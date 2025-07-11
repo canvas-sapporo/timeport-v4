@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import FormBuilder from '@/components/forms/form-builder';
-import { RequestTypeForm } from '@/types';
+import { RequestType } from '@/types';
 
 export default function NewRequestTypePage() {
   const { user } = useAuth();
@@ -15,7 +15,7 @@ export default function NewRequestTypePage() {
     return <div>アクセス権限がありません</div>;
   }
 
-  const handleSave = async (data: RequestTypeForm) => {
+  const handleSave = async (data: RequestType) => {
     setIsLoading(true);
     try {
       // In a real app, this would save to backend
@@ -43,8 +43,8 @@ export default function NewRequestTypePage() {
       </div>
 
       <FormBuilder
-        onSave={handleSave}
-        onCancel={handleCancel}
+        onSaveAction={handleSave}
+        onCancelAction={handleCancel}
         isLoading={isLoading}
       />
     </div>
