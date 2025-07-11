@@ -24,7 +24,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen timeport-main-background flex relative overflow-hidden">
+    <div className="h-screen timeport-main-background flex relative overflow-hidden">
       {/* 浮遊パーティクル */}
       <div className="absolute inset-0 pointer-events-none">
         {[...Array(15)].map((_, i) => (
@@ -41,9 +41,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
       </div>
       
       <Sidebar />
-      <div className="flex-1 flex flex-col relative z-10">
+      <div className="flex-1 flex flex-col relative z-10 h-full">
         <Header />
-        <main className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+        <main className="flex-1 p-6 overflow-y-auto custom-scrollbar h-full">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

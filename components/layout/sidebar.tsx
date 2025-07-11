@@ -74,10 +74,10 @@ export default function Sidebar() {
       )}
       
       <aside className={cn(
-        "fixed left-0 top-0 z-50 h-screen timeport-sidebar text-white transition-all duration-300 lg:relative lg:z-0 shadow-2xl",
+        "fixed left-0 top-0 z-50 h-full min-h-screen timeport-sidebar text-white transition-all duration-300 lg:relative lg:z-0 shadow-2xl",
         isCollapsed ? "w-16" : "w-64"
       )}>
-        <div className="flex h-full flex-col relative">
+        <div className="flex h-full min-h-screen flex-col relative">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-white/20">
             <div className={cn("flex items-center space-x-2", isCollapsed && "justify-center")}>
@@ -116,7 +116,7 @@ export default function Sidebar() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
