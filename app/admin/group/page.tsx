@@ -35,7 +35,7 @@ export default function AdminGroupManagementPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    parent_id: ''
+    parentId: ''
   });
 
   if (!user || user.role !== 'admin') {
@@ -76,7 +76,7 @@ export default function AdminGroupManagementPage() {
   const handleCreateGroup = () => {
     console.log('Creating group:', formData);
     setIsCreateGroupOpen(false);
-    setFormData({ name: '', description: '', parent_id: '' });
+    setFormData({ name: '', description: '', parentId: '' });
   };
 
   const renderGroupTree = (groupList: HierarchicalGroup[], level = 0): React.ReactNode[] => {
@@ -169,8 +169,8 @@ export default function AdminGroupManagementPage() {
               <div>
                 <Label htmlFor="parentGroup">親グループ</Label>
                 <Select
-                  value={formData.parent_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, parent_id: value }))}
+                  value={formData.parentId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, parentId: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="親グループを選択（任意）" />
