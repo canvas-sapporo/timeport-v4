@@ -6,6 +6,7 @@ export interface Company {
   code: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface Group {
@@ -17,6 +18,7 @@ export interface Group {
   path: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 // 後方互換性のため残す（段階的移行用）
@@ -34,15 +36,20 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface ValidationRules {
+  id: string;
   minLength?: number;
   maxLength?: number;
   minValue?: number;
   maxValue?: number;
   pattern?: string;
   customMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface FormField {
@@ -55,6 +62,9 @@ export interface FormField {
   validationRules: ValidationRules;
   options?: string[];
   order: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface RequestType {
@@ -66,6 +76,7 @@ export interface RequestType {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface Request {
@@ -83,6 +94,7 @@ export interface Request {
   rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface AttendanceRecord {
@@ -98,6 +110,7 @@ export interface AttendanceRecord {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface FeatureSetting {
@@ -110,6 +123,7 @@ export interface FeatureSetting {
   settings?: any;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface Notification {
@@ -120,6 +134,8 @@ export interface Notification {
   type: 'info' | 'warning' | 'error' | 'success';
   isRead: boolean;
   createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface AuthUser {
@@ -129,57 +145,87 @@ export interface AuthUser {
   email: string;
   role: 'super_admin' | 'admin' | 'member';
   groupId: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 // フォームビルダー用の型
 export interface FormBuilderField extends Omit<FormField, 'id'> {
   id?: string;
   isNew?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface RequestTypeForm {
+  id: string;
   name: string;
   description: string;
   code: string;
   formFields: FormBuilderField[];
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 // API レスポンス型
 export interface ApiResponse<T> {
+  id:string;
   data?: T;
   error?: string;
   message?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface PaginatedResponse<T> {
+  id: string;
   data: T[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 // フィルター・検索用の型
 export interface AttendanceFilter {
+  id:string
   userId?: string;
   groupId?: string;
   startDate?: string;
   endDate?: string;
   status?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface RequestFilter {
+  id:string;
   userId?: string;
   requestTypeId?: string;
   status?: string;
   startDate?: string;
   endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface UserFilter {
+  id:string;
   groupId?: string;
   role?: string;
   isActive?: boolean;
   search?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }

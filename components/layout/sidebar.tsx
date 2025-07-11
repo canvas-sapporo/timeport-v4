@@ -31,13 +31,13 @@ const adminMenuItems = [
   { href: '/admin/attendance', icon: Clock, label: '勤怠管理' },
   { href: '/admin/requests', icon: FileText, label: '申請管理' },
   { href: '/admin/users', icon: Users, label: 'ユーザー管理' },
-  { href: '/admin/organization', icon: Building, label: 'グループ管理' },
+  { href: '/admin/group', icon: Building, label: 'グループ管理' },
   { href: '/admin/settings', icon: Settings, label: '設定' },
 ];
 
 const superAdminMenuItems = [
   { href: '/super-admin', icon: Home, label: 'ダッシュボード' },
-  { href: '/super-admin/organizations', icon: Building, label: 'グループ管理' },
+  { href: '/super-admin/company', icon: Building, label: '企業管理' },
   { href: '/super-admin/features', icon: Settings, label: '機能管理' },
   { href: '/super-admin/system', icon: BarChart3, label: 'システム管理' },
 ];

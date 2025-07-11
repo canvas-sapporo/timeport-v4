@@ -92,7 +92,7 @@ export default function AdminDashboard() {
               </TableHeader>
               <TableBody>
                 {recentRequests.map((request) => {
-                  const requestant = users.find(u => u.id === request.user_id);
+                  const requestant = users.find(u => u.id === request.userId);
                   return (
                     <TableRow key={request.id}>
                       <TableCell>{requestant?.name}</TableCell>
@@ -153,7 +153,7 @@ export default function AdminDashboard() {
             </div>
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
-                {Math.round(monthlyAttendance.reduce((sum, r) => sum + (r.actual_work_minutes || 0), 0) / 60)}h
+                {Math.round(monthlyAttendance.reduce((sum, r) => sum + (r.actualWorkMinutes || 0), 0) / 60)}h
               </div>
               <div className="text-sm text-green-600">総勤務時間</div>
             </div>

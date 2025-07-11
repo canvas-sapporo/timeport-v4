@@ -51,7 +51,7 @@ export default function MemberRequestsPage() {
       userId: user.id,
       requestTypeId: selectedRequestType,
       title: requestType.name,
-      content: formData,
+      formData: formData,
       targetDate: formData.targetDate,
       startDate: formData.startDate,
       endDate: formData.endDate,

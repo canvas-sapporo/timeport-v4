@@ -1,7 +1,14 @@
 import { AuthUser } from '@/types';
 import { users } from './mock';
 
-export const loginUser = async (email: string, password: string): Promise<AuthUser | null> => {
+export const loginUser = async (email: string, password: string): Promise<{
+  id: string;
+  employeeId: string;
+  name: string;
+  email: string;
+  role: "super_admin" | "admin" | "member";
+  groupId: string;
+} | null> => {
   // Mock authentication - in real app, this would call an API
   const user = users.find(u => u.email === email && u.isActive);
   

@@ -175,9 +175,12 @@ export const mockRequestTypes: RequestType[] = [
         label: '休暇種別',
         placeholder: '',
         required: true,
-        validationRules: {},
+        validationRules: { id: '', createdAt: '', updatedAt: '', deletedAt: '' },
         options: ['年次有給休暇', '病気休暇', '特別休暇'],
-        order: 1
+        order: 1,
+        createdAt: '',
+        updatedAt: '',
+        deletedAt: '',
       },
       {
         id: 'start_date',
@@ -186,9 +189,12 @@ export const mockRequestTypes: RequestType[] = [
         label: '開始日',
         placeholder: '',
         required: true,
-        validationRules: {},
+        validationRules: { id: '', createdAt: '', updatedAt: '', deletedAt: '' },
         options: [],
-        order: 2
+        order: 2,
+        createdAt: '',
+        updatedAt: '',
+        deletedAt: '',
       },
       {
         id: 'end_date',
@@ -197,9 +203,12 @@ export const mockRequestTypes: RequestType[] = [
         label: '終了日',
         placeholder: '',
         required: true,
-        validationRules: {},
+        validationRules: { id: '', createdAt: '', updatedAt: '', deletedAt: '' },
         options: [],
-        order: 3
+        order: 3,
+        createdAt: '',
+        updatedAt: '',
+        deletedAt: '',
       },
       {
         id: 'reason',
@@ -208,9 +217,12 @@ export const mockRequestTypes: RequestType[] = [
         label: '理由',
         placeholder: '休暇の理由を入力してください',
         required: true,
-        validationRules: { minLength: 10, maxLength: 500 },
+        validationRules: { id: '', createdAt: '', updatedAt: '', deletedAt: '', minLength: 10, maxLength: 500 },
         options: [],
-        order: 4
+        order: 4,
+        createdAt: '',
+        updatedAt: '',
+        deletedAt: '',
       }
     ],
     isActive: true,
@@ -230,9 +242,12 @@ export const mockRequestTypes: RequestType[] = [
         label: '対象日',
         placeholder: '',
         required: true,
-        validationRules: {},
+        validationRules: { id: '', createdAt: '', updatedAt: '', deletedAt: '' },
         options: [],
-        order: 1
+        order: 1,
+        createdAt: '',
+        updatedAt: '',
+        deletedAt: '',
       },
       {
         id: 'start_time',
@@ -241,9 +256,12 @@ export const mockRequestTypes: RequestType[] = [
         label: '開始時刻',
         placeholder: '',
         required: true,
-        validationRules: {},
+        validationRules: { id: '', createdAt: '', updatedAt: '', deletedAt: '' },
         options: [],
-        order: 2
+        order: 2,
+        createdAt: '',
+        updatedAt: '',
+        deletedAt: '',
       },
       {
         id: 'end_time',
@@ -252,9 +270,12 @@ export const mockRequestTypes: RequestType[] = [
         label: '終了時刻',
         placeholder: '',
         required: true,
-        validationRules: {},
+        validationRules: { id: '', createdAt: '', updatedAt: '', deletedAt: '' },
         options: [],
-        order: 3
+        order: 3,
+        createdAt: '',
+        updatedAt: '',
+        deletedAt: '',
       },
       {
         id: 'reason',
@@ -263,9 +284,12 @@ export const mockRequestTypes: RequestType[] = [
         label: '理由',
         placeholder: '残業の理由を入力してください',
         required: true,
-        validationRules: { minLength: 20, maxLength: 1000 },
+        validationRules: { id: '', createdAt: '', updatedAt: '', deletedAt: '', minLength: 20, maxLength: 1000 },
         options: [],
-        order: 4
+        order: 4,
+        createdAt: '',
+        updatedAt: '',
+        deletedAt: '',
       }
     ],
     isActive: true,
@@ -367,7 +391,8 @@ const mockNotifications: Notification[] = [
     message: '田中花子さんから休暇申請が提出されました',
     type: 'info' as const,
     isRead: false,
-    createdAt: '2024-01-20T10:00:00Z'
+    createdAt: '2024-01-20T10:00:00Z',
+    updatedAt: '2024-01-20T10:00:00Z',
   },
   {
     id: 'notif2',
@@ -376,7 +401,8 @@ const mockNotifications: Notification[] = [
     message: 'あなたの休暇申請が承認されました',
     type: 'success' as const,
     isRead: true,
-    createdAt: '2024-01-19T14:30:00Z'
+    createdAt: '2024-01-19T14:30:00Z',
+    updatedAt: '2024-01-19T14:30:00Z',
   }
 ];
 

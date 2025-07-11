@@ -24,15 +24,15 @@ export default function AdminRequestsPage() {
   const handleApprove = (requestId: string) => {
     updateRequest(requestId, {
       status: 'approved',
-      approved_by: user.id,
-      approved_at: new Date().toISOString()
+      approvedBy: user.id,
+      approvedAt: new Date().toISOString()
     });
   };
 
   const handleReject = (requestId: string) => {
     updateRequest(requestId, {
       status: 'rejected',
-      rejection_reason: rejectionReason || '管理者により却下されました'
+      rejectionReason: rejectionReason || '管理者により却下されました'
     });
     setRejectionReason('');
   };
@@ -51,7 +51,7 @@ export default function AdminRequestsPage() {
   };
 
   const pendingRequests = requests.filter(a => a.status === 'pending');
-  const allRequests = requests.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const allRequests = requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="space-y-6">
@@ -82,19 +82,19 @@ export default function AdminRequestsPage() {
               </TableHeader>
               <TableBody>
                 {pendingRequests.map((request) => {
-                  const requestant = users.find(u => u.id === request.user_id);
+                  const requestant = users.find(u => u.id === request.userId);
                   return (
                     <TableRow key={request.id}>
                       <TableCell>{requestant?.name}</TableCell>
                       <TableCell>{request.title}</TableCell>
                       <TableCell>
-                        {new Date(request.created_at).toLocaleDateString('ja-JP')}
+                        {new Date(request.createdAt).toLocaleDateString('ja-JP')}
                       </TableCell>
                       <TableCell>
-                        {request.target_date 
-                          ? new Date(request.target_date).toLocaleDateString('ja-JP')
-                          : request.start_date 
-                          ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date || request.start_date).toLocaleDateString('ja-JP')}`
+                        {request.targetDate 
+                          ? new Date(request.targetDate).toLocaleDateString('ja-JP')
+                          : request.startDate 
+                          ? `${new Date(request.startDate).toLocaleDateString('ja-JP')} - ${new Date(request.endDate || request.startDate).toLocaleDateString('ja-JP')}`
                           : '-'
                         }
                       </TableCell>
@@ -126,11 +126,14 @@ export default function AdminRequestsPage() {
                                 <div>
                                   <div className="font-medium">申請内容</div>
                                   <div className="text-sm text-gray-600 space-y-1">
-                                    {Object.entries(request.form_data).map(([key, value]) => (
-                                      <div key={key}>
-                                        <span className="font-medium">{key}:</span> {value as string}
-                                      </div>
-                                    ))}
+                                    {request.formData
+                                      ? Object.entries(request.formData).map(([key, value]) => (
+                                          <div key={key}>
+                                            <span className="font-medium">{key}:</span> {value as string}
+                                          </div>
+                                        ))
+                                      : <div className="text-gray-400">申請内容なし</div>
+                                    }
                                   </div>
                                 </div>
                                 <div className="flex space-x-2">
@@ -211,21 +214,21 @@ export default function AdminRequestsPage() {
             </TableHeader>
             <TableBody>
               {allRequests.map((request) => {
-                const requestant = users.find(u => u.id === request.user_id);
-                const approver = request.approved_by ? users.find(u => u.id === request.approved_by) : null;
+                const requestant = users.find(u => u.id === request.userId);
+                const approver = request.approvedBy ? users.find(u => u.id === request.approvedBy) : null;
                 
                 return (
                   <TableRow key={request.id}>
                     <TableCell>{requestant?.name}</TableCell>
                     <TableCell>{request.title}</TableCell>
                     <TableCell>
-                      {new Date(request.created_at).toLocaleDateString('ja-JP')}
+                      {new Date(request.createdAt).toLocaleDateString('ja-JP')}
                     </TableCell>
                     <TableCell>
-                      {request.target_date 
-                        ? new Date(request.target_date).toLocaleDateString('ja-JP')
-                        : request.start_date 
-                        ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date || request.start_date).toLocaleDateString('ja-JP')}`
+                      {request.targetDate 
+                        ? new Date(request.targetDate).toLocaleDateString('ja-JP')
+                        : request.startDate 
+                        ? `${new Date(request.startDate).toLocaleDateString('ja-JP')} - ${new Date(request.endDate || request.startDate).toLocaleDateString('ja-JP')}`
                         : '-'
                       }
                     </TableCell>

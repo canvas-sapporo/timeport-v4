@@ -109,7 +109,7 @@ export default function AdminUsersPage() {
   const activeUsers = users.filter(u => u.isActive).length;
   const inactiveUsers = users.filter(u => !u.isActive).length;
   const adminUsers = users.filter(u => u.role === 'admin').length;
-  const regularUsers = users.filter(u => u.role === 'user').length;
+  const regularUsers = users.filter(u => u.role === 'member').length;
 
   return (
     <div className="space-y-6">

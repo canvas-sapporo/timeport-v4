@@ -27,7 +27,12 @@ export default function LoginPage() {
     try {
       const user = await loginUser(email, password);
       if (user) {
-        login(user);
+        login({
+          ...user,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deletedAt: undefined,
+        });
         const redirectPath = user.role === 'super_admin' ? '/super-admin' : 
                             user.role === 'admin' ? '/admin' : '/member';
         router.push(redirectPath);

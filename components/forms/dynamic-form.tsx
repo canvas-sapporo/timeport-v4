@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { FormField, ApplicationType } from '@/types';
+import { FormField, RequestType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface DynamicFormProps {
   requestType: RequestType;
-  onSubmit: (data: Record<string, any>) => void;
+  onSubmitAction: (data: Record<string, any>) => void;
   isLoading?: boolean;
 }
 
@@ -29,40 +29,43 @@ const createValidationSchema = (fields: FormField[]) => {
 
     switch (field.type) {
       case 'email':
-        fieldSchema = z.string().email(field.validation_rules.custom_message || '正しいメールアドレスを入力してください');
+        fieldSchema = z.string().email(field.validationRules.customMessage || '正しいメールアドレスを入力してください');
         break;
       case 'number':
         fieldSchema = z.coerce.number();
-        if (field.validation_rules.min_value !== undefined) {
-          fieldSchema = fieldSchema.min(field.validation_rules.min_value);
+        if (field.validationRules.minValue !== undefined) {
+          fieldSchema = (fieldSchema as z.ZodNumber).min(field.validationRules.minValue);
         }
-        if (field.validation_rules.max_value !== undefined) {
-          fieldSchema = fieldSchema.max(field.validation_rules.max_value);
+        if (field.validationRules.maxValue !== undefined) {
+          fieldSchema = (fieldSchema as z.ZodNumber).max(field.validationRules.maxValue);
         }
         break;
       case 'tel':
-        fieldSchema = z.string();
-        if (field.validation_rules.pattern) {
-          fieldSchema = fieldSchema.regex(
-            new RegExp(field.validation_rules.pattern),
-            field.validation_rules.custom_message || '正しい形式で入力してください'
+        let telSchema: z.ZodString = z.string();
+        if (field.validationRules.pattern) {
+          telSchema = telSchema.regex(
+            new RegExp(field.validationRules.pattern),
+            field.validationRules.customMessage || '正しい形式で入力してください'
           );
         }
+        fieldSchema = telSchema;
         break;
       default:
-        fieldSchema = z.string();
-        if (field.validation_rules.min_length) {
-          fieldSchema = fieldSchema.min(field.validation_rules.min_length);
+        let strSchema: z.ZodString = z.string();
+        if (field.validationRules.minLength) {
+          strSchema = strSchema.min(field.validationRules.minLength);
         }
-        if (field.validation_rules.max_length) {
-          fieldSchema = fieldSchema.max(field.validation_rules.max_length);
+        if (field.validationRules.maxLength) {
+          strSchema = strSchema.max(field.validationRules.maxLength);
         }
-        if (field.validation_rules.pattern) {
-          fieldSchema = fieldSchema.regex(
-            new RegExp(field.validation_rules.pattern),
-            field.validation_rules.custom_message || '正しい形式で入力してください'
+        if (field.validationRules.pattern) {
+          strSchema = strSchema.regex(
+            new RegExp(field.validationRules.pattern),
+            field.validationRules.customMessage || '正しい形式で入力してください'
           );
         }
+        fieldSchema = strSchema;
+        break;
     }
 
     if (!field.required) {
@@ -173,15 +176,15 @@ const DynamicFormField = ({
       {renderField()}
       {error && (
         <p className="text-sm text-red-500">
-          {error.message || field.validation_rules.custom_message || 'この項目は必須です'}
+          {error.message || field.validationRules.customMessage || 'この項目は必須です'}
         </p>
       )}
     </div>
   );
 };
 
-export default function DynamicForm({ requestType, onSubmit, isLoading }: DynamicFormProps) {
-  const sortedFields = [...requestType.form_fields].sort((a, b) => a.order - b.order);
+export default function DynamicForm({ requestType, onSubmitAction, isLoading }: DynamicFormProps) {
+  const sortedFields = [...requestType.formFields].sort((a, b) => a.order - b.order);
   const validationSchema = createValidationSchema(sortedFields);
 
   const {
@@ -195,7 +198,7 @@ export default function DynamicForm({ requestType, onSubmit, isLoading }: Dynami
   });
 
   const handleFormSubmit = (data: Record<string, any>) => {
-    onSubmit(data);
+    onSubmitAction(data);
   };
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { FormField, ValidationRules, ApplicationTypeForm } from '@/types';
+import { FormField, ValidationRules, RequestType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,9 +17,9 @@ import { Plus, Settings, Trash2, Eye } from 'lucide-react';
 import DynamicForm from './dynamic-form';
 
 interface FormBuilderProps {
-  initialData?: RequestTypeForm;
-  onSave: (data: RequestTypeForm) => void;
-  onCancel: () => void;
+  initialData?: RequestType;
+  onSaveAction: (data: RequestType) => void;
+  onCancelAction: () => void;
   isLoading?: boolean;
 }
 
@@ -46,7 +46,7 @@ interface ValidationModalProps {
 }
 
 const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProps) => {
-  const [validationRules, setValidationRules] = useState<ValidationRules>(field.validation_rules || {});
+  const [validationRules, setValidationRules] = useState<ValidationRules>(field.validationRules || {});
   const [options, setOptions] = useState<string[]>(field.options || []);
   const [optionsText, setOptionsText] = useState(field.options?.join('\n') || '');
 
@@ -87,7 +87,7 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
                   <Label>最小文字数</Label>
                   <Input 
                     type="number" 
-                    value={validationRules.min_length || ''}
+                    value={validationRules.minLength || ''}
                     onChange={(e) => setValidationRules(prev => ({
                       ...prev,
                       min_length: e.target.value ? parseInt(e.target.value) : undefined
@@ -98,7 +98,7 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
                   <Label>最大文字数</Label>
                   <Input 
                     type="number" 
-                    value={validationRules.max_length || ''}
+                    value={validationRules.maxLength || ''}
                     onChange={(e) => setValidationRules(prev => ({
                       ...prev,
                       max_length: e.target.value ? parseInt(e.target.value) : undefined
@@ -128,7 +128,7 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
                 <Label>最小値</Label>
                 <Input 
                   type="number" 
-                  value={validationRules.min_value || ''}
+                  value={validationRules.minValue || ''}
                   onChange={(e) => setValidationRules(prev => ({
                     ...prev,
                     min_value: e.target.value ? parseInt(e.target.value) : undefined
@@ -139,7 +139,7 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
                 <Label>最大値</Label>
                 <Input 
                   type="number" 
-                  value={validationRules.max_value || ''}
+                  value={validationRules.maxValue || ''}
                   onChange={(e) => setValidationRules(prev => ({
                     ...prev,
                     max_value: e.target.value ? parseInt(e.target.value) : undefined
@@ -166,7 +166,7 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
           <div>
             <Label>カスタムエラーメッセージ</Label>
             <Input 
-              value={validationRules.custom_message || ''}
+              value={validationRules.customMessage || ''}
               placeholder="エラー時に表示するメッセージ"
               onChange={(e) => setValidationRules(prev => ({
                 ...prev,
@@ -185,14 +185,18 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
   );
 };
 
-export default function FormBuilder({ initialData, onSave, onCancel, isLoading }: FormBuilderProps) {
-  const [formData, setFormData] = useState<RequestTypeForm>(
+export default function FormBuilder({ initialData, onSaveAction, onCancelAction, isLoading }: FormBuilderProps) {
+  const [formData, setFormData] = useState<RequestType>(
     initialData || {
+      id: '', // または一時的なユニークID
       name: '',
       description: '',
       code: '',
-      form_fields: [],
-      is_active: true,
+      formFields: [],
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      deletedAt: undefined,
     }
   );
   const [selectedField, setSelectedField] = useState<FormField | null>(null);
@@ -202,26 +206,34 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
   const addField = () => {
     const newField: FormField = {
       id: `field_${Date.now()}`,
-      name: `field_${formData.form_fields.length + 1}`,
+      name: `field_${formData.formFields.length + 1}`,
       type: 'text',
       label: '',
       placeholder: '',
       required: false,
-      validation_rules: {},
+      validationRules: {
+        id: '',
+        createdAt: '',
+        updatedAt: '',
+        deletedAt: '',
+      },
       options: [],
-      order: formData.form_fields.length + 1,
+      order: formData.formFields.length + 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      deletedAt: '',
     };
 
     setFormData(prev => ({
       ...prev,
-      form_fields: [...prev.form_fields, newField]
+      formFields: [...prev.formFields, newField]
     }));
   };
 
   const updateField = (fieldId: string, key: keyof FormField, value: any) => {
     setFormData(prev => ({
       ...prev,
-      form_fields: prev.form_fields.map(field => 
+      formFields: prev.formFields.map(field => 
         field.id === fieldId ? { ...field, [key]: value } : field
       )
     }));
@@ -230,12 +242,12 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
   const removeField = (fieldId: string) => {
     setFormData(prev => ({
       ...prev,
-      form_fields: prev.form_fields.filter(field => field.id !== fieldId)
+      formFields: prev.formFields.filter(field => field.id !== fieldId)
     }));
   };
 
   const openValidationModal = (fieldId: string) => {
-    const field = formData.form_fields.find(f => f.id === fieldId);
+    const field = formData.formFields.find(f => f.id === fieldId);
     if (field) {
       setSelectedField(field);
       setValidationModalOpen(true);
@@ -245,11 +257,11 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
   const saveValidationRules = (fieldId: string, validationRules: ValidationRules, options?: string[]) => {
     setFormData(prev => ({
       ...prev,
-      form_fields: prev.form_fields.map(field => 
+      formFields: prev.formFields.map(field => 
         field.id === fieldId 
           ? { 
               ...field, 
-              validation_rules: validationRules,
+              validationRules: validationRules,
               options: options || field.options
             } 
           : field
@@ -269,20 +281,20 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
       return;
     }
 
-    if (formData.form_fields.length === 0) {
+    if (formData.formFields.length === 0) {
       alert('少なくとも1つの項目を追加してください');
       return;
     }
 
     // 項目名の重複チェック
-    const fieldNames = formData.form_fields.map(f => f.name);
+    const fieldNames = formData.formFields.map(f => f.name);
     const duplicateNames = fieldNames.filter((name, index) => fieldNames.indexOf(name) !== index);
     if (duplicateNames.length > 0) {
       alert('項目名が重複しています');
       return;
     }
 
-    onSave(formData);
+    onSaveAction(formData);
   };
 
   const previewRequestType = {
@@ -290,10 +302,10 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
     code: formData.code,
     name: formData.name,
     description: formData.description,
-    form_fields: formData.form_fields,
-    is_active: formData.is_active,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    formFields: formData.formFields,
+    isActive: formData.isActive,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 
   return (
@@ -349,7 +361,7 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {formData.form_fields.length === 0 ? (
+          {formData.formFields.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               項目を追加してください
             </div>
@@ -365,7 +377,7 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {formData.form_fields.map((field) => (
+                {formData.formFields.map((field) => (
                   <TableRow key={field.id}>
                     <TableCell>
                       <Input
@@ -428,7 +440,7 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
       </Card>
 
       {/* プレビュー */}
-      {formData.form_fields.length > 0 && (
+      {formData.formFields.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -446,7 +458,7 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
                   </DialogHeader>
                   <DynamicForm
                     requestType={previewRequestType}
-                    onSubmit={(data) => {
+                    onSubmitAction={(data) => {
                       console.log('Preview form data:', data);
                       alert('プレビューモードです');
                     }}
@@ -459,7 +471,7 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
             <div className="border rounded-lg p-4 bg-gray-50">
               <h3 className="font-medium mb-4">{formData.name || '申請名'}</h3>
               <div className="space-y-3">
-                {formData.form_fields.slice(0, 3).map((field) => (
+                {formData.formFields.slice(0, 3).map((field) => (
                   <div key={field.id}>
                     <Label>
                       {field.label || '項目名'}
@@ -472,9 +484,9 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
                     </div>
                   </div>
                 ))}
-                {formData.form_fields.length > 3 && (
+                {formData.formFields.length > 3 && (
                   <div className="text-sm text-gray-500">
-                    他 {formData.form_fields.length - 3} 項目...
+                    他 {formData.formFields.length - 3} 項目...
                   </div>
                 )}
               </div>
@@ -485,7 +497,7 @@ export default function FormBuilder({ initialData, onSave, onCancel, isLoading }
 
       {/* 保存・キャンセル */}
       <div className="flex justify-end space-x-4">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={onCancelAction}>
           キャンセル
         </Button>
         <Button onClick={handleSave} disabled={isLoading}>

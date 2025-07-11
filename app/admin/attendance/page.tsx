@@ -28,7 +28,7 @@ export default function AdminAttendancePage() {
   const filteredRecords = attendanceRecords.filter(record => {
     const matchesMonth = record.workDate.startsWith(selectedMonth);
     const recordUser = users.find(u => u.id === record.userId);
-    const matchesDepartment = selectedDepartment === 'all' || recordUser?.departmentId === selectedDepartment;
+    const matchesDepartment = selectedDepartment === 'all' || recordUser?.groupId === selectedDepartment;
     const matchesUser = selectedUser === 'all' || record.userId === selectedUser;
     
     return matchesMonth && matchesDepartment && matchesUser;
@@ -97,7 +97,7 @@ export default function AdminAttendancePage() {
                       <SelectValue placeholder="社員を選択" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.filter(u => u.role === 'user').map((user) => (
+                      {users.filter(u => u.role === 'member').map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.name} ({user.employeeId})
                         </SelectItem>
@@ -233,7 +233,7 @@ export default function AdminAttendancePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全社員</SelectItem>
-                  {users.filter(u => u.role === 'user').map((user) => (
+                  {users.filter(u => u.role === 'member').map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name} ({user.employeeId})
                     </SelectItem>

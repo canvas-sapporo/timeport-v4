@@ -150,9 +150,9 @@ export default function SuperAdminDashboard() {
             </TableHeader>
             <TableBody>
               {workplaces.map((workplace) => {
-                const workplaceDepartments = departments.filter(d => d.workplaceId === workplace.id);
+                const workplaceDepartments = departments.filter(d => d.parentId === workplace.id);
                 const workplaceUsers = workplaceDepartments.reduce((total, dept) => 
-                  total + users.filter(u => u.departmentId === dept.id && u.isActive).length, 0
+                  total + users.filter(u => u.groupId === dept.id && u.isActive).length, 0
                 );
                 
                 return (

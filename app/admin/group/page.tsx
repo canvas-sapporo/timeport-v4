@@ -16,13 +16,14 @@ import { Building, Users, Plus, Edit, Trash2, ChevronRight, FolderTree } from 'l
 
 interface HierarchicalGroup {
   id: string;
-  parent_id?: string;
+  parentId?: string;
   name: string;
   description?: string;
   level: number;
   path: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
   children?: HierarchicalGroup[];
 }
 
@@ -34,7 +35,7 @@ export default function AdminGroupManagementPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    parentId: ''
+    parent_id: ''
   });
 
   if (!user || user.role !== 'admin') {
@@ -43,11 +44,11 @@ export default function AdminGroupManagementPage() {
 
   // グループの階層構造を構築
   const buildGroupHierarchy = (): HierarchicalGroup[] => {
-    const rootGroups = groups.filter(g => !g.parent_id);
+    const rootGroups = groups.filter(g => !g.parentId);
     
     const buildChildren = (parentId: string): HierarchicalGroup[] => {
       return groups
-        .filter(g => g.parent_id === parentId)
+        .filter(g => g.parentId === parentId)
         .map(group => ({
           ...group,
           children: buildChildren(group.id)
@@ -75,7 +76,7 @@ export default function AdminGroupManagementPage() {
   const handleCreateGroup = () => {
     console.log('Creating group:', formData);
     setIsCreateGroupOpen(false);
-    setFormData({ name: '', description: '', parentId: '' });
+    setFormData({ name: '', description: '', parent_id: '' });
   };
 
   const renderGroupTree = (groupList: HierarchicalGroup[], level = 0): React.ReactNode[] => {
@@ -168,8 +169,8 @@ export default function AdminGroupManagementPage() {
               <div>
                 <Label htmlFor="parentGroup">親グループ</Label>
                 <Select
-                  value={formData.parentId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, parentId: value }))}
+                  value={formData.parent_id}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, parent_id: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="親グループを選択（任意）" />

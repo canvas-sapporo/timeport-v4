@@ -21,8 +21,8 @@ export default function SuperAdminOrganizationsPage() {
     return <div>アクセス権限がありません</div>;
   }
 
-  const getChildGroups = (parentId: string) => {
-    return groups.filter(g => g.parent_id === parentId);
+  const getChildGroups = (parent_id: string) => {
+    return groups.filter(g => g.parentId === parent_id);
   };
 
   const getUsersByGroup = (groupId: string) => {
