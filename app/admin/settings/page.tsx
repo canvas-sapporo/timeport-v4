@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ import {
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('system');
 
@@ -103,8 +105,15 @@ export default function AdminSettingsPage() {
     workplaces: ['本社', '大阪支社']
   });
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const handleSaveSettings = async (settingsType: string) => {

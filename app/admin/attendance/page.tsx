@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,13 +16,21 @@ import { Clock, Calendar, Download, Filter, Edit, Eye, Plus } from 'lucide-react
 
 export default function AdminAttendancePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { attendanceRecords, users, departments, workplaces } = useData();
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   // Filter attendance records

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { User, Building, MapPin, Calendar } from 'lucide-react';
 
 export default function MemberProfilePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { users, groups } = useData();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -18,8 +20,15 @@ export default function MemberProfilePage() {
     email: ''
   });
 
+  useEffect(() => {
+    if (!user || user.role !== 'member') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'member') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const userDetails = users.find(u => u.id === user.id);

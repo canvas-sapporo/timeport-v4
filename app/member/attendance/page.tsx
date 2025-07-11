@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,11 +13,19 @@ import { Calendar, Download, Filter } from 'lucide-react';
 
 export default function MemberAttendancePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { getUserAttendance } = useData();
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
+  useEffect(() => {
+    if (!user || user.role !== 'member') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'member') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const attendanceRecords = getUserAttendance(user.id);

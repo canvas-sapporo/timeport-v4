@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,12 +18,21 @@ import { FileText, Plus, Eye } from 'lucide-react';
 export default function MemberRequestsPage() {
   const { user } = useAuth();
   const { requests, requestTypes, createRequest } = useData();
+  const router = useRouter();
   const [selectedRequestType, setSelectedRequestType] = useState<string>('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    if (!user || user.role !== 'member') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
 
   if (!user || user.role !== 'member') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const userRequests = requests.filter(r => r.userId === user.id);

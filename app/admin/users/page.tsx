@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,7 @@ import { Users, Plus, Edit, Trash2, Search, Filter, UserCheck, UserX } from 'luc
 
 export default function AdminUsersPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { users, groups } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('all');
@@ -31,8 +33,15 @@ export default function AdminUsersPage() {
     isActive: true
   });
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const filteredUsers = users.filter(u => {

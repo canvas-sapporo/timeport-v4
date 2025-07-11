@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -18,11 +20,16 @@ import {
   Monitor,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  AlertTriangle,
+  Gauge,
+  Server,
+  Users
 } from 'lucide-react';
 
 export default function SuperAdminSystemPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   // Mock system settings
@@ -52,8 +59,48 @@ export default function SuperAdminSystemPage() {
     errorRate: 0.02
   };
 
+  const [systemMetrics, setSystemMetrics] = useState({
+    cpuUsage: 45,
+    memoryUsage: 68,
+    diskUsage: 32,
+    activeUsers: 127,
+    databaseConnections: 15,
+    responseTime: 234
+  });
+
+  const [systemConfig, setSystemConfig] = useState({
+    maxUsers: 1000,
+    sessionTimeout: 30,
+    backupInterval: 24,
+    logLevel: 'info',
+    maintenanceMode: false,
+    sslEnabled: true
+  });
+
+  const [alerts, setAlerts] = useState([
+    {
+      id: '1',
+      type: 'warning' as const,
+      message: 'メモリ使用率が70%を超えています',
+      timestamp: '2024-01-15 14:30:00'
+    },
+    {
+      id: '2',
+      type: 'info' as const,
+      message: 'データベースバックアップが完了しました',
+      timestamp: '2024-01-15 13:00:00'
+    }
+  ]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'super_admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'super_admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const handleSaveSettings = async () => {

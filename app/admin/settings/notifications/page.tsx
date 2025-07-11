@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Bell, Save } from 'lucide-react';
 
 export default function NotificationsSettingsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   // Notification Settings State
@@ -22,8 +24,15 @@ export default function NotificationsSettingsPage() {
     systemMaintenance: true
   });
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const handleSaveSettings = async () => {

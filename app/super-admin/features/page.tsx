@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { Settings, Save, Building } from 'lucide-react';
 
 export default function SuperAdminFeaturesPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   // Mock feature settings for companies
@@ -31,8 +33,15 @@ export default function SuperAdminFeaturesPage() {
     }
   ]);
 
+  useEffect(() => {
+    if (!user || user.role !== 'super_admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'super_admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const handleFeatureToggle = (companyId: string, featureKey: string, enabled: boolean) => {

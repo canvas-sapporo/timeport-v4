@@ -32,8 +32,15 @@ export default function RequestTypeDetailPage() {
     }
   }, [requestTypeId, requestTypes, router]);
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   if (!requestType) {

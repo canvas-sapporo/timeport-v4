@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +30,7 @@ interface HierarchicalGroup {
 
 export default function AdminGroupManagementPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { groups, users } = useData();
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [selectedParentGroup, setSelectedParentGroup] = useState<string>('');
@@ -38,8 +40,15 @@ export default function AdminGroupManagementPage() {
     parentId: ''
   });
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   // グループの階層構造を構築

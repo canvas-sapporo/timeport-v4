@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import StatsCard from '@/components/ui/stats-card';
@@ -12,10 +13,18 @@ import Link from 'next/link';
 
 export default function MemberDashboard() {
   const { user } = useAuth();
+  const router = useRouter();
   const { getUserAttendance, getTodayAttendance, requests, notifications, clockIn, clockOut, startBreak, endBreak } = useData();
 
+  useEffect(() => {
+    if (!user || user.role !== 'member') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'member') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const attendanceRecords = getUserAttendance(user.id);

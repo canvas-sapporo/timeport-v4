@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import StatsCard from '@/components/ui/stats-card';
@@ -10,10 +12,18 @@ import { Users, Clock, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lu
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const router = useRouter();
   const { users, requests, attendanceRecords, notifications } = useData();
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const activeUsers = users.filter(u => u.isActive).length;

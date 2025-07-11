@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +15,19 @@ import { Building, MapPin, Users, Plus, Edit, Trash2, Settings } from 'lucide-re
 
 export default function SuperAdminOrganizationsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { groups, users } = useData();
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
 
+  useEffect(() => {
+    if (!user || user.role !== 'super_admin') {
+      router.push('/login');
+      return;
+    }
+  }, [user, router]);
+
   if (!user || user.role !== 'super_admin') {
-    return <div>アクセス権限がありません</div>;
+    return null;
   }
 
   const getChildGroups = (parent_id: string) => {
