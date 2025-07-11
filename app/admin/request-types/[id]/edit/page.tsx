@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import FormBuilder from '@/components/forms/form-builder';
-import { RequestTypeForm } from '@/types';
+import { RequestType } from '@/types';
 
 export default function EditRequestTypePage() {
   const { user } = useAuth();
@@ -38,7 +38,8 @@ export default function EditRequestTypePage() {
     );
   }
 
-  const initialData: RequestTypeForm = {
+  const initialData: RequestType = {
+    id: requestType.id,
     name: requestType.name,
     description: requestType.description || '',
     code: requestType.code,
@@ -46,10 +47,12 @@ export default function EditRequestTypePage() {
       ...field,
       isNew: false
     })),
-    isActive: requestType.isActive
+    isActive: requestType.isActive,
+    createdAt: requestType.createdAt,
+    updatedAt: requestType.updatedAt
   };
 
-  const handleSave = async (data: RequestTypeForm) => {
+  const handleSave = async (data: RequestType) => {
     setIsLoading(true);
     try {
       // In a real app, this would update the backend
@@ -78,8 +81,8 @@ export default function EditRequestTypePage() {
 
       <FormBuilder
         initialData={initialData}
-        onSave={handleSave}
-        onCancel={handleCancel}
+        onSaveAction={handleSave}
+        onCancelAction={handleCancel}
         isLoading={isLoading}
       />
     </div>
