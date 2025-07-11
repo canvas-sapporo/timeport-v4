@@ -88,7 +88,7 @@ export default function RequestTypeDetailPage() {
               </DialogHeader>
               <DynamicForm
                 requestType={requestType}
-                onSubmit={(data) => {
+                onSubmitAction={(data) => {
                   console.log('Preview form data:', data);
                   alert('プレビューモードです');
                 }}
