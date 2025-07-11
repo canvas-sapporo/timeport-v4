@@ -16,7 +16,10 @@ import {
   Menu,
   X,
   BarChart3,
-  Building
+  Building,
+  ChevronRight,
+  ChevronLeft,
+  User
 } from 'lucide-react';
 
 const userMenuItems = [
@@ -45,7 +48,7 @@ const superAdminMenuItems = [
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoggingOut } = useAuth();
 
   if (!user) return null;
 
@@ -74,88 +77,101 @@ export default function Sidebar() {
       )}
       
       <aside className={cn(
-        "fixed left-0 top-0 z-50 h-full min-h-screen timeport-sidebar text-white transition-all duration-300 lg:relative lg:z-0 shadow-2xl",
+        "fixed left-0 top-0 z-50 h-full min-h-screen timeport-sidebar text-white transition-all duration-300 lg:relative lg:z-0 shadow-2xl flex flex-col",
         isCollapsed ? "w-16" : "w-64"
       )}>
-        <div className="flex h-full min-h-screen flex-col relative">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-white/20">
-            <div className={cn("flex items-center space-x-2", isCollapsed && "justify-center")}>
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/30">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
-              {!isCollapsed && (
-                <span className="text-xl font-bold text-white gradient-text">TimePort</span>
-              )}
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-white/20">
+          <div className={cn("flex items-center space-x-3", isCollapsed && "justify-center")}>
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+              <span className="text-blue-600 font-bold text-lg">T</span>
             </div>
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-1 rounded-lg hover:bg-white/10 lg:hidden text-white transition-colors"
-            >
-              {isCollapsed ? <Menu className="w-5 h-5" /> : <X className="w-5 h-5" />}
-            </button>
-          </div>
-
-          {/* User info */}
-          <div className="p-4 border-b border-white/20">
-            <div className={cn("flex items-center space-x-3", isCollapsed && "justify-center")}>
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
-                <span className="text-sm font-medium text-white">{user.name.charAt(0)}</span>
+            {!isCollapsed && (
+              <div>
+                <h1 className="text-lg font-bold">TimePort</h1>
+                <p className="text-xs text-white/80">時間管理システム</p>
               </div>
-              {!isCollapsed && (
-                <div>
-                  <div className="text-sm font-medium text-white">{user.name}</div>
-                  <div className="text-xs text-white/70">{user.employeeId}</div>
-                  <div className="text-xs text-white/60">
-                    {user.role === 'super_admin' ? 'スーパー管理者' : 
-                     user.role === 'admin' ? '管理者' : 'メンバー'}
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="lg:block hidden p-1 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          </button>
+        </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group",
-                    isActive 
-                      ? "bg-white/20 text-white backdrop-blur-sm shadow-lg border border-white/30" 
-                      : "text-white/80 hover:bg-white/10 hover:text-white",
-                    isCollapsed && "justify-center"
-                  )}
-                >
-                  <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "animate-pulse")} />
-                  {!isCollapsed && <span className="ml-3">{item.label}</span>}
-                  {!isCollapsed && isActive && (
-                    <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+        {/* User Info */}
+        <div className="p-4 border-b border-white/20">
+          <div className={cn("flex items-center space-x-3", isCollapsed && "justify-center")}>
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <User className="w-5 h-5" />
+            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user.name}</p>
+                <p className="text-xs text-white/80 truncate">
+                  {user.role === 'super_admin' ? 'スーパー管理者' : 
+                   user.role === 'admin' ? '管理者' : 'メンバー'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
 
-          {/* Logout */}
-          <div className="p-4 border-t border-white/20">
-            <button
-              onClick={logout}
-              className={cn(
-                "w-full flex items-center px-3 py-3 rounded-xl text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200 group",
-                isCollapsed && "justify-center"
-              )}
-            >
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group",
+                  isActive 
+                    ? "bg-white/20 text-white backdrop-blur-sm shadow-lg border border-white/30" 
+                    : "text-white/80 hover:bg-white/10 hover:text-white transform hover:scale-[1.02]",
+                  isCollapsed && "justify-center"
+                )}
+                prefetch={true}
+              >
+                <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "animate-pulse")} />
+                {!isCollapsed && <span className="ml-3">{item.label}</span>}
+                {!isCollapsed && isActive && (
+                  <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="p-4 border-t border-white/20 mt-auto">
+          <button
+            onClick={logout}
+            disabled={isLoggingOut}
+            className={cn(
+              "w-full flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group",
+              isCollapsed && "justify-center",
+              isLoggingOut 
+                ? "bg-white/10 text-white/60 cursor-not-allowed" 
+                : "text-white/80 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            {isLoggingOut ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin flex-shrink-0" />
+            ) : (
               <LogOut className="w-5 h-5 flex-shrink-0 group-hover:animate-pulse" />
-              {!isCollapsed && <span className="ml-3">ログアウト</span>}
-            </button>
-          </div>
+            )}
+            {!isCollapsed && (
+              <span className="ml-3">
+                {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+              </span>
+            )}
+          </button>
         </div>
       </aside>
     </>

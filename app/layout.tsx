@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/auth-context';
 import { DataProvider } from '@/contexts/data-context';
+import { PageTransitionProvider } from '@/contexts/page-transition-context';
 import MainLayout from '@/components/layout/main-layout';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -20,13 +21,15 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={inter.className}>
-        <AuthProvider>
-          <DataProvider>
-            <MainLayout>
-              {children}
-            </MainLayout>
-          </DataProvider>
-        </AuthProvider>
+        <PageTransitionProvider>
+          <AuthProvider>
+            <DataProvider>
+              <MainLayout>
+                {children}
+              </MainLayout>
+            </DataProvider>
+          </AuthProvider>
+        </PageTransitionProvider>
       </body>
     </html>
   );
