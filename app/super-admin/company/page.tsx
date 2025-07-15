@@ -241,7 +241,7 @@ export default function SuperAdminOrganizationsPage() {
                                     <li key={user.id}>
                                       {user.name} 
                                       <span className="ml-1 text-gray-500">
-                                        ({user.role === 'admin' ? '管理者' : user.role === 'super_admin' ? 'スーパー管理者' : 'メンバー'})
+                                        ({user.role === 'admin' ? '管理者' : user.role === 'super_admin' ? 'システム管理者' : 'メンバー'})
                                       </span>
                                     </li>
                                   ))}

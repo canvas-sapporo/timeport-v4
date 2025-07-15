@@ -90,8 +90,8 @@ export const mockUsers: User[] = [
   {
     id: 'user1',
     employeeId: 'SA001',
-    name: 'スーパー管理者',
-    email: 'super@timeport.com',
+    name: 'システム管理者',
+    email: 'system@timeport.com',
     role: 'super_admin',
     groupId: 'group3',
     hireDate: '2020-01-01',
@@ -769,7 +769,7 @@ export const authenticateUser = async (email: string, password: string) => {
   await new Promise(resolve => setTimeout(resolve, 800));
   
   const user = mockUsers.find(u => u.email === email && u.isActive);
-  if (user && password === 'password') {
+  if (user && password === 'Passw0rd!') {
     return {
       success: true,
       user: {

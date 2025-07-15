@@ -11,8 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Eye, EyeOff, Sparkles, Shield } from 'lucide-react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@timeport.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('system@timeport.com');
+  const [password, setPassword] = useState('Passw0rd!');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -173,8 +173,8 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2 text-xs text-white/80">
               <div className="flex justify-between">
-                <span className="font-medium text-purple-200">スーパー管理者:</span>
-                <span>super@timeport.com</span>
+                <span className="font-medium text-purple-200">システム管理者:</span>
+                <span>system@timeport.com</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium text-blue-200">管理者:</span>
@@ -186,7 +186,7 @@ export default function LoginPage() {
               </div>
               <div className="flex justify-between pt-1 border-t border-white/10">
                 <span className="font-medium text-yellow-200">パスワード:</span>
-                <span>password</span>
+                <span>Passw0rd!</span>
               </div>
             </div>
           </div>

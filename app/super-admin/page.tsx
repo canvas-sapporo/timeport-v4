@@ -59,7 +59,7 @@ export default function SuperAdminDashboard() {
   ];
 
   const roleDistribution = [
-    { role: 'super_admin', count: users.filter(u => u.role === 'super_admin').length, label: 'スーパー管理者' },
+    { role: 'super_admin', count: users.filter(u => u.role === 'super_admin').length, label: 'システム管理者' },
     { role: 'admin', count: users.filter(u => u.role === 'admin').length, label: '管理者' },
     { role: 'member', count: users.filter(u => u.role === 'member').length, label: 'メンバー' }
   ];
@@ -67,7 +67,7 @@ export default function SuperAdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">スーパー管理者ダッシュボード</h1>
+        <h1 className="text-2xl font-bold text-gray-900">システム管理者ダッシュボード</h1>
         <p className="text-gray-600">システム全体の管理と監視を行います</p>
       </div>
 

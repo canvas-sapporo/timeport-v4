@@ -111,7 +111,7 @@ export default function Sidebar() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user.name}</p>
                 <p className="text-xs text-white/80 truncate">
-                  {user.role === 'super_admin' ? 'スーパー管理者' : 
+                  {user.role === 'super_admin' ? 'システム管理者' : 
                    user.role === 'admin' ? '管理者' : 'メンバー'}
                 </p>
               </div>

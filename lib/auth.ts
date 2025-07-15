@@ -12,7 +12,7 @@ export const loginUser = async (email: string, password: string): Promise<{
   // Mock authentication - in real app, this would call an API
   const user = users.find(u => u.email === email && u.isActive);
   
-  if (user && password === 'password') {
+  if (user && password === 'Passw0rd!') {
     return {
       id: user.id,
       employeeId: user.employeeId,
