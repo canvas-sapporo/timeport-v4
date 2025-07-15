@@ -143,18 +143,19 @@ export default function AdminSettingsPage() {
 
       {/* タブナビゲーション */}
       <div className="border-b border-gray-200 bg-gray-50 rounded-t-lg">
-        <nav className="flex space-x-0">
+        <nav className="flex space-x-0 bg-gray-50 rounded-t-lg px-2 py-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 py-4 px-6 font-medium text-sm whitespace-nowrap transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-black text-white rounded-t-lg shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`flex items-center space-x-2 py-2 px-4 font-semibold text-sm whitespace-nowrap transition-all duration-200 rounded-md mx-1
+                  ${activeTab === tab.id
+                    ? 'bg-black text-white shadow-md scale-105'
+                    : 'text-gray-500 hover:text-black hover:bg-gray-100'}
+                `}
+                style={{ minHeight: 32 }}
               >
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
