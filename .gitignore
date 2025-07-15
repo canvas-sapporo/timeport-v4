@@ -36,5 +36,5 @@ yarn-error.log*
 next-env.d.ts
 .idea/
 
-# bol files
-*.bol
+# bolt folder
+.bolt/
