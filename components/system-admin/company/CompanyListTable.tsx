@@ -8,10 +8,28 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Pencil, Trash2, Plus, Building2, CheckCircle2, HelpCircle, Search, Filter } from 'lucide-react';
 import type { Company } from '@/types/company';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { addCompany } from '@/lib/actions/system-admin/company';
+import { useRouter } from 'next/navigation';
 
 export default function CompanyListTable({ companies, activeCompanyCount }: { companies: Company[]; activeCompanyCount: number }) {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [open, setOpen] = useState(false); // 追加ダイアログの開閉状態
+  const [loading, setLoading] = useState(false);
+
+  // 追加フォームの状態
+  const [form, setForm] = useState({
+    name: '',
+    code: '',
+    address: '',
+    phone: '',
+    is_active: true,
+  });
+
+  const router = useRouter();
 
   // ステータスでフィルタリング
   const filteredCompanies = useMemo(() => {
@@ -36,6 +54,20 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
     setSelectedStatus('all');
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await addCompany(form);
+      setOpen(false);
+      router.refresh(); // ← ここでリフレッシュ
+    } catch (err) {
+      alert('企業の追加に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-6">
       {/* タイトル・追加ボタン */}
@@ -44,9 +76,43 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
           <h1 className="text-2xl font-bold">企業管理</h1>
           <p className="text-muted-foreground text-sm mt-1">全社の企業情報を管理します</p>
         </div>
-        <Button variant="timeport-primary" size="sm">
-          <Plus className="w-4 h-4 mr-2" />追加
-        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="timeport-primary" size="sm">
+              <Plus className="w-4 h-4 mr-2" />追加
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>企業追加</DialogTitle>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div>
+                <Label htmlFor="company-name">企業名<span className="text-red-500 ml-1">*</span></Label>
+                <Input id="company-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
+              </div>
+              <div>
+                <Label htmlFor="company-code">企業コード<span className="text-red-500 ml-1">*</span></Label>
+                <Input id="company-code" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} required />
+              </div>
+              <div>
+                <Label htmlFor="company-address">住所</Label>
+                <Input id="company-address" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+              </div>
+              <div>
+                <Label htmlFor="company-phone">電話番号</Label>
+                <Input id="company-phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="company-active" checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
+                <Label htmlFor="company-active">有効</Label>
+              </div>
+              <Button type="submit" variant="timeport-primary" className="w-full" disabled={loading}>
+                {loading ? '追加中...' : '追加'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* 上部カード（画像風デザイン） */}
