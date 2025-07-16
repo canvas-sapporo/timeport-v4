@@ -6,7 +6,7 @@ export const loginUser = async (email: string, password: string): Promise<{
   employeeId: string;
   name: string;
   email: string;
-  role: "super_admin" | "admin" | "member";
+  role: "system-admin" | "admin" | "member";
   groupId: string;
 } | null> => {
   // Mock authentication - in real app, this would call an API

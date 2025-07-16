@@ -20,13 +20,13 @@ export default function SuperAdminOrganizationsPage() {
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
 
   useEffect(() => {
-    if (!user || user.role !== 'super_admin') {
+    if (!user || user.role !== 'system-admin') {
       router.push('/login');
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'super_admin') {
+  if (!user || user.role !== 'system-admin') {
     return null;
   }
 
@@ -241,7 +241,7 @@ export default function SuperAdminOrganizationsPage() {
                                     <li key={user.id}>
                                       {user.name} 
                                       <span className="ml-1 text-gray-500">
-                                        ({user.role === 'admin' ? '管理者' : user.role === 'super_admin' ? 'システム管理者' : 'メンバー'})
+                                        ({user.role === 'admin' ? '管理者' : user.role === 'system-admin' ? 'システム管理者' : 'メンバー'})
                                       </span>
                                     </li>
                                   ))}

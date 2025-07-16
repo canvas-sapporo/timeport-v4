@@ -33,7 +33,7 @@ export default function LoginPage() {
           updatedAt: new Date().toISOString(),
           deletedAt: undefined,
         });
-        const redirectPath = user.role === 'super_admin' ? '/super-admin' : 
+        const redirectPath = user.role === 'system-admin' ? '/system-admin' : 
                             user.role === 'admin' ? '/admin' : '/member';
         router.push(redirectPath);
       } else {

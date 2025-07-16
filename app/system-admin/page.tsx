@@ -16,13 +16,13 @@ export default function SuperAdminDashboard() {
   const { users, workplaces, departments, requests } = useData();
 
   useEffect(() => {
-    if (!user || user.role !== 'super_admin') {
+    if (!user || user.role !== 'system-admin') {
       router.push('/login');
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'super_admin') {
+  if (!user || user.role !== 'system-admin') {
     return null;
   }
 
@@ -59,7 +59,7 @@ export default function SuperAdminDashboard() {
   ];
 
   const roleDistribution = [
-    { role: 'super_admin', count: users.filter(u => u.role === 'super_admin').length, label: 'システム管理者' },
+    { role: 'system-admin', count: users.filter(u => u.role === 'system-admin').length, label: 'システム管理者' },
     { role: 'admin', count: users.filter(u => u.role === 'admin').length, label: '管理者' },
     { role: 'member', count: users.filter(u => u.role === 'member').length, label: 'メンバー' }
   ];
@@ -99,7 +99,7 @@ export default function SuperAdminDashboard() {
                 <div key={item.role} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-3 h-3 rounded-full ${
-                      item.role === 'super_admin' ? 'bg-purple-500' :
+                      item.role === 'system-admin' ? 'bg-purple-500' :
                       item.role === 'admin' ? 'bg-blue-500' : 'bg-green-500'
                     }`} />
                     <span className="text-sm font-medium">{item.label}</span>

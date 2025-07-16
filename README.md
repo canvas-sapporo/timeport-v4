@@ -100,7 +100,7 @@ src/
 │   ├── admin/                       # 管理者ページ
 │   ├── login/                       # ログインページ
 │   ├── member/                      # 一般ユーザーページ
-│   └── super-admin/                 # システム管理者ページ
+│   └── system-admin/                # システム管理者ページ
 ├── components/                       # 再利用可能コンポーネント
 │   ├── form/                        # フォーム関連
 │   ├── layout/                      # レイアウト関連

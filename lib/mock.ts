@@ -92,7 +92,7 @@ export const mockUsers: User[] = [
     employeeId: 'SA001',
     name: 'システム管理者',
     email: 'system@timeport.com',
-    role: 'super_admin',
+    role: 'system-admin',
     groupId: 'group3',
     hireDate: '2020-01-01',
     isActive: true,

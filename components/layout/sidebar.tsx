@@ -38,11 +38,11 @@ const adminMenuItems = [
   { href: '/admin/settings', icon: Settings, label: '設定' },
 ];
 
-const superAdminMenuItems = [
-  { href: '/super-admin', icon: Home, label: 'ダッシュボード' },
-  { href: '/super-admin/company', icon: Building, label: '企業管理' },
-  { href: '/super-admin/features', icon: Settings, label: '機能管理' },
-  { href: '/super-admin/system', icon: BarChart3, label: 'システム管理' },
+const systemAdminMenuItems = [
+  { href: '/system-admin', icon: Home, label: 'ダッシュボード' },
+  { href: '/system-admin/company', icon: Building, label: '企業管理' },
+  { href: '/system-admin/features', icon: Settings, label: '機能管理' },
+  { href: '/system-admin/system', icon: BarChart3, label: 'システム管理' },
 ];
 
 export default function Sidebar() {
@@ -54,8 +54,8 @@ export default function Sidebar() {
 
   const getMenuItems = () => {
     switch (user.role) {
-      case 'super_admin':
-        return superAdminMenuItems;
+      case 'system-admin':
+        return systemAdminMenuItems;
       case 'admin':
         return adminMenuItems;
       case 'member':
@@ -111,7 +111,7 @@ export default function Sidebar() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user.name}</p>
                 <p className="text-xs text-white/80 truncate">
-                  {user.role === 'super_admin' ? 'システム管理者' : 
+                  {user.role === 'system-admin' ? 'システム管理者' : 
                    user.role === 'admin' ? '管理者' : 'メンバー'}
                 </p>
               </div>

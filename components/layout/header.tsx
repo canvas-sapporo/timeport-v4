@@ -88,7 +88,7 @@ export default function Header() {
           <div className="hidden md:block">
             <div className="text-sm font-medium text-white">{user?.name}</div>
             <div className="text-xs text-white/70">
-              {user?.role === 'super_admin' ? 'システム管理者' : 
+              {user?.role === 'system-admin' ? 'システム管理者' : 
                user?.role === 'admin' ? '管理者' : 'メンバー'}
             </div>
           </div>

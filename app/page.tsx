@@ -14,7 +14,7 @@ export default function Home() {
       setIsRedirecting(true);
       
       const redirectPath = user 
-        ? user.role === 'super_admin' ? '/super-admin' : 
+        ? user.role === 'system-admin' ? '/system-admin' : 
           user.role === 'admin' ? '/admin' : '/member'
         : '/login';
       

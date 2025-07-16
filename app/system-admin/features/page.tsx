@@ -34,13 +34,13 @@ export default function SuperAdminFeaturesPage() {
   ]);
 
   useEffect(() => {
-    if (!user || user.role !== 'super_admin') {
+    if (!user || user.role !== 'system-admin') {
       router.push('/login');
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'super_admin') {
+  if (!user || user.role !== 'system-admin') {
     return null;
   }
 
