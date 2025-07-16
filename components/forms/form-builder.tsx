@@ -354,7 +354,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             フォーム項目設定
-            <Button onClick={addField} size="sm">
+            <Button onClick={addField} size="sm" variant="timeport-primary">
               <Plus className="w-4 h-4 mr-2" />
               項目追加
             </Button>
@@ -500,7 +500,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
         <Button variant="outline" onClick={onCancelAction}>
           キャンセル
         </Button>
-        <Button onClick={handleSave} disabled={isLoading}>
+        <Button onClick={handleSave} disabled={isLoading} variant="timeport-primary">
           {isLoading ? '保存中...' : '保存'}
         </Button>
       </div>

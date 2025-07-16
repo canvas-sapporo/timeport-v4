@@ -139,6 +139,7 @@ export default function NotificationsSettingsPage() {
             onClick={handleSaveSettings}
             disabled={isLoading}
             className="w-full"
+            variant="timeport-primary"
           >
             <Save className="w-4 h-4 mr-2" />
             保存

@@ -47,7 +47,7 @@ export default function AdminRequestTypesPage() {
           <p className="text-gray-600">申請フォームの作成・編集・管理を行います</p>
         </div>
         <Link href="/admin/request-types/new">
-          <Button>
+          <Button variant="timeport-primary">
             <Plus className="w-4 h-4 mr-2" />
             新規フォーム作成
           </Button>

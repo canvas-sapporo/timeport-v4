@@ -129,7 +129,7 @@ export default function AdminUsersPage() {
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button variant="timeport-primary">
               <Plus className="w-4 h-4 mr-2" />
               新規ユーザー
             </Button>

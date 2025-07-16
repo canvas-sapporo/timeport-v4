@@ -213,6 +213,7 @@ export default function AdminSettingsPage() {
                     onClick={() => handleSaveSettings('company')}
                     disabled={isLoading}
                     className="w-full"
+                    variant="timeport-primary"
                   >
                     <Save className="w-4 h-4 mr-2" />
                     保存
@@ -290,6 +291,7 @@ export default function AdminSettingsPage() {
                     onClick={() => handleSaveSettings('working-hours')}
                     disabled={isLoading}
                     className="w-full"
+                    variant="timeport-primary"
                   >
                     <Save className="w-4 h-4 mr-2" />
                     保存
@@ -388,6 +390,7 @@ export default function AdminSettingsPage() {
                 onClick={() => handleSaveSettings('notifications')}
                 disabled={isLoading}
                 className="w-full"
+                variant="timeport-primary"
               >
                 <Save className="w-4 h-4 mr-2" />
                 保存
@@ -484,6 +487,7 @@ export default function AdminSettingsPage() {
                 onClick={() => handleSaveSettings('features')}
                 disabled={isLoading}
                 className="w-full"
+                variant="timeport-primary"
               >
                 <Save className="w-4 h-4 mr-2" />
                 保存
@@ -501,7 +505,7 @@ export default function AdminSettingsPage() {
                   <FormInput className="w-5 h-5" />
                   <span>申請フォーム</span>
                 </div>
-                <Button onClick={() => window.location.href = '/admin/request-types/new'}>
+                <Button onClick={() => window.location.href = '/admin/request-types/new'} variant="timeport-primary">
                   <Plus className="w-4 h-4 mr-2" />
                   新規フォーム作成
                 </Button>
@@ -614,6 +618,7 @@ export default function AdminSettingsPage() {
                   onClick={() => handleSaveSettings('group')}
                   disabled={isLoading}
                   className="w-full"
+                  variant="timeport-primary"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   保存

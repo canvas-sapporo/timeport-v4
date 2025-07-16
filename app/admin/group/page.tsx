@@ -146,7 +146,7 @@ export default function AdminGroupManagementPage() {
         </div>
         <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button variant="timeport-primary">
               <Plus className="w-4 h-4 mr-2" />
               グループ追加
             </Button>

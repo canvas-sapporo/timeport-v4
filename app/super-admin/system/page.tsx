@@ -128,7 +128,7 @@ export default function SuperAdminSystemPage() {
           <h1 className="text-2xl font-bold text-gray-900">システム管理</h1>
           <p className="text-gray-600">システム全体の設定と監視を行います</p>
         </div>
-        <Button onClick={handleSaveSettings} disabled={isLoading}>
+        <Button onClick={handleSaveSettings} disabled={isLoading} variant="timeport-primary">
           <Save className="w-4 h-4 mr-2" />
           設定保存
         </Button>
