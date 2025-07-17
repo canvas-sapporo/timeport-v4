@@ -250,7 +250,7 @@ export default function AdminRequestsPage() {
                             ? formatDate(request.start_date)
                             : '-'}
                     </TableCell>
-                    <TableCell>{getStatusBadge(request.status)}</TableCell>
+                    <TableCell>{getStatusBadge(request.status ?? '-')}</TableCell>
                     <TableCell>{approver?.name || '-'}</TableCell>
                   </TableRow>
                 );
