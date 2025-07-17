@@ -34,8 +34,8 @@ export default function AdminRequestsPage() {
   const handleApprove = (requestId: string) => {
     updateRequest(requestId, {
       status: 'approved',
-      approvedBy: user.id,
-      approvedAt: new Date().toISOString()
+      approved_by: user.id,
+      approved_at: new Date().toISOString()
     });
   };
 
