@@ -29,9 +29,10 @@ export default function MemberAttendancePage() {
   }
 
   const attendanceRecords = getUserAttendance(user.id);
+  const formatDate = (date?: string) => (typeof date === 'string' ? new Date(date).toLocaleDateString('ja-JP') : '-');
   const filteredRecords = attendanceRecords.filter(record => 
-    record.workDate?.startsWith(selectedMonth)
-  ).sort((a, b) => (b.workDate || '').localeCompare(a.workDate || ''));
+    record.work_date?.startsWith(selectedMonth)
+  ).sort((a, b) => (b.work_date || '').localeCompare(a.work_date || ''));
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -110,10 +111,10 @@ export default function MemberAttendancePage() {
                 <TableRow key={record.id}>
                   <TableCell>
                     <div className="font-medium">
-                      {record.workDate ? new Date(record.workDate).toLocaleDateString('ja-JP') : '-'}
+                      {formatDate(record.work_date)}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {record.workDate ? new Date(record.workDate).toLocaleDateString('ja-JP', { weekday: 'short' }) : '-'}
+                      {record.work_date ? new Date(record.work_date).toLocaleDateString('ja-JP', { weekday: 'short' }) : '-'}
                     </div>
                   </TableCell>
                   <TableCell>{formatTime(record.clockInTime)}</TableCell>

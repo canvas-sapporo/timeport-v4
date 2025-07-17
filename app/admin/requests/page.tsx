@@ -60,6 +60,8 @@ export default function AdminRequestsPage() {
     }
   };
 
+  const formatDate = (date?: string) => (typeof date === 'string' ? new Date(date).toLocaleDateString('ja-JP') : '-');
+
   const pendingRequests = requests.filter(a => a.status === 'pending');
   const allRequests = requests.sort((a, b) => {
     const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -102,15 +104,15 @@ export default function AdminRequestsPage() {
                       <TableCell>{requestant?.name}</TableCell>
                       <TableCell>{request.title}</TableCell>
                       <TableCell>
-                        {request.created_at ? new Date(request.created_at).toLocaleDateString('ja-JP') : '-'}
+                        {formatDate(request.created_at)}
                       </TableCell>
                       <TableCell>
                         {request.target_date
-                          ? new Date(request.target_date).toLocaleDateString('ja-JP')
+                          ? formatDate(request.target_date)
                           : request.start_date && request.end_date
-                            ? `${typeof request.start_date === 'string' ? new Date(request.start_date).toLocaleDateString('ja-JP') : '-'} - ${typeof request.end_date === 'string' ? new Date(request.end_date).toLocaleDateString('ja-JP') : '-'}`
-                            : request.start_date && typeof request.start_date === 'string'
-                              ? new Date(request.start_date).toLocaleDateString('ja-JP')
+                            ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
+                            : request.start_date
+                              ? formatDate(request.start_date)
                               : '-'}
                       </TableCell>
                       <TableCell>
@@ -237,15 +239,15 @@ export default function AdminRequestsPage() {
                     <TableCell>{requestant?.name}</TableCell>
                     <TableCell>{request.title}</TableCell>
                     <TableCell>
-                      {request.created_at ? new Date(request.created_at).toLocaleDateString('ja-JP') : '-'}
+                      {formatDate(request.created_at)}
                     </TableCell>
                     <TableCell>
                       {request.target_date
-                        ? new Date(request.target_date).toLocaleDateString('ja-JP')
+                        ? formatDate(request.target_date)
                         : request.start_date && request.end_date
-                          ? `${typeof request.start_date === 'string' ? new Date(request.start_date).toLocaleDateString('ja-JP') : '-'} - ${typeof request.end_date === 'string' ? new Date(request.end_date).toLocaleDateString('ja-JP') : '-'}`
-                          : request.start_date && typeof request.start_date === 'string'
-                            ? new Date(request.start_date).toLocaleDateString('ja-JP')
+                          ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
+                          : request.start_date
+                            ? formatDate(request.start_date)
                             : '-'}
                     </TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>

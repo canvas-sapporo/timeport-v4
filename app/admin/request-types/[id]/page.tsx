@@ -66,6 +66,10 @@ export default function RequestTypeDetailPage() {
     file: 'ファイルアップロード'
   };
 
+  const formatDate = (date?: string) => (typeof date === 'string' ? new Date(date).toLocaleDateString('ja-JP', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  }) : '-');
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -150,25 +154,13 @@ export default function RequestTypeDetailPage() {
             <div>
               <div className="text-sm font-medium text-gray-600">作成日</div>
               <div className="text-gray-900">
-                {new Date(requestType.createdAt).toLocaleDateString('ja-JP', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                {formatDate(requestType.created_at)}
               </div>
             </div>
             <div>
               <div className="text-sm font-medium text-gray-600">更新日</div>
               <div className="text-gray-900">
-                {new Date(requestType.updatedAt).toLocaleDateString('ja-JP', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                {formatDate(requestType.updated_at)}
               </div>
             </div>
           </div>
