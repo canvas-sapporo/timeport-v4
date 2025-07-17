@@ -52,14 +52,22 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
     } else if (selectedStatus === 'inactive') {
       result = result.filter(c => !c.is_active);
     }
-    if (!search) return result;
+    if (!search) return [...result].sort((a, b) => {
+      if (!a.updated_at || !b.updated_at) return 0;
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    });
     const lower = search.toLowerCase();
-    return result.filter(c =>
-      (c.name && c.name.toLowerCase().includes(lower)) ||
-      (c.code && c.code.toLowerCase().includes(lower)) ||
-      (c.address && c.address.toLowerCase().includes(lower)) ||
-      (c.phone && c.phone.toLowerCase().includes(lower))
-    );
+    return result
+      .filter(c =>
+        (c.name && c.name.toLowerCase().includes(lower)) ||
+        (c.code && c.code.toLowerCase().includes(lower)) ||
+        (c.address && c.address.toLowerCase().includes(lower)) ||
+        (c.phone && c.phone.toLowerCase().includes(lower))
+      )
+      .sort((a, b) => {
+        if (!a.updated_at || !b.updated_at) return 0;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      });
   }, [companies, search, selectedStatus]);
 
   const handleReset = () => {
