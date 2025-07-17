@@ -74,7 +74,7 @@ export default function AdminRequestTypesPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">有効な申請種別</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {requestTypes.filter(t => t.isActive).length}
+                  {requestTypes.filter(t => t.is_active).length}
                 </p>
               </div>
               <ToggleRight className="w-8 h-8 text-green-600" />
@@ -88,7 +88,7 @@ export default function AdminRequestTypesPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">無効な申請種別</p>
                 <p className="text-2xl font-bold text-gray-600">
-                  {requestTypes.filter(t => !t.isActive).length}
+                  {requestTypes.filter(t => !t.is_active).length}
                 </p>
               </div>
               <ToggleLeft className="w-8 h-8 text-gray-600" />
@@ -128,15 +128,13 @@ export default function AdminRequestTypesPage() {
                   <TableCell className="max-w-xs truncate">
                     {type.description || '-'}
                   </TableCell>
-                  <TableCell>{type.formFields.length}項目</TableCell>
+                  <TableCell>{type.form_config.length}項目</TableCell>
                   <TableCell>
-                    <Badge variant={type.isActive ? "default" : "secondary"}>
-                      {type.isActive ? '有効' : '無効'}
+                    <Badge variant={type.is_active ? "default" : "secondary"}>
+                      {type.is_active ? '有効' : '無効'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {new Date(type.updatedAt).toLocaleDateString('ja-JP')}
-                  </TableCell>
+                  <TableCell>{type.updated_at ? new Date(type.updated_at).toLocaleDateString('ja-JP') : '-'}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <Link href={`/admin/request-types/${type.id}`}>
@@ -152,9 +150,9 @@ export default function AdminRequestTypesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleToggleStatus(type.id, type.isActive)}
+                        onClick={() => handleToggleStatus(type.id, type.is_active)}
                       >
-                        {type.isActive ? (
+                        {type.is_active ? (
                           <ToggleRight className="w-4 h-4 text-green-600" />
                         ) : (
                           <ToggleLeft className="w-4 h-4 text-gray-600" />
