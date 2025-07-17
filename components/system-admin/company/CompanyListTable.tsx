@@ -18,7 +18,7 @@ import { deleteCompany } from '@/lib/actions/system-admin/company';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
-export default function CompanyListTable({ companies, activeCompanyCount }: { companies: Company[]; activeCompanyCount: number }) {
+export default function CompanyListTable({ companies, activeCompanyCount, deletedCompanyCount }: { companies: Company[]; activeCompanyCount: number; deletedCompanyCount: number }) {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [open, setOpen] = useState(false); // 追加ダイアログの開閉状態
@@ -217,15 +217,15 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
           <div className="text-2xl font-bold text-gray-800 mb-1">{activeCompanyCount}</div>
           <div className="absolute left-0 right-0 bottom-0 h-2" style={{background: 'linear-gradient(90deg, #22c55e 0%, #4ade80 100%)'}} />
         </Card>
-        {/* ダミー項目カード */}
+        {/* 削除済み企業数カード */}
         <Card className="relative p-4 flex flex-col gap-1 bg-purple-50 shadow rounded-xl overflow-hidden">
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-500">
               <HelpCircle className="text-white w-5 h-5" />
             </div>
           </div>
-          <div className="text-sm text-gray-600">ダミー項目</div>
-          <div className="text-2xl font-bold text-gray-800 mb-1">-</div>
+          <div className="text-sm text-gray-600">削除済み企業数</div>
+          <div className="text-2xl font-bold text-gray-800 mb-1">{deletedCompanyCount}</div>
           <div className="absolute left-0 right-0 bottom-0 h-2" style={{background: 'linear-gradient(90deg, #a78bfa 0%, #c4b5fd 100%)'}} />
         </Card>
       </div>

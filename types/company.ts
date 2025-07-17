@@ -24,6 +24,9 @@ export interface Company extends BaseEntity {
   phone?: string;
   /** 有効フラグ */
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
 }
 
 /**

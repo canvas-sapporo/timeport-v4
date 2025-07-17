@@ -4,18 +4,19 @@ import CompanyListTable from '@/components/system-admin/company/CompanyListTable
 
 export default async function CompanyListPage() {
   const cookieStore = await cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore }); // ✅ 関数でラップして渡す
+  const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
-  const { data: companies, error } = await supabase
+  const { data: allCompanies, error } = await supabase
     .from('companies')
-    .select('*')
-    .is('deleted_at', null);
+    .select('*'); // 全件取得
 
   if (error) {
     return <div className="p-6 text-destructive">企業データの取得に失敗しました</div>;
   }
 
-  const activeCompanyCount = (companies ?? []).filter(c => c.is_active).length;
+  const companies = (allCompanies ?? []).filter(c => !c.deleted_at);
+  const deletedCompanies = (allCompanies ?? []).filter(c => c.deleted_at);
+  const activeCompanyCount = companies.filter(c => c.is_active).length;
 
-  return <CompanyListTable companies={companies ?? []} activeCompanyCount={activeCompanyCount} />;
+  return <CompanyListTable companies={companies} activeCompanyCount={activeCompanyCount} deletedCompanyCount={deletedCompanies.length} />;
 }
