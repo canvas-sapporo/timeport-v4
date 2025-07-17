@@ -219,6 +219,8 @@ export interface Request extends BaseEntity {
   current_approval_step: number;
   /** 申請コメント */
   submission_comment?: string;
+  /** ステータス */
+  status?: 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'expired';
 }
 
 /**
@@ -385,12 +387,12 @@ export interface RequestDetail extends Request {
     group_name?: string;
   };
   /** ステータス情報 */
-  status: {
-    id: UUID;
-    name: string;
-    code: string;
-    color?: string;
-  };
+  // status: {
+  //   id: UUID;
+  //   name: string;
+  //   code: string;
+  //   color?: string;
+  // };
   /** 承認履歴 */
   approval_history: Array<{
     step: number;

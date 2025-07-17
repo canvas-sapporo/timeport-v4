@@ -195,6 +195,8 @@ export interface Request extends BaseEntity {
   status_id?: UUID;
   current_approval_step: number;
   submission_comment?: string;
+  /** ステータス */
+  status?: 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'expired';
 }
 
 // ================================
