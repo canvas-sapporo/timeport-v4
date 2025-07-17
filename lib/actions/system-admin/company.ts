@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import type { CreateCompanyInput, UpdateCompanyInput } from '@/types/company';
 
 export async function addCompany(form: CreateCompanyInput) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerActionClient({ cookies: () => cookieStore });
   const { data, error } = await supabase
     .from('companies')
@@ -16,7 +16,7 @@ export async function addCompany(form: CreateCompanyInput) {
 }
 
 export async function updateCompany(id: string, form: UpdateCompanyInput) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerActionClient({ cookies: () => cookieStore });
   const { data, error } = await supabase
     .from('companies')

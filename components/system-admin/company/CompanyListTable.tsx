@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Pencil, Trash2, Plus, Building2, CheckCircle2, HelpCircle, Search, Filter } from 'lucide-react';
 import type { Company } from '@/types/company';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { addCompany } from '@/lib/actions/system-admin/company';
@@ -132,6 +132,7 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
           <DialogContent>
             <DialogHeader>
               <DialogTitle>企業追加</DialogTitle>
+              <DialogDescription>新しい企業情報を入力してください。</DialogDescription>
             </DialogHeader>
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
@@ -290,6 +291,7 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
         <DialogContent>
           <DialogHeader>
             <DialogTitle>企業編集</DialogTitle>
+            <DialogDescription>企業情報を変更できます。</DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleEditSubmit}>
             <div>

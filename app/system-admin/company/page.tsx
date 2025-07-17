@@ -3,7 +3,9 @@ import { cookies } from 'next/headers';
 import CompanyListTable from '@/components/system-admin/company/CompanyListTable';
 
 export default async function CompanyListPage() {
-  const supabase = createServerComponentClient({ cookies: () => cookies() });
+  const cookieStore = await cookies();
+  const supabase = createServerComponentClient({ cookies: () => cookieStore }); // ✅ 関数でラップして渡す
+
   const { data: companies, error } = await supabase
     .from('companies')
     .select('*')
