@@ -1,22 +1,32 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import CompanyListTable from '@/components/system-admin/company/CompanyListTable';
+import { getCompanies, getCompanyStats } from '@/lib/actions/system-admin/company';
 
 export default async function CompanyListPage() {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
-  const { data: allCompanies, error } = await supabase
-    .from('companies')
-    .select('*'); // 全件取得
+  // 新しいServer Actionを使用してデータを取得
+  const companiesResult = await getCompanies();
+  const statsResult = await getCompanyStats();
 
-  if (error) {
-    return <div className="p-6 text-destructive">企業データの取得に失敗しました</div>;
+  if (!companiesResult.success) {
+    return <div className="p-6 text-destructive">企業データの取得に失敗しました: {companiesResult.error.message}</div>;
   }
 
-  const companies = (allCompanies ?? []).filter(c => !c.deleted_at);
-  const deletedCompanies = (allCompanies ?? []).filter(c => c.deleted_at);
-  const activeCompanyCount = companies.filter(c => c.is_active).length;
+  if (!statsResult.success) {
+    return <div className="p-6 text-destructive">統計データの取得に失敗しました: {statsResult.error.message}</div>;
+  }
 
-  return <CompanyListTable companies={companies} activeCompanyCount={activeCompanyCount} deletedCompanyCount={deletedCompanies.length} />;
+  const { companies, activeCount, deletedCount } = companiesResult.data;
+  const stats = statsResult.data;
+
+  return (
+    <CompanyListTable 
+      companies={companies} 
+      activeCompanyCount={activeCount} 
+      deletedCompanyCount={deletedCount} 
+    />
+  );
 }
