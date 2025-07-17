@@ -10,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Building, Settings, Save } from 'lucide-react';
 
+export * from "./request";
+
 export default function SystemAdminFeaturesPage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
