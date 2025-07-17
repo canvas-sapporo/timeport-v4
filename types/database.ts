@@ -197,6 +197,9 @@ export interface Request extends BaseEntity {
   submission_comment?: string;
   /** ステータス */
   status?: 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'expired';
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
 }
 
 // ================================
