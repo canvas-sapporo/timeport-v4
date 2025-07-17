@@ -47,16 +47,21 @@ export default function EditRequestTypePage() {
 
   const initialData: RequestType = {
     id: requestType.id,
+    company_id: requestType.company_id,
     name: requestType.name,
     description: requestType.description || '',
     code: requestType.code,
-    formFields: requestType.formFields.map((field: any) => ({
+    category: requestType.category,
+    form_config: requestType.form_config.map((field: any) => ({
       ...field,
       isNew: false
     })),
-    isActive: requestType.isActive,
-    createdAt: requestType.createdAt,
-    updatedAt: requestType.updatedAt
+    approval_flow: requestType.approval_flow,
+    default_status_id: requestType.default_status_id,
+    is_active: requestType.is_active,
+    display_order: requestType.display_order,
+    created_at: requestType.created_at,
+    updated_at: requestType.updated_at
   };
 
   const handleSave = async (data: RequestType) => {
