@@ -14,6 +14,9 @@ import { Label } from '@/components/ui/label';
 import { addCompany } from '@/lib/actions/system-admin/company';
 import { useRouter } from 'next/navigation';
 import { updateCompany } from '@/lib/actions/system-admin/company';
+import { deleteCompany } from '@/lib/actions/system-admin/company';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 export default function CompanyListTable({ companies, activeCompanyCount }: { companies: Company[]; activeCompanyCount: number }) {
   const [search, setSearch] = useState('');
@@ -41,6 +44,10 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
   });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -120,6 +127,21 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
       setEditError('企業の更新に失敗しました');
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await deleteCompany(deleteTarget.id);
+      setDeleteTarget(null);
+      router.refresh();
+    } catch (err) {
+      setDeleteError('企業の削除に失敗しました');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -278,9 +300,27 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
                       <Button variant="ghost" size="icon" className="mr-2" onClick={() => handleEditClick(company)}>
                         <Pencil size={16} />
                       </Button>
-                      <Button variant="ghost" size="icon">
-                        <Trash2 size={16} className="text-destructive" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeleteTarget(company)}
+                                disabled={company.is_active}
+                              >
+                                <Trash2 size={16} className="text-destructive" />
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          {company.is_active && (
+                            <TooltipContent>
+                              無効化しないと削除できません
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
                     </td>
                   </tr>
                 ))
@@ -329,6 +369,25 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* 削除ダイアログ */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>本当に削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              この操作は取り消せません。選択した企業「{deleteTarget?.name}」を削除します。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && <div className="text-destructive text-sm mb-2">{deleteError}</div>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteLoading} className="bg-destructive text-white hover:bg-destructive/80">
+              {deleteLoading ? '削除中...' : 'OK'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 

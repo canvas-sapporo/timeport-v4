@@ -26,4 +26,17 @@ export async function updateCompany(id: string, form: UpdateCompanyInput) {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function deleteCompany(id: string) {
+  const cookieStore = await cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const { data, error } = await supabase
+    .from('companies')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 } 
