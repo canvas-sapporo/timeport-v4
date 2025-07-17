@@ -92,7 +92,7 @@ export default function AdminRequestsPage() {
               </TableHeader>
               <TableBody>
                 {pendingRequests.map((request) => {
-                  const requestant = users.find(u => u.id === request.userId);
+                  const requestant = users.find(u => u.id === request.user_id);
                   return (
                     <TableRow key={request.id}>
                       <TableCell>{requestant?.name}</TableCell>
@@ -101,10 +101,10 @@ export default function AdminRequestsPage() {
                         {new Date(request.createdAt).toLocaleDateString('ja-JP')}
                       </TableCell>
                       <TableCell>
-                        {request.targetDate 
-                          ? new Date(request.targetDate).toLocaleDateString('ja-JP')
-                          : request.startDate 
-                          ? `${new Date(request.startDate).toLocaleDateString('ja-JP')} - ${new Date(request.endDate || request.startDate).toLocaleDateString('ja-JP')}`
+                        {request.target_date 
+                          ? new Date(request.target_date).toLocaleDateString('ja-JP')
+                          : request.start_date 
+                          ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date || request.start_date).toLocaleDateString('ja-JP')}`
                           : '-'
                         }
                       </TableCell>
@@ -136,8 +136,8 @@ export default function AdminRequestsPage() {
                                 <div>
                                   <div className="font-medium">申請内容</div>
                                   <div className="text-sm text-gray-600 space-y-1">
-                                    {request.formData
-                                      ? Object.entries(request.formData).map(([key, value]) => (
+                                    {request.form_data
+                                      ? Object.entries(request.form_data).map(([key, value]) => (
                                           <div key={key}>
                                             <span className="font-medium">{key}:</span> {value as string}
                                           </div>
@@ -224,8 +224,8 @@ export default function AdminRequestsPage() {
             </TableHeader>
             <TableBody>
               {allRequests.map((request) => {
-                const requestant = users.find(u => u.id === request.userId);
-                const approver = request.approvedBy ? users.find(u => u.id === request.approvedBy) : null;
+                const requestant = users.find(u => u.id === request.user_id);
+                const approver = request.approved_by ? users.find(u => u.id === request.approved_by) : null;
                 
                 return (
                   <TableRow key={request.id}>
@@ -235,10 +235,10 @@ export default function AdminRequestsPage() {
                       {new Date(request.createdAt).toLocaleDateString('ja-JP')}
                     </TableCell>
                     <TableCell>
-                      {request.targetDate 
-                        ? new Date(request.targetDate).toLocaleDateString('ja-JP')
-                        : request.startDate 
-                        ? `${new Date(request.startDate).toLocaleDateString('ja-JP')} - ${new Date(request.endDate || request.startDate).toLocaleDateString('ja-JP')}`
+                      {request.target_date 
+                        ? new Date(request.target_date).toLocaleDateString('ja-JP')
+                        : request.start_date 
+                        ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date || request.start_date).toLocaleDateString('ja-JP')}`
                         : '-'
                       }
                     </TableCell>

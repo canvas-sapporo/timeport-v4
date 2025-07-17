@@ -35,8 +35,8 @@ export default function MemberRequestsPage() {
     return null;
   }
 
-  const userRequests = requests.filter(r => r.userId === user.id);
-  const activeRequestTypes = requestTypes.filter(rt => rt.isActive);
+  const userRequests = requests.filter(r => r.user_id === user.id);
+  const activeRequestTypes = requestTypes.filter(rt => rt.is_active);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -58,14 +58,17 @@ export default function MemberRequestsPage() {
     if (!requestType) return;
 
     createRequest({
-      userId: user.id,
-      requestTypeId: selectedRequestType,
+      user_id: user.id,
+      request_type_id: selectedRequestType,
       title: requestType.name,
-      formData: formData,
-      targetDate: formData.targetDate,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      status: 'pending'
+      form_data: formData,
+      target_date: formData.target_date,
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      status: 'pending',
+      current_approval_step: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     });
 
     setIsCreateDialogOpen(false);
@@ -154,9 +157,9 @@ export default function MemberRequestsPage() {
               {selectedType && (
                 <div className="space-y-4">
                   <h3 className="font-medium">{selectedType.name}</h3>
-                  {selectedType.formFields
-                    .sort((a, b) => a.order - b.order)
-                    .map((field) => (
+                  {selectedType.form_config
+                    .sort((a: any, b: any) => a.order - b.order)
+                    .map((field: any) => (
                       <div key={field.id}>
                         <Label htmlFor={field.name}>
                           {field.label}
@@ -205,19 +208,20 @@ export default function MemberRequestsPage() {
                 <TableRow key={request.id}>
                   <TableCell>{request.title}</TableCell>
                   <TableCell>
-                    {new Date(request.createdAt).toLocaleDateString('ja-JP')}
+                    {request.created_at ? new Date(request.created_at).toLocaleDateString('ja-JP') : '-'}
                   </TableCell>
                   <TableCell>
-                    {request.targetDate 
-                      ? new Date(request.targetDate).toLocaleDateString('ja-JP')
-                      : request.startDate 
-                      ? `${new Date(request.startDate).toLocaleDateString('ja-JP')} - ${new Date(request.endDate || request.startDate).toLocaleDateString('ja-JP')}`
-                      : '-'
-                    }
+                    {request.target_date
+                      ? new Date(request.target_date).toLocaleDateString('ja-JP')
+                      : request.start_date && request.end_date
+                        ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date).toLocaleDateString('ja-JP')}`
+                        : request.start_date
+                          ? new Date(request.start_date).toLocaleDateString('ja-JP')
+                          : '-'}
                   </TableCell>
                   <TableCell>{getStatusBadge(request.status)}</TableCell>
                   <TableCell>
-                    {request.approvedBy ? '管理者' : '-'}
+                    {'-'}
                   </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm">

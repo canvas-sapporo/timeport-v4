@@ -102,7 +102,7 @@ export default function AdminDashboard() {
               </TableHeader>
               <TableBody>
                 {recentRequests.map((request) => {
-                  const requestant = users.find(u => u.id === request.userId);
+                  const requestant = users.find(u => u.id === request.user_id);
                   return (
                     <TableRow key={request.id}>
                       <TableCell>{requestant?.name}</TableCell>
