@@ -1,13 +1,27 @@
 "use server";
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import type { CreateCompanyInput } from '@/types/company';
+import type { CreateCompanyInput, UpdateCompanyInput } from '@/types/company';
 
 export async function addCompany(form: CreateCompanyInput) {
-  const supabase = createServerActionClient({ cookies });
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
   const { data, error } = await supabase
     .from('companies')
     .insert([form])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCompany(id: string, form: UpdateCompanyInput) {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const { data, error } = await supabase
+    .from('companies')
+    .update(form)
+    .eq('id', id)
     .select()
     .single();
   if (error) throw error;

@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { addCompany } from '@/lib/actions/system-admin/company';
 import { useRouter } from 'next/navigation';
+import { updateCompany } from '@/lib/actions/system-admin/company';
 
 export default function CompanyListTable({ companies, activeCompanyCount }: { companies: Company[]; activeCompanyCount: number }) {
   const [search, setSearch] = useState('');
@@ -28,6 +29,18 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
     phone: '',
     is_active: true,
   });
+
+  const [editOpen, setEditOpen] = useState(false); // 編集ダイアログの開閉
+  const [editTarget, setEditTarget] = useState<Company | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    code: '',
+    address: '',
+    phone: '',
+    is_active: true,
+  });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -65,6 +78,40 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
       alert('企業の追加に失敗しました');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 編集ボタン押下時
+  const handleEditClick = (company: Company) => {
+    setEditTarget(company);
+    setEditForm({
+      name: company.name,
+      code: company.code,
+      address: company.address || '',
+      phone: company.phone || '',
+      is_active: company.is_active,
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError(null);
+    if (!editForm.name.trim() || !editForm.code.trim()) {
+      setEditError('企業名と企業コードは必須です');
+      return;
+    }
+    setEditLoading(true);
+    try {
+      if (editTarget) {
+        await updateCompany(editTarget.id, editForm);
+        setEditOpen(false);
+        router.refresh();
+      }
+    } catch (err) {
+      setEditError('企業の更新に失敗しました');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -219,7 +266,7 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
                       )}
                     </td>
                     <td className="px-4 py-2 text-center">
-                      <Button variant="ghost" size="icon" className="mr-2">
+                      <Button variant="ghost" size="icon" className="mr-2" onClick={() => handleEditClick(company)}>
                         <Pencil size={16} />
                       </Button>
                       <Button variant="ghost" size="icon">
@@ -237,6 +284,41 @@ export default function CompanyListTable({ companies, activeCompanyCount }: { co
           </table>
         </div>
       </div>
+
+      {/* 編集ダイアログ */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>企業編集</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleEditSubmit}>
+            <div>
+              <Label htmlFor="edit-company-name">企業名<span className="text-red-500 ml-1">*</span></Label>
+              <Input id="edit-company-name" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} required />
+            </div>
+            <div>
+              <Label htmlFor="edit-company-code">企業コード<span className="text-red-500 ml-1">*</span></Label>
+              <Input id="edit-company-code" value={editForm.code} onChange={e => setEditForm(f => ({ ...f, code: e.target.value }))} required />
+            </div>
+            <div>
+              <Label htmlFor="edit-company-address">住所</Label>
+              <Input id="edit-company-address" value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor="edit-company-phone">電話番号</Label>
+              <Input id="edit-company-phone" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch id="edit-company-active" checked={editForm.is_active} onCheckedChange={v => setEditForm(f => ({ ...f, is_active: v }))} />
+              <Label htmlFor="edit-company-active">有効</Label>
+            </div>
+            {editError && <div className="text-destructive text-sm">{editError}</div>}
+            <Button type="submit" variant="timeport-primary" className="w-full" disabled={editLoading}>
+              {editLoading ? '更新中...' : '更新'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
