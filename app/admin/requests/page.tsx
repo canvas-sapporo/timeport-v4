@@ -42,7 +42,7 @@ export default function AdminRequestsPage() {
   const handleReject = (requestId: string) => {
     updateRequest(requestId, {
       status: 'rejected',
-      rejectionReason: rejectionReason || '管理者により却下されました'
+      rejection_reason: rejectionReason || '管理者により却下されました'
     });
     setRejectionReason('');
   };
@@ -61,7 +61,11 @@ export default function AdminRequestsPage() {
   };
 
   const pendingRequests = requests.filter(a => a.status === 'pending');
-  const allRequests = requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const allRequests = requests.sort((a, b) => {
+    const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return bTime - aTime;
+  });
 
   return (
     <div className="space-y-6">
@@ -98,15 +102,16 @@ export default function AdminRequestsPage() {
                       <TableCell>{requestant?.name}</TableCell>
                       <TableCell>{request.title}</TableCell>
                       <TableCell>
-                        {new Date(request.createdAt).toLocaleDateString('ja-JP')}
+                        {request.created_at ? new Date(request.created_at).toLocaleDateString('ja-JP') : '-'}
                       </TableCell>
                       <TableCell>
-                        {request.target_date 
+                        {request.target_date
                           ? new Date(request.target_date).toLocaleDateString('ja-JP')
-                          : request.start_date 
-                          ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date || request.start_date).toLocaleDateString('ja-JP')}`
-                          : '-'
-                        }
+                          : request.start_date && request.end_date
+                            ? `${typeof request.start_date === 'string' ? new Date(request.start_date).toLocaleDateString('ja-JP') : '-'} - ${typeof request.end_date === 'string' ? new Date(request.end_date).toLocaleDateString('ja-JP') : '-'}`
+                            : request.start_date && typeof request.start_date === 'string'
+                              ? new Date(request.start_date).toLocaleDateString('ja-JP')
+                              : '-'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
@@ -232,15 +237,16 @@ export default function AdminRequestsPage() {
                     <TableCell>{requestant?.name}</TableCell>
                     <TableCell>{request.title}</TableCell>
                     <TableCell>
-                      {new Date(request.createdAt).toLocaleDateString('ja-JP')}
+                      {request.created_at ? new Date(request.created_at).toLocaleDateString('ja-JP') : '-'}
                     </TableCell>
                     <TableCell>
-                      {request.target_date 
+                      {request.target_date
                         ? new Date(request.target_date).toLocaleDateString('ja-JP')
-                        : request.start_date 
-                        ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date || request.start_date).toLocaleDateString('ja-JP')}`
-                        : '-'
-                      }
+                        : request.start_date && request.end_date
+                          ? `${typeof request.start_date === 'string' ? new Date(request.start_date).toLocaleDateString('ja-JP') : '-'} - ${typeof request.end_date === 'string' ? new Date(request.end_date).toLocaleDateString('ja-JP') : '-'}`
+                          : request.start_date && typeof request.start_date === 'string'
+                            ? new Date(request.start_date).toLocaleDateString('ja-JP')
+                            : '-'}
                     </TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell>{approver?.name || '-'}</TableCell>
