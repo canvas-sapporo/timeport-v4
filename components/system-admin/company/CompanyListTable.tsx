@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Pencil, Trash2, Plus, Building2, CheckCircle2, HelpCircle, Search, Filter } from 'lucide-react';
+import { Pencil, Trash2, Plus, Building2, CheckCircle2, HelpCircle, Search, Filter, Eye, EyeOff } from 'lucide-react';
 import type { Company } from '@/types/company';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
@@ -18,11 +18,19 @@ import { deleteCompany } from '@/lib/actions/system-admin/company';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
+const steps = [
+  { label: '企業情報' },
+  { label: 'グループ情報' },
+  { label: '管理者ユーザー情報' },
+];
+
 export default function CompanyListTable({ companies, activeCompanyCount, deletedCompanyCount }: { companies: Company[]; activeCompanyCount: number; deletedCompanyCount: number }) {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [open, setOpen] = useState(false); // 追加ダイアログの開閉状態
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
 
   // 追加フォームの状態
   const [form, setForm] = useState({
@@ -31,7 +39,15 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
     address: '',
     phone: '',
     is_active: true,
+    admin_family_name: '',
+    admin_first_name: '',
+    admin_family_name_kana: '',
+    admin_first_name_kana: '',
+    admin_email: '',
+    admin_password: '',
+    group_name: '初期設定グループ',
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
   const [editOpen, setEditOpen] = useState(false); // 編集ダイアログの開閉
   const [editTarget, setEditTarget] = useState<Company | null>(null);
@@ -50,6 +66,58 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const router = useRouter();
+
+  // ステップごとのフォーム
+  const renderStep = () => {
+    switch (step) {
+      case 0:
+        return (
+          <>
+            <Label htmlFor="company-name">企業名<span className="text-red-500 ml-1">*</span></Label>
+            <Input id="company-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
+            <Label htmlFor="company-code">企業コード<span className="text-red-500 ml-1">*</span></Label>
+            <Input id="company-code" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} required />
+            <Label htmlFor="company-address">住所</Label>
+            <Input id="company-address" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+            <Label htmlFor="company-phone">電話番号</Label>
+            <Input id="company-phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+            <div className="flex items-center gap-2 mt-2">
+              <Switch id="company-active" checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
+              <Label htmlFor="company-active">有効</Label>
+            </div>
+          </>
+        );
+      case 1:
+        return (
+          <>
+            <Label htmlFor="group-name">初期グループ名<span className="text-red-500 ml-1">*</span></Label>
+            <Input id="group-name" value={form.group_name} onChange={e => setForm(f => ({ ...f, group_name: e.target.value }))} required />
+          </>
+        );
+      case 2:
+        return (
+          <>
+            <Label htmlFor="admin-family-name">管理者姓<span className="text-red-500 ml-1">*</span></Label>
+            <Input id="admin-family-name" value={form.admin_family_name} onChange={e => setForm(f => ({ ...f, admin_family_name: e.target.value }))} required />
+            <Label htmlFor="admin-family-name-kana">管理者姓カナ<span className="text-red-500 ml-1">*</span></Label>
+            <Input id="admin-family-name-kana" value={form.admin_family_name_kana} onChange={e => setForm(f => ({ ...f, admin_family_name_kana: e.target.value }))} required />
+            <Label htmlFor="admin-first-name">管理者名<span className="text-red-500 ml-1">*</span></Label>
+            <Input id="admin-first-name" value={form.admin_first_name} onChange={e => setForm(f => ({ ...f, admin_first_name: e.target.value }))} required />
+            <Label htmlFor="admin-first-name-kana">管理者名カナ<span className="text-red-500 ml-1">*</span></Label>
+            <Input id="admin-first-name-kana" value={form.admin_first_name_kana} onChange={e => setForm(f => ({ ...f, admin_first_name_kana: e.target.value }))} required />
+            <Label htmlFor="admin-email">管理者メールアドレス<span className="text-red-500 ml-1">*</span></Label>
+            <Input id="admin-email" type="email" value={form.admin_email} onChange={e => setForm(f => ({ ...f, admin_email: e.target.value }))} required />
+            <Label htmlFor="admin-password">管理者パスワード<span className="text-red-500 ml-1">*</span></Label>
+            <div className="relative">
+              <Input id="admin-password" type={showPassword ? 'text' : 'password'} value={form.admin_password} onChange={e => setForm(f => ({ ...f, admin_password: e.target.value }))} required minLength={8} />
+              <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowPassword(v => !v)} tabIndex={-1}>
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+          </>
+        );
+    }
+  };
 
   // ステータスでフィルタリング
   const filteredCompanies = useMemo(() => {
@@ -85,12 +153,50 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setFormError(null);
+    // バリデーション（最終ステップのみ）
+    if (!form.name.trim() || !form.code.trim()) {
+      setFormError('企業名と企業コードは必須です');
+      setLoading(false);
+      return;
+    }
+    if (!form.admin_family_name.trim() || !form.admin_first_name.trim()) {
+      setFormError('管理者の姓・名は必須です');
+      setLoading(false);
+      return;
+    }
+    if (!form.admin_family_name_kana.trim() || !form.admin_first_name_kana.trim()) {
+      setFormError('管理者の姓カナ・名カナは必須です');
+      setLoading(false);
+      return;
+    }
+    if (!form.admin_email.trim()) {
+      setFormError('管理者メールアドレスは必須です');
+      setLoading(false);
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(form.admin_email)) {
+      setFormError('メールアドレスの形式が正しくありません');
+      setLoading(false);
+      return;
+    }
+    if (!form.admin_password || form.admin_password.length < 8 || !/[a-zA-Z]/.test(form.admin_password) || !/\d/.test(form.admin_password)) {
+      setFormError('パスワードは8文字以上の英数字混在で入力してください');
+      setLoading(false);
+      return;
+    }
+    if (!form.group_name.trim()) {
+      setFormError('初期グループ名は必須です');
+      setLoading(false);
+      return;
+    }
     try {
       await addCompany(form);
       setOpen(false);
-      router.refresh(); // ← ここでリフレッシュ
+      setStep(0);
+      router.refresh();
     } catch (err) {
-      alert('企業の追加に失敗しました');
+      setFormError('企業の追加に失敗しました');
     } finally {
       setLoading(false);
     }
@@ -165,29 +271,23 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
               <DialogDescription>新しい企業情報を入力してください。</DialogDescription>
             </DialogHeader>
             <form className="space-y-4" onSubmit={handleSubmit}>
-              <div>
-                <Label htmlFor="company-name">企業名<span className="text-red-500 ml-1">*</span></Label>
-                <Input id="company-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
+              {/* Stepper表示 */}
+              <div className="flex mb-4">
+                {steps.map((s, i) => (
+                  <div key={i} className={`flex-1 text-center ${i === step ? 'font-bold' : ''}`}>{s.label}</div>
+                ))}
               </div>
-              <div>
-                <Label htmlFor="company-code">企業コード<span className="text-red-500 ml-1">*</span></Label>
-                <Input id="company-code" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} required />
+              {/* ステップごとのフォーム */}
+              {renderStep()}
+              {formError && <div className="text-destructive text-sm">{formError}</div>}
+              <div className="flex justify-between mt-6">
+                {step > 0 && <Button type="button" onClick={() => setStep(step - 1)} className="w-32">戻る</Button>}
+                <div className="flex-1" />
+                {step < steps.length - 1
+                  ? <Button type="button" onClick={() => setStep(step + 1)} className="w-32 ml-auto">次へ</Button>
+                  : <Button type="submit" variant="timeport-primary" className="w-32 ml-auto" disabled={loading}>{loading ? '追加中...' : '追加'}</Button>
+                }
               </div>
-              <div>
-                <Label htmlFor="company-address">住所</Label>
-                <Input id="company-address" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
-              </div>
-              <div>
-                <Label htmlFor="company-phone">電話番号</Label>
-                <Input id="company-phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="company-active" checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
-                <Label htmlFor="company-active">有効</Label>
-              </div>
-              <Button type="submit" variant="timeport-primary" className="w-full" disabled={loading}>
-                {loading ? '追加中...' : '追加'}
-              </Button>
             </form>
           </DialogContent>
         </Dialog>
