@@ -111,28 +111,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoggingOut(true);
 
     try {
-      // 少し待機してローディングアニメーションを表示
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
       // Supabaseでサインアウト
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error("Supabase signOut error:", error);
+      }
 
       // ユーザー状態をクリア
       setUser(null);
       localStorage.removeItem("auth-user");
 
-      // Next.jsのrouterを使用してスムーズに遷移
-      router.push("/login");
-
-      // 追加の待機時間でスムーズな遷移を確保
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // 直接window.locationを使用して確実にリダイレクト
+      window.location.href = "/login";
     } catch (error) {
       console.error("Logout error:", error);
-      // エラーが発生した場合は従来の方法を使用
+      // エラーが発生した場合も確実にリダイレクト
       window.location.href = "/login";
-    } finally {
-      setIsLoggingOut(false);
     }
+    // finallyブロックを削除 - リダイレクト後に状態管理は不要
   };
 
   return (
