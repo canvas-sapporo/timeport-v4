@@ -78,6 +78,7 @@ export default function CompanyCreateDialog({
         });
       } else {
         // エラーハンドリング
+        console.error('Server action error:', result.error);
         const error = result.error;
 
         if (error.validationErrors && error.validationErrors.length > 0) {
@@ -89,11 +90,14 @@ export default function CompanyCreateDialog({
           setFieldErrors(fieldErrorsMap);
         } else {
           // 一般的なエラー
-          setFormError(error.message);
+          setFormError(error.message || 'サーバーエラーが発生しました');
         }
       }
     } catch (err) {
-      setFormError('予期しないエラーが発生しました');
+      console.error('Unexpected error in createCompany:', err);
+      setFormError(
+        `予期しないエラーが発生しました: ${err instanceof Error ? err.message : 'Unknown error'}`
+      );
     } finally {
       setLoading(false);
     }

@@ -139,6 +139,8 @@ export async function withErrorHandling<T>(
     const result = await operation();
     return { success: true, data: result };
   } catch (error) {
+    console.error(`Error in ${context || 'operation'}:`, error);
+
     if (error instanceof AppError) {
       return { success: false, error };
     }

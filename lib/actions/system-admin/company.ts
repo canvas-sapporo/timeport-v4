@@ -29,10 +29,19 @@ import {
 } from '@/lib/utils/error-handling';
 import type { ValidationError } from '@/types/common';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// 環境変数の確認
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) {
+  console.error('NEXT_PUBLIC_SUPABASE_URL is not set');
+}
+
+if (!serviceRoleKey) {
+  console.error('SUPABASE_SERVICE_ROLE_KEY is not set');
+}
+
+const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
 
 // ================================
 // バリデーション関数
@@ -151,6 +160,17 @@ async function checkEmailExists(email: string): Promise<boolean> {
 export async function createCompany(
   form: CreateCompanyFormData
 ): Promise<{ success: true; data: CreateCompanyResult } | { success: false; error: AppError }> {
+  console.log('createCompany called with form:', { ...form, admin_password: '[REDACTED]' });
+
+  // 環境変数の確認
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Required environment variables are not set');
+    return {
+      success: false,
+      error: new AppError('環境変数が正しく設定されていません', 'ENV_ERROR', 500),
+    };
+  }
+
   return withErrorHandling(async () => {
     // バリデーション
     const validation = validateCreateCompanyForm(form);
@@ -171,6 +191,14 @@ export async function createCompany(
     }
 
     // 1. 企業作成
+    console.log('Creating company with data:', {
+      name: form.name,
+      code: form.code,
+      address: form.address,
+      phone: form.phone,
+      is_active: form.is_active,
+    });
+
     const { data: company, error: companyError } = await supabaseAdmin
       .from('companies')
       .insert([
@@ -186,8 +214,11 @@ export async function createCompany(
       .single();
 
     if (companyError) {
+      console.error('Company creation error:', companyError);
       throw AppError.fromSupabaseError(companyError, '企業作成');
     }
+
+    console.log('Company created successfully:', company);
 
     // 2. グループ作成
     const { data: group, error: groupError } = await supabaseAdmin
