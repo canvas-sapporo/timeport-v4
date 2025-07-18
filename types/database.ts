@@ -64,7 +64,7 @@ export interface UserProfile extends BaseEntity {
   first_name: string;
   family_name: string;
   email: string;
-  role: 'system_admin' | 'admin' | 'member';
+  role: 'system-admin' | 'admin' | 'member';
   primary_group_id?: UUID;
   employment_type_id?: UUID;
   work_start_date?: DateString;

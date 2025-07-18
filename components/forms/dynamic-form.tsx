@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { FormField, RequestType } from '@/types';
+import { RequestType } from '@/types';
+import { FormFieldConfig } from '@/types/request';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,51 +22,62 @@ interface DynamicFormProps {
 }
 
 // バリデーションルールからZodスキーマを生成
-const createValidationSchema = (fields: FormField[]) => {
+const createValidationSchema = (fields: FormFieldConfig[]) => {
   const schemaFields: Record<string, z.ZodTypeAny> = {};
 
   fields.forEach((field) => {
     let fieldSchema: z.ZodTypeAny;
 
+    // バリデーションルールを抽出（fieldごとに）
+    const minLengthRule = field.validation_rules.find((r) => r.type === 'minLength');
+    const maxLengthRule = field.validation_rules.find((r) => r.type === 'maxLength');
+    const patternRule = field.validation_rules.find((r) => r.type === 'pattern');
+    const minValueRule = field.validation_rules.find((r) => r.type === 'min');
+    const maxValueRule = field.validation_rules.find((r) => r.type === 'max');
+    const emailRule = field.validation_rules.find((r) => r.type === 'email');
+    const telRule = field.validation_rules.find((r) => r.type === 'tel');
+
     switch (field.type) {
       case 'email':
-        fieldSchema = z.string().email(field.validationRules.customMessage || '正しいメールアドレスを入力してください');
+        fieldSchema = z.string().email(emailRule?.message || '正しいメールアドレスを入力してください');
         break;
       case 'number':
         fieldSchema = z.coerce.number();
-        if (field.validationRules.minValue !== undefined) {
-          fieldSchema = (fieldSchema as z.ZodNumber).min(field.validationRules.minValue);
+        if (minValueRule) {
+          fieldSchema = (fieldSchema as z.ZodNumber).min(Number(minValueRule.value), minValueRule.message);
         }
-        if (field.validationRules.maxValue !== undefined) {
-          fieldSchema = (fieldSchema as z.ZodNumber).max(field.validationRules.maxValue);
+        if (maxValueRule) {
+          fieldSchema = (fieldSchema as z.ZodNumber).max(Number(maxValueRule.value), maxValueRule.message);
         }
         break;
-      case 'tel':
+      case 'tel': {
         let telSchema: z.ZodString = z.string();
-        if (field.validationRules.pattern) {
+        if (patternRule) {
           telSchema = telSchema.regex(
-            new RegExp(field.validationRules.pattern),
-            field.validationRules.customMessage || '正しい形式で入力してください'
+            new RegExp(String(patternRule.value)),
+            patternRule.message || '正しい形式で入力してください'
           );
         }
         fieldSchema = telSchema;
         break;
-      default:
+      }
+      default: {
         let strSchema: z.ZodString = z.string();
-        if (field.validationRules.minLength) {
-          strSchema = strSchema.min(field.validationRules.minLength);
+        if (minLengthRule) {
+          strSchema = strSchema.min(Number(minLengthRule.value), minLengthRule.message);
         }
-        if (field.validationRules.maxLength) {
-          strSchema = strSchema.max(field.validationRules.maxLength);
+        if (maxLengthRule) {
+          strSchema = strSchema.max(Number(maxLengthRule.value), maxLengthRule.message);
         }
-        if (field.validationRules.pattern) {
+        if (patternRule) {
           strSchema = strSchema.regex(
-            new RegExp(field.validationRules.pattern),
-            field.validationRules.customMessage || '正しい形式で入力してください'
+            new RegExp(String(patternRule.value)),
+            patternRule.message || '正しい形式で入力してください'
           );
         }
         fieldSchema = strSchema;
         break;
+      }
     }
 
     if (!field.required) {
@@ -85,7 +97,7 @@ const DynamicFormField = ({
   setValue, 
   watch 
 }: { 
-  field: FormField;
+  field: FormFieldConfig;
   register: any;
   errors: any;
   setValue: any;
@@ -176,7 +188,7 @@ const DynamicFormField = ({
       {renderField()}
       {error && (
         <p className="text-sm text-red-500">
-          {error.message || field.validationRules.customMessage || 'この項目は必須です'}
+          {error.message || field.validation_rules.find(r => r.type === 'required')?.message || 'この項目は必須です'}
         </p>
       )}
     </div>
@@ -184,7 +196,7 @@ const DynamicFormField = ({
 };
 
 export default function DynamicForm({ requestType, onSubmitAction, isLoading }: DynamicFormProps) {
-  const sortedFields = [...requestType.formFields].sort((a, b) => a.order - b.order);
+  const sortedFields = [...requestType.form_config].sort((a, b) => a.order - b.order);
   const validationSchema = createValidationSchema(sortedFields);
 
   const {

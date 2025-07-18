@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
-import { useData } from '@/contexts/data-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { User, Building, MapPin, Calendar } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { useData } from "@/contexts/data-context";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { User, Building, MapPin, Calendar } from "lucide-react";
 
 export default function MemberProfilePage() {
   const { user } = useAuth();
@@ -16,39 +16,36 @@ export default function MemberProfilePage() {
   const { users, groups } = useData();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-    name: '',
-    email: ''
+    name: "",
+    email: "",
   });
 
   useEffect(() => {
-    if (!user || user.role !== 'member') {
-      router.push('/login');
+    if (!user || user.role !== "member") {
+      router.push("/login");
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'member') {
+  if (!user || user.role !== "member") {
     return null;
   }
 
-  const userDetails = users.find(u => u.id === user.id);
-  const userGroup = groups.find(g => g.id === user.groupId);
-  
+  const userDetails = users.find((u) => u.id === user.id);
+  const userGroup = groups.find((g) => g.id === user.primary_group_id);
+
   const getGroupPath = (groupId: string) => {
-    const group = groups.find(g => g.id === groupId);
-    if (!group) return '';
-    
-    const pathParts = group.path.split('/').filter(Boolean);
-    return pathParts.map((id: string) => {
-      const g = groups.find(gr => gr.id === id);
-      return g?.name || '';
-    }).join(' > ');
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return "";
+    return group.name;
   };
 
   const handleEdit = () => {
     setEditData({
-      name: userDetails?.name || '',
-      email: userDetails?.email || ''
+      name: userDetails
+        ? `${userDetails.family_name} ${userDetails.first_name}`
+        : "",
+      email: userDetails?.email || "",
     });
     setIsEditing(true);
   };
@@ -84,10 +81,16 @@ export default function MemberProfilePage() {
                 <Input
                   id="name"
                   value={editData.name}
-                  onChange={(e) => setEditData(prev => ({...prev, name: e.target.value}))}
+                  onChange={(e) =>
+                    setEditData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                 />
               ) : (
-                <div className="mt-1 text-sm text-gray-900">{userDetails?.name}</div>
+                <div className="mt-1 text-sm text-gray-900">
+                  {userDetails
+                    ? `${userDetails.family_name} ${userDetails.first_name}`
+                    : "-"}
+                </div>
               )}
             </div>
 
@@ -98,33 +101,49 @@ export default function MemberProfilePage() {
                   id="email"
                   type="email"
                   value={editData.email}
-                  onChange={(e) => setEditData(prev => ({...prev, email: e.target.value}))}
+                  onChange={(e) =>
+                    setEditData((prev) => ({ ...prev, email: e.target.value }))
+                  }
                 />
               ) : (
-                <div className="mt-1 text-sm text-gray-900">{userDetails?.email}</div>
+                <div className="mt-1 text-sm text-gray-900">
+                  {userDetails?.email}
+                </div>
               )}
             </div>
 
             <div>
               <Label>社員番号</Label>
-              <div className="mt-1 text-sm text-gray-900">{userDetails?.employeeId}</div>
+              <div className="mt-1 text-sm text-gray-900">
+                {userDetails?.code || "-"}
+              </div>
             </div>
 
             <div>
               <Label>入社日</Label>
               <div className="mt-1 text-sm text-gray-900">
-                {userDetails?.hireDate ? new Date(userDetails.hireDate).toLocaleDateString('ja-JP') : '-'}
+                {userDetails?.work_start_date
+                  ? new Date(userDetails.work_start_date).toLocaleDateString(
+                      "ja-JP",
+                    )
+                  : "-"}
               </div>
             </div>
 
             <div className="flex space-x-2">
               {isEditing ? (
                 <>
-                  <Button onClick={handleSave} size="sm">保存</Button>
-                  <Button onClick={handleCancel} variant="outline" size="sm">キャンセル</Button>
+                  <Button onClick={handleSave} size="sm">
+                    保存
+                  </Button>
+                  <Button onClick={handleCancel} variant="outline" size="sm">
+                    キャンセル
+                  </Button>
                 </>
               ) : (
-                <Button onClick={handleEdit} size="sm">編集</Button>
+                <Button onClick={handleEdit} size="sm">
+                  編集
+                </Button>
               )}
             </div>
           </CardContent>
@@ -140,8 +159,12 @@ export default function MemberProfilePage() {
           <CardContent className="space-y-4">
             <div>
               <Label>所属グループ</Label>
-              <div className="mt-1 text-sm text-gray-900">{getGroupPath(user.groupId)}</div>
-              <div className="mt-1 text-xs text-gray-500">{userGroup?.description}</div>
+              <div className="mt-1 text-sm text-gray-900">
+                {getGroupPath(user.primary_group_id || "")}
+              </div>
+              <div className="mt-1 text-xs text-gray-500">
+                {userGroup?.description}
+              </div>
             </div>
 
             <div>
@@ -152,7 +175,7 @@ export default function MemberProfilePage() {
             <div>
               <Label>ステータス</Label>
               <div className="mt-1 text-sm text-gray-900">
-                {userDetails?.isActive ? '有効' : '無効'}
+                {userDetails?.is_active ? "有効" : "無効"}
               </div>
             </div>
           </CardContent>

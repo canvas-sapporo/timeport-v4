@@ -6,11 +6,11 @@ export const loginUser = async (
   password: string,
 ): Promise<{
   id: string;
-  employeeId: string;
-  name: string;
+  employee_id: string;
+  full_name: string;
   email: string;
   role: "system-admin" | "admin" | "member";
-  groupId: string;
+  primary_group_id: string;
 } | null> => {
   try {
     console.log("ログイン開始:", email);
@@ -79,11 +79,11 @@ export const loginUser = async (
 
     const result = {
       id: profileData.id,
-      employeeId: profileData.code || "",
-      name: `${profileData.family_name} ${profileData.first_name}`,
+      employee_id: profileData.code || "",
+      full_name: `${profileData.family_name} ${profileData.first_name}`,
       email: profileData.email,
       role: profileData.role as "system-admin" | "admin" | "member",
-      groupId: groupData?.group_id || "",
+      primary_group_id: groupData?.group_id || "",
     };
 
     console.log("ログイン成功:", result);

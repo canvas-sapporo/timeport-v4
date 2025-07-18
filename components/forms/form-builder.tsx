@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { FormField, ValidationRules, RequestType } from '@/types';
+import { RequestType } from '@/types';
+import { FormFieldConfig, ValidationRule } from '@/types/request';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,14 +40,14 @@ const fieldTypeOptions = [
 ];
 
 interface ValidationModalProps {
-  field: FormField;
+  field: FormFieldConfig;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (fieldId: string, validationRules: ValidationRules, options?: string[]) => void;
+  onSave: (fieldId: string, validationRules: ValidationRule[], options?: string[]) => void;
 }
 
 const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProps) => {
-  const [validationRules, setValidationRules] = useState<ValidationRules>(field.validationRules || {});
+  const [validationRules, setValidationRules] = useState<ValidationRule[]>(field.validation_rules || []);
   const [options, setOptions] = useState<string[]>(field.options || []);
   const [optionsText, setOptionsText] = useState(field.options?.join('\n') || '');
 
@@ -87,22 +88,20 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
                   <Label>最小文字数</Label>
                   <Input 
                     type="number" 
-                    value={validationRules.minLength || ''}
-                    onChange={(e) => setValidationRules(prev => ({
-                      ...prev,
-                      min_length: e.target.value ? parseInt(e.target.value) : undefined
-                    }))}
+                    value={validationRules.find(r => r.type === 'minLength')?.value || ''}
+                    onChange={(e) => setValidationRules(prev => prev.map(r => 
+                      r.type === 'minLength' ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined } : r
+                    ))}
                   />
                 </div>
                 <div>
                   <Label>最大文字数</Label>
                   <Input 
                     type="number" 
-                    value={validationRules.maxLength || ''}
-                    onChange={(e) => setValidationRules(prev => ({
-                      ...prev,
-                      max_length: e.target.value ? parseInt(e.target.value) : undefined
-                    }))}
+                    value={validationRules.find(r => r.type === 'maxLength')?.value || ''}
+                    onChange={(e) => setValidationRules(prev => prev.map(r => 
+                      r.type === 'maxLength' ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined } : r
+                    ))}
                   />
                 </div>
               </div>
@@ -110,12 +109,11 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
               <div>
                 <Label>正規表現パターン</Label>
                 <Input 
-                  value={validationRules.pattern || ''}
+                  value={validationRules.find(r => r.type === 'pattern')?.value || ''}
                   placeholder="例: ^[0-9]+$"
-                  onChange={(e) => setValidationRules(prev => ({
-                    ...prev,
-                    pattern: e.target.value || undefined
-                  }))}
+                  onChange={(e) => setValidationRules(prev => prev.map(r => 
+                    r.type === 'pattern' ? { ...r, value: e.target.value || undefined } : r
+                  ))}
                 />
               </div>
             </>
@@ -128,22 +126,20 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
                 <Label>最小値</Label>
                 <Input 
                   type="number" 
-                  value={validationRules.minValue || ''}
-                  onChange={(e) => setValidationRules(prev => ({
-                    ...prev,
-                    min_value: e.target.value ? parseInt(e.target.value) : undefined
-                  }))}
+                  value={validationRules.find(r => r.type === 'min')?.value || ''}
+                  onChange={(e) => setValidationRules(prev => prev.map(r => 
+                    r.type === 'min' ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined } : r
+                  ))}
                 />
               </div>
               <div>
                 <Label>最大値</Label>
                 <Input 
                   type="number" 
-                  value={validationRules.maxValue || ''}
-                  onChange={(e) => setValidationRules(prev => ({
-                    ...prev,
-                    max_value: e.target.value ? parseInt(e.target.value) : undefined
-                  }))}
+                  value={validationRules.find(r => r.type === 'max')?.value || ''}
+                  onChange={(e) => setValidationRules(prev => prev.map(r => 
+                    r.type === 'max' ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined } : r
+                  ))}
                 />
               </div>
             </div>
@@ -166,12 +162,11 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
           <div>
             <Label>カスタムエラーメッセージ</Label>
             <Input 
-              value={validationRules.customMessage || ''}
+              value={validationRules.find(r => r.type === 'custom')?.value || ''}
               placeholder="エラー時に表示するメッセージ"
-              onChange={(e) => setValidationRules(prev => ({
-                ...prev,
-                custom_message: e.target.value || undefined
-              }))}
+              onChange={(e) => setValidationRules(prev => prev.map(r => 
+                r.type === 'custom' ? { ...r, value: e.target.value || undefined } : r
+              ))}
             />
           </div>
         </div>
@@ -192,48 +187,44 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
       name: '',
       description: '',
       code: '',
-      formFields: [],
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      deletedAt: undefined,
+      form_config: [],
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: undefined,
+      company_id: '',
+      category: '',
+      approval_flow: [],
+      display_order: 0,
     }
   );
-  const [selectedField, setSelectedField] = useState<FormField | null>(null);
+  const [selectedField, setSelectedField] = useState<FormFieldConfig | null>(null);
   const [validationModalOpen, setValidationModalOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
 
   const addField = () => {
-    const newField: FormField = {
+    const newField: FormFieldConfig = {
       id: `field_${Date.now()}`,
-      name: `field_${formData.formFields.length + 1}`,
+      name: `field_${formData.form_config.length + 1}`,
       type: 'text',
       label: '',
       placeholder: '',
       required: false,
-      validationRules: {
-        id: '',
-        createdAt: '',
-        updatedAt: '',
-        deletedAt: '',
-      },
+      validation_rules: [], // 初期値を空の配列に変更
       options: [],
-      order: formData.formFields.length + 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      deletedAt: '',
+      order: formData.form_config.length + 1,
     };
 
     setFormData(prev => ({
       ...prev,
-      formFields: [...prev.formFields, newField]
+      form_config: [...prev.form_config, newField]
     }));
   };
 
-  const updateField = (fieldId: string, key: keyof FormField, value: any) => {
+  const updateField = (fieldId: string, key: keyof FormFieldConfig, value: any) => {
     setFormData(prev => ({
       ...prev,
-      formFields: prev.formFields.map(field => 
+      form_config: prev.form_config.map(field => 
         field.id === fieldId ? { ...field, [key]: value } : field
       )
     }));
@@ -242,26 +233,26 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
   const removeField = (fieldId: string) => {
     setFormData(prev => ({
       ...prev,
-      formFields: prev.formFields.filter(field => field.id !== fieldId)
+      form_config: prev.form_config.filter(field => field.id !== fieldId)
     }));
   };
 
   const openValidationModal = (fieldId: string) => {
-    const field = formData.formFields.find(f => f.id === fieldId);
+    const field = formData.form_config.find(f => f.id === fieldId);
     if (field) {
       setSelectedField(field);
       setValidationModalOpen(true);
     }
   };
 
-  const saveValidationRules = (fieldId: string, validationRules: ValidationRules, options?: string[]) => {
+  const saveValidationRules = (fieldId: string, validationRules: ValidationRule[], options?: string[]) => {
     setFormData(prev => ({
       ...prev,
-      formFields: prev.formFields.map(field => 
+      form_config: prev.form_config.map(field => 
         field.id === fieldId 
           ? { 
               ...field, 
-              validationRules: validationRules,
+              validation_rules: validationRules,
               options: options || field.options
             } 
           : field
@@ -281,13 +272,13 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
       return;
     }
 
-    if (formData.formFields.length === 0) {
+    if (formData.form_config.length === 0) {
       alert('少なくとも1つの項目を追加してください');
       return;
     }
 
     // 項目名の重複チェック
-    const fieldNames = formData.formFields.map(f => f.name);
+    const fieldNames = formData.form_config.map(f => f.name);
     const duplicateNames = fieldNames.filter((name, index) => fieldNames.indexOf(name) !== index);
     if (duplicateNames.length > 0) {
       alert('項目名が重複しています');
@@ -297,15 +288,19 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
     onSaveAction(formData);
   };
 
-  const previewRequestType = {
+  const previewRequestType: RequestType = {
     id: 'preview',
     code: formData.code,
     name: formData.name,
     description: formData.description,
-    formFields: formData.formFields,
-    isActive: formData.isActive,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    form_config: formData.form_config,
+    is_active: formData.is_active,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    company_id: '',
+    category: '',
+    approval_flow: [],
+    display_order: 0,
   };
 
   return (
@@ -361,7 +356,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {formData.formFields.length === 0 ? (
+          {formData.form_config.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               項目を追加してください
             </div>
@@ -377,7 +372,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {formData.formFields.map((field) => (
+                {formData.form_config.map((field) => (
                   <TableRow key={field.id}>
                     <TableCell>
                       <Input
@@ -440,7 +435,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
       </Card>
 
       {/* プレビュー */}
-      {formData.formFields.length > 0 && (
+      {formData.form_config.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
@@ -471,7 +466,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
             <div className="border rounded-lg p-4 bg-gray-50">
               <h3 className="font-medium mb-4">{formData.name || '申請名'}</h3>
               <div className="space-y-3">
-                {formData.formFields.slice(0, 3).map((field) => (
+                {formData.form_config.slice(0, 3).map((field) => (
                   <div key={field.id}>
                     <Label>
                       {field.label || '項目名'}
@@ -484,9 +479,9 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
                     </div>
                   </div>
                 ))}
-                {formData.formFields.length > 3 && (
+                {formData.form_config.length > 3 && (
                   <div className="text-sm text-gray-500">
-                    他 {formData.formFields.length - 3} 項目...
+                    他 {formData.form_config.length - 3} 項目...
                   </div>
                 )}
               </div>

@@ -8,7 +8,7 @@ DROP POLICY IF EXISTS "users_can_read_own_profile" ON user_profiles;
 DROP POLICY IF EXISTS "users_can_update_own_profile" ON user_profiles;
 DROP POLICY IF EXISTS "admin_manage_user_profiles" ON user_profiles;
 DROP POLICY IF EXISTS "member_manage_own_profile" ON user_profiles;
-DROP POLICY IF EXISTS "system_admin_manage_all_profiles" ON user_profiles;
+DROP POLICY IF EXISTS "system-admin_manage_all_profiles" ON user_profiles;
 DROP POLICY IF EXISTS "admin_manage_all_profiles" ON user_profiles;
 
 -- ================================

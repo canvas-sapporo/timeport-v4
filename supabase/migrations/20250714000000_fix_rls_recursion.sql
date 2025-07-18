@@ -19,7 +19,7 @@ ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
 -- ================================
 
 -- companiesテーブルのポリシーを修正
-DROP POLICY IF EXISTS "system_admin_manage_companies" ON companies;
+DROP POLICY IF EXISTS "system-admin_manage_companies" ON companies;
 DROP POLICY IF EXISTS "admin_read_companies" ON companies;
 DROP POLICY IF EXISTS "member_read_companies" ON companies;
 
@@ -81,7 +81,7 @@ CREATE POLICY "users_can_update_own_profile" ON user_profiles
   WITH CHECK (id = auth.uid());
 
 -- システム管理者は全ユーザーのプロフィールを管理可能
-CREATE POLICY "system_admin_manage_all_profiles" ON user_profiles
+CREATE POLICY "system-admin_manage_all_profiles" ON user_profiles
   FOR ALL
   TO authenticated
   USING (

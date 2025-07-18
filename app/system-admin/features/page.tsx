@@ -1,15 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Settings, Save, Building } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Settings, Save, Building } from "lucide-react";
 
 export default function SuperAdminFeaturesPage() {
   const { user } = useAuth();
@@ -19,8 +26,8 @@ export default function SuperAdminFeaturesPage() {
   // Mock feature settings for companies
   const [companyFeatures, setCompanyFeatures] = useState([
     {
-      companyId: '1',
-      companyName: '株式会社TimePort',
+      companyId: "1",
+      companyName: "株式会社TimePort",
       features: {
         attendance: true,
         requests: true,
@@ -28,35 +35,39 @@ export default function SuperAdminFeaturesPage() {
         organizationManagement: true,
         analytics: false,
         mobileApp: true,
-        apiAccess: false
-      }
-    }
+        apiAccess: false,
+      },
+    },
   ]);
 
   useEffect(() => {
-    if (!user || user.role !== 'system-admin') {
-      router.push('/login');
+    if (!user || user.role !== "system-admin") {
+      router.push("/login");
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'system-admin') {
+  if (!user || user.role !== "system-admin") {
     return null;
   }
 
-  const handleFeatureToggle = (companyId: string, featureKey: string, enabled: boolean) => {
-    setCompanyFeatures(prev => 
-      prev.map(company => 
-        company.companyId === companyId 
+  const handleFeatureToggle = (
+    companyId: string,
+    featureKey: string,
+    enabled: boolean,
+  ) => {
+    setCompanyFeatures((prev) =>
+      prev.map((company) =>
+        company.companyId === companyId
           ? {
               ...company,
               features: {
                 ...company.features,
-                [featureKey]: enabled
-              }
+                [featureKey]: enabled,
+              },
             }
-          : company
-      )
+          : company,
+      ),
     );
   };
 
@@ -64,21 +75,49 @@ export default function SuperAdminFeaturesPage() {
     setIsLoading(true);
     try {
       // In a real app, this would save to backend
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Saving feature settings...', companyFeatures);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log("Saving feature settings...", companyFeatures);
     } finally {
       setIsLoading(false);
     }
   };
 
   const featureDefinitions = [
-    { key: 'attendance', name: '勤怠管理', description: '出退勤打刻、勤怠履歴管理' },
-    { key: 'requests', name: '申請機能', description: '各種申請の作成・承認機能' },
-    { key: 'userManagement', name: 'ユーザー管理', description: 'ユーザーアカウントの管理' },
-    { key: 'organizationManagement', name: '組織管理', description: '部署・勤務地の管理' },
-    { key: 'analytics', name: '分析機能', description: '勤怠データの分析・レポート' },
-    { key: 'mobileApp', name: 'モバイルアプリ', description: 'スマートフォンアプリの利用' },
-    { key: 'apiAccess', name: 'API連携', description: '外部システムとのAPI連携' }
+    {
+      key: "attendance",
+      name: "勤怠管理",
+      description: "出退勤打刻、勤怠履歴管理",
+    },
+    {
+      key: "requests",
+      name: "申請機能",
+      description: "各種申請の作成・承認機能",
+    },
+    {
+      key: "userManagement",
+      name: "ユーザー管理",
+      description: "ユーザーアカウントの管理",
+    },
+    {
+      key: "organizationManagement",
+      name: "組織管理",
+      description: "部署・勤務地の管理",
+    },
+    {
+      key: "analytics",
+      name: "分析機能",
+      description: "勤怠データの分析・レポート",
+    },
+    {
+      key: "mobileApp",
+      name: "モバイルアプリ",
+      description: "スマートフォンアプリの利用",
+    },
+    {
+      key: "apiAccess",
+      name: "API連携",
+      description: "外部システムとのAPI連携",
+    },
   ];
 
   return (
@@ -88,7 +127,11 @@ export default function SuperAdminFeaturesPage() {
           <h1 className="text-2xl font-bold text-gray-900">機能管理</h1>
           <p className="text-gray-600">各企業の機能利用設定を管理します</p>
         </div>
-        <Button onClick={handleSaveSettings} disabled={isLoading} variant="timeport-primary">
+        <Button
+          onClick={handleSaveSettings}
+          disabled={isLoading}
+          variant="timeport-primary"
+        >
           <Save className="w-4 h-4 mr-2" />
           設定保存
         </Button>
@@ -115,17 +158,43 @@ export default function SuperAdminFeaturesPage() {
               <TableBody>
                 {featureDefinitions.map((feature) => (
                   <TableRow key={feature.key}>
-                    <TableCell className="font-medium">{feature.name}</TableCell>
-                    <TableCell className="text-sm text-gray-600">{feature.description}</TableCell>
+                    <TableCell className="font-medium">
+                      {feature.name}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {feature.description}
+                    </TableCell>
                     <TableCell>
-                      <Badge variant={company.features[feature.key as keyof typeof company.features] ? "default" : "secondary"}>
-                        {company.features[feature.key as keyof typeof company.features] ? '有効' : '無効'}
+                      <Badge
+                        variant={
+                          company.features[
+                            feature.key as keyof typeof company.features
+                          ]
+                            ? "default"
+                            : "secondary"
+                        }
+                      >
+                        {company.features[
+                          feature.key as keyof typeof company.features
+                        ]
+                          ? "有効"
+                          : "無効"}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Switch
-                        checked={company.features[feature.key as keyof typeof company.features]}
-                        onCheckedChange={(checked) => handleFeatureToggle(company.companyId, feature.key, checked)}
+                        checked={
+                          company.features[
+                            feature.key as keyof typeof company.features
+                          ]
+                        }
+                        onCheckedChange={(checked) =>
+                          handleFeatureToggle(
+                            company.companyId,
+                            feature.key,
+                            checked,
+                          )
+                        }
                       />
                     </TableCell>
                   </TableRow>
@@ -147,8 +216,15 @@ export default function SuperAdminFeaturesPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {featureDefinitions.map((feature) => {
-              const enabledCount = companyFeatures.reduce((count, company) => 
-                count + (company.features[feature.key as keyof typeof company.features] ? 1 : 0), 0
+              const enabledCount = companyFeatures.reduce(
+                (count, company) =>
+                  count +
+                  (company.features[
+                    feature.key as keyof typeof company.features
+                  ]
+                    ? 1
+                    : 0),
+                0,
               );
               const totalCount = companyFeatures.length;
               const percentage = Math.round((enabledCount / totalCount) * 100);
@@ -163,8 +239,8 @@ export default function SuperAdminFeaturesPage() {
                     {enabledCount}/{totalCount} 企業で利用中
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
+                    <div
+                      className="bg-blue-600 h-2 rounded-full"
                       style={{ width: `${percentage}%` }}
                     ></div>
                   </div>

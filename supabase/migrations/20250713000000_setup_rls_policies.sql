@@ -7,7 +7,7 @@
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 
 -- system-admin: w (書き込み権限)
-CREATE POLICY "system_admin_manage_companies" ON companies
+CREATE POLICY "system-admin_manage_companies" ON companies
   FOR ALL
   TO authenticated
   USING (
@@ -505,7 +505,7 @@ CREATE POLICY "member_read_validations" ON validations
 ALTER TABLE features ENABLE ROW LEVEL SECURITY;
 
 -- system-admin: r (読み取り権限)
-CREATE POLICY "system_admin_read_features" ON features
+CREATE POLICY "system-admin_read_features" ON features
   FOR SELECT
   TO authenticated
   USING (
@@ -522,7 +522,7 @@ CREATE POLICY "system_admin_read_features" ON features
 ALTER TABLE feature_companies ENABLE ROW LEVEL SECURITY;
 
 -- system-admin: r (読み取り権限)
-CREATE POLICY "system_admin_read_feature_companies" ON feature_companies
+CREATE POLICY "system-admin_read_feature_companies" ON feature_companies
   FOR SELECT
   TO authenticated
   USING (
@@ -537,7 +537,7 @@ CREATE POLICY "system_admin_read_feature_companies" ON feature_companies
 -- 18. notifications テーブル
 -- ================================
 -- system-admin: r (読み取り権限)
-CREATE POLICY "system_admin_read_notifications" ON notifications
+CREATE POLICY "system-admin_read_notifications" ON notifications
   FOR SELECT
   TO authenticated
   USING (
@@ -579,7 +579,7 @@ CREATE POLICY "member_update_own_notifications" ON notifications
 ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
 
 -- system-admin: r (読み取り権限)
-CREATE POLICY "system_admin_read_logs" ON logs
+CREATE POLICY "system-admin_read_logs" ON logs
   FOR SELECT
   TO authenticated
   USING (

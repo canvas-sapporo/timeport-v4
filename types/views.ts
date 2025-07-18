@@ -33,7 +33,7 @@ export interface UserDetailView {
   /** 勤務開始日 */
   work_start_date?: DateString;
   /** 有効フラグ */
-  role: 'system_admin' | 'admin' | 'member';
+  is_active: boolean;
   /** 主所属グループ名 */
   primary_group_name?: string;
   /** グループパス */

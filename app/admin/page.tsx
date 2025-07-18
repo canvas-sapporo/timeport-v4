@@ -1,14 +1,28 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
-import { useData } from '@/contexts/data-context';
-import StatsCard from '@/components/ui/stats-card';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Users, Clock, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { useData } from "@/contexts/data-context";
+import StatsCard from "@/components/ui/stats-card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Users,
+  Clock,
+  FileText,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -16,48 +30,56 @@ export default function AdminDashboard() {
   const { users, requests, attendanceRecords, notifications } = useData();
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
-      router.push('/login');
+    if (!user || user.role !== "admin") {
+      router.push("/login");
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== "admin") {
     return null;
   }
 
-  const activeUsers = users.filter(u => u.isActive).length;
-  const pendingRequests = requests.filter(a => a.status === 'pending').length;
-  const todayAttendance = attendanceRecords.filter(r => r.workDate === new Date().toISOString().split('T')[0]).length;
+  const activeUsers = users.filter((u) => u.is_active).length;
+  const pendingRequests = requests.filter((a) => a.status === "pending").length;
+  const todayAttendance = attendanceRecords.filter(
+    (r) => r.work_date === new Date().toISOString().split("T")[0],
+  ).length;
   const thisMonth = new Date().toISOString().slice(0, 7);
-  const monthlyAttendance = attendanceRecords.filter(r => r.workDate.startsWith(thisMonth));
-  const totalOvertimeHours = Math.round(monthlyAttendance.reduce((sum, r) => sum + r.overtimeMinutes, 0) / 60 * 10) / 10;
+  const monthlyAttendance = attendanceRecords.filter((r) =>
+    r.work_date.startsWith(thisMonth),
+  );
+  const totalOvertimeHours =
+    Math.round(
+      (monthlyAttendance.reduce((sum, r) => sum + r.overtime_minutes, 0) / 60) *
+        10,
+    ) / 10;
 
   const stats = [
     {
-      title: '総ユーザー数',
+      title: "総ユーザー数",
       value: activeUsers,
       change: 2,
-      icon: <Users className="w-6 h-6" />
+      icon: <Users className="w-6 h-6" />,
     },
     {
-      title: '未承認申請',
+      title: "未承認申請",
       value: pendingRequests,
       change: -1,
-      icon: <FileText className="w-6 h-6" />
+      icon: <FileText className="w-6 h-6" />,
     },
     {
-      title: '今日の出勤',
+      title: "今日の出勤",
       value: todayAttendance,
       change: 0,
-      icon: <Clock className="w-6 h-6" />
+      icon: <Clock className="w-6 h-6" />,
     },
     {
-      title: '今月残業時間',
+      title: "今月残業時間",
       value: `${totalOvertimeHours}h`,
       change: -5.2,
-      icon: <TrendingUp className="w-6 h-6" />
-    }
+      icon: <TrendingUp className="w-6 h-6" />,
+    },
   ];
 
   const recentRequests = requests.slice(0, 5);
@@ -65,7 +87,9 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">管理者ダッシュボード</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          管理者ダッシュボード
+        </h1>
         <p className="text-gray-600">全社の勤怠状況を確認できます</p>
       </div>
 
@@ -102,15 +126,27 @@ export default function AdminDashboard() {
               </TableHeader>
               <TableBody>
                 {recentRequests.map((request) => {
-                  const requestant = users.find(u => u.id === request.user_id);
+                  const requestant = users.find(
+                    (u) => u.id === request.user_id,
+                  );
                   return (
                     <TableRow key={request.id}>
-                      <TableCell>{requestant?.name}</TableCell>
+                      <TableCell>
+                        {requestant
+                          ? `${requestant.family_name} ${requestant.first_name}`
+                          : "-"}
+                      </TableCell>
                       <TableCell>{request.title}</TableCell>
                       <TableCell>
-                        {request.status === 'pending' && <Badge variant="secondary">承認待ち</Badge>}
-                        {request.status === 'approved' && <Badge variant="default">承認済み</Badge>}
-                        {request.status === 'rejected' && <Badge variant="destructive">却下</Badge>}
+                        {request.status === "pending" && (
+                          <Badge variant="secondary">承認待ち</Badge>
+                        )}
+                        {request.status === "approved" && (
+                          <Badge variant="default">承認済み</Badge>
+                        )}
+                        {request.status === "rejected" && (
+                          <Badge variant="destructive">却下</Badge>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -133,16 +169,24 @@ export default function AdminDashboard() {
               <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
                 <AlertCircle className="w-5 h-5 text-yellow-600" />
                 <div>
-                  <div className="font-medium text-sm text-yellow-800">承認待ち申請があります</div>
-                  <div className="text-xs text-yellow-700">{pendingRequests}件の申請が承認待ちです</div>
+                  <div className="font-medium text-sm text-yellow-800">
+                    承認待ち申請があります
+                  </div>
+                  <div className="text-xs text-yellow-700">
+                    {pendingRequests}件の申請が承認待ちです
+                  </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
                 <CheckCircle className="w-5 h-5 text-green-600" />
                 <div>
-                  <div className="font-medium text-sm text-green-800">システム正常動作中</div>
-                  <div className="text-xs text-green-700">すべてのシステムが正常に動作しています</div>
+                  <div className="font-medium text-sm text-green-800">
+                    システム正常動作中
+                  </div>
+                  <div className="text-xs text-green-700">
+                    すべてのシステムが正常に動作しています
+                  </div>
                 </div>
               </div>
             </div>
@@ -158,21 +202,33 @@ export default function AdminDashboard() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{monthlyAttendance.length}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {monthlyAttendance.length}
+              </div>
               <div className="text-sm text-blue-600">総出勤回数</div>
             </div>
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
-                {Math.round(monthlyAttendance.reduce((sum, r) => sum + (r.actualWorkMinutes || 0), 0) / 60)}h
+                {Math.round(
+                  monthlyAttendance.reduce(
+                    (sum, r) => sum + (r.actual_work_minutes || 0),
+                    0,
+                  ) / 60,
+                )}
+                h
               </div>
               <div className="text-sm text-green-600">総勤務時間</div>
             </div>
             <div className="text-center p-4 bg-yellow-50 rounded-lg">
-              <div className="text-2xl font-bold text-yellow-600">{totalOvertimeHours}h</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {totalOvertimeHours}h
+              </div>
               <div className="text-sm text-yellow-600">総残業時間</div>
             </div>
             <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{requests.length}</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {requests.length}
+              </div>
               <div className="text-sm text-purple-600">総申請数</div>
             </div>
           </div>

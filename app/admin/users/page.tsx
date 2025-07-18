@@ -1,64 +1,96 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
-import { useData } from '@/contexts/data-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Edit, Trash2, Search, Filter, UserCheck, UserX } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { useData } from "@/contexts/data-context";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  Filter,
+  UserCheck,
+  UserX,
+} from "lucide-react";
 
 export default function AdminUsersPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { users, groups } = useData();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [formData, setFormData] = useState({
-    employeeId: '',
-    name: '',
-    email: '',
-    role: 'user',
-    groupId: '',
-    hireDate: '',
-    isActive: true
+    employeeId: "",
+    name: "",
+    email: "",
+    role: "user",
+    groupId: "",
+    hireDate: "",
+    isActive: true,
   });
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
-      router.push('/login');
+    if (!user || user.role !== "admin") {
+      router.push("/login");
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== "admin") {
     return null;
   }
 
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         u.employeeId.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGroup = selectedGroup === 'all' || u.groupId === selectedGroup;
-    const matchesStatus = selectedStatus === 'all' || 
-                         (selectedStatus === 'active' && u.isActive) ||
-                         (selectedStatus === 'inactive' && !u.isActive);
-    
+  const filteredUsers = users.filter((u) => {
+    const fullName = `${u.family_name} ${u.first_name}`;
+    const matchesSearch =
+      fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.code && u.code.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesGroup =
+      selectedGroup === "all" || u.primary_group_id === selectedGroup;
+    const matchesStatus =
+      selectedStatus === "all" ||
+      (selectedStatus === "active" && u.is_active) ||
+      (selectedStatus === "inactive" && !u.is_active);
+
     return matchesSearch && matchesGroup && matchesStatus;
   });
 
   const handleCreateUser = () => {
     // In a real app, this would create a new user
-    console.log('Creating user:', formData);
+    console.log("Creating user:", formData);
     setIsCreateDialogOpen(false);
     resetForm();
   };
@@ -72,53 +104,50 @@ export default function AdminUsersPage() {
       role: userData.role,
       groupId: userData.groupId,
       hireDate: userData.hireDate,
-      isActive: userData.isActive
+      isActive: userData.isActive,
     });
   };
 
   const handleUpdateUser = () => {
     // In a real app, this would update the user
-    console.log('Updating user:', editingUser.id, formData);
+    console.log("Updating user:", editingUser.id, formData);
     setEditingUser(null);
     resetForm();
   };
 
   const handleDeleteUser = (userId: string) => {
     // In a real app, this would delete the user
-    console.log('Deleting user:', userId);
+    console.log("Deleting user:", userId);
   };
 
   const resetForm = () => {
     setFormData({
-      employeeId: '',
-      name: '',
-      email: '',
-      role: 'user',
-      groupId: '',
-      hireDate: '',
-      isActive: true
+      employeeId: "",
+      name: "",
+      email: "",
+      role: "user",
+      groupId: "",
+      hireDate: "",
+      isActive: true,
     });
   };
 
   const getUserGroup = (groupId: string) => {
-    return groups.find(g => g.id === groupId);
+    return groups.find((g) => g.id === groupId);
   };
 
   const getGroupPath = (groupId: string) => {
-    const group = groups.find(g => g.id === groupId);
-    if (!group) return '';
-    
-    const pathParts = group.path.split('/').filter(Boolean);
-    return pathParts.map((id: string) => {
-      const g = groups.find(gr => gr.id === id);
-      return g?.name || '';
-    }).join(' > ');
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return "";
+
+    // Group型にpathプロパティがないため、仮の実装
+    return group.name || "";
   };
 
-  const activeUsers = users.filter(u => u.isActive).length;
-  const inactiveUsers = users.filter(u => !u.isActive).length;
-  const adminUsers = users.filter(u => u.role === 'admin').length;
-  const regularUsers = users.filter(u => u.role === 'member').length;
+  const activeUsers = users.filter((u) => u.is_active).length;
+  const inactiveUsers = users.filter((u) => !u.is_active).length;
+  const adminUsers = users.filter((u) => u.role === "admin").length;
+  const regularUsers = users.filter((u) => u.role === "member").length;
 
   return (
     <div className="space-y-6">
@@ -145,7 +174,12 @@ export default function AdminUsersPage() {
                   <Input
                     id="employeeId"
                     value={formData.employeeId}
-                    onChange={(e) => setFormData(prev => ({...prev, employeeId: e.target.value}))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        employeeId: e.target.value,
+                      }))
+                    }
                     placeholder="A001"
                   />
                 </div>
@@ -154,19 +188,23 @@ export default function AdminUsersPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    }
                     placeholder="山田太郎"
                   />
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="email">メールアドレス</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({...prev, email: e.target.value}))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  }
                   placeholder="yamada@timeport.com"
                 />
               </div>
@@ -174,7 +212,12 @@ export default function AdminUsersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="role">権限</Label>
-                  <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({...prev, role: value}))}>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, role: value }))
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -186,7 +229,12 @@ export default function AdminUsersPage() {
                 </div>
                 <div>
                   <Label htmlFor="group">グループ</Label>
-                  <Select value={formData.groupId} onValueChange={(value) => setFormData(prev => ({...prev, groupId: value}))}>
+                  <Select
+                    value={formData.groupId}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, groupId: value }))
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="グループを選択" />
                     </SelectTrigger>
@@ -207,17 +255,23 @@ export default function AdminUsersPage() {
                   id="hireDate"
                   type="date"
                   value={formData.hireDate}
-                  onChange={(e) => setFormData(prev => ({...prev, hireDate: e.target.value}))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hireDate: e.target.value,
+                    }))
+                  }
                 />
               </div>
 
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
                   キャンセル
                 </Button>
-                <Button onClick={handleCreateUser}>
-                  作成
-                </Button>
+                <Button onClick={handleCreateUser}>作成</Button>
               </div>
             </div>
           </DialogContent>
@@ -230,44 +284,58 @@ export default function AdminUsersPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">総ユーザー数</p>
-                <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  総ユーザー数
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {users.length}
+                </p>
               </div>
               <Users className="w-8 h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">有効ユーザー</p>
-                <p className="text-2xl font-bold text-green-600">{activeUsers}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  有効ユーザー
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  {activeUsers}
+                </p>
               </div>
               <UserCheck className="w-8 h-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">無効ユーザー</p>
-                <p className="text-2xl font-bold text-red-600">{inactiveUsers}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  無効ユーザー
+                </p>
+                <p className="text-2xl font-bold text-red-600">
+                  {inactiveUsers}
+                </p>
               </div>
               <UserX className="w-8 h-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">管理者</p>
-                <p className="text-2xl font-bold text-purple-600">{adminUsers}</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {adminUsers}
+                </p>
               </div>
               <Users className="w-8 h-8 text-purple-600" />
             </div>
@@ -294,7 +362,7 @@ export default function AdminUsersPage() {
                 className="pl-10"
               />
             </div>
-            
+
             <Select value={selectedGroup} onValueChange={setSelectedGroup}>
               <SelectTrigger>
                 <SelectValue placeholder="グループで絞り込み" />
@@ -308,7 +376,7 @@ export default function AdminUsersPage() {
                 ))}
               </SelectContent>
             </Select>
-            
+
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
               <SelectTrigger>
                 <SelectValue placeholder="ステータスで絞り込み" />
@@ -319,13 +387,13 @@ export default function AdminUsersPage() {
                 <SelectItem value="inactive">無効</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Button
               variant="outline"
               onClick={() => {
-                setSearchQuery('');
-                setSelectedGroup('all');
-                setSelectedStatus('all');
+                setSearchQuery("");
+                setSelectedGroup("all");
+                setSelectedStatus("all");
               }}
             >
               リセット
@@ -358,30 +426,42 @@ export default function AdminUsersPage() {
             </TableHeader>
             <TableBody>
               {filteredUsers.map((userData) => {
-                const userGroup = getUserGroup(userData.groupId);
-                
+                const userGroup = getUserGroup(userData.primary_group_id || "");
+
                 return (
                   <TableRow key={userData.id}>
-                    <TableCell className="font-medium">{userData.employeeId}</TableCell>
-                    <TableCell>{userData.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {userData.code || "-"}
+                    </TableCell>
+                    <TableCell>{`${userData.family_name} ${userData.first_name}`}</TableCell>
                     <TableCell>{userData.email}</TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {getGroupPath(userData.groupId) || '-'}
+                        {getGroupPath(userData.primary_group_id || "") || "-"}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={userData.role === 'admin' ? 'default' : 'secondary'}>
-                        {userData.role === 'admin' ? '管理者' : '一般ユーザー'}
+                      <Badge
+                        variant={
+                          userData.role === "admin" ? "default" : "secondary"
+                        }
+                      >
+                        {userData.role === "admin" ? "管理者" : "一般ユーザー"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={userData.isActive ? 'default' : 'destructive'}>
-                        {userData.isActive ? '有効' : '無効'}
+                      <Badge
+                        variant={userData.is_active ? "default" : "destructive"}
+                      >
+                        {userData.is_active ? "有効" : "無効"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {userData.hireDate ? new Date(userData.hireDate).toLocaleDateString('ja-JP') : '-'}
+                      {userData.work_start_date
+                        ? new Date(userData.work_start_date).toLocaleDateString(
+                            "ja-JP",
+                          )
+                        : "-"}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
@@ -402,11 +482,18 @@ export default function AdminUsersPage() {
                             <div className="space-y-4">
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <Label htmlFor="edit-employeeId">社員番号</Label>
+                                  <Label htmlFor="edit-employeeId">
+                                    社員番号
+                                  </Label>
                                   <Input
                                     id="edit-employeeId"
                                     value={formData.employeeId}
-                                    onChange={(e) => setFormData(prev => ({...prev, employeeId: e.target.value}))}
+                                    onChange={(e) =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        employeeId: e.target.value,
+                                      }))
+                                    }
                                   />
                                 </div>
                                 <div>
@@ -414,43 +501,78 @@ export default function AdminUsersPage() {
                                   <Input
                                     id="edit-name"
                                     value={formData.name}
-                                    onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
+                                    onChange={(e) =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        name: e.target.value,
+                                      }))
+                                    }
                                   />
                                 </div>
                               </div>
-                              
+
                               <div>
-                                <Label htmlFor="edit-email">メールアドレス</Label>
+                                <Label htmlFor="edit-email">
+                                  メールアドレス
+                                </Label>
                                 <Input
                                   id="edit-email"
                                   type="email"
                                   value={formData.email}
-                                  onChange={(e) => setFormData(prev => ({...prev, email: e.target.value}))}
+                                  onChange={(e) =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      email: e.target.value,
+                                    }))
+                                  }
                                 />
                               </div>
 
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
                                   <Label htmlFor="edit-role">権限</Label>
-                                  <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({...prev, role: value}))}>
+                                  <Select
+                                    value={formData.role}
+                                    onValueChange={(value) =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        role: value,
+                                      }))
+                                    }
+                                  >
                                     <SelectTrigger>
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="user">一般ユーザー</SelectItem>
-                                      <SelectItem value="admin">管理者</SelectItem>
+                                      <SelectItem value="user">
+                                        一般ユーザー
+                                      </SelectItem>
+                                      <SelectItem value="admin">
+                                        管理者
+                                      </SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
                                 <div>
                                   <Label htmlFor="edit-group">グループ</Label>
-                                  <Select value={formData.groupId} onValueChange={(value) => setFormData(prev => ({...prev, groupId: value}))}>
+                                  <Select
+                                    value={formData.groupId}
+                                    onValueChange={(value) =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        groupId: value,
+                                      }))
+                                    }
+                                  >
                                     <SelectTrigger>
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {groups.map((group) => (
-                                        <SelectItem key={group.id} value={group.id}>
+                                        <SelectItem
+                                          key={group.id}
+                                          value={group.id}
+                                        >
                                           {getGroupPath(group.id)}
                                         </SelectItem>
                                       ))}
@@ -466,38 +588,57 @@ export default function AdminUsersPage() {
                                     id="edit-hireDate"
                                     type="date"
                                     value={formData.hireDate}
-                                    onChange={(e) => setFormData(prev => ({...prev, hireDate: e.target.value}))}
+                                    onChange={(e) =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        hireDate: e.target.value,
+                                      }))
+                                    }
                                   />
                                 </div>
                                 <div>
-                                  <Label htmlFor="edit-status">ステータス</Label>
-                                  <Select 
-                                    value={formData.isActive ? 'active' : 'inactive'} 
-                                    onValueChange={(value) => setFormData(prev => ({...prev, isActive: value === 'active'}))}
+                                  <Label htmlFor="edit-status">
+                                    ステータス
+                                  </Label>
+                                  <Select
+                                    value={
+                                      formData.isActive ? "active" : "inactive"
+                                    }
+                                    onValueChange={(value) =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        isActive: value === "active",
+                                      }))
+                                    }
                                   >
                                     <SelectTrigger>
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="active">有効</SelectItem>
-                                      <SelectItem value="inactive">無効</SelectItem>
+                                      <SelectItem value="active">
+                                        有効
+                                      </SelectItem>
+                                      <SelectItem value="inactive">
+                                        無効
+                                      </SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
                               </div>
 
                               <div className="flex justify-end space-x-2">
-                                <Button variant="outline" onClick={() => setEditingUser(null)}>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setEditingUser(null)}
+                                >
                                   キャンセル
                                 </Button>
-                                <Button onClick={handleUpdateUser}>
-                                  更新
-                                </Button>
+                                <Button onClick={handleUpdateUser}>更新</Button>
                               </div>
                             </div>
                           </DialogContent>
                         </Dialog>
-                        
+
                         <Button
                           variant="ghost"
                           size="sm"
@@ -513,10 +654,12 @@ export default function AdminUsersPage() {
               })}
             </TableBody>
           </Table>
-          
+
           {filteredUsers.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">条件に一致するユーザーが見つかりません</p>
+              <p className="text-gray-500">
+                条件に一致するユーザーが見つかりません
+              </p>
             </div>
           )}
         </CardContent>

@@ -1,30 +1,57 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
-import { useData } from '@/contexts/data-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building, Users, Plus, Edit, Trash2, ChevronRight, FolderTree } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { useData } from "@/contexts/data-context";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Building,
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  ChevronRight,
+  FolderTree,
+} from "lucide-react";
 
 interface HierarchicalGroup {
   id: string;
-  parentId?: string;
+  parent_group_id?: string;
   name: string;
   description?: string;
   level: number;
   path: string;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
   children?: HierarchicalGroup[];
 }
 
@@ -33,109 +60,134 @@ export default function AdminGroupManagementPage() {
   const router = useRouter();
   const { groups, users } = useData();
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
-  const [selectedParentGroup, setSelectedParentGroup] = useState<string>('');
+  const [selectedParentGroup, setSelectedParentGroup] = useState<string>("");
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    parentId: ''
+    name: "",
+    description: "",
+    parentId: "",
   });
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
-      router.push('/login');
+    if (!user || user.role !== "admin") {
+      router.push("/login");
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== "admin") {
     return null;
   }
 
   // グループの階層構造を構築
   const buildGroupHierarchy = (): HierarchicalGroup[] => {
-    const rootGroups = groups.filter(g => !g.parentId);
-    
+    const rootGroups = groups.filter((g) => !g.parent_group_id);
+
     const buildChildren = (parentId: string): HierarchicalGroup[] => {
       return groups
-        .filter(g => g.parentId === parentId)
-        .map(group => ({
+        .filter((g) => g.parent_group_id === parentId)
+        .map((group) => ({
           ...group,
-          children: buildChildren(group.id)
+          level: 1, // 仮の値
+          path: group.name, // 仮の値
+          children: buildChildren(group.id),
         }));
     };
 
-    return rootGroups.map(group => ({
+    return rootGroups.map((group) => ({
       ...group,
-      children: buildChildren(group.id)
+      level: 1, // 仮の値
+      path: group.name, // 仮の値
+      children: buildChildren(group.id),
     }));
   };
 
   const getGroupUsers = (groupId: string) => {
-    return users.filter(u => u.groupId === groupId);
+    return users.filter((u) => u.primary_group_id === groupId);
   };
 
   const getGroupPath = (group: any) => {
-    const pathParts = (group.path || '').split('/').filter(Boolean);
-    return pathParts.map((id: string) => {
-      const g = groups.find(gr => gr.id === id);
-      return g?.name || '';
-    }).join(' > ');
+    const pathParts = (group.path || "").split("/").filter(Boolean);
+    return pathParts
+      .map((id: string) => {
+        const g = groups.find((gr) => gr.id === id);
+        return g?.name || "";
+      })
+      .join(" > ");
   };
 
   const handleCreateGroup = () => {
-    console.log('Creating group:', formData);
+    console.log("Creating group:", formData);
     setIsCreateGroupOpen(false);
-    setFormData({ name: '', description: '', parentId: '' });
+    setFormData({ name: "", description: "", parentId: "" });
   };
 
-  const renderGroupTree = (groupList: HierarchicalGroup[], level = 0): React.ReactNode[] => {
+  const renderGroupTree = (
+    groupList: HierarchicalGroup[],
+    level = 0,
+  ): React.ReactNode[] => {
     const result: React.ReactNode[] = [];
-    
+
     groupList.forEach((group) => {
       result.push(
         <TableRow key={group.id}>
           <TableCell className="w-1/3">
-            <div className="flex items-center" style={{ paddingLeft: `${level * 20}px` }}>
-              {level > 0 && <ChevronRight className="w-4 h-4 text-gray-400 mr-1 flex-shrink-0" />}
+            <div
+              className="flex items-center"
+              style={{ paddingLeft: `${level * 20}px` }}
+            >
+              {level > 0 && (
+                <ChevronRight className="w-4 h-4 text-gray-400 mr-1 flex-shrink-0" />
+              )}
               <FolderTree className="w-4 h-4 text-blue-600 mr-2 flex-shrink-0" />
               <span className="font-medium truncate">{group.name}</span>
             </div>
           </TableCell>
           <TableCell className="w-20 text-center">
-            <Badge variant="outline" className="text-xs">レベル {group.level}</Badge>
+            <Badge variant="outline" className="text-xs">
+              レベル {group.level}
+            </Badge>
           </TableCell>
           <TableCell className="w-1/3">
-            <div className="text-sm text-gray-600 truncate" title={group.description || '-'}>
-              {group.description || '-'}
+            <div
+              className="text-sm text-gray-600 truncate"
+              title={group.description || "-"}
+            >
+              {group.description || "-"}
             </div>
           </TableCell>
           <TableCell className="w-20 text-center">
-            <Badge variant="secondary" className="text-xs">{getGroupUsers(group.id).length}名</Badge>
+            <Badge variant="secondary" className="text-xs">
+              {getGroupUsers(group.id).length}名
+            </Badge>
           </TableCell>
           <TableCell className="w-24">
             <div className="flex items-center justify-center space-x-1">
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <Edit className="w-3 h-3" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+              >
                 <Trash2 className="w-3 h-3" />
               </Button>
             </div>
           </TableCell>
-        </TableRow>
+        </TableRow>,
       );
-      
+
       if (group.children && group.children.length > 0) {
         result.push(...renderGroupTree(group.children, level + 1));
       }
     });
-    
+
     return result;
   };
 
   const hierarchicalGroups = buildGroupHierarchy();
   const totalGroups = groups.length;
-  const totalUsers = users.filter(u => u.isActive).length;
+  const totalUsers = users.filter((u) => u.is_active).length;
 
   return (
     <div className="space-y-6">
@@ -161,7 +213,9 @@ export default function AdminGroupManagementPage() {
                 <Input
                   id="groupName"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                   placeholder="グループ名を入力"
                 />
               </div>
@@ -170,7 +224,12 @@ export default function AdminGroupManagementPage() {
                 <Textarea
                   id="groupDescription"
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
                   placeholder="グループの説明を入力"
                   rows={3}
                 />
@@ -179,7 +238,9 @@ export default function AdminGroupManagementPage() {
                 <Label htmlFor="parentGroup">親グループ</Label>
                 <Select
                   value={formData.parentId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, parentId: value }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, parentId: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="親グループを選択（任意）" />
@@ -195,12 +256,13 @@ export default function AdminGroupManagementPage() {
                 </Select>
               </div>
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreateGroupOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateGroupOpen(false)}
+                >
                   キャンセル
                 </Button>
-                <Button onClick={handleCreateGroup}>
-                  作成
-                </Button>
+                <Button onClick={handleCreateGroup}>作成</Button>
               </div>
             </div>
           </DialogContent>
@@ -216,12 +278,10 @@ export default function AdminGroupManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalGroups}</div>
-            <p className="text-xs text-muted-foreground">
-              階層構造で管理
-            </p>
+            <p className="text-xs text-muted-foreground">階層構造で管理</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">総従業員数</CardTitle>
@@ -229,22 +289,22 @@ export default function AdminGroupManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              アクティブユーザー
-            </p>
+            <p className="text-xs text-muted-foreground">アクティブユーザー</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">最大階層レベル</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              最大階層レベル
+            </CardTitle>
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.max(...groups.map(g => g.level))}</div>
-            <p className="text-xs text-muted-foreground">
-              階層の深さ
-            </p>
+            <div className="text-2xl font-bold">
+              {Math.max(...groups.map((g) => 1))}
+            </div>
+            <p className="text-xs text-muted-foreground">階層の深さ</p>
           </CardContent>
         </Card>
       </div>
@@ -269,9 +329,7 @@ export default function AdminGroupManagementPage() {
                   <TableHead className="w-24 text-center">操作</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {renderGroupTree(hierarchicalGroups)}
-              </TableBody>
+              <TableBody>{renderGroupTree(hierarchicalGroups)}</TableBody>
             </Table>
           </div>
         </CardContent>
@@ -291,20 +349,24 @@ export default function AdminGroupManagementPage() {
                   <h3 className="font-semibold text-lg">{rootGroup.name}</h3>
                   <Badge variant="outline">レベル {rootGroup.level}</Badge>
                 </div>
-                
+
                 {rootGroup.description && (
-                  <p className="text-sm text-gray-600 mb-4">{rootGroup.description}</p>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {rootGroup.description}
+                  </p>
                 )}
 
                 <div className="space-y-3">
                   {/* Root group members */}
                   {getGroupUsers(rootGroup.id).length > 0 && (
                     <div className="bg-gray-50 p-3 rounded">
-                      <div className="font-medium text-sm mb-2">直属メンバー ({getGroupUsers(rootGroup.id).length}名)</div>
+                      <div className="font-medium text-sm mb-2">
+                        直属メンバー ({getGroupUsers(rootGroup.id).length}名)
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {getGroupUsers(rootGroup.id).map((user) => (
                           <Badge key={user.id} variant="secondary">
-                            {user.name}
+                            {`${user.family_name} ${user.first_name}`}
                           </Badge>
                         ))}
                       </div>
@@ -315,24 +377,40 @@ export default function AdminGroupManagementPage() {
                   {rootGroup.children && rootGroup.children.length > 0 && (
                     <div className="ml-4 space-y-3">
                       {rootGroup.children.map((childGroup) => (
-                        <div key={childGroup.id} className="border-l-2 border-gray-200 pl-4">
+                        <div
+                          key={childGroup.id}
+                          className="border-l-2 border-gray-200 pl-4"
+                        >
                           <div className="flex items-center space-x-2 mb-2">
                             <FolderTree className="w-4 h-4 text-green-600" />
-                            <span className="font-medium">{childGroup.name}</span>
-                            <Badge variant="outline">レベル {childGroup.level}</Badge>
+                            <span className="font-medium">
+                              {childGroup.name}
+                            </span>
+                            <Badge variant="outline">
+                              レベル {childGroup.level}
+                            </Badge>
                           </div>
-                          
+
                           {childGroup.description && (
-                            <p className="text-xs text-gray-600 mb-2">{childGroup.description}</p>
+                            <p className="text-xs text-gray-600 mb-2">
+                              {childGroup.description}
+                            </p>
                           )}
 
                           {getGroupUsers(childGroup.id).length > 0 && (
                             <div className="bg-green-50 p-2 rounded text-sm">
-                              <div className="font-medium mb-1">メンバー ({getGroupUsers(childGroup.id).length}名)</div>
+                              <div className="font-medium mb-1">
+                                メンバー ({getGroupUsers(childGroup.id).length}
+                                名)
+                              </div>
                               <div className="flex flex-wrap gap-1">
                                 {getGroupUsers(childGroup.id).map((user) => (
-                                  <Badge key={user.id} variant="secondary" className="text-xs">
-                                    {user.name}
+                                  <Badge
+                                    key={user.id}
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {`${user.family_name} ${user.first_name}`}
                                   </Badge>
                                 ))}
                               </div>
@@ -340,32 +418,57 @@ export default function AdminGroupManagementPage() {
                           )}
 
                           {/* Grandchild groups */}
-                          {childGroup.children && childGroup.children.length > 0 && (
-                            <div className="ml-4 mt-2 space-y-2">
-                              {childGroup.children.map((grandchildGroup) => (
-                                <div key={grandchildGroup.id} className="border-l-2 border-gray-100 pl-3">
-                                  <div className="flex items-center space-x-2 mb-1">
-                                    <FolderTree className="w-3 h-3 text-purple-600" />
-                                    <span className="text-sm font-medium">{grandchildGroup.name}</span>
-                                    <Badge variant="outline" className="text-xs">レベル {grandchildGroup.level}</Badge>
-                                  </div>
-                                  
-                                  {getGroupUsers(grandchildGroup.id).length > 0 && (
-                                    <div className="bg-purple-50 p-2 rounded text-xs">
-                                      <div className="font-medium mb-1">メンバー ({getGroupUsers(grandchildGroup.id).length}名)</div>
-                                      <div className="flex flex-wrap gap-1">
-                                        {getGroupUsers(grandchildGroup.id).map((user) => (
-                                          <Badge key={user.id} variant="secondary" className="text-xs">
-                                            {user.name}
-                                          </Badge>
-                                        ))}
-                                      </div>
+                          {childGroup.children &&
+                            childGroup.children.length > 0 && (
+                              <div className="ml-4 mt-2 space-y-2">
+                                {childGroup.children.map((grandchildGroup) => (
+                                  <div
+                                    key={grandchildGroup.id}
+                                    className="border-l-2 border-gray-100 pl-3"
+                                  >
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <FolderTree className="w-3 h-3 text-purple-600" />
+                                      <span className="text-sm font-medium">
+                                        {grandchildGroup.name}
+                                      </span>
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        レベル {grandchildGroup.level}
+                                      </Badge>
                                     </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
+
+                                    {getGroupUsers(grandchildGroup.id).length >
+                                      0 && (
+                                      <div className="bg-purple-50 p-2 rounded text-xs">
+                                        <div className="font-medium mb-1">
+                                          メンバー (
+                                          {
+                                            getGroupUsers(grandchildGroup.id)
+                                              .length
+                                          }
+                                          名)
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {getGroupUsers(
+                                            grandchildGroup.id,
+                                          ).map((user) => (
+                                            <Badge
+                                              key={user.id}
+                                              variant="secondary"
+                                              className="text-xs"
+                                            >
+                                              {`${user.family_name} ${user.first_name}`}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                         </div>
                       ))}
                     </div>
