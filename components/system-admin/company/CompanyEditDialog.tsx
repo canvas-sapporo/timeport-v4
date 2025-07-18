@@ -63,7 +63,6 @@ export default function CompanyEditDialog({
 
         if (result.success) {
           onOpenChange(false);
-          router.refresh();
         } else {
           // エラーハンドリング
           const appError = result.error;

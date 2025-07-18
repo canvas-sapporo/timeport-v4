@@ -37,7 +37,6 @@ export default function CompanyDeleteDialog({
 
       if (result.success) {
         onOpenChange(false);
-        router.refresh();
       } else {
         // エラーハンドリング
         setError(result.error.message);

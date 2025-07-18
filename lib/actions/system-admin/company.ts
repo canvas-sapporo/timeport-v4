@@ -3,6 +3,7 @@
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { revalidatePath } from 'next/cache';
 
 import type {
   CreateCompanyInput,
@@ -264,6 +265,7 @@ export async function createCompany(
       throw AppError.fromSupabaseError(userGroupError, 'ユーザーグループ作成');
     }
 
+    revalidatePath('/system-admin/company');
     return {
       company,
       groupId: group.id,
@@ -330,6 +332,7 @@ export async function updateCompany(
     if (existingCompany.phone !== form.phone) updatedFields.push('phone');
     if (existingCompany.is_active !== form.is_active) updatedFields.push('is_active');
 
+    revalidatePath('/system-admin/company');
     return {
       company,
       updatedFields,
@@ -377,6 +380,7 @@ export async function deleteCompany(
       throw AppError.fromSupabaseError(deleteError, '企業削除');
     }
 
+    revalidatePath('/system-admin/company');
     return {
       companyId: id,
       deletedAt: company.deleted_at!,

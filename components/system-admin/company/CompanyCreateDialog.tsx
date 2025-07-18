@@ -76,7 +76,6 @@ export default function CompanyCreateDialog({
           admin_password: '',
           group_name: '初期設定グループ',
         });
-        router.refresh();
       } else {
         // エラーハンドリング
         const error = result.error;

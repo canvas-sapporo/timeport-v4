@@ -1,6 +1,10 @@
 import CompanyListTable from '@/components/system-admin/company/CompanyListTable';
 import { getCompanies, getCompanyStats } from '@/lib/actions/system-admin/company';
 
+// キャッシュを無効化して常に最新データを取得
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function CompanyListPage() {
   // 新しいServer Actionを使用してデータを取得
   const companiesResult = await getCompanies();
