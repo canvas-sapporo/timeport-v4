@@ -1,0 +1,13 @@
+{
+  // 保存時にフォーマット
+  "editor.formatOnSave": true,
+
+  // Prettier を既定のフォーマッターに
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // 保存時に自動保存
+  "files.autoSave": "onFocusChange",
+
+  // インラインAI補助（Cursor独自）
+  "cursor.assistant.inline.enabled": true
+}

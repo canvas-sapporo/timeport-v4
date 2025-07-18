@@ -34,10 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.idea/
 
 # bolt folder
 .bolt/
 
-# VSCode
-.vscode/
+# WebStor
+.idea/
