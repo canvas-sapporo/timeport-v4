@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useAuth } from '@/contexts/auth-context';
-import Sidebar from './sidebar';
-import Header from './header';
-import PageTransitionLoader from './page-transition-loader';
+import { useAuth } from "@/contexts/auth-context";
+import { usePathname } from "next/navigation";
+import Sidebar from "./sidebar";
+import Header from "./header";
+import PageTransitionLoader from "./page-transition-loader";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,12 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const { user, isLoading, isLoggingOut } = useAuth();
+  const pathname = usePathname();
+
+  // ログインページの場合はレイアウトを適用しない
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (
@@ -56,14 +63,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
             />
           ))}
         </div>
-        
+
         <Sidebar />
         <div className="flex-1 flex flex-col relative z-10 h-full">
           <Header />
           <main className="flex-1 p-6 overflow-y-auto custom-scrollbar h-full">
-            <div className="max-w-7xl mx-auto animate-slide-in">
-              {children}
-            </div>
+            <div className="max-w-7xl mx-auto animate-slide-in">{children}</div>
           </main>
         </div>
       </div>
