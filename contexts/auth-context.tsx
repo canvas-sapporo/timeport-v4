@@ -111,25 +111,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoggingOut(true);
 
     try {
-      // Supabaseでサインアウト
-      const { error } = await supabase.auth.signOut();
+      console.log("ログアウト処理開始");
 
-      if (error) {
-        console.error("Supabase signOut error:", error);
-      }
-
-      // ユーザー状態をクリア
+      // ユーザー状態を先にクリア
       setUser(null);
       localStorage.removeItem("auth-user");
 
-      // 直接window.locationを使用して確実にリダイレクト
+      // Supabaseでサインアウト（タイムアウト付き）
+      const signOutPromise = supabase.auth.signOut();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("SignOut timeout")), 5000),
+      );
+
+      try {
+        await Promise.race([signOutPromise, timeoutPromise]);
+        console.log("Supabase signOut 完了");
+      } catch (signOutError) {
+        console.error("Supabase signOut error:", signOutError);
+        // サインアウトエラーでも続行
+      }
+
+      // 確実にリダイレクト
+      console.log("ログインページにリダイレクト");
       window.location.href = "/login";
     } catch (error) {
       console.error("Logout error:", error);
       // エラーが発生した場合も確実にリダイレクト
       window.location.href = "/login";
     }
-    // finallyブロックを削除 - リダイレクト後に状態管理は不要
   };
 
   return (
