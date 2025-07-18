@@ -7,8 +7,7 @@ import {
 } from "@/lib/actions/system-admin/company";
 
 export default async function CompanyListPage() {
-  const cookieStore = cookies();
-  const supabase = createServerComponentClient({ cookies: () => cookieStore });
+  const supabase = createServerComponentClient({ cookies });
 
   // 新しいServer Actionを使用してデータを取得
   const companiesResult = await getCompanies();
