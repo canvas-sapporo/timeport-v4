@@ -1,3 +1,79 @@
 {
-  "extends": "next/core-web-vitals"
+  // この設定ファイルをプロジェクトのルートとする
+  "root": true,
+
+  // 各種 ESLint の基本設定を継承
+  "extends": [
+    // Next.js の推奨設定と Core Web Vitals チェック
+    "next/core-web-vitals",
+
+    // ESLint の基本ルール
+    "eslint:recommended",
+
+    // TypeScript 用のルール
+    "plugin:@typescript-eslint/recommended",
+
+    // React の useEffect などの Hook のルール
+    "plugin:react-hooks/recommended",
+
+    // import順序などのチェック
+    "plugin:import/recommended",
+    "plugin:import/typescript",
+
+    // Prettier のフォーマットルールを優先
+    "plugin:prettier/recommended"
+  ],
+
+  // 使用するプラグインを指定
+  "plugins": [
+    "@typescript-eslint",
+    "react-hooks",
+    "import",
+    "prettier"
+  ],
+
+  // TypeScriptのパーサーとそのオプション
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    // tsconfig.json の場所を指定
+    "project": "./tsconfig.json",
+    "tsconfigRootDir": ".",
+    "sourceType": "module"
+  },
+
+  // 独自に上書きしたいルール設定
+  "rules": {
+    // 文末にセミコロンを強制
+    "semi": ["error", "always"],
+
+    // シングルクォートを強制
+    "quotes": ["error", "single", { "avoidEscape": true }],
+
+    // 未使用変数の警告（引数で _ を使うと無視）
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+
+    // React Hooks の依存チェック
+    "react-hooks/exhaustive-deps": "warn",
+
+    // import の順序と空行ルール
+    "import/order": [
+      "warn",
+      {
+        "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
+        "newlines-between": "always"
+      }
+    ],
+
+    // Prettier に違反している箇所を警告
+    "prettier/prettier": "warn"
+  },
+
+  // import 解決のための設定
+  "settings": {
+    "import/resolver": {
+      // TypeScriptのパスエイリアス解決
+      "typescript": {}
+    }
+  }
 }
