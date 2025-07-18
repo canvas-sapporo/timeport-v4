@@ -1,16 +1,11 @@
-"use client";
+'use client';
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
-import { useRouter } from "next/navigation";
-import { AuthUser, UserRole } from "@/types/auth";
-import { supabase } from "@/lib/supabase";
-import { getCurrentUser, setCurrentUser } from "@/lib/auth";
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+
+import { AuthUser, UserRole } from '@/types/auth';
+import { supabase } from '@/lib/supabase';
+import { getCurrentUser, setCurrentUser } from '@/lib/auth';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -33,11 +28,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
+      if (event === 'SIGNED_IN' && session?.user) {
         // ユーザーがサインインした場合、プロフィール情報を取得
         try {
           const { data: profileData, error: profileError } = await supabase
-            .from("user_profiles")
+            .from('user_profiles')
             .select(
               `
                 id,
@@ -47,24 +42,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 email,
                 role,
                 current_work_type_id
-              `,
+              `
             )
-            .eq("id", session.user.id)
-            .eq("is_active", true)
+            .eq('id', session.user.id)
+            .eq('is_active', true)
             .single();
 
           if (profileError || !profileData) {
-            console.error("プロフィール取得エラー:", profileError);
+            console.error('プロフィール取得エラー:', profileError);
             return;
           }
 
           // ユーザーの主所属グループを取得（system-admin以外）
           let groupData = null;
-          if (profileData.role !== "system-admin") {
+          if (profileData.role !== 'system-admin') {
             const { data: groupResult } = await supabase
-              .from("user_groups")
-              .select("group_id")
-              .eq("user_id", session.user.id)
+              .from('user_groups')
+              .select('group_id')
+              .eq('user_id', session.user.id)
               .limit(1)
               .single();
             groupData = groupResult;
@@ -72,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           const authUser: AuthUser = {
             id: profileData.id,
-            employee_id: profileData.code || "",
+            employee_id: profileData.code || '',
             full_name: `${profileData.family_name} ${profileData.first_name}`,
             email: profileData.email,
             role: profileData.role as UserRole,
@@ -82,12 +77,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(authUser);
           setCurrentUser(authUser);
         } catch (error) {
-          console.error("認証状態更新エラー:", error);
+          console.error('認証状態更新エラー:', error);
         }
-      } else if (event === "SIGNED_OUT") {
+      } else if (event === 'SIGNED_OUT') {
         // ユーザーがサインアウトした場合
         setUser(null);
-        localStorage.removeItem("auth-user");
+        localStorage.removeItem('auth-user');
       }
       setIsLoading(false);
     });
@@ -111,40 +106,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoggingOut(true);
 
     try {
-      console.log("ログアウト処理開始");
+      console.log('ログアウト処理開始');
 
       // ユーザー状態を先にクリア
       setUser(null);
-      localStorage.removeItem("auth-user");
+      localStorage.removeItem('auth-user');
 
       // Supabaseでサインアウト（タイムアウト付き）
       const signOutPromise = supabase.auth.signOut();
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("SignOut timeout")), 5000),
+        setTimeout(() => reject(new Error('SignOut timeout')), 5000)
       );
 
       try {
         await Promise.race([signOutPromise, timeoutPromise]);
-        console.log("Supabase signOut 完了");
+        console.log('Supabase signOut 完了');
       } catch (signOutError) {
-        console.error("Supabase signOut error:", signOutError);
+        console.error('Supabase signOut error:', signOutError);
         // サインアウトエラーでも続行
       }
 
       // 確実にリダイレクト
-      console.log("ログインページにリダイレクト");
-      window.location.href = "/login";
+      console.log('ログインページにリダイレクト');
+      window.location.href = '/login';
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error('Logout error:', error);
       // エラーが発生した場合も確実にリダイレクト
-      window.location.href = "/login";
+      window.location.href = '/login';
     }
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, login, logout, isLoading, isLoggingOut }}
-    >
+    <AuthContext.Provider value={{ user, login, logout, isLoading, isLoggingOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -153,7 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

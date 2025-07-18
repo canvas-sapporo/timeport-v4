@@ -1,10 +1,12 @@
-"use client";
+'use client';
 
-import { useAuth } from "@/contexts/auth-context";
-import { usePathname } from "next/navigation";
-import Sidebar from "./sidebar";
-import Header from "./header";
-import PageTransitionLoader from "./page-transition-loader";
+import { usePathname } from 'next/navigation';
+
+import { useAuth } from '@/contexts/auth-context';
+
+import Sidebar from './sidebar';
+import Header from './header';
+import PageTransitionLoader from './page-transition-loader';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -15,7 +17,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
 
   // ログインページの場合はレイアウトを適用しない
-  if (pathname === "/login") {
+  if (pathname === '/login') {
     return <>{children}</>;
   }
 

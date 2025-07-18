@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+import { useAuth } from '@/contexts/auth-context';
 
 export default function Home() {
   const { user, isLoading } = useAuth();
@@ -14,12 +15,12 @@ export default function Home() {
       setIsRedirecting(true);
 
       const redirectPath = user
-        ? user.role === "system-admin"
-          ? "/system-admin"
-          : user.role === "admin"
-            ? "/admin"
-            : "/member"
-        : "/login";
+        ? user.role === 'system-admin'
+          ? '/system-admin'
+          : user.role === 'admin'
+            ? '/admin'
+            : '/member'
+        : '/login';
 
       // 短い遅延を追加してスムーズな遷移を確保
       const timer = setTimeout(() => {
@@ -39,7 +40,7 @@ export default function Home() {
             <div className="absolute inset-0 w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
           <p className="text-gray-600 font-medium animate-pulse">
-            {isLoading ? "読み込み中..." : "リダイレクト中..."}
+            {isLoading ? '読み込み中...' : 'リダイレクト中...'}
           </p>
         </div>
       </div>

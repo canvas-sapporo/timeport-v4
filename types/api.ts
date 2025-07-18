@@ -1,12 +1,12 @@
 /**
  * TimePort API関連型定義
- * 
+ *
  * API通信、リクエスト、レスポンスに関する型を定義
  */
 
-import type { 
-  UUID, 
-  Timestamp, 
+import type {
+  UUID,
+  Timestamp,
   DateString,
   UserProfile,
   Attendance,
@@ -14,7 +14,7 @@ import type {
   RequestType,
   Group,
   Notification,
-  MonthlyAttendanceStats
+  MonthlyAttendanceStats,
 } from './database';
 
 // ================================

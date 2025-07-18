@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Bell, Save } from 'lucide-react';
+
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Bell, Save } from 'lucide-react';
 
 export default function NotificationsSettingsPage() {
   const { user } = useAuth();
@@ -21,7 +22,7 @@ export default function NotificationsSettingsPage() {
     lateArrivalAlert: true,
     overtimeAlert: true,
     applicationAlert: true,
-    systemMaintenance: true
+    systemMaintenance: true,
   });
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function NotificationsSettingsPage() {
     setIsLoading(true);
     try {
       // In a real app, this would save to backend
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log('Saving notification settings...');
     } finally {
       setIsLoading(false);
@@ -69,15 +70,17 @@ export default function NotificationsSettingsPage() {
               </div>
               <Switch
                 checked={notificationSettings.emailNotifications}
-                onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                  ...prev,
-                  emailNotifications: checked
-                }))}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings((prev) => ({
+                    ...prev,
+                    emailNotifications: checked,
+                  }))
+                }
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div>
                 <Label>遅刻アラート</Label>
@@ -85,13 +88,15 @@ export default function NotificationsSettingsPage() {
               </div>
               <Switch
                 checked={notificationSettings.lateArrivalAlert}
-                onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                  ...prev,
-                  lateArrivalAlert: checked
-                }))}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings((prev) => ({
+                    ...prev,
+                    lateArrivalAlert: checked,
+                  }))
+                }
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div>
                 <Label>残業アラート</Label>
@@ -99,13 +104,15 @@ export default function NotificationsSettingsPage() {
               </div>
               <Switch
                 checked={notificationSettings.overtimeAlert}
-                onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                  ...prev,
-                  overtimeAlert: checked
-                }))}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings((prev) => ({
+                    ...prev,
+                    overtimeAlert: checked,
+                  }))
+                }
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div>
                 <Label>申請アラート</Label>
@@ -113,13 +120,15 @@ export default function NotificationsSettingsPage() {
               </div>
               <Switch
                 checked={notificationSettings.applicationAlert}
-                onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                  ...prev,
-                  applicationAlert: checked
-                }))}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings((prev) => ({
+                    ...prev,
+                    applicationAlert: checked,
+                  }))
+                }
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div>
                 <Label>メンテナンス通知</Label>
@@ -127,15 +136,17 @@ export default function NotificationsSettingsPage() {
               </div>
               <Switch
                 checked={notificationSettings.systemMaintenance}
-                onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                  ...prev,
-                  systemMaintenance: checked
-                }))}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings((prev) => ({
+                    ...prev,
+                    systemMaintenance: checked,
+                  }))
+                }
               />
             </div>
           </div>
-          
-          <Button 
+
+          <Button
             onClick={handleSaveSettings}
             disabled={isLoading}
             className="w-full"

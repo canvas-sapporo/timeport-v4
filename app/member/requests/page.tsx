@@ -1,18 +1,20 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { useData } from "@/contexts/data-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { FileText, Plus, Eye } from 'lucide-react';
+
+import { useAuth } from '@/contexts/auth-context';
+import { useData } from '@/contexts/data-context';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -20,37 +22,36 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { FileText, Plus, Eye } from "lucide-react";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 export default function MemberRequestsPage() {
   const { user } = useAuth();
   const { requests, requestTypes, createRequest } = useData();
   const router = useRouter();
-  const [selectedRequestType, setSelectedRequestType] = useState<string>("");
+  const [selectedRequestType, setSelectedRequestType] = useState<string>('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    if (!user || user.role !== "member") {
-      router.push("/login");
+    if (!user || user.role !== 'member') {
+      router.push('/login');
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== "member") {
+  if (!user || user.role !== 'member') {
     return null;
   }
 
@@ -59,11 +60,11 @@ export default function MemberRequestsPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "pending":
+      case 'pending':
         return <Badge variant="secondary">承認待ち</Badge>;
-      case "approved":
+      case 'approved':
         return <Badge variant="default">承認済み</Badge>;
-      case "rejected":
+      case 'rejected':
         return <Badge variant="destructive">却下</Badge>;
       default:
         return <Badge variant="outline">-</Badge>;
@@ -73,9 +74,7 @@ export default function MemberRequestsPage() {
   const handleCreateRequest = () => {
     if (!selectedRequestType) return;
 
-    const requestType = requestTypes.find(
-      (rt) => rt.id === selectedRequestType,
-    );
+    const requestType = requestTypes.find((rt) => rt.id === selectedRequestType);
     if (!requestType) return;
 
     createRequest({
@@ -86,40 +85,34 @@ export default function MemberRequestsPage() {
       target_date: formData.target_date,
       start_date: formData.start_date,
       end_date: formData.end_date,
-      status: "pending",
+      status: 'pending',
       current_approval_step: 1,
     });
 
     setIsCreateDialogOpen(false);
-    setSelectedRequestType("");
+    setSelectedRequestType('');
     setFormData({});
   };
 
   const renderFormField = (field: any) => {
     switch (field.type) {
-      case "textarea":
+      case 'textarea':
         return (
           <Textarea
-            value={formData[field.name] || ""}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
+            value={formData[field.name] || ''}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
             placeholder={field.placeholder}
             rows={3}
           />
         );
-      case "select":
+      case 'select':
         return (
           <Select
-            value={formData[field.name] || ""}
-            onValueChange={(value) =>
-              setFormData((prev) => ({ ...prev, [field.name]: value }))
-            }
+            value={formData[field.name] || ''}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, [field.name]: value }))}
           >
             <SelectTrigger>
-              <SelectValue
-                placeholder={field.placeholder || `${field.label}を選択`}
-              />
+              <SelectValue placeholder={field.placeholder || `${field.label}を選択`} />
             </SelectTrigger>
             <SelectContent>
               {field.options?.map((option: string) => (
@@ -134,10 +127,8 @@ export default function MemberRequestsPage() {
         return (
           <Input
             type={field.type}
-            value={formData[field.name] || ""}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
+            value={formData[field.name] || ''}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
             placeholder={field.placeholder}
           />
         );
@@ -167,10 +158,7 @@ export default function MemberRequestsPage() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="requestType">申請種別</Label>
-                <Select
-                  value={selectedRequestType}
-                  onValueChange={setSelectedRequestType}
-                >
+                <Select value={selectedRequestType} onValueChange={setSelectedRequestType}>
                   <SelectTrigger>
                     <SelectValue placeholder="申請種別を選択してください" />
                   </SelectTrigger>
@@ -193,9 +181,7 @@ export default function MemberRequestsPage() {
                       <div key={field.id}>
                         <Label htmlFor={field.name}>
                           {field.label}
-                          {field.required && (
-                            <span className="text-red-500 ml-1">*</span>
-                          )}
+                          {field.required && <span className="text-red-500 ml-1">*</span>}
                         </Label>
                         {renderFormField(field)}
                       </div>
@@ -204,16 +190,10 @@ export default function MemberRequestsPage() {
               )}
 
               <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreateDialogOpen(false)}
-                >
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   キャンセル
                 </Button>
-                <Button
-                  onClick={handleCreateRequest}
-                  disabled={!selectedRequestType}
-                >
+                <Button onClick={handleCreateRequest} disabled={!selectedRequestType}>
                   申請する
                 </Button>
               </div>
@@ -247,24 +227,20 @@ export default function MemberRequestsPage() {
                   <TableCell>{request.title}</TableCell>
                   <TableCell>
                     {request.created_at
-                      ? new Date(request.created_at).toLocaleDateString("ja-JP")
-                      : "-"}
+                      ? new Date(request.created_at).toLocaleDateString('ja-JP')
+                      : '-'}
                   </TableCell>
                   <TableCell>
                     {request.target_date
-                      ? new Date(request.target_date).toLocaleDateString(
-                          "ja-JP",
-                        )
+                      ? new Date(request.target_date).toLocaleDateString('ja-JP')
                       : request.start_date && request.end_date
-                        ? `${new Date(request.start_date).toLocaleDateString("ja-JP")} - ${new Date(request.end_date).toLocaleDateString("ja-JP")}`
+                        ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date).toLocaleDateString('ja-JP')}`
                         : request.start_date
-                          ? new Date(request.start_date).toLocaleDateString(
-                              "ja-JP",
-                            )
-                          : "-"}
+                          ? new Date(request.start_date).toLocaleDateString('ja-JP')
+                          : '-'}
                   </TableCell>
-                  <TableCell>{getStatusBadge(request.status ?? "-")}</TableCell>
-                  <TableCell>{"-"}</TableCell>
+                  <TableCell>{getStatusBadge(request.status ?? '-')}</TableCell>
+                  <TableCell>{'-'}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm">
                       <Eye className="w-4 h-4" />
@@ -279,10 +255,7 @@ export default function MemberRequestsPage() {
             <div className="text-center py-8">
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">申請履歴がありません</p>
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="mt-4"
-              >
+              <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4">
                 最初の申請を作成
               </Button>
             </div>

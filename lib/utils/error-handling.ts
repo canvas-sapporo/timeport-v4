@@ -39,7 +39,7 @@ export class AppError extends Error {
     const message = error.message || 'データベース操作に失敗しました';
     const code = error.code || 'DATABASE_ERROR';
     const details = { context, originalError: error };
-    
+
     return new AppError(message, code, 500, details);
   }
 
@@ -49,7 +49,7 @@ export class AppError extends Error {
   static fromValidationErrors(errors: ValidationError[], context?: string): AppError {
     const message = '入力データの検証に失敗しました';
     const details = { context };
-    
+
     return new AppError(message, 'VALIDATION_ERROR', 400, details, errors);
   }
 
@@ -64,7 +64,7 @@ export class AppError extends Error {
    * リソース未発見エラーを作成
    */
   static notFound(resource: string, id?: string): AppError {
-    const message = id 
+    const message = id
       ? `${resource} (ID: ${id}) が見つかりません`
       : `${resource} が見つかりません`;
     return new AppError(message, 'NOT_FOUND', 404);
@@ -142,7 +142,7 @@ export async function withErrorHandling<T>(
     if (error instanceof AppError) {
       return { success: false, error };
     }
-    
+
     // 予期しないエラーをAppErrorに変換
     const appError = AppError.fromSupabaseError(error, context);
     return { success: false, error: appError };
@@ -177,7 +177,10 @@ export function validateEmail(email: string, fieldName: string = 'email'): Valid
   return null;
 }
 
-export function validatePassword(password: string, fieldName: string = 'password'): ValidationError | null {
+export function validatePassword(
+  password: string,
+  fieldName: string = 'password'
+): ValidationError | null {
   if (password.length < 8) {
     return {
       field: fieldName,
@@ -186,7 +189,7 @@ export function validatePassword(password: string, fieldName: string = 'password
       value: password,
     };
   }
-  
+
   if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
     return {
       field: fieldName,
@@ -195,6 +198,6 @@ export function validatePassword(password: string, fieldName: string = 'password
       value: password,
     };
   }
-  
+
   return null;
-} 
+}

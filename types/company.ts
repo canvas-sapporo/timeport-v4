@@ -1,6 +1,6 @@
 /**
  * TimePort 会社・組織関連型定義
- * 
+ *
  * 会社、グループ、組織階層に関する型を定義
  */
 
@@ -71,10 +71,10 @@ export interface CreateCompanyFormData {
   address: string;
   phone: string;
   is_active: boolean;
-  
+
   // グループ情報
   group_name: string;
-  
+
   // 管理者ユーザー情報
   admin_family_name: string;
   admin_first_name: string;

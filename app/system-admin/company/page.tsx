@@ -1,14 +1,7 @@
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import CompanyListTable from "@/components/system-admin/company/CompanyListTable";
-import {
-  getCompanies,
-  getCompanyStats,
-} from "@/lib/actions/system-admin/company";
+import CompanyListTable from '@/components/system-admin/company/CompanyListTable';
+import { getCompanies, getCompanyStats } from '@/lib/actions/system-admin/company';
 
 export default async function CompanyListPage() {
-  const supabase = createServerComponentClient({ cookies });
-
   // 新しいServer Actionを使用してデータを取得
   const companiesResult = await getCompanies();
   const statsResult = await getCompanyStats();

@@ -1,12 +1,14 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { useData } from "@/contexts/data-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Calendar, Download, Filter } from 'lucide-react';
+
+import { useAuth } from '@/contexts/auth-context';
+import { useData } from '@/contexts/data-context';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -14,54 +16,50 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Download, Filter } from "lucide-react";
-import { Attendance, AttendanceStatus } from "@/types/attendance";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Attendance, AttendanceStatus } from '@/types/attendance';
 
 export default function MemberAttendancePage() {
   const { user } = useAuth();
   const router = useRouter();
   const { getUserAttendance } = useData();
-  const [selectedMonth, setSelectedMonth] = useState(
-    new Date().toISOString().slice(0, 7),
-  );
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
-    if (!user || user.role !== "member") {
-      router.push("/login");
+    if (!user || user.role !== 'member') {
+      router.push('/login');
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== "member") {
+  if (!user || user.role !== 'member') {
     return null;
   }
 
   const attendanceRecords = getUserAttendance(user.id);
   const formatDate = (date?: string) =>
-    typeof date === "string" ? new Date(date).toLocaleDateString("ja-JP") : "-";
+    typeof date === 'string' ? new Date(date).toLocaleDateString('ja-JP') : '-';
   const filteredRecords = attendanceRecords
     .filter((record) => record.work_date?.startsWith(selectedMonth))
-    .sort((a, b) => (b.work_date || "").localeCompare(a.work_date || ""));
+    .sort((a, b) => (b.work_date || '').localeCompare(a.work_date || ''));
 
   const getAttendanceStatus = (record: Attendance): AttendanceStatus => {
-    if (!record.clock_in_time) return "absent";
-    if (record.late_minutes > 0 && record.early_leave_minutes > 0)
-      return "late";
-    if (record.early_leave_minutes > 0) return "early_leave";
-    return "normal";
+    if (!record.clock_in_time) return 'absent';
+    if (record.late_minutes > 0 && record.early_leave_minutes > 0) return 'late';
+    if (record.early_leave_minutes > 0) return 'early_leave';
+    return 'normal';
   };
 
   const getStatusBadge = (status: AttendanceStatus) => {
     switch (status) {
-      case "normal":
+      case 'normal':
         return <Badge variant="default">正常</Badge>;
-      case "late":
+      case 'late':
         return <Badge variant="destructive">遅刻</Badge>;
-      case "early_leave":
+      case 'early_leave':
         return <Badge variant="secondary">早退</Badge>;
-      case "absent":
+      case 'absent':
         return <Badge variant="outline">欠勤</Badge>;
       default:
         return <Badge variant="outline">-</Badge>;
@@ -69,14 +67,14 @@ export default function MemberAttendancePage() {
   };
 
   const formatTime = (time?: string) => {
-    return time || "--:--";
+    return time || '--:--';
   };
 
   const formatMinutes = (minutes?: number) => {
-    if (!minutes) return "--:--";
+    if (!minutes) return '--:--';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return `${hours}:${mins.toString().padStart(2, "0")}`;
+    return `${hours}:${mins.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -129,33 +127,22 @@ export default function MemberAttendancePage() {
               {filteredRecords.map((record) => (
                 <TableRow key={record.id}>
                   <TableCell>
-                    <div className="font-medium">
-                      {formatDate(record.work_date)}
-                    </div>
+                    <div className="font-medium">{formatDate(record.work_date)}</div>
                     <div className="text-sm text-gray-500">
                       {record.work_date
-                        ? new Date(record.work_date).toLocaleDateString(
-                            "ja-JP",
-                            { weekday: "short" },
-                          )
-                        : "-"}
+                        ? new Date(record.work_date).toLocaleDateString('ja-JP', {
+                            weekday: 'short',
+                          })
+                        : '-'}
                     </div>
                   </TableCell>
                   <TableCell>{formatTime(record.clock_in_time)}</TableCell>
                   <TableCell>{formatTime(record.clock_out_time)}</TableCell>
+                  <TableCell>{formatMinutes(record.actual_work_minutes)}</TableCell>
+                  <TableCell>{formatMinutes(record.overtime_minutes)}</TableCell>
+                  <TableCell>{getStatusBadge(getAttendanceStatus(record))}</TableCell>
                   <TableCell>
-                    {formatMinutes(record.actual_work_minutes)}
-                  </TableCell>
-                  <TableCell>
-                    {formatMinutes(record.overtime_minutes)}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(getAttendanceStatus(record))}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-500">
-                      {record.description || "-"}
-                    </span>
+                    <span className="text-sm text-gray-500">{record.description || '-'}</span>
                   </TableCell>
                 </TableRow>
               ))}

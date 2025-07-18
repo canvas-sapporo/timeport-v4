@@ -1,10 +1,18 @@
-"use client";
+'use client';
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Company } from '@/types/company';
 import { deleteCompany } from '@/lib/actions/system-admin/company';
-import { useRouter } from 'next/navigation';
 
 export default function CompanyDeleteDialog({
   open,
@@ -23,10 +31,10 @@ export default function CompanyDeleteDialog({
     if (!company) return;
     setLoading(true);
     setError(null);
-    
+
     try {
       const result = await deleteCompany(company.id);
-      
+
       if (result.success) {
         onOpenChange(false);
         router.refresh();
@@ -52,7 +60,9 @@ export default function CompanyDeleteDialog({
         </DialogHeader>
         {error && <div className="text-destructive text-sm mb-2">{error}</div>}
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>キャンセル</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            キャンセル
+          </Button>
           <Button onClick={handleDelete} disabled={loading} variant="destructive">
             {loading ? '削除中...' : 'OK'}
           </Button>
@@ -60,4 +70,4 @@ export default function CompanyDeleteDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

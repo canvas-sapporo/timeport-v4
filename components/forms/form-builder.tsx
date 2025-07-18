@@ -2,19 +2,40 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { Plus, Settings, Trash2, Eye } from 'lucide-react';
+
 import { RequestType } from '@/types';
 import { FormFieldConfig, ValidationRule } from '@/types/request';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Settings, Trash2, Eye } from 'lucide-react';
+
 import DynamicForm from './dynamic-form';
 
 interface FormBuilderProps {
@@ -47,15 +68,18 @@ interface ValidationModalProps {
 }
 
 const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProps) => {
-  const [validationRules, setValidationRules] = useState<ValidationRule[]>(field.validation_rules || []);
+  const [validationRules, setValidationRules] = useState<ValidationRule[]>(
+    field.validation_rules || []
+  );
   const [options, setOptions] = useState<string[]>(field.options || []);
   const [optionsText, setOptionsText] = useState(field.options?.join('\n') || '');
 
   const handleSave = () => {
-    const updatedOptions = (field.type === 'select' || field.type === 'radio') 
-      ? optionsText.split('\n').filter(option => option.trim() !== '')
-      : undefined;
-    
+    const updatedOptions =
+      field.type === 'select' || field.type === 'radio'
+        ? optionsText.split('\n').filter((option) => option.trim() !== '')
+        : undefined;
+
     onSave(field.id, validationRules, updatedOptions);
     onClose();
   };
@@ -69,14 +93,11 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
         <DialogHeader>
           <DialogTitle>入力規則設定: {field.label}</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4 max-h-96 overflow-y-auto">
           {/* 必須設定 */}
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              checked={field.required} 
-              disabled
-            />
+            <Checkbox checked={field.required} disabled />
             <Label>必須項目</Label>
           </div>
 
@@ -86,34 +107,50 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>最小文字数</Label>
-                  <Input 
-                    type="number" 
-                    value={validationRules.find(r => r.type === 'minLength')?.value || ''}
-                    onChange={(e) => setValidationRules(prev => prev.map(r => 
-                      r.type === 'minLength' ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined } : r
-                    ))}
+                  <Input
+                    type="number"
+                    value={validationRules.find((r) => r.type === 'minLength')?.value || ''}
+                    onChange={(e) =>
+                      setValidationRules((prev) =>
+                        prev.map((r) =>
+                          r.type === 'minLength'
+                            ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined }
+                            : r
+                        )
+                      )
+                    }
                   />
                 </div>
                 <div>
                   <Label>最大文字数</Label>
-                  <Input 
-                    type="number" 
-                    value={validationRules.find(r => r.type === 'maxLength')?.value || ''}
-                    onChange={(e) => setValidationRules(prev => prev.map(r => 
-                      r.type === 'maxLength' ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined } : r
-                    ))}
+                  <Input
+                    type="number"
+                    value={validationRules.find((r) => r.type === 'maxLength')?.value || ''}
+                    onChange={(e) =>
+                      setValidationRules((prev) =>
+                        prev.map((r) =>
+                          r.type === 'maxLength'
+                            ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined }
+                            : r
+                        )
+                      )
+                    }
                   />
                 </div>
               </div>
-              
+
               <div>
                 <Label>正規表現パターン</Label>
-                <Input 
-                  value={validationRules.find(r => r.type === 'pattern')?.value || ''}
+                <Input
+                  value={validationRules.find((r) => r.type === 'pattern')?.value || ''}
                   placeholder="例: ^[0-9]+$"
-                  onChange={(e) => setValidationRules(prev => prev.map(r => 
-                    r.type === 'pattern' ? { ...r, value: e.target.value || undefined } : r
-                  ))}
+                  onChange={(e) =>
+                    setValidationRules((prev) =>
+                      prev.map((r) =>
+                        r.type === 'pattern' ? { ...r, value: e.target.value || undefined } : r
+                      )
+                    )
+                  }
                 />
               </div>
             </>
@@ -124,22 +161,34 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>最小値</Label>
-                <Input 
-                  type="number" 
-                  value={validationRules.find(r => r.type === 'min')?.value || ''}
-                  onChange={(e) => setValidationRules(prev => prev.map(r => 
-                    r.type === 'min' ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined } : r
-                  ))}
+                <Input
+                  type="number"
+                  value={validationRules.find((r) => r.type === 'min')?.value || ''}
+                  onChange={(e) =>
+                    setValidationRules((prev) =>
+                      prev.map((r) =>
+                        r.type === 'min'
+                          ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined }
+                          : r
+                      )
+                    )
+                  }
                 />
               </div>
               <div>
                 <Label>最大値</Label>
-                <Input 
-                  type="number" 
-                  value={validationRules.find(r => r.type === 'max')?.value || ''}
-                  onChange={(e) => setValidationRules(prev => prev.map(r => 
-                    r.type === 'max' ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined } : r
-                  ))}
+                <Input
+                  type="number"
+                  value={validationRules.find((r) => r.type === 'max')?.value || ''}
+                  onChange={(e) =>
+                    setValidationRules((prev) =>
+                      prev.map((r) =>
+                        r.type === 'max'
+                          ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined }
+                          : r
+                      )
+                    )
+                  }
                 />
               </div>
             </div>
@@ -149,7 +198,7 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
           {isSelectType(field.type) && (
             <div>
               <Label>選択肢（1行につき1つ）</Label>
-              <Textarea 
+              <Textarea
                 value={optionsText}
                 onChange={(e) => setOptionsText(e.target.value)}
                 placeholder="選択肢1&#10;選択肢2&#10;選択肢3"
@@ -161,18 +210,24 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
           {/* カスタムエラーメッセージ */}
           <div>
             <Label>カスタムエラーメッセージ</Label>
-            <Input 
-              value={validationRules.find(r => r.type === 'custom')?.value || ''}
+            <Input
+              value={validationRules.find((r) => r.type === 'custom')?.value || ''}
               placeholder="エラー時に表示するメッセージ"
-              onChange={(e) => setValidationRules(prev => prev.map(r => 
-                r.type === 'custom' ? { ...r, value: e.target.value || undefined } : r
-              ))}
+              onChange={(e) =>
+                setValidationRules((prev) =>
+                  prev.map((r) =>
+                    r.type === 'custom' ? { ...r, value: e.target.value || undefined } : r
+                  )
+                )
+              }
             />
           </div>
         </div>
 
         <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={onClose}>キャンセル</Button>
+          <Button variant="outline" onClick={onClose}>
+            キャンセル
+          </Button>
           <Button onClick={handleSave}>保存</Button>
         </div>
       </DialogContent>
@@ -180,7 +235,12 @@ const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProp
   );
 };
 
-export default function FormBuilder({ initialData, onSaveAction, onCancelAction, isLoading }: FormBuilderProps) {
+export default function FormBuilder({
+  initialData,
+  onSaveAction,
+  onCancelAction,
+  isLoading,
+}: FormBuilderProps) {
   const [formData, setFormData] = useState<RequestType>(
     initialData || {
       id: '', // または一時的なユニークID
@@ -215,48 +275,52 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
       order: formData.form_config.length + 1,
     };
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      form_config: [...prev.form_config, newField]
+      form_config: [...prev.form_config, newField],
     }));
   };
 
   const updateField = (fieldId: string, key: keyof FormFieldConfig, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      form_config: prev.form_config.map(field => 
+      form_config: prev.form_config.map((field) =>
         field.id === fieldId ? { ...field, [key]: value } : field
-      )
+      ),
     }));
   };
 
   const removeField = (fieldId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      form_config: prev.form_config.filter(field => field.id !== fieldId)
+      form_config: prev.form_config.filter((field) => field.id !== fieldId),
     }));
   };
 
   const openValidationModal = (fieldId: string) => {
-    const field = formData.form_config.find(f => f.id === fieldId);
+    const field = formData.form_config.find((f) => f.id === fieldId);
     if (field) {
       setSelectedField(field);
       setValidationModalOpen(true);
     }
   };
 
-  const saveValidationRules = (fieldId: string, validationRules: ValidationRule[], options?: string[]) => {
-    setFormData(prev => ({
+  const saveValidationRules = (
+    fieldId: string,
+    validationRules: ValidationRule[],
+    options?: string[]
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      form_config: prev.form_config.map(field => 
-        field.id === fieldId 
-          ? { 
-              ...field, 
+      form_config: prev.form_config.map((field) =>
+        field.id === fieldId
+          ? {
+              ...field,
               validation_rules: validationRules,
-              options: options || field.options
-            } 
+              options: options || field.options,
+            }
           : field
-      )
+      ),
     }));
   };
 
@@ -278,7 +342,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
     }
 
     // 項目名の重複チェック
-    const fieldNames = formData.form_config.map(f => f.name);
+    const fieldNames = formData.form_config.map((f) => f.name);
     const duplicateNames = fieldNames.filter((name, index) => fieldNames.indexOf(name) !== index);
     if (duplicateNames.length > 0) {
       alert('項目名が重複しています');
@@ -317,7 +381,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="例：休暇申請"
               />
             </div>
@@ -326,7 +390,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
               <Input
                 id="code"
                 value={formData.code}
-                onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
                 placeholder="例：vacation"
               />
             </div>
@@ -336,7 +400,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
               placeholder="申請の説明を入力してください"
               rows={3}
             />
@@ -357,9 +421,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
         </CardHeader>
         <CardContent>
           {formData.form_config.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              項目を追加してください
-            </div>
+            <div className="text-center py-8 text-gray-500">項目を追加してください</div>
           ) : (
             <Table>
               <TableHeader>
@@ -379,7 +441,11 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
                         value={field.label}
                         onChange={(e) => {
                           updateField(field.id, 'label', e.target.value);
-                          updateField(field.id, 'name', e.target.value.toLowerCase().replace(/\s+/g, '_'));
+                          updateField(
+                            field.id,
+                            'name',
+                            e.target.value.toLowerCase().replace(/\s+/g, '_')
+                          );
                         }}
                         placeholder="項目名を入力"
                         className="min-w-32"
@@ -418,11 +484,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
                       </Button>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeField(field.id)}
-                      >
+                      <Button variant="destructive" size="sm" onClick={() => removeField(field.id)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </TableCell>
@@ -474,7 +536,7 @@ export default function FormBuilder({ initialData, onSaveAction, onCancelAction,
                     </Label>
                     <div className="mt-1">
                       <Badge variant="outline">
-                        {fieldTypeOptions.find(opt => opt.value === field.type)?.label}
+                        {fieldTypeOptions.find((opt) => opt.value === field.type)?.label}
                       </Badge>
                     </div>
                   </div>

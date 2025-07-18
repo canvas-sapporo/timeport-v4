@@ -6,7 +6,7 @@ import type { UUID } from './database';
 // フォームフィールド型
 // ================================
 
-export type FieldType = 
+export type FieldType =
   | 'text'
   | 'textarea'
   | 'number'
@@ -24,7 +24,17 @@ export type FieldType =
   | 'hidden';
 
 export interface ValidationRule {
-  type: 'required' | 'minLength' | 'maxLength' | 'min' | 'max' | 'pattern' | 'email' | 'tel' | 'url' | 'custom';
+  type:
+    | 'required'
+    | 'minLength'
+    | 'maxLength'
+    | 'min'
+    | 'max'
+    | 'pattern'
+    | 'email'
+    | 'tel'
+    | 'url'
+    | 'custom';
   value?: string | number;
   message?: string;
   validator?: (value: any) => boolean | string;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface LoadingOverlayProps {
@@ -9,10 +10,10 @@ interface LoadingOverlayProps {
   className?: string;
 }
 
-export default function LoadingOverlay({ 
-  isVisible, 
-  message = '読み込み中...', 
-  className 
+export default function LoadingOverlay({
+  isVisible,
+  message = '読み込み中...',
+  className,
 }: LoadingOverlayProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -23,11 +24,11 @@ export default function LoadingOverlay({
   if (!mounted || !isVisible) return null;
 
   return (
-    <div 
+    <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center",
-        "bg-white/80 backdrop-blur-sm transition-all duration-300",
-        "animate-in fade-in-0",
+        'fixed inset-0 z-50 flex items-center justify-center',
+        'bg-white/80 backdrop-blur-sm transition-all duration-300',
+        'animate-in fade-in-0',
         className
       )}
     >
@@ -40,4 +41,4 @@ export default function LoadingOverlay({
       </div>
     </div>
   );
-} 
+}

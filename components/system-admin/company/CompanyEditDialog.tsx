@@ -1,13 +1,20 @@
-"use client";
+'use client';
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Company } from '@/types/company';
 import { updateCompany } from '@/lib/actions/system-admin/company';
-import { useRouter } from 'next/navigation';
 import type { EditCompanyFormData } from '@/types/company';
 
 export default function CompanyEditDialog({
@@ -49,22 +56,22 @@ export default function CompanyEditDialog({
     setError(null);
     setFieldErrors({});
     setLoading(true);
-    
+
     try {
       if (company) {
         const result = await updateCompany(company.id, editForm);
-        
+
         if (result.success) {
           onOpenChange(false);
           router.refresh();
         } else {
           // エラーハンドリング
           const appError = result.error;
-          
+
           if (appError.validationErrors && appError.validationErrors.length > 0) {
             // フィールド別エラーを設定
             const fieldErrorsMap: Record<string, string> = {};
-            appError.validationErrors.forEach(validationError => {
+            appError.validationErrors.forEach((validationError) => {
               fieldErrorsMap[validationError.field] = validationError.message;
             });
             setFieldErrors(fieldErrorsMap);
@@ -94,48 +101,56 @@ export default function CompanyEditDialog({
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <Label htmlFor="edit-company-name">企業名<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="edit-company-name" 
-              value={editForm.name} 
-              onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} 
-              required 
+            <Label htmlFor="edit-company-name">
+              企業名<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="edit-company-name"
+              value={editForm.name}
+              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+              required
               className={getFieldError('name') ? 'border-red-500' : ''}
             />
-            {getFieldError('name') && <div className="text-red-500 text-sm">{getFieldError('name')}</div>}
+            {getFieldError('name') && (
+              <div className="text-red-500 text-sm">{getFieldError('name')}</div>
+            )}
           </div>
           <div>
-            <Label htmlFor="edit-company-code">企業コード<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="edit-company-code" 
-              value={editForm.code} 
-              onChange={e => setEditForm(f => ({ ...f, code: e.target.value }))} 
-              required 
+            <Label htmlFor="edit-company-code">
+              企業コード<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="edit-company-code"
+              value={editForm.code}
+              onChange={(e) => setEditForm((f) => ({ ...f, code: e.target.value }))}
+              required
               className={getFieldError('code') ? 'border-red-500' : ''}
             />
-            {getFieldError('code') && <div className="text-red-500 text-sm">{getFieldError('code')}</div>}
+            {getFieldError('code') && (
+              <div className="text-red-500 text-sm">{getFieldError('code')}</div>
+            )}
           </div>
           <div>
             <Label htmlFor="edit-company-address">住所</Label>
-            <Input 
-              id="edit-company-address" 
-              value={editForm.address} 
-              onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} 
+            <Input
+              id="edit-company-address"
+              value={editForm.address}
+              onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))}
             />
           </div>
           <div>
             <Label htmlFor="edit-company-phone">電話番号</Label>
-            <Input 
-              id="edit-company-phone" 
-              value={editForm.phone} 
-              onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} 
+            <Input
+              id="edit-company-phone"
+              value={editForm.phone}
+              onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
             />
           </div>
           <div className="flex items-center gap-2">
-            <Switch 
-              id="edit-company-active" 
-              checked={editForm.is_active} 
-              onCheckedChange={v => setEditForm(f => ({ ...f, is_active: v }))} 
+            <Switch
+              id="edit-company-active"
+              checked={editForm.is_active}
+              onCheckedChange={(v) => setEditForm((f) => ({ ...f, is_active: v }))}
             />
             <Label htmlFor="edit-company-active">有効</Label>
           </div>
@@ -147,4 +162,4 @@ export default function CompanyEditDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

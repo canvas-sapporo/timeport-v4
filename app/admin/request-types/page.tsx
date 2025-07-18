@@ -2,14 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { FormInput, Plus, Edit, Trash2, Eye, ToggleLeft, ToggleRight } from 'lucide-react';
+import Link from 'next/link';
+
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { FormInput, Plus, Edit, Trash2, Eye, ToggleLeft, ToggleRight } from 'lucide-react';
-import Link from 'next/link';
 
 export default function AdminRequestTypesPage() {
   const { user } = useAuth();
@@ -67,28 +75,28 @@ export default function AdminRequestTypesPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">有効な申請種別</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {requestTypes.filter(t => t.is_active).length}
+                  {requestTypes.filter((t) => t.is_active).length}
                 </p>
               </div>
               <ToggleRight className="w-8 h-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">無効な申請種別</p>
                 <p className="text-2xl font-bold text-gray-600">
-                  {requestTypes.filter(t => !t.is_active).length}
+                  {requestTypes.filter((t) => !t.is_active).length}
                 </p>
               </div>
               <ToggleLeft className="w-8 h-8 text-gray-600" />
@@ -125,16 +133,16 @@ export default function AdminRequestTypesPage() {
                   <TableCell>
                     <Badge variant="outline">{type.code}</Badge>
                   </TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {type.description || '-'}
-                  </TableCell>
+                  <TableCell className="max-w-xs truncate">{type.description || '-'}</TableCell>
                   <TableCell>{type.form_config.length}項目</TableCell>
                   <TableCell>
-                    <Badge variant={type.is_active ? "default" : "secondary"}>
+                    <Badge variant={type.is_active ? 'default' : 'secondary'}>
                       {type.is_active ? '有効' : '無効'}
                     </Badge>
                   </TableCell>
-                  <TableCell>{type.updated_at ? new Date(type.updated_at).toLocaleDateString('ja-JP') : '-'}</TableCell>
+                  <TableCell>
+                    {type.updated_at ? new Date(type.updated_at).toLocaleDateString('ja-JP') : '-'}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <Link href={`/admin/request-types/${type.id}`}>
@@ -172,15 +180,13 @@ export default function AdminRequestTypesPage() {
               ))}
             </TableBody>
           </Table>
-          
+
           {requestTypes.length === 0 && (
             <div className="text-center py-8">
               <FormInput className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">申請フォームがありません</p>
               <Link href="/admin/request-types/new">
-                <Button className="mt-4">
-                  最初のフォームを作成
-                </Button>
+                <Button className="mt-4">最初のフォームを作成</Button>
               </Link>
             </div>
           )}

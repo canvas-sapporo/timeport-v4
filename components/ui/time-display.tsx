@@ -17,7 +17,7 @@ export default function TimeDisplay() {
     return date.toLocaleTimeString('ja-JP', {
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
     });
   };
 
@@ -26,18 +26,14 @@ export default function TimeDisplay() {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      weekday: 'long'
+      weekday: 'long',
     });
   };
 
   return (
     <div className="text-center">
-      <div className="text-4xl font-bold text-gray-900 mb-2">
-        {formatTime(time)}
-      </div>
-      <div className="text-lg text-gray-600">
-        {formatDate(time)}
-      </div>
+      <div className="text-4xl font-bold text-gray-900 mb-2">{formatTime(time)}</div>
+      <div className="text-lg text-gray-600">{formatDate(time)}</div>
     </div>
   );
 }

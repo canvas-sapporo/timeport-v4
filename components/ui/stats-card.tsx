@@ -1,5 +1,6 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+
+import { Card, CardContent } from '@/components/ui/card';
 
 interface StatsCardProps {
   title: string;
@@ -23,20 +24,19 @@ export default function StatsCard({ title, value, change, icon }: StatsCardProps
               <div className="flex items-center space-x-1">
                 {isPositive && <TrendingUp className="w-4 h-4 text-green-600" />}
                 {isNegative && <TrendingDown className="w-4 h-4 text-red-600" />}
-                <span className={`text-sm font-medium ${
-                  isPositive ? 'text-green-600' : 
-                  isNegative ? 'text-red-600' : 
-                  'text-gray-600'
-                }`}>
-                  {change > 0 ? '+' : ''}{change}%
+                <span
+                  className={`text-sm font-medium ${
+                    isPositive ? 'text-green-600' : isNegative ? 'text-red-600' : 'text-gray-600'
+                  }`}
+                >
+                  {change > 0 ? '+' : ''}
+                  {change}%
                 </span>
               </div>
             )}
           </div>
           <div className="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/30">
-            <div className="text-blue-600">
-              {icon}
-            </div>
+            <div className="text-blue-600">{icon}</div>
           </div>
         </div>
       </CardContent>

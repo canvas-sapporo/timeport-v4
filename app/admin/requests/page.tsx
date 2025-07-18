@@ -1,11 +1,13 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { useData } from "@/contexts/data-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { FileText, Check, X, Eye } from 'lucide-react';
+
+import { useAuth } from '@/contexts/auth-context';
+import { useData } from '@/contexts/data-context';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -13,40 +15,38 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { FileText, Check, X, Eye } from "lucide-react";
-import { useState } from "react";
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AdminRequestsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { requests, users, updateRequest } = useData();
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
-    if (!user || user.role !== "admin") {
-      router.push("/login");
+    if (!user || user.role !== 'admin') {
+      router.push('/login');
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== 'admin') {
     return null;
   }
 
   const handleApprove = (requestId: string) => {
     updateRequest(requestId, {
-      status: "approved",
+      status: 'approved',
       approved_by: user.id,
       approved_at: new Date().toISOString(),
     });
@@ -54,19 +54,19 @@ export default function AdminRequestsPage() {
 
   const handleReject = (requestId: string) => {
     updateRequest(requestId, {
-      status: "rejected",
-      rejection_reason: rejectionReason || "管理者により却下されました",
+      status: 'rejected',
+      rejection_reason: rejectionReason || '管理者により却下されました',
     });
-    setRejectionReason("");
+    setRejectionReason('');
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "pending":
+      case 'pending':
         return <Badge variant="secondary">承認待ち</Badge>;
-      case "approved":
+      case 'approved':
         return <Badge variant="default">承認済み</Badge>;
-      case "rejected":
+      case 'rejected':
         return <Badge variant="destructive">却下</Badge>;
       default:
         return <Badge variant="outline">-</Badge>;
@@ -74,9 +74,9 @@ export default function AdminRequestsPage() {
   };
 
   const formatDate = (date?: string) =>
-    typeof date === "string" ? new Date(date).toLocaleDateString("ja-JP") : "-";
+    typeof date === 'string' ? new Date(date).toLocaleDateString('ja-JP') : '-';
 
-  const pendingRequests = requests.filter((a) => a.status === "pending");
+  const pendingRequests = requests.filter((a) => a.status === 'pending');
   const allRequests = requests.sort((a, b) => {
     const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
     const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -112,15 +112,11 @@ export default function AdminRequestsPage() {
               </TableHeader>
               <TableBody>
                 {pendingRequests.map((request) => {
-                  const requestant = users.find(
-                    (u) => u.id === request.user_id,
-                  );
+                  const requestant = users.find((u) => u.id === request.user_id);
                   return (
                     <TableRow key={request.id}>
                       <TableCell>
-                        {requestant
-                          ? `${requestant.family_name} ${requestant.first_name}`
-                          : "-"}
+                        {requestant ? `${requestant.family_name} ${requestant.first_name}` : '-'}
                       </TableCell>
                       <TableCell>{request.title}</TableCell>
                       <TableCell>{formatDate(request.created_at)}</TableCell>
@@ -131,7 +127,7 @@ export default function AdminRequestsPage() {
                             ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                             : request.start_date
                               ? formatDate(request.start_date)
-                              : "-"}
+                              : '-'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
@@ -155,33 +151,25 @@ export default function AdminRequestsPage() {
                                   <div className="text-sm text-gray-600">
                                     {requestant
                                       ? `${requestant.family_name} ${requestant.first_name}`
-                                      : "-"}
+                                      : '-'}
                                   </div>
                                 </div>
                                 <div>
                                   <div className="font-medium">申請種別</div>
-                                  <div className="text-sm text-gray-600">
-                                    {request.title}
-                                  </div>
+                                  <div className="text-sm text-gray-600">{request.title}</div>
                                 </div>
                                 <div>
                                   <div className="font-medium">申請内容</div>
                                   <div className="text-sm text-gray-600 space-y-1">
                                     {request.form_data ? (
-                                      Object.entries(request.form_data).map(
-                                        ([key, value]) => (
-                                          <div key={key}>
-                                            <span className="font-medium">
-                                              {key}:
-                                            </span>{" "}
-                                            {value as string}
-                                          </div>
-                                        ),
-                                      )
+                                      Object.entries(request.form_data).map(([key, value]) => (
+                                        <div key={key}>
+                                          <span className="font-medium">{key}:</span>{' '}
+                                          {value as string}
+                                        </div>
+                                      ))
                                     ) : (
-                                      <div className="text-gray-400">
-                                        申請内容なし
-                                      </div>
+                                      <div className="text-gray-400">申請内容なし</div>
                                     )}
                                   </div>
                                 </div>
@@ -211,22 +199,16 @@ export default function AdminRequestsPage() {
                                           </label>
                                           <Textarea
                                             value={rejectionReason}
-                                            onChange={(e) =>
-                                              setRejectionReason(e.target.value)
-                                            }
+                                            onChange={(e) => setRejectionReason(e.target.value)}
                                             placeholder="却下理由を入力してください"
                                             rows={3}
                                           />
                                         </div>
                                         <div className="flex justify-end space-x-2">
-                                          <Button variant="outline">
-                                            キャンセル
-                                          </Button>
+                                          <Button variant="outline">キャンセル</Button>
                                           <Button
                                             variant="destructive"
-                                            onClick={() =>
-                                              handleReject(request.id)
-                                            }
+                                            onClick={() => handleReject(request.id)}
                                           >
                                             却下する
                                           </Button>
@@ -279,9 +261,7 @@ export default function AdminRequestsPage() {
                 return (
                   <TableRow key={request.id}>
                     <TableCell>
-                      {requestant
-                        ? `${requestant.family_name} ${requestant.first_name}`
-                        : "-"}
+                      {requestant ? `${requestant.family_name} ${requestant.first_name}` : '-'}
                     </TableCell>
                     <TableCell>{request.title}</TableCell>
                     <TableCell>{formatDate(request.created_at)}</TableCell>
@@ -292,15 +272,11 @@ export default function AdminRequestsPage() {
                           ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                           : request.start_date
                             ? formatDate(request.start_date)
-                            : "-"}
+                            : '-'}
                     </TableCell>
+                    <TableCell>{getStatusBadge(request.status ?? '-')}</TableCell>
                     <TableCell>
-                      {getStatusBadge(request.status ?? "-")}
-                    </TableCell>
-                    <TableCell>
-                      {approver
-                        ? `${approver.family_name} ${approver.first_name}`
-                        : "-"}
+                      {approver ? `${approver.family_name} ${approver.first_name}` : '-'}
                     </TableCell>
                   </TableRow>
                 );

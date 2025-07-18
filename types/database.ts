@@ -1,6 +1,6 @@
 /**
  * TimePort データベース型定義
- * 
+ *
  * Supabaseデータベーススキーマに基づく型定義
  */
 
@@ -153,7 +153,19 @@ export interface RequestStatus extends BaseEntity {
 export interface FormField {
   id: string;
   name: string;
-  type: 'text' | 'textarea' | 'number' | 'date' | 'time' | 'datetime-local' | 'email' | 'tel' | 'select' | 'radio' | 'checkbox' | 'file';
+  type:
+    | 'text'
+    | 'textarea'
+    | 'number'
+    | 'date'
+    | 'time'
+    | 'datetime-local'
+    | 'email'
+    | 'tel'
+    | 'select'
+    | 'radio'
+    | 'checkbox'
+    | 'file';
   label: string;
   placeholder?: string;
   required: boolean;

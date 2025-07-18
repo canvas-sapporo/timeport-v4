@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+
 import { useAuth } from '@/contexts/auth-context';
 import FormBuilder from '@/components/forms/form-builder';
 import { RequestType } from '@/types';
@@ -27,8 +28,8 @@ export default function NewRequestTypePage() {
     try {
       // In a real app, this would save to backend
       console.log('Creating new request type:', data);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Redirect to request types list
       router.push('/admin/request-types');
     } catch (error) {
@@ -49,11 +50,7 @@ export default function NewRequestTypePage() {
         <p className="text-gray-600">新しい申請フォームを作成します</p>
       </div>
 
-      <FormBuilder
-        onSaveAction={handleSave}
-        onCancelAction={handleCancel}
-        isLoading={isLoading}
-      />
+      <FormBuilder onSaveAction={handleSave} onCancelAction={handleCancel} isLoading={isLoading} />
     </div>
   );
 }

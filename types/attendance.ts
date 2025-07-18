@@ -1,6 +1,6 @@
 /**
  * TimePort 勤怠管理関連型定義
- * 
+ *
  * 勤怠記録、打刻、休憩記録に関する型を定義
  */
 
@@ -394,7 +394,7 @@ export interface AttendanceSettings {
 /**
  * 勤怠エラータイプ
  */
-export type AttendanceErrorType = 
+export type AttendanceErrorType =
   | 'already_clocked_in'
   | 'not_clocked_in'
   | 'invalid_time'

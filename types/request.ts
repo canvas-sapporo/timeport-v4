@@ -1,6 +1,6 @@
 /**
  * TimePort 申請・承認関連型定義
- * 
+ *
  * 申請、申請種別、承認フローに関する型を定義
  */
 
@@ -116,7 +116,7 @@ export interface FormFieldConfig {
 /**
  * フォームフィールドタイプ
  */
-export type FormFieldType = 
+export type FormFieldType =
   | 'text'
   | 'textarea'
   | 'number'
@@ -138,7 +138,17 @@ export type FormFieldType =
  */
 export interface ValidationRule {
   /** ルールタイプ */
-  type: 'required' | 'minLength' | 'maxLength' | 'min' | 'max' | 'pattern' | 'email' | 'tel' | 'url' | 'custom';
+  type:
+    | 'required'
+    | 'minLength'
+    | 'maxLength'
+    | 'min'
+    | 'max'
+    | 'pattern'
+    | 'email'
+    | 'tel'
+    | 'url'
+    | 'custom';
   /** ルール値 */
   value?: string | number;
   /** エラーメッセージ */

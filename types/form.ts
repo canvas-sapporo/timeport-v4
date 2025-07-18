@@ -1,6 +1,6 @@
 /**
  * TimePort フォーム関連型定義
- * 
+ *
  * 動的フォーム、フォームビルダー、バリデーションに関する型を定義
  */
 
@@ -13,7 +13,7 @@ import type { BaseEntity, UUID, Timestamp } from './common';
 /**
  * フォームフィールドタイプ
  */
-export type FieldType = 
+export type FieldType =
   | 'text'
   | 'textarea'
   | 'number'
@@ -35,7 +35,17 @@ export type FieldType =
  */
 export interface ValidationRule {
   /** ルールタイプ */
-  type: 'required' | 'minLength' | 'maxLength' | 'min' | 'max' | 'pattern' | 'email' | 'tel' | 'url' | 'custom';
+  type:
+    | 'required'
+    | 'minLength'
+    | 'maxLength'
+    | 'min'
+    | 'max'
+    | 'pattern'
+    | 'email'
+    | 'tel'
+    | 'url'
+    | 'custom';
   /** ルール値 */
   value?: string | number;
   /** エラーメッセージ */

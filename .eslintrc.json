@@ -13,9 +13,6 @@
     // TypeScript 用のルール
     "plugin:@typescript-eslint/recommended",
 
-    // React の useEffect などの Hook のルール
-    "plugin:react-hooks/recommended",
-
     // import順序などのチェック
     "plugin:import/recommended",
     "plugin:import/typescript",
@@ -27,7 +24,6 @@
   // 使用するプラグインを指定
   "plugins": [
     "@typescript-eslint",
-    "react-hooks",
     "import",
     "prettier"
   ],
@@ -66,7 +62,11 @@
     ],
 
     // Prettier に違反している箇所を警告
-    "prettier/prettier": "warn"
+    "prettier/prettier": "warn",
+
+    // function() {} → const fn = () => {}
+    "prefer-arrow-callback": ["error"],
+    "func-style": ["error", "expression"]
   },
 
   // import 解決のための設定

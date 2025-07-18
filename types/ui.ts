@@ -1,6 +1,7 @@
 // TimePort UI関連型定義
 
 import type { ReactNode } from 'react';
+
 import type { UUID } from './database';
 
 // ================================
@@ -8,7 +9,14 @@ import type { UUID } from './database';
 // ================================
 
 export type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-export type Variant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
+export type Variant =
+  | 'default'
+  | 'primary'
+  | 'secondary'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'info';
 export type Position = 'top' | 'bottom' | 'left' | 'right' | 'center';
 export type Alignment = 'start' | 'center' | 'end' | 'stretch';
 
@@ -212,7 +220,13 @@ export interface ToastProps {
   title: string;
   message?: string;
   duration?: number;
-  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
+  position?:
+    | 'top-right'
+    | 'top-left'
+    | 'bottom-right'
+    | 'bottom-left'
+    | 'top-center'
+    | 'bottom-center';
 }
 
 // ================================

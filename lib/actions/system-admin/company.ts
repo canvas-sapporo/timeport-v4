@@ -1,11 +1,12 @@
-"use server";
+'use server';
 
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
-import type { 
-  CreateCompanyInput, 
-  UpdateCompanyInput, 
+
+import type {
+  CreateCompanyInput,
+  UpdateCompanyInput,
   CreateCompanyFormData,
   EditCompanyFormData,
   CreateCompanyResult,
@@ -14,16 +15,16 @@ import type {
   CompanyListResponse,
   CompanySearchParams,
   CompanyStats,
-  CompanyValidationResult
+  CompanyValidationResult,
 } from '@/types/company';
-import { 
-  AppError, 
-  withErrorHandling, 
-  createSuccessResponse, 
+import {
+  AppError,
+  withErrorHandling,
+  createSuccessResponse,
   createFailureResponse,
   validateRequired,
   validateEmail,
-  validatePassword
+  validatePassword,
 } from '@/lib/utils/error-handling';
 import type { ValidationError } from '@/types/common';
 
@@ -74,11 +75,11 @@ function validateCreateCompanyForm(form: CreateCompanyFormData): CompanyValidati
 
   return {
     isValid: errors.length === 0,
-    errors: errors.map(error => ({
+    errors: errors.map((error) => ({
       field: error.field as keyof CreateCompanyFormData,
       message: error.message,
-      code: error.code || 'VALIDATION_ERROR'
-    }))
+      code: error.code || 'VALIDATION_ERROR',
+    })),
   };
 }
 
@@ -96,11 +97,11 @@ function validateEditCompanyForm(form: EditCompanyFormData): CompanyValidationRe
 
   return {
     isValid: errors.length === 0,
-    errors: errors.map(error => ({
+    errors: errors.map((error) => ({
       field: error.field as keyof EditCompanyFormData,
       message: error.message,
-      code: error.code || 'VALIDATION_ERROR'
-    }))
+      code: error.code || 'VALIDATION_ERROR',
+    })),
   };
 }
 
@@ -146,7 +147,9 @@ async function checkEmailExists(email: string): Promise<boolean> {
 /**
  * 企業作成（管理者ユーザー・グループ同時作成）
  */
-export async function createCompany(form: CreateCompanyFormData): Promise<{ success: true; data: CreateCompanyResult } | { success: false; error: AppError }> {
+export async function createCompany(
+  form: CreateCompanyFormData
+): Promise<{ success: true; data: CreateCompanyResult } | { success: false; error: AppError }> {
   return withErrorHandling(async () => {
     // バリデーション
     const validation = validateCreateCompanyForm(form);
@@ -169,13 +172,15 @@ export async function createCompany(form: CreateCompanyFormData): Promise<{ succ
     // 1. 企業作成
     const { data: company, error: companyError } = await supabaseAdmin
       .from('companies')
-      .insert([{
-        name: form.name,
-        code: form.code,
-        address: form.address,
-        phone: form.phone,
-        is_active: form.is_active,
-      }])
+      .insert([
+        {
+          name: form.name,
+          code: form.code,
+          address: form.address,
+          phone: form.phone,
+          is_active: form.is_active,
+        },
+      ])
       .select()
       .single();
 
@@ -186,10 +191,12 @@ export async function createCompany(form: CreateCompanyFormData): Promise<{ succ
     // 2. グループ作成
     const { data: group, error: groupError } = await supabaseAdmin
       .from('groups')
-      .insert([{
-        company_id: company.id,
-        name: form.group_name,
-      }])
+      .insert([
+        {
+          company_id: company.id,
+          name: form.group_name,
+        },
+      ])
       .select()
       .single();
 
@@ -210,15 +217,17 @@ export async function createCompany(form: CreateCompanyFormData): Promise<{ succ
       // グループ・企業ロールバック
       await supabaseAdmin.from('groups').delete().eq('id', group.id);
       await supabaseAdmin.from('companies').delete().eq('id', company.id);
-      throw AppError.fromSupabaseError(adminUserRes.error || new Error('管理者ユーザー作成に失敗しました'), '管理者ユーザー作成');
+      throw AppError.fromSupabaseError(
+        adminUserRes.error || new Error('管理者ユーザー作成に失敗しました'),
+        '管理者ユーザー作成'
+      );
     }
 
     const adminUserId = adminUserRes.data.user.id;
 
     // 4. user_profiles作成
-    const { error: profileError } = await supabaseAdmin
-      .from('user_profiles')
-      .insert([{
+    const { error: profileError } = await supabaseAdmin.from('user_profiles').insert([
+      {
         id: adminUserId,
         family_name: form.admin_family_name,
         first_name: form.admin_first_name,
@@ -227,7 +236,8 @@ export async function createCompany(form: CreateCompanyFormData): Promise<{ succ
         email: form.admin_email,
         role: 'admin',
         is_active: true,
-      }]);
+      },
+    ]);
 
     if (profileError) {
       // ユーザー・グループ・企業ロールバック
@@ -238,12 +248,12 @@ export async function createCompany(form: CreateCompanyFormData): Promise<{ succ
     }
 
     // 5. user_groups作成
-    const { error: userGroupError } = await supabaseAdmin
-      .from('user_groups')
-      .insert([{
+    const { error: userGroupError } = await supabaseAdmin.from('user_groups').insert([
+      {
         user_id: adminUserId,
         group_id: group.id,
-      }]);
+      },
+    ]);
 
     if (userGroupError) {
       // user_profiles・ユーザー・グループ・企業ロールバック
@@ -257,7 +267,7 @@ export async function createCompany(form: CreateCompanyFormData): Promise<{ succ
     return {
       company,
       groupId: group.id,
-      adminUserId
+      adminUserId,
     };
   }, '企業作成');
 }
@@ -265,7 +275,10 @@ export async function createCompany(form: CreateCompanyFormData): Promise<{ succ
 /**
  * 企業更新
  */
-export async function updateCompany(id: string, form: EditCompanyFormData): Promise<{ success: true; data: UpdateCompanyResult } | { success: false; error: AppError }> {
+export async function updateCompany(
+  id: string,
+  form: EditCompanyFormData
+): Promise<{ success: true; data: UpdateCompanyResult } | { success: false; error: AppError }> {
   return withErrorHandling(async () => {
     // バリデーション
     const validation = validateEditCompanyForm(form);
@@ -319,7 +332,7 @@ export async function updateCompany(id: string, form: EditCompanyFormData): Prom
 
     return {
       company,
-      updatedFields
+      updatedFields,
     };
   }, '企業更新');
 }
@@ -327,7 +340,9 @@ export async function updateCompany(id: string, form: EditCompanyFormData): Prom
 /**
  * 企業削除（論理削除）
  */
-export async function deleteCompany(id: string): Promise<{ success: true; data: DeleteCompanyResult } | { success: false; error: AppError }> {
+export async function deleteCompany(
+  id: string
+): Promise<{ success: true; data: DeleteCompanyResult } | { success: false; error: AppError }> {
   return withErrorHandling(async () => {
     // 企業の存在確認
     const { data: existingCompany, error: fetchError } = await supabaseAdmin
@@ -343,7 +358,11 @@ export async function deleteCompany(id: string): Promise<{ success: true; data: 
 
     // アクティブな企業は削除不可
     if (existingCompany.is_active) {
-      throw new AppError('アクティブな企業は削除できません。先に無効化してください。', 'ACTIVE_COMPANY_DELETE_ERROR', 400);
+      throw new AppError(
+        'アクティブな企業は削除できません。先に無効化してください。',
+        'ACTIVE_COMPANY_DELETE_ERROR',
+        400
+      );
     }
 
     // 論理削除
@@ -360,7 +379,7 @@ export async function deleteCompany(id: string): Promise<{ success: true; data: 
 
     return {
       companyId: id,
-      deletedAt: company.deleted_at!
+      deletedAt: company.deleted_at!,
     };
   }, '企業削除');
 }
@@ -368,7 +387,9 @@ export async function deleteCompany(id: string): Promise<{ success: true; data: 
 /**
  * 企業一覧取得
  */
-export async function getCompanies(params: CompanySearchParams = {}): Promise<{ success: true; data: CompanyListResponse } | { success: false; error: AppError }> {
+export async function getCompanies(
+  params: CompanySearchParams = {}
+): Promise<{ success: true; data: CompanyListResponse } | { success: false; error: AppError }> {
   return withErrorHandling(async () => {
     const {
       search = '',
@@ -376,12 +397,10 @@ export async function getCompanies(params: CompanySearchParams = {}): Promise<{ 
       page = 1,
       limit = 50,
       orderBy = 'updated_at',
-      ascending = false
+      ascending = false,
     } = params;
 
-    let query = supabaseAdmin
-      .from('companies')
-      .select('*', { count: 'exact' });
+    let query = supabaseAdmin.from('companies').select('*', { count: 'exact' });
 
     // 削除済みを除外
     query = query.is('deleted_at', null);
@@ -396,7 +415,9 @@ export async function getCompanies(params: CompanySearchParams = {}): Promise<{ 
     // 検索フィルター
     if (search.trim()) {
       const searchLower = search.toLowerCase();
-      query = query.or(`name.ilike.%${searchLower}%,code.ilike.%${searchLower}%,address.ilike.%${searchLower}%,phone.ilike.%${searchLower}%`);
+      query = query.or(
+        `name.ilike.%${searchLower}%,code.ilike.%${searchLower}%,address.ilike.%${searchLower}%,phone.ilike.%${searchLower}%`
+      );
     }
 
     // ソート
@@ -418,8 +439,8 @@ export async function getCompanies(params: CompanySearchParams = {}): Promise<{ 
       .select('is_active, deleted_at');
 
     const total = count || 0;
-    const activeCount = allCompanies?.filter(c => c.is_active && !c.deleted_at).length || 0;
-    const deletedCount = allCompanies?.filter(c => c.deleted_at).length || 0;
+    const activeCount = allCompanies?.filter((c) => c.is_active && !c.deleted_at).length || 0;
+    const deletedCount = allCompanies?.filter((c) => c.deleted_at).length || 0;
     const totalPages = Math.ceil(total / limit);
 
     return {
@@ -432,8 +453,8 @@ export async function getCompanies(params: CompanySearchParams = {}): Promise<{ 
         limit,
         totalPages,
         hasMore: page < totalPages,
-        hasPrevious: page > 1
-      }
+        hasPrevious: page > 1,
+      },
     };
   }, '企業一覧取得');
 }
@@ -441,7 +462,9 @@ export async function getCompanies(params: CompanySearchParams = {}): Promise<{ 
 /**
  * 企業統計情報取得
  */
-export async function getCompanyStats(): Promise<{ success: true; data: CompanyStats } | { success: false; error: AppError }> {
+export async function getCompanyStats(): Promise<
+  { success: true; data: CompanyStats } | { success: false; error: AppError }
+> {
   return withErrorHandling(async () => {
     const { data: companies, error } = await supabaseAdmin
       .from('companies')
@@ -456,13 +479,13 @@ export async function getCompanyStats(): Promise<{ success: true; data: CompanyS
 
     const stats: CompanyStats = {
       total: companies?.length || 0,
-      active: companies?.filter(c => c.is_active && !c.deleted_at).length || 0,
-      inactive: companies?.filter(c => !c.is_active && !c.deleted_at).length || 0,
-      deleted: companies?.filter(c => c.deleted_at).length || 0,
-      createdThisMonth: companies?.filter(c => new Date(c.created_at) >= thisMonth).length || 0,
-      updatedThisMonth: companies?.filter(c => new Date(c.updated_at) >= thisMonth).length || 0,
+      active: companies?.filter((c) => c.is_active && !c.deleted_at).length || 0,
+      inactive: companies?.filter((c) => !c.is_active && !c.deleted_at).length || 0,
+      deleted: companies?.filter((c) => c.deleted_at).length || 0,
+      createdThisMonth: companies?.filter((c) => new Date(c.created_at) >= thisMonth).length || 0,
+      updatedThisMonth: companies?.filter((c) => new Date(c.updated_at) >= thisMonth).length || 0,
     };
 
     return stats;
   }, '企業統計取得');
-} 
+}

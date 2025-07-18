@@ -2,6 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  Settings,
+  Building,
+  Clock,
+  Bell,
+  Shield,
+  Database,
+  Save,
+  Plus,
+  Edit,
+  Trash2,
+  FormInput,
+} from 'lucide-react';
+
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,24 +23,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Settings, 
-  Building, 
-  Clock, 
-  Bell, 
-  Shield, 
-  Database,
-  Save,
-  Plus,
-  Edit,
-  Trash2,
-  FormInput
-} from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();
@@ -41,7 +55,7 @@ export default function AdminSettingsPage() {
     workingHours: {
       start: '09:00',
       end: '18:00',
-      breakDuration: 60
+      breakDuration: 60,
     },
     overtimeThreshold: 480,
     autoClockOut: false,
@@ -51,8 +65,8 @@ export default function AdminSettingsPage() {
       requests: true,
       userManagement: true,
       organizationManagement: true,
-      analytics: false
-    }
+      analytics: false,
+    },
   });
 
   // Notification Settings State
@@ -61,7 +75,7 @@ export default function AdminSettingsPage() {
     lateArrivalAlert: true,
     overtimeAlert: true,
     applicationAlert: true,
-    systemMaintenance: true
+    systemMaintenance: true,
   });
 
   // Mock Request Types for Form Builder
@@ -74,7 +88,7 @@ export default function AdminSettingsPage() {
       form_fields: [],
       is_active: true,
       created_at: '2024-01-20T00:00:00Z',
-      updated_at: '2024-01-20T00:00:00Z'
+      updated_at: '2024-01-20T00:00:00Z',
     },
     {
       id: '2',
@@ -84,7 +98,7 @@ export default function AdminSettingsPage() {
       form_fields: [],
       is_active: true,
       created_at: '2024-01-18T00:00:00Z',
-      updated_at: '2024-01-18T00:00:00Z'
+      updated_at: '2024-01-18T00:00:00Z',
     },
     {
       id: '3',
@@ -94,15 +108,15 @@ export default function AdminSettingsPage() {
       form_fields: [],
       is_active: false,
       created_at: '2024-01-15T00:00:00Z',
-      updated_at: '2024-01-15T00:00:00Z'
-    }
+      updated_at: '2024-01-15T00:00:00Z',
+    },
   ]);
 
   // Organization Settings State
   const [organizationSettings, setOrganizationSettings] = useState({
     companyName: '株式会社TimePort',
     departments: ['開発部', '営業部', '管理部'],
-    workplaces: ['本社', '大阪支社']
+    workplaces: ['本社', '大阪支社'],
   });
 
   useEffect(() => {
@@ -119,7 +133,7 @@ export default function AdminSettingsPage() {
   const handleSaveSettings = async (settingsType: string) => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log(`Saving ${settingsType} settings...`);
     } finally {
       setIsLoading(false);
@@ -131,7 +145,7 @@ export default function AdminSettingsPage() {
     { id: 'notifications', label: '通知', icon: Bell },
     { id: 'features', label: '機能設定', icon: FormInput },
     { id: 'form-builder', label: '申請フォーム', icon: FormInput },
-    { id: 'group', label: 'グループ', icon: Building }
+    { id: 'group', label: 'グループ', icon: Building },
   ];
 
   return (
@@ -151,9 +165,11 @@ export default function AdminSettingsPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center space-x-2 py-2 px-4 font-semibold text-sm whitespace-nowrap transition-all duration-200 rounded-md mx-1
-                  ${activeTab === tab.id
-                    ? 'bg-black text-white shadow-md scale-105'
-                    : 'text-gray-500 hover:text-black hover:bg-gray-100'}
+                  ${
+                    activeTab === tab.id
+                      ? 'bg-black text-white shadow-md scale-105'
+                      : 'text-gray-500 hover:text-black hover:bg-gray-100'
+                  }
                 `}
                 style={{ minHeight: 32 }}
               >
@@ -184,20 +200,24 @@ export default function AdminSettingsPage() {
                     <Input
                       id="companyName"
                       value={systemSettings.companyName}
-                      onChange={(e) => setSystemSettings(prev => ({
-                        ...prev,
-                        companyName: e.target.value
-                      }))}
+                      onChange={(e) =>
+                        setSystemSettings((prev) => ({
+                          ...prev,
+                          companyName: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                   <div>
                     <Label htmlFor="timezone">タイムゾーン</Label>
                     <Select
                       value={systemSettings.timezone}
-                      onValueChange={(value) => setSystemSettings(prev => ({
-                        ...prev,
-                        timezone: value
-                      }))}
+                      onValueChange={(value) =>
+                        setSystemSettings((prev) => ({
+                          ...prev,
+                          timezone: value,
+                        }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -209,7 +229,7 @@ export default function AdminSettingsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button 
+                  <Button
                     onClick={() => handleSaveSettings('company')}
                     disabled={isLoading}
                     className="w-full"
@@ -236,13 +256,15 @@ export default function AdminSettingsPage() {
                         id="startTime"
                         type="time"
                         value={systemSettings.workingHours.start}
-                        onChange={(e) => setSystemSettings(prev => ({
-                          ...prev,
-                          workingHours: {
-                            ...prev.workingHours,
-                            start: e.target.value
-                          }
-                        }))}
+                        onChange={(e) =>
+                          setSystemSettings((prev) => ({
+                            ...prev,
+                            workingHours: {
+                              ...prev.workingHours,
+                              start: e.target.value,
+                            },
+                          }))
+                        }
                       />
                     </div>
                     <div>
@@ -251,13 +273,15 @@ export default function AdminSettingsPage() {
                         id="endTime"
                         type="time"
                         value={systemSettings.workingHours.end}
-                        onChange={(e) => setSystemSettings(prev => ({
-                          ...prev,
-                          workingHours: {
-                            ...prev.workingHours,
-                            end: e.target.value
-                          }
-                        }))}
+                        onChange={(e) =>
+                          setSystemSettings((prev) => ({
+                            ...prev,
+                            workingHours: {
+                              ...prev.workingHours,
+                              end: e.target.value,
+                            },
+                          }))
+                        }
                       />
                     </div>
                   </div>
@@ -267,13 +291,15 @@ export default function AdminSettingsPage() {
                       id="breakDuration"
                       type="number"
                       value={systemSettings.workingHours.breakDuration}
-                      onChange={(e) => setSystemSettings(prev => ({
-                        ...prev,
-                        workingHours: {
-                          ...prev.workingHours,
-                          breakDuration: parseInt(e.target.value)
-                        }
-                      }))}
+                      onChange={(e) =>
+                        setSystemSettings((prev) => ({
+                          ...prev,
+                          workingHours: {
+                            ...prev.workingHours,
+                            breakDuration: parseInt(e.target.value),
+                          },
+                        }))
+                      }
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -281,13 +307,15 @@ export default function AdminSettingsPage() {
                     <Switch
                       id="autoClockOut"
                       checked={systemSettings.autoClockOut}
-                      onCheckedChange={(checked) => setSystemSettings(prev => ({
-                        ...prev,
-                        autoClockOut: checked
-                      }))}
+                      onCheckedChange={(checked) =>
+                        setSystemSettings((prev) => ({
+                          ...prev,
+                          autoClockOut: checked,
+                        }))
+                      }
                     />
                   </div>
-                  <Button 
+                  <Button
                     onClick={() => handleSaveSettings('working-hours')}
                     disabled={isLoading}
                     className="w-full"
@@ -320,15 +348,17 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={notificationSettings.emailNotifications}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                      ...prev,
-                      emailNotifications: checked
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setNotificationSettings((prev) => ({
+                        ...prev,
+                        emailNotifications: checked,
+                      }))
+                    }
                   />
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>遅刻アラート</Label>
@@ -336,13 +366,15 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={notificationSettings.lateArrivalAlert}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                      ...prev,
-                      lateArrivalAlert: checked
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setNotificationSettings((prev) => ({
+                        ...prev,
+                        lateArrivalAlert: checked,
+                      }))
+                    }
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>残業アラート</Label>
@@ -350,13 +382,15 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={notificationSettings.overtimeAlert}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                      ...prev,
-                      overtimeAlert: checked
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setNotificationSettings((prev) => ({
+                        ...prev,
+                        overtimeAlert: checked,
+                      }))
+                    }
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>申請アラート</Label>
@@ -364,13 +398,15 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={notificationSettings.applicationAlert}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                      ...prev,
-                      applicationAlert: checked
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setNotificationSettings((prev) => ({
+                        ...prev,
+                        applicationAlert: checked,
+                      }))
+                    }
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>メンテナンス通知</Label>
@@ -378,15 +414,17 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={notificationSettings.systemMaintenance}
-                    onCheckedChange={(checked) => setNotificationSettings(prev => ({
-                      ...prev,
-                      systemMaintenance: checked
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setNotificationSettings((prev) => ({
+                        ...prev,
+                        systemMaintenance: checked,
+                      }))
+                    }
                   />
                 </div>
               </div>
-              
-              <Button 
+
+              <Button
                 onClick={() => handleSaveSettings('notifications')}
                 disabled={isLoading}
                 className="w-full"
@@ -417,15 +455,17 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={systemSettings.features.attendance}
-                    onCheckedChange={(checked) => setSystemSettings(prev => ({
-                      ...prev,
-                      features: { ...prev.features, attendance: checked }
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setSystemSettings((prev) => ({
+                        ...prev,
+                        features: { ...prev.features, attendance: checked },
+                      }))
+                    }
                   />
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>申請機能</Label>
@@ -433,13 +473,15 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={systemSettings.features.requests}
-                    onCheckedChange={(checked) => setSystemSettings(prev => ({
-                      ...prev,
-                      features: { ...prev.features, requests: checked }
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setSystemSettings((prev) => ({
+                        ...prev,
+                        features: { ...prev.features, requests: checked },
+                      }))
+                    }
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>ユーザー管理</Label>
@@ -447,13 +489,15 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={systemSettings.features.userManagement}
-                    onCheckedChange={(checked) => setSystemSettings(prev => ({
-                      ...prev,
-                      features: { ...prev.features, userManagement: checked }
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setSystemSettings((prev) => ({
+                        ...prev,
+                        features: { ...prev.features, userManagement: checked },
+                      }))
+                    }
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>グループ管理</Label>
@@ -461,13 +505,15 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={systemSettings.features.organizationManagement}
-                    onCheckedChange={(checked) => setSystemSettings(prev => ({
-                      ...prev,
-                      features: { ...prev.features, organizationManagement: checked }
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setSystemSettings((prev) => ({
+                        ...prev,
+                        features: { ...prev.features, organizationManagement: checked },
+                      }))
+                    }
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>分析機能</Label>
@@ -475,15 +521,17 @@ export default function AdminSettingsPage() {
                   </div>
                   <Switch
                     checked={systemSettings.features.analytics}
-                    onCheckedChange={(checked) => setSystemSettings(prev => ({
-                      ...prev,
-                      features: { ...prev.features, analytics: checked }
-                    }))}
+                    onCheckedChange={(checked) =>
+                      setSystemSettings((prev) => ({
+                        ...prev,
+                        features: { ...prev.features, analytics: checked },
+                      }))
+                    }
                   />
                 </div>
               </div>
-              
-              <Button 
+
+              <Button
                 onClick={() => handleSaveSettings('features')}
                 disabled={isLoading}
                 className="w-full"
@@ -505,7 +553,10 @@ export default function AdminSettingsPage() {
                   <FormInput className="w-5 h-5" />
                   <span>申請フォーム</span>
                 </div>
-                <Button onClick={() => window.location.href = '/admin/request-types/new'} variant="timeport-primary">
+                <Button
+                  onClick={() => (window.location.href = '/admin/request-types/new')}
+                  variant="timeport-primary"
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   新規フォーム作成
                 </Button>
@@ -531,28 +582,28 @@ export default function AdminSettingsPage() {
                       <TableCell>
                         <Badge variant="outline">{type.code}</Badge>
                       </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {type.description}
-                      </TableCell>
+                      <TableCell className="max-w-xs truncate">{type.description}</TableCell>
                       <TableCell>{type.form_fields.length}項目</TableCell>
                       <TableCell>
-                        <Badge variant={type.is_active ? "default" : "secondary"}>
+                        <Badge variant={type.is_active ? 'default' : 'secondary'}>
                           {type.is_active ? '有効' : '無効'}
                         </Badge>
                       </TableCell>
                       <TableCell>{new Date(type.updated_at).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
-                            onClick={() => window.location.href = `/admin/request-types/${type.id}/edit`}
+                            onClick={() =>
+                              (window.location.href = `/admin/request-types/${type.id}/edit`)
+                            }
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-red-600"
                             onClick={() => {
                               if (confirm(`申請種別「${type.name}」を削除しますか？`)) {
@@ -589,18 +640,23 @@ export default function AdminSettingsPage() {
                   <Input
                     id="orgCompanyName"
                     value={organizationSettings.companyName}
-                    onChange={(e) => setOrganizationSettings(prev => ({
-                      ...prev,
-                      companyName: e.target.value
-                    }))}
+                    onChange={(e) =>
+                      setOrganizationSettings((prev) => ({
+                        ...prev,
+                        companyName: e.target.value,
+                      }))
+                    }
                   />
                 </div>
-                
+
                 <div>
                   <Label>グループ一覧</Label>
                   <div className="mt-2 space-y-2">
                     {organizationSettings.departments.map((group, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                      >
                         <span>{group}</span>
                         <Button variant="ghost" size="sm" className="text-red-600">
                           <Trash2 className="w-4 h-4" />
@@ -614,7 +670,7 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
 
-                <Button 
+                <Button
                   onClick={() => handleSaveSettings('group')}
                   disabled={isLoading}
                   className="w-full"

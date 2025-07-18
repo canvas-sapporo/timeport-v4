@@ -1,22 +1,46 @@
-"use client";
+'use client';
 import { useState, useMemo } from 'react';
+import {
+  Pencil,
+  Trash2,
+  Plus,
+  Building2,
+  CheckCircle2,
+  HelpCircle,
+  Search,
+  Filter,
+} from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Pencil, Trash2, Plus, Building2, CheckCircle2, HelpCircle, Search, Filter } from 'lucide-react';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import type { Company } from '@/types/company';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+
 import CompanyCreateDialog from './CompanyCreateDialog';
 import CompanyEditDialog from './CompanyEditDialog';
 import CompanyDeleteDialog from './CompanyDeleteDialog';
 
-export default function CompanyListTable({ companies, activeCompanyCount, deletedCompanyCount }: { companies: Company[]; activeCompanyCount: number; deletedCompanyCount: number }) {
+export default function CompanyListTable({
+  companies,
+  activeCompanyCount,
+  deletedCompanyCount,
+}: {
+  companies: Company[];
+  activeCompanyCount: number;
+  deletedCompanyCount: number;
+}) {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  
+
   // ダイアログの状態管理
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -28,21 +52,23 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
   const filteredCompanies = useMemo(() => {
     let result = companies;
     if (selectedStatus === 'active') {
-      result = result.filter(c => c.is_active);
+      result = result.filter((c) => c.is_active);
     } else if (selectedStatus === 'inactive') {
-      result = result.filter(c => !c.is_active);
+      result = result.filter((c) => !c.is_active);
     }
-    if (!search) return [...result].sort((a, b) => {
-      if (!a.updated_at || !b.updated_at) return 0;
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-    });
+    if (!search)
+      return [...result].sort((a, b) => {
+        if (!a.updated_at || !b.updated_at) return 0;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      });
     const lower = search.toLowerCase();
     return result
-      .filter(c =>
-        (c.name && c.name.toLowerCase().includes(lower)) ||
-        (c.code && c.code.toLowerCase().includes(lower)) ||
-        (c.address && c.address.toLowerCase().includes(lower)) ||
-        (c.phone && c.phone.toLowerCase().includes(lower))
+      .filter(
+        (c) =>
+          (c.name && c.name.toLowerCase().includes(lower)) ||
+          (c.code && c.code.toLowerCase().includes(lower)) ||
+          (c.address && c.address.toLowerCase().includes(lower)) ||
+          (c.phone && c.phone.toLowerCase().includes(lower))
       )
       .sort((a, b) => {
         if (!a.updated_at || !b.updated_at) return 0;
@@ -76,7 +102,8 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
           <p className="text-muted-foreground text-sm mt-1">全社の企業情報を管理します</p>
         </div>
         <Button variant="timeport-primary" size="sm" onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />追加
+          <Plus className="w-4 h-4 mr-2" />
+          追加
         </Button>
       </div>
 
@@ -91,7 +118,10 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
           </div>
           <div className="text-sm text-gray-600">総企業数</div>
           <div className="text-2xl font-bold text-gray-800 mb-1">{companies.length}</div>
-          <div className="absolute left-0 right-0 bottom-0 h-2" style={{background: 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)'}} />
+          <div
+            className="absolute left-0 right-0 bottom-0 h-2"
+            style={{ background: 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)' }}
+          />
         </Card>
         {/* アクティブカード */}
         <Card className="relative p-4 flex flex-col gap-1 bg-green-50 shadow rounded-xl overflow-hidden">
@@ -102,7 +132,10 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
           </div>
           <div className="text-sm text-gray-600">アクティブ</div>
           <div className="text-2xl font-bold text-gray-800 mb-1">{activeCompanyCount}</div>
-          <div className="absolute left-0 right-0 bottom-0 h-2" style={{background: 'linear-gradient(90deg, #22c55e 0%, #4ade80 100%)'}} />
+          <div
+            className="absolute left-0 right-0 bottom-0 h-2"
+            style={{ background: 'linear-gradient(90deg, #22c55e 0%, #4ade80 100%)' }}
+          />
         </Card>
         {/* 削除済み企業数カード */}
         <Card className="relative p-4 flex flex-col gap-1 bg-purple-50 shadow rounded-xl overflow-hidden">
@@ -113,7 +146,10 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
           </div>
           <div className="text-sm text-gray-600">削除済み企業数</div>
           <div className="text-2xl font-bold text-gray-800 mb-1">{deletedCompanyCount}</div>
-          <div className="absolute left-0 right-0 bottom-0 h-2" style={{background: 'linear-gradient(90deg, #a78bfa 0%, #c4b5fd 100%)'}} />
+          <div
+            className="absolute left-0 right-0 bottom-0 h-2"
+            style={{ background: 'linear-gradient(90deg, #a78bfa 0%, #c4b5fd 100%)' }}
+          />
         </Card>
       </div>
 
@@ -133,7 +169,7 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
                 <Input
                   placeholder="企業名、コード、住所、電話番号で検索"
                   value={search}
-                  onChange={e => setSearch(e.target.value)}
+                  onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 w-full"
                 />
               </div>
@@ -148,7 +184,9 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" onClick={handleReset} className="w-full md:w-32">リセット</Button>
+            <Button variant="outline" onClick={handleReset} className="w-full md:w-32">
+              リセット
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -184,7 +222,12 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
                       )}
                     </td>
                     <td className="px-4 py-2 text-center">
-                      <Button variant="ghost" size="icon" className="mr-2" onClick={() => handleEditClick(company)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="mr-2"
+                        onClick={() => handleEditClick(company)}
+                      >
                         <Pencil size={16} />
                       </Button>
                       <TooltipProvider>
@@ -202,9 +245,7 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
                             </span>
                           </TooltipTrigger>
                           {company.is_active && (
-                            <TooltipContent>
-                              無効化しないと削除できません
-                            </TooltipContent>
+                            <TooltipContent>無効化しないと削除できません</TooltipContent>
                           )}
                         </Tooltip>
                       </TooltipProvider>
@@ -213,7 +254,9 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-muted-foreground">企業データがありません</td>
+                  <td colSpan={6} className="text-center py-6 text-muted-foreground">
+                    企業データがありません
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -222,22 +265,19 @@ export default function CompanyListTable({ companies, activeCompanyCount, delete
       </div>
 
       {/* 分割済みダイアログコンポーネント */}
-      <CompanyCreateDialog 
-        open={createDialogOpen} 
-        onOpenChange={setCreateDialogOpen} 
-      />
-      
-      <CompanyEditDialog 
-        open={editDialogOpen} 
+      <CompanyCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+
+      <CompanyEditDialog
+        open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         company={editTarget}
       />
-      
-      <CompanyDeleteDialog 
-        open={deleteDialogOpen} 
+
+      <CompanyDeleteDialog
+        open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         company={deleteTarget}
       />
     </div>
   );
-} 
+}

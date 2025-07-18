@@ -1,6 +1,6 @@
 /**
  * TimePort 共通型定義
- * 
+ *
  * 全エンティティで共通して使用される基本型とユーティリティ型を定義
  */
 
@@ -26,7 +26,7 @@ export type TimeString = string;
 
 /**
  * 全テーブル共通の基底エンティティ型
- * 
+ *
  * @example
  * ```typescript
  * interface User extends BaseEntity {
@@ -53,7 +53,7 @@ export interface BaseEntity {
 /**
  * エンティティ作成用の入力型
  * id, created_at, updated_atを除外
- * 
+ *
  * @example
  * ```typescript
  * type CreateUserInput = CreateInput<User>;
@@ -65,18 +65,20 @@ export type CreateInput<T extends BaseEntity> = Omit<T, 'id' | 'created_at' | 'u
 /**
  * エンティティ更新用の入力型
  * id, created_at, updated_atを除外し、全フィールドをOptional
- * 
+ *
  * @example
  * ```typescript
  * type UpdateUserInput = UpdateInput<User>;
  * // { name?: string; email?: string; deleted_at?: Timestamp }
  * ```
  */
-export type UpdateInput<T extends BaseEntity> = Partial<Omit<T, 'id' | 'created_at' | 'updated_at'>>;
+export type UpdateInput<T extends BaseEntity> = Partial<
+  Omit<T, 'id' | 'created_at' | 'updated_at'>
+>;
 
 /**
  * リレーションを含む型の生成
- * 
+ *
  * @example
  * ```typescript
  * type UserWithGroup = WithRelations<User, {

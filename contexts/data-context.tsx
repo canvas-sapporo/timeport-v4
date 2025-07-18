@@ -1,17 +1,12 @@
-"use client";
+'use client';
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
-import { Attendance } from "@/types/attendance";
-import { Request, RequestType } from "@/types/request";
-import { UserProfile } from "@/types/auth";
-import { Notification } from "@/types/system";
-import { Group } from "@/types/groups";
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+import { Attendance } from '@/types/attendance';
+import { Request, RequestType } from '@/types/request';
+import { UserProfile } from '@/types/auth';
+import { Notification } from '@/types/system';
+import { Group } from '@/types/groups';
 import {
   users,
   requests,
@@ -19,7 +14,7 @@ import {
   notifications,
   groups,
   generateAttendanceRecords,
-} from "@/lib/mock";
+} from '@/lib/mock';
 
 interface DataContextType {
   attendanceRecords: Attendance[];
@@ -29,9 +24,7 @@ interface DataContextType {
   users: UserProfile[];
   groups: Group[];
   updateAttendance: (record: Attendance) => void;
-  createRequest: (
-    request: Omit<Request, "id" | "created_at" | "updated_at">,
-  ) => void;
+  createRequest: (request: Omit<Request, 'id' | 'created_at' | 'updated_at'>) => void;
   updateRequest: (id: string, updates: Partial<Request>) => void;
   markNotificationAsRead: (id: string) => void;
   getTodayAttendance: (userId: string) => Attendance | null;
@@ -50,8 +43,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
   const [requestsState, setRequests] = useState<Request[]>(requests);
-  const [notificationsState, setNotifications] =
-    useState<Notification[]>(notifications);
+  const [notificationsState, setNotifications] = useState<Notification[]>(notifications);
 
   useEffect(() => {
     // Generate attendance records for all users
@@ -75,9 +67,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const createRequest = (
-    request: Omit<Request, "id" | "created_at" | "updated_at">,
-  ) => {
+  const createRequest = (request: Omit<Request, 'id' | 'created_at' | 'updated_at'>) => {
     const newRequest: Request = {
       ...request,
       id: Date.now().toString(),
@@ -90,28 +80,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const updateRequest = (id: string, updates: Partial<Request>) => {
     setRequests((prev) =>
       prev.map((app) =>
-        app.id === id
-          ? { ...app, ...updates, updatedAt: new Date().toISOString() }
-          : app,
-      ),
+        app.id === id ? { ...app, ...updates, updatedAt: new Date().toISOString() } : app
+      )
     );
   };
 
   const markNotificationAsRead = (id: string) => {
     setNotifications((prev) =>
-      prev.map((notif) =>
-        notif.id === id ? { ...notif, isRead: true } : notif,
-      ),
+      prev.map((notif) => (notif.id === id ? { ...notif, isRead: true } : notif))
     );
   };
 
   const getTodayAttendance = (userId: string): Attendance | null => {
-    const today = new Date().toISOString().split("T")[0];
-    return (
-      attendanceRecords.find(
-        (r) => r.user_id === userId && r.work_date === today,
-      ) || null
-    );
+    const today = new Date().toISOString().split('T')[0];
+    return attendanceRecords.find((r) => r.user_id === userId && r.work_date === today) || null;
   };
 
   const getUserAttendance = (userId: string): Attendance[] => {
@@ -119,7 +101,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clockIn = (userId: string, time: string) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split('T')[0];
     const recordId = `${userId}-${today}`;
 
     const existingRecord = attendanceRecords.find((r) => r.id === recordId);
@@ -148,18 +130,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clockOut = (userId: string, time: string) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split('T')[0];
     const recordId = `${userId}-${today}`;
 
     const existingRecord = attendanceRecords.find((r) => r.id === recordId);
     if (existingRecord && existingRecord.clock_in_time) {
-      const clockInTime = new Date(
-        `${today}T${existingRecord.clock_in_time}:00`,
-      );
+      const clockInTime = new Date(`${today}T${existingRecord.clock_in_time}:00`);
       const clockOutTime = new Date(`${today}T${time}:00`);
-      const workMinutes =
-        Math.floor((clockOutTime.getTime() - clockInTime.getTime()) / 60000) -
-        60;
+      const workMinutes = Math.floor((clockOutTime.getTime() - clockInTime.getTime()) / 60000) - 60;
       const overtimeMinutes = Math.max(0, workMinutes - 480);
 
       updateAttendance({
@@ -173,12 +151,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const startBreak = (userId: string, time: string) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split('T')[0];
     const recordId = `${userId}-${today}`;
 
     const existingRecord = attendanceRecords.find((r) => r.id === recordId);
     if (existingRecord) {
-      const newBreakRecord = { start: time, end: "" };
+      const newBreakRecord = { start: time, end: '' };
       updateAttendance({
         ...existingRecord,
         break_records: [...existingRecord.break_records, newBreakRecord],
@@ -188,7 +166,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const endBreak = (userId: string, time: string) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split('T')[0];
     const recordId = `${userId}-${today}`;
 
     const existingRecord = attendanceRecords.find((r) => r.id === recordId);
@@ -216,8 +194,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         users,
         groups,
         // 後方互換性のため
-        departments: groups.filter((g) => g.id.includes("dept")),
-        workplaces: groups.filter((g) => g.id.includes("work")),
+        departments: groups.filter((g) => g.id.includes('dept')),
+        workplaces: groups.filter((g) => g.id.includes('work')),
         updateAttendance,
         createRequest,
         updateRequest,
@@ -238,7 +216,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 export const useData = () => {
   const context = useContext(DataContext);
   if (context === undefined) {
-    throw new Error("useData must be used within a DataProvider");
+    throw new Error('useData must be used within a DataProvider');
   }
   return context;
 };

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import FormBuilder from '@/components/forms/form-builder';
@@ -18,7 +19,7 @@ export default function EditRequestTypePage() {
   const requestTypeId = params.id as string;
 
   useEffect(() => {
-    const type = requestTypes.find(t => t.id === requestTypeId);
+    const type = requestTypes.find((t) => t.id === requestTypeId);
     if (type) {
       setRequestType(type);
     } else {
@@ -54,14 +55,14 @@ export default function EditRequestTypePage() {
     category: requestType.category,
     form_config: requestType.form_config.map((field: any) => ({
       ...field,
-      isNew: false
+      isNew: false,
     })),
     approval_flow: requestType.approval_flow,
     default_status_id: requestType.default_status_id,
     is_active: requestType.is_active,
     display_order: requestType.display_order,
     created_at: requestType.created_at,
-    updated_at: requestType.updated_at
+    updated_at: requestType.updated_at,
   };
 
   const handleSave = async (data: RequestType) => {
@@ -69,8 +70,8 @@ export default function EditRequestTypePage() {
     try {
       // In a real app, this would update the backend
       console.log('Updating request type:', requestTypeId, data);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Redirect to request type detail
       router.push(`/admin/request-types/${requestTypeId}`);
     } catch (error) {

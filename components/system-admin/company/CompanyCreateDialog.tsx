@@ -1,23 +1,29 @@
-"use client";
+'use client';
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Eye, EyeOff } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Eye, EyeOff } from 'lucide-react';
 import { createCompany } from '@/lib/actions/system-admin/company';
-import { useRouter } from 'next/navigation';
 import type { CreateCompanyFormData } from '@/types/company';
 import { AppError } from '@/lib/utils/error-handling';
 
-const steps = [
-  { label: '企業情報' },
-  { label: 'グループ情報' },
-  { label: '管理者ユーザー情報' },
-];
+const steps = [{ label: '企業情報' }, { label: 'グループ情報' }, { label: '管理者ユーザー情報' }];
 
-export default function CompanyCreateDialog({ open, onOpenChange }: {
+export default function CompanyCreateDialog({
+  open,
+  onOpenChange,
+}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -26,7 +32,7 @@ export default function CompanyCreateDialog({ open, onOpenChange }: {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  
+
   const [form, setForm] = useState<CreateCompanyFormData>({
     name: '',
     code: '',
@@ -52,7 +58,7 @@ export default function CompanyCreateDialog({ open, onOpenChange }: {
 
     try {
       const result = await createCompany(form);
-      
+
       if (result.success) {
         onOpenChange(false);
         setStep(0);
@@ -74,11 +80,11 @@ export default function CompanyCreateDialog({ open, onOpenChange }: {
       } else {
         // エラーハンドリング
         const error = result.error;
-        
+
         if (error.validationErrors && error.validationErrors.length > 0) {
           // フィールド別エラーを設定
           const fieldErrorsMap: Record<string, string> = {};
-          error.validationErrors.forEach(validationError => {
+          error.validationErrors.forEach((validationError) => {
             fieldErrorsMap[validationError.field] = validationError.message;
           });
           setFieldErrors(fieldErrorsMap);
@@ -103,45 +109,53 @@ export default function CompanyCreateDialog({ open, onOpenChange }: {
       case 0:
         return (
           <>
-            <Label htmlFor="company-name">企業名<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="company-name" 
-              value={form.name} 
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))} 
-              required 
+            <Label htmlFor="company-name">
+              企業名<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="company-name"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              required
               className={getFieldError('name') ? 'border-red-500' : ''}
             />
-            {getFieldError('name') && <div className="text-red-500 text-sm">{getFieldError('name')}</div>}
-            
-            <Label htmlFor="company-code">企業コード<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="company-code" 
-              value={form.code} 
-              onChange={e => setForm(f => ({ ...f, code: e.target.value }))} 
-              required 
+            {getFieldError('name') && (
+              <div className="text-red-500 text-sm">{getFieldError('name')}</div>
+            )}
+
+            <Label htmlFor="company-code">
+              企業コード<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="company-code"
+              value={form.code}
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+              required
               className={getFieldError('code') ? 'border-red-500' : ''}
             />
-            {getFieldError('code') && <div className="text-red-500 text-sm">{getFieldError('code')}</div>}
-            
+            {getFieldError('code') && (
+              <div className="text-red-500 text-sm">{getFieldError('code')}</div>
+            )}
+
             <Label htmlFor="company-address">住所</Label>
-            <Input 
-              id="company-address" 
-              value={form.address} 
-              onChange={e => setForm(f => ({ ...f, address: e.target.value }))} 
+            <Input
+              id="company-address"
+              value={form.address}
+              onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
             />
-            
+
             <Label htmlFor="company-phone">電話番号</Label>
-            <Input 
-              id="company-phone" 
-              value={form.phone} 
-              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} 
+            <Input
+              id="company-phone"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
             />
-            
+
             <div className="flex items-center gap-2 mt-2">
-              <Switch 
-                id="company-active" 
-                checked={form.is_active} 
-                onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} 
+              <Switch
+                id="company-active"
+                checked={form.is_active}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
               />
               <Label htmlFor="company-active">有効</Label>
             </div>
@@ -150,92 +164,120 @@ export default function CompanyCreateDialog({ open, onOpenChange }: {
       case 1:
         return (
           <>
-            <Label htmlFor="group-name">初期グループ名<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="group-name" 
-              value={form.group_name} 
-              onChange={e => setForm(f => ({ ...f, group_name: e.target.value }))} 
-              required 
+            <Label htmlFor="group-name">
+              初期グループ名<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="group-name"
+              value={form.group_name}
+              onChange={(e) => setForm((f) => ({ ...f, group_name: e.target.value }))}
+              required
               className={getFieldError('group_name') ? 'border-red-500' : ''}
             />
-            {getFieldError('group_name') && <div className="text-red-500 text-sm">{getFieldError('group_name')}</div>}
+            {getFieldError('group_name') && (
+              <div className="text-red-500 text-sm">{getFieldError('group_name')}</div>
+            )}
           </>
         );
       case 2:
         return (
           <>
-            <Label htmlFor="admin-family-name">管理者姓<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="admin-family-name" 
-              value={form.admin_family_name} 
-              onChange={e => setForm(f => ({ ...f, admin_family_name: e.target.value }))} 
-              required 
+            <Label htmlFor="admin-family-name">
+              管理者姓<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="admin-family-name"
+              value={form.admin_family_name}
+              onChange={(e) => setForm((f) => ({ ...f, admin_family_name: e.target.value }))}
+              required
               className={getFieldError('admin_family_name') ? 'border-red-500' : ''}
             />
-            {getFieldError('admin_family_name') && <div className="text-red-500 text-sm">{getFieldError('admin_family_name')}</div>}
-            
-            <Label htmlFor="admin-family-name-kana">管理者姓カナ<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="admin-family-name-kana" 
-              value={form.admin_family_name_kana} 
-              onChange={e => setForm(f => ({ ...f, admin_family_name_kana: e.target.value }))} 
-              required 
+            {getFieldError('admin_family_name') && (
+              <div className="text-red-500 text-sm">{getFieldError('admin_family_name')}</div>
+            )}
+
+            <Label htmlFor="admin-family-name-kana">
+              管理者姓カナ<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="admin-family-name-kana"
+              value={form.admin_family_name_kana}
+              onChange={(e) => setForm((f) => ({ ...f, admin_family_name_kana: e.target.value }))}
+              required
               className={getFieldError('admin_family_name_kana') ? 'border-red-500' : ''}
             />
-            {getFieldError('admin_family_name_kana') && <div className="text-red-500 text-sm">{getFieldError('admin_family_name_kana')}</div>}
-            
-            <Label htmlFor="admin-first-name">管理者名<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="admin-first-name" 
-              value={form.admin_first_name} 
-              onChange={e => setForm(f => ({ ...f, admin_first_name: e.target.value }))} 
-              required 
+            {getFieldError('admin_family_name_kana') && (
+              <div className="text-red-500 text-sm">{getFieldError('admin_family_name_kana')}</div>
+            )}
+
+            <Label htmlFor="admin-first-name">
+              管理者名<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="admin-first-name"
+              value={form.admin_first_name}
+              onChange={(e) => setForm((f) => ({ ...f, admin_first_name: e.target.value }))}
+              required
               className={getFieldError('admin_first_name') ? 'border-red-500' : ''}
             />
-            {getFieldError('admin_first_name') && <div className="text-red-500 text-sm">{getFieldError('admin_first_name')}</div>}
-            
-            <Label htmlFor="admin-first-name-kana">管理者名カナ<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="admin-first-name-kana" 
-              value={form.admin_first_name_kana} 
-              onChange={e => setForm(f => ({ ...f, admin_first_name_kana: e.target.value }))} 
-              required 
+            {getFieldError('admin_first_name') && (
+              <div className="text-red-500 text-sm">{getFieldError('admin_first_name')}</div>
+            )}
+
+            <Label htmlFor="admin-first-name-kana">
+              管理者名カナ<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="admin-first-name-kana"
+              value={form.admin_first_name_kana}
+              onChange={(e) => setForm((f) => ({ ...f, admin_first_name_kana: e.target.value }))}
+              required
               className={getFieldError('admin_first_name_kana') ? 'border-red-500' : ''}
             />
-            {getFieldError('admin_first_name_kana') && <div className="text-red-500 text-sm">{getFieldError('admin_first_name_kana')}</div>}
-            
-            <Label htmlFor="admin-email">管理者メールアドレス<span className="text-red-500 ml-1">*</span></Label>
-            <Input 
-              id="admin-email" 
-              type="email" 
-              value={form.admin_email} 
-              onChange={e => setForm(f => ({ ...f, admin_email: e.target.value }))} 
-              required 
+            {getFieldError('admin_first_name_kana') && (
+              <div className="text-red-500 text-sm">{getFieldError('admin_first_name_kana')}</div>
+            )}
+
+            <Label htmlFor="admin-email">
+              管理者メールアドレス<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="admin-email"
+              type="email"
+              value={form.admin_email}
+              onChange={(e) => setForm((f) => ({ ...f, admin_email: e.target.value }))}
+              required
               className={getFieldError('admin_email') ? 'border-red-500' : ''}
             />
-            {getFieldError('admin_email') && <div className="text-red-500 text-sm">{getFieldError('admin_email')}</div>}
-            
-            <Label htmlFor="admin-password">管理者パスワード<span className="text-red-500 ml-1">*</span></Label>
+            {getFieldError('admin_email') && (
+              <div className="text-red-500 text-sm">{getFieldError('admin_email')}</div>
+            )}
+
+            <Label htmlFor="admin-password">
+              管理者パスワード<span className="text-red-500 ml-1">*</span>
+            </Label>
             <div className="relative">
-              <Input 
-                id="admin-password" 
-                type={showPassword ? 'text' : 'password'} 
-                value={form.admin_password} 
-                onChange={e => setForm(f => ({ ...f, admin_password: e.target.value }))} 
-                required 
-                minLength={8} 
+              <Input
+                id="admin-password"
+                type={showPassword ? 'text' : 'password'}
+                value={form.admin_password}
+                onChange={(e) => setForm((f) => ({ ...f, admin_password: e.target.value }))}
+                required
+                minLength={8}
                 className={getFieldError('admin_password') ? 'border-red-500' : ''}
               />
-              <button 
-                type="button" 
-                className="absolute right-2 top-1/2 -translate-y-1/2" 
-                onClick={() => setShowPassword(v => !v)} 
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2"
+                onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {getFieldError('admin_password') && <div className="text-red-500 text-sm">{getFieldError('admin_password')}</div>}
+            {getFieldError('admin_password') && (
+              <div className="text-red-500 text-sm">{getFieldError('admin_password')}</div>
+            )}
           </>
         );
     }
@@ -252,22 +294,38 @@ export default function CompanyCreateDialog({ open, onOpenChange }: {
           {/* Stepper表示 */}
           <div className="flex mb-4">
             {steps.map((s, i) => (
-              <div key={i} className={`flex-1 text-center ${i === step ? 'font-bold' : ''}`}>{s.label}</div>
+              <div key={i} className={`flex-1 text-center ${i === step ? 'font-bold' : ''}`}>
+                {s.label}
+              </div>
             ))}
           </div>
           {/* ステップごとのフォーム */}
           {renderStep()}
           {formError && <div className="text-destructive text-sm">{formError}</div>}
           <div className="flex justify-between mt-6">
-            {step > 0 && <Button type="button" onClick={() => setStep(step - 1)} className="w-32">戻る</Button>}
+            {step > 0 && (
+              <Button type="button" onClick={() => setStep(step - 1)} className="w-32">
+                戻る
+              </Button>
+            )}
             <div className="flex-1" />
-            {step < steps.length - 1
-              ? <Button type="button" onClick={() => setStep(step + 1)} className="w-32 ml-auto">次へ</Button>
-              : <Button type="submit" variant="timeport-primary" className="w-32 ml-auto" disabled={loading}>{loading ? '追加中...' : '追加'}</Button>
-            }
+            {step < steps.length - 1 ? (
+              <Button type="button" onClick={() => setStep(step + 1)} className="w-32 ml-auto">
+                次へ
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                variant="timeport-primary"
+                className="w-32 ml-auto"
+                disabled={loading}
+              >
+                {loading ? '追加中...' : '追加'}
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>
     </Dialog>
   );
-} 
+}

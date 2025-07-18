@@ -2,16 +2,30 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { FormInput, Edit, ArrowLeft, Eye } from 'lucide-react';
+import Link from 'next/link';
+
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FormInput, Edit, ArrowLeft, Eye } from 'lucide-react';
-import Link from 'next/link';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import DynamicForm from '@/components/forms/dynamic-form';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 export default function RequestTypeDetailPage() {
   const { user } = useAuth();
@@ -24,7 +38,7 @@ export default function RequestTypeDetailPage() {
   const requestTypeId = params.id as string;
 
   useEffect(() => {
-    const type = requestTypes.find(t => t.id === requestTypeId);
+    const type = requestTypes.find((t) => t.id === requestTypeId);
     if (type) {
       setRequestType(type);
     } else {
@@ -63,12 +77,19 @@ export default function RequestTypeDetailPage() {
     select: 'ドロップダウン選択',
     radio: 'ラジオボタン',
     checkbox: 'チェックボックス',
-    file: 'ファイルアップロード'
+    file: 'ファイルアップロード',
   };
 
-  const formatDate = (date?: string) => (typeof date === 'string' ? new Date(date).toLocaleDateString('ja-JP', {
-    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-  }) : '-');
+  const formatDate = (date?: string) =>
+    typeof date === 'string'
+      ? new Date(date).toLocaleDateString('ja-JP', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '-';
 
   return (
     <div className="space-y-6">
@@ -131,17 +152,21 @@ export default function RequestTypeDetailPage() {
             </div>
             <div>
               <div className="text-sm font-medium text-gray-600">申請コード</div>
-              <Badge variant="outline" className="text-sm">{requestType.code}</Badge>
+              <Badge variant="outline" className="text-sm">
+                {requestType.code}
+              </Badge>
             </div>
             <div>
               <div className="text-sm font-medium text-gray-600">ステータス</div>
-              <Badge variant={requestType.isActive ? "default" : "secondary"}>
+              <Badge variant={requestType.isActive ? 'default' : 'secondary'}>
                 {requestType.isActive ? '有効' : '無効'}
               </Badge>
             </div>
             <div>
               <div className="text-sm font-medium text-gray-600">項目数</div>
-              <div className="text-lg font-semibold text-gray-900">{requestType.formFields.length}項目</div>
+              <div className="text-lg font-semibold text-gray-900">
+                {requestType.formFields.length}項目
+              </div>
             </div>
           </div>
           {requestType.description && (
@@ -153,15 +178,11 @@ export default function RequestTypeDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <div className="text-sm font-medium text-gray-600">作成日</div>
-              <div className="text-gray-900">
-                {formatDate(requestType.created_at)}
-              </div>
+              <div className="text-gray-900">{formatDate(requestType.created_at)}</div>
             </div>
             <div>
               <div className="text-sm font-medium text-gray-600">更新日</div>
-              <div className="text-gray-900">
-                {formatDate(requestType.updated_at)}
-              </div>
+              <div className="text-gray-900">{formatDate(requestType.updated_at)}</div>
             </div>
           </div>
         </CardContent>
@@ -174,9 +195,7 @@ export default function RequestTypeDetailPage() {
         </CardHeader>
         <CardContent>
           {requestType.formFields.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              フォーム項目が設定されていません
-            </div>
+            <div className="text-center py-8 text-gray-500">フォーム項目が設定されていません</div>
           ) : (
             <Table>
               <TableHeader>
@@ -197,12 +216,10 @@ export default function RequestTypeDetailPage() {
                       <TableCell>{field.order}</TableCell>
                       <TableCell className="font-medium">{field.label}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {fieldTypeLabels[field.type] || field.type}
-                        </Badge>
+                        <Badge variant="outline">{fieldTypeLabels[field.type] || field.type}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={field.required ? "destructive" : "secondary"}>
+                        <Badge variant={field.required ? 'destructive' : 'secondary'}>
                           {field.required ? '必須' : '任意'}
                         </Badge>
                       </TableCell>

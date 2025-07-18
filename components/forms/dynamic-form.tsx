@@ -4,13 +4,20 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+
 import { RequestType } from '@/types';
 import { FormFieldConfig } from '@/types/request';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,15 +46,23 @@ const createValidationSchema = (fields: FormFieldConfig[]) => {
 
     switch (field.type) {
       case 'email':
-        fieldSchema = z.string().email(emailRule?.message || '正しいメールアドレスを入力してください');
+        fieldSchema = z
+          .string()
+          .email(emailRule?.message || '正しいメールアドレスを入力してください');
         break;
       case 'number':
         fieldSchema = z.coerce.number();
         if (minValueRule) {
-          fieldSchema = (fieldSchema as z.ZodNumber).min(Number(minValueRule.value), minValueRule.message);
+          fieldSchema = (fieldSchema as z.ZodNumber).min(
+            Number(minValueRule.value),
+            minValueRule.message
+          );
         }
         if (maxValueRule) {
-          fieldSchema = (fieldSchema as z.ZodNumber).max(Number(maxValueRule.value), maxValueRule.message);
+          fieldSchema = (fieldSchema as z.ZodNumber).max(
+            Number(maxValueRule.value),
+            maxValueRule.message
+          );
         }
         break;
       case 'tel': {
@@ -90,13 +105,13 @@ const createValidationSchema = (fields: FormFieldConfig[]) => {
   return z.object(schemaFields);
 };
 
-const DynamicFormField = ({ 
-  field, 
-  register, 
-  errors, 
-  setValue, 
-  watch 
-}: { 
+const DynamicFormField = ({
+  field,
+  register,
+  errors,
+  setValue,
+  watch,
+}: {
   field: FormFieldConfig;
   register: any;
   errors: any;
@@ -120,10 +135,7 @@ const DynamicFormField = ({
 
       case 'select':
         return (
-          <Select
-            value={value || ''}
-            onValueChange={(val) => setValue(field.name, val)}
-          >
+          <Select value={value || ''} onValueChange={(val) => setValue(field.name, val)}>
             <SelectTrigger className={error ? 'border-red-500' : ''}>
               <SelectValue placeholder={field.placeholder || `${field.label}を選択`} />
             </SelectTrigger>
@@ -188,7 +200,9 @@ const DynamicFormField = ({
       {renderField()}
       {error && (
         <p className="text-sm text-red-500">
-          {error.message || field.validation_rules.find(r => r.type === 'required')?.message || 'この項目は必須です'}
+          {error.message ||
+            field.validation_rules.find((r) => r.type === 'required')?.message ||
+            'この項目は必須です'}
         </p>
       )}
     </div>

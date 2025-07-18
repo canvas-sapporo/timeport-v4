@@ -20,13 +20,15 @@ export const PageTransitionProvider = ({ children }: { children: ReactNode }) =>
   const enableTransition = () => setIsTransitionDisabled(false);
 
   return (
-    <PageTransitionContext.Provider value={{ 
-      isTransitioning, 
-      setIsTransitioning, 
-      disableTransition, 
-      enableTransition, 
-      isTransitionDisabled 
-    }}>
+    <PageTransitionContext.Provider
+      value={{
+        isTransitioning,
+        setIsTransitioning,
+        disableTransition,
+        enableTransition,
+        isTransitionDisabled,
+      }}
+    >
       {children}
     </PageTransitionContext.Provider>
   );
@@ -38,4 +40,4 @@ export const usePageTransition = () => {
     throw new Error('usePageTransition must be used within a PageTransitionProvider');
   }
   return context;
-}; 
+};

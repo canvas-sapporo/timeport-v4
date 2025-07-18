@@ -7,7 +7,7 @@ import * as supabaseProvider from './supabase-provider';
 const USE_SUPABASE = process.env.NEXT_PUBLIC_USE_SUPABASE === 'true';
 
 // 勤怠データ
-export const getAttendanceData = USE_SUPABASE 
+export const getAttendanceData = USE_SUPABASE
   ? supabaseProvider.getAttendanceData
   : mockProvider.getAttendanceData;
 
@@ -15,26 +15,16 @@ export const getTodayAttendance = USE_SUPABASE
   ? supabaseProvider.getTodayAttendance
   : mockProvider.getTodayAttendance;
 
-export const clockIn = USE_SUPABASE
-  ? supabaseProvider.clockIn
-  : mockProvider.clockIn;
+export const clockIn = USE_SUPABASE ? supabaseProvider.clockIn : mockProvider.clockIn;
 
-export const clockOut = USE_SUPABASE
-  ? supabaseProvider.clockOut
-  : mockProvider.clockOut;
+export const clockOut = USE_SUPABASE ? supabaseProvider.clockOut : mockProvider.clockOut;
 
-export const startBreak = USE_SUPABASE
-  ? supabaseProvider.startBreak
-  : mockProvider.startBreak;
+export const startBreak = USE_SUPABASE ? supabaseProvider.startBreak : mockProvider.startBreak;
 
-export const endBreak = USE_SUPABASE
-  ? supabaseProvider.endBreak
-  : mockProvider.endBreak;
+export const endBreak = USE_SUPABASE ? supabaseProvider.endBreak : mockProvider.endBreak;
 
 // ユーザーデータ
-export const getUserData = USE_SUPABASE
-  ? supabaseProvider.getUserData  
-  : mockProvider.getUserData;
+export const getUserData = USE_SUPABASE ? supabaseProvider.getUserData : mockProvider.getUserData;
 
 export const getUserProfile = USE_SUPABASE
   ? supabaseProvider.getUserProfile
@@ -104,9 +94,7 @@ export const getGroupData = USE_SUPABASE
   ? supabaseProvider.getGroupData
   : mockProvider.getGroupData;
 
-export const getGroups = USE_SUPABASE
-  ? supabaseProvider.getGroups
-  : mockProvider.getGroups;
+export const getGroups = USE_SUPABASE ? supabaseProvider.getGroups : mockProvider.getGroups;
 
 // 通知データ
 export const getNotifications = USE_SUPABASE
@@ -122,9 +110,7 @@ export const authenticateUser = USE_SUPABASE
   ? supabaseProvider.authenticateUser
   : mockProvider.authenticateUser;
 
-export const logoutUser = USE_SUPABASE
-  ? supabaseProvider.logoutUser
-  : mockProvider.logoutUser;
+export const logoutUser = USE_SUPABASE ? supabaseProvider.logoutUser : mockProvider.logoutUser;
 
 // 後方互換性のため（段階的移行用）
 export const getOrganizationData = USE_SUPABASE

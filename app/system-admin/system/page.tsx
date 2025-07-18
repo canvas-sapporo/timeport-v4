@@ -1,22 +1,7 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Settings,
   Save,
@@ -31,7 +16,23 @@ import {
   Gauge,
   Server,
   Users,
-} from "lucide-react";
+} from 'lucide-react';
+
+import { useAuth } from '@/contexts/auth-context';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 
 export default function SuperAdminSystemPage() {
   const { user } = useAuth();
@@ -42,21 +43,21 @@ export default function SuperAdminSystemPage() {
   const [systemSettings, setSystemSettings] = useState({
     maintenanceMode: false,
     debugMode: false,
-    logLevel: "info",
+    logLevel: 'info',
     maxUsers: 1000,
     sessionTimeout: 30,
     backupEnabled: true,
-    backupFrequency: "daily",
+    backupFrequency: 'daily',
     emailNotifications: true,
     smsNotifications: false,
-    systemName: "TimePort",
-    systemVersion: "1.0.0",
-    maintenanceMessage: "システムメンテナンス中です。しばらくお待ちください。",
+    systemName: 'TimePort',
+    systemVersion: '1.0.0',
+    maintenanceMessage: 'システムメンテナンス中です。しばらくお待ちください。',
   });
 
   // Mock system status
   const systemStatus = {
-    uptime: "15日 8時間 32分",
+    uptime: '15日 8時間 32分',
     cpuUsage: 45,
     memoryUsage: 62,
     diskUsage: 38,
@@ -78,34 +79,34 @@ export default function SuperAdminSystemPage() {
     maxUsers: 1000,
     sessionTimeout: 30,
     backupInterval: 24,
-    logLevel: "info",
+    logLevel: 'info',
     maintenanceMode: false,
     sslEnabled: true,
   });
 
   const [alerts, setAlerts] = useState([
     {
-      id: "1",
-      type: "warning" as const,
-      message: "メモリ使用率が70%を超えています",
-      timestamp: "2024-01-15 14:30:00",
+      id: '1',
+      type: 'warning' as const,
+      message: 'メモリ使用率が70%を超えています',
+      timestamp: '2024-01-15 14:30:00',
     },
     {
-      id: "2",
-      type: "info" as const,
-      message: "データベースバックアップが完了しました",
-      timestamp: "2024-01-15 13:00:00",
+      id: '2',
+      type: 'info' as const,
+      message: 'データベースバックアップが完了しました',
+      timestamp: '2024-01-15 13:00:00',
     },
   ]);
 
   useEffect(() => {
-    if (!user || user.role !== "system-admin") {
-      router.push("/login");
+    if (!user || user.role !== 'system-admin') {
+      router.push('/login');
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== "system-admin") {
+  if (!user || user.role !== 'system-admin') {
     return null;
   }
 
@@ -114,7 +115,7 @@ export default function SuperAdminSystemPage() {
     try {
       // In a real app, this would save to backend
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Saving system settings...", systemSettings);
+      console.log('Saving system settings...', systemSettings);
     } finally {
       setIsLoading(false);
     }
@@ -134,11 +135,7 @@ export default function SuperAdminSystemPage() {
           <h1 className="text-2xl font-bold text-gray-900">システム管理</h1>
           <p className="text-gray-600">システム全体の設定と監視を行います</p>
         </div>
-        <Button
-          onClick={handleSaveSettings}
-          disabled={isLoading}
-          variant="timeport-primary"
-        >
+        <Button onClick={handleSaveSettings} disabled={isLoading} variant="timeport-primary">
           <Save className="w-4 h-4 mr-2" />
           設定保存
         </Button>
@@ -158,12 +155,8 @@ export default function SuperAdminSystemPage() {
               <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
                 <CheckCircle className="w-5 h-5 text-green-600" />
                 <div>
-                  <div className="font-medium text-sm text-green-800">
-                    システム正常稼働中
-                  </div>
-                  <div className="text-xs text-green-700">
-                    稼働時間: {systemStatus.uptime}
-                  </div>
+                  <div className="font-medium text-sm text-green-800">システム正常稼働中</div>
+                  <div className="text-xs text-green-700">稼働時間: {systemStatus.uptime}</div>
                 </div>
               </div>
 
@@ -196,9 +189,7 @@ export default function SuperAdminSystemPage() {
 
             <div className="space-y-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {systemStatus.activeUsers}
-                </div>
+                <div className="text-2xl font-bold text-blue-600">{systemStatus.activeUsers}</div>
                 <div className="text-sm text-blue-600">アクティブユーザー</div>
               </div>
 
@@ -250,19 +241,13 @@ export default function SuperAdminSystemPage() {
               <Input
                 id="systemName"
                 value={systemSettings.systemName}
-                onChange={(e) =>
-                  handleSettingChange("systemName", e.target.value)
-                }
+                onChange={(e) => handleSettingChange('systemName', e.target.value)}
               />
             </div>
 
             <div>
               <Label htmlFor="systemVersion">バージョン</Label>
-              <Input
-                id="systemVersion"
-                value={systemSettings.systemVersion}
-                disabled
-              />
+              <Input id="systemVersion" value={systemSettings.systemVersion} disabled />
             </div>
 
             <div>
@@ -271,41 +256,28 @@ export default function SuperAdminSystemPage() {
                 id="maxUsers"
                 type="number"
                 value={systemSettings.maxUsers}
-                onChange={(e) =>
-                  handleSettingChange("maxUsers", parseInt(e.target.value))
-                }
+                onChange={(e) => handleSettingChange('maxUsers', parseInt(e.target.value))}
               />
             </div>
 
             <div>
-              <Label htmlFor="sessionTimeout">
-                セッションタイムアウト（分）
-              </Label>
+              <Label htmlFor="sessionTimeout">セッションタイムアウト（分）</Label>
               <Input
                 id="sessionTimeout"
                 type="number"
                 value={systemSettings.sessionTimeout}
-                onChange={(e) =>
-                  handleSettingChange(
-                    "sessionTimeout",
-                    parseInt(e.target.value),
-                  )
-                }
+                onChange={(e) => handleSettingChange('sessionTimeout', parseInt(e.target.value))}
               />
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <Label>メンテナンスモード</Label>
-                <p className="text-sm text-gray-500">
-                  システムを一時的に停止します
-                </p>
+                <p className="text-sm text-gray-500">システムを一時的に停止します</p>
               </div>
               <Switch
                 checked={systemSettings.maintenanceMode}
-                onCheckedChange={(checked) =>
-                  handleSettingChange("maintenanceMode", checked)
-                }
+                onCheckedChange={(checked) => handleSettingChange('maintenanceMode', checked)}
               />
             </div>
 
@@ -316,9 +288,7 @@ export default function SuperAdminSystemPage() {
               </div>
               <Switch
                 checked={systemSettings.debugMode}
-                onCheckedChange={(checked) =>
-                  handleSettingChange("debugMode", checked)
-                }
+                onCheckedChange={(checked) => handleSettingChange('debugMode', checked)}
               />
             </div>
           </CardContent>
@@ -336,15 +306,11 @@ export default function SuperAdminSystemPage() {
             <div className="flex items-center justify-between">
               <div>
                 <Label>自動バックアップ</Label>
-                <p className="text-sm text-gray-500">
-                  定期的にデータをバックアップします
-                </p>
+                <p className="text-sm text-gray-500">定期的にデータをバックアップします</p>
               </div>
               <Switch
                 checked={systemSettings.backupEnabled}
-                onCheckedChange={(checked) =>
-                  handleSettingChange("backupEnabled", checked)
-                }
+                onCheckedChange={(checked) => handleSettingChange('backupEnabled', checked)}
               />
             </div>
 
@@ -353,9 +319,7 @@ export default function SuperAdminSystemPage() {
               <select
                 className="w-full mt-1 p-2 border rounded-md"
                 value={systemSettings.backupFrequency}
-                onChange={(e) =>
-                  handleSettingChange("backupFrequency", e.target.value)
-                }
+                onChange={(e) => handleSettingChange('backupFrequency', e.target.value)}
               >
                 <option value="hourly">毎時</option>
                 <option value="daily">毎日</option>
@@ -367,15 +331,11 @@ export default function SuperAdminSystemPage() {
             <div className="flex items-center justify-between">
               <div>
                 <Label>メール通知</Label>
-                <p className="text-sm text-gray-500">
-                  システムイベントをメールで通知
-                </p>
+                <p className="text-sm text-gray-500">システムイベントをメールで通知</p>
               </div>
               <Switch
                 checked={systemSettings.emailNotifications}
-                onCheckedChange={(checked) =>
-                  handleSettingChange("emailNotifications", checked)
-                }
+                onCheckedChange={(checked) => handleSettingChange('emailNotifications', checked)}
               />
             </div>
 
@@ -386,22 +346,16 @@ export default function SuperAdminSystemPage() {
               </div>
               <Switch
                 checked={systemSettings.smsNotifications}
-                onCheckedChange={(checked) =>
-                  handleSettingChange("smsNotifications", checked)
-                }
+                onCheckedChange={(checked) => handleSettingChange('smsNotifications', checked)}
               />
             </div>
 
             <div className="p-3 bg-yellow-50 rounded-lg">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-yellow-600" />
-                <span className="text-sm font-medium text-yellow-800">
-                  最終バックアップ
-                </span>
+                <span className="text-sm font-medium text-yellow-800">最終バックアップ</span>
               </div>
-              <p className="text-xs text-yellow-700 mt-1">
-                2024年1月20日 03:00 (成功)
-              </p>
+              <p className="text-xs text-yellow-700 mt-1">2024年1月20日 03:00 (成功)</p>
             </div>
           </CardContent>
         </Card>
@@ -421,9 +375,7 @@ export default function SuperAdminSystemPage() {
             <Textarea
               id="maintenanceMessage"
               value={systemSettings.maintenanceMessage}
-              onChange={(e) =>
-                handleSettingChange("maintenanceMessage", e.target.value)
-              }
+              onChange={(e) => handleSettingChange('maintenanceMessage', e.target.value)}
               rows={3}
               placeholder="メンテナンス中に表示するメッセージを入力してください"
             />
@@ -433,9 +385,7 @@ export default function SuperAdminSystemPage() {
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-5 h-5 text-red-600" />
-                <span className="font-medium text-red-800">
-                  メンテナンスモード有効
-                </span>
+                <span className="font-medium text-red-800">メンテナンスモード有効</span>
               </div>
               <p className="text-sm text-red-700 mt-1">
                 現在システムはメンテナンスモードです。一般ユーザーはアクセスできません。

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+
 import { cn } from '@/lib/utils';
 import { usePageTransition } from '@/contexts/page-transition-context';
 
@@ -17,10 +18,10 @@ export default function PageTransitionLoader() {
     if (previousPath && previousPath !== pathname && !isTransitionDisabled) {
       setIsLoading(true);
       setLoadingProgress(0);
-      
+
       // プログレスバーのアニメーション
       const progressInterval = setInterval(() => {
-        setLoadingProgress(prev => {
+        setLoadingProgress((prev) => {
           if (prev >= 100) {
             clearInterval(progressInterval);
             return 100;
@@ -33,7 +34,7 @@ export default function PageTransitionLoader() {
       const loadingTimer = setTimeout(() => {
         clearInterval(progressInterval);
         setLoadingProgress(100);
-        
+
         // 少し待ってからフェードアウト
         setTimeout(() => {
           setIsLoading(false);
@@ -46,7 +47,7 @@ export default function PageTransitionLoader() {
         clearTimeout(loadingTimer);
       };
     }
-    
+
     setPreviousPath(pathname);
   }, [pathname, previousPath, isTransitionDisabled]);
 
@@ -58,12 +59,12 @@ export default function PageTransitionLoader() {
   if (!isLoading) return null;
 
   return (
-    <div 
+    <div
       className={cn(
-        "fixed inset-0 z-[100] flex items-center justify-center",
-        "bg-gradient-to-br from-blue-50/95 to-indigo-50/95 backdrop-blur-sm",
-        "transition-all duration-300 ease-out",
-        "animate-in fade-in-0"
+        'fixed inset-0 z-[100] flex items-center justify-center',
+        'bg-gradient-to-br from-blue-50/95 to-indigo-50/95 backdrop-blur-sm',
+        'transition-all duration-300 ease-out',
+        'animate-in fade-in-0'
       )}
     >
       <div className="flex flex-col items-center space-y-6">
@@ -72,7 +73,10 @@ export default function PageTransitionLoader() {
           {/* 外側のリング */}
           <div className="w-16 h-16 border-4 border-blue-200/60 rounded-full animate-spin"></div>
           {/* 内側のリング - 反対方向に回転 */}
-          <div className="absolute inset-0 w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+          <div
+            className="absolute inset-0 w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"
+            style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
+          ></div>
           {/* 中央のドット */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full animate-pulse"></div>
@@ -81,20 +85,27 @@ export default function PageTransitionLoader() {
 
         {/* ローディングテキスト */}
         <div className="flex flex-col items-center space-y-3">
-          <p className="text-gray-700 font-semibold text-lg">
-            ページを読み込み中
-          </p>
+          <p className="text-gray-700 font-semibold text-lg">ページを読み込み中</p>
           <div className="flex space-x-1">
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            <div
+              className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+              style={{ animationDelay: '0ms' }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+              style={{ animationDelay: '150ms' }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+              style={{ animationDelay: '300ms' }}
+            ></div>
           </div>
         </div>
 
         {/* プログレスバー */}
         <div className="w-72 space-y-2">
           <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-full transition-all duration-200 ease-out"
               style={{ width: `${loadingProgress}%` }}
             ></div>
@@ -126,10 +137,19 @@ export default function PageTransitionLoader() {
       {/* 追加の装飾要素 */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-10 left-10 w-16 h-16 bg-blue-200/30 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/4 right-16 w-8 h-8 bg-indigo-200/40 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-purple-200/30 rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-32 right-1/3 w-6 h-6 bg-blue-200/50 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+        <div
+          className="absolute top-1/4 right-16 w-8 h-8 bg-indigo-200/40 rounded-full animate-pulse"
+          style={{ animationDelay: '1s' }}
+        ></div>
+        <div
+          className="absolute bottom-20 left-1/4 w-12 h-12 bg-purple-200/30 rounded-full animate-pulse"
+          style={{ animationDelay: '2s' }}
+        ></div>
+        <div
+          className="absolute bottom-32 right-1/3 w-6 h-6 bg-blue-200/50 rounded-full animate-pulse"
+          style={{ animationDelay: '0.5s' }}
+        ></div>
       </div>
     </div>
   );
-} 
+}
