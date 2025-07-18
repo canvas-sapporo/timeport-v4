@@ -1,10 +1,16 @@
 /**
  * TimePort 認証関連型定義
- * 
+ *
  * ユーザー認証、プロフィール、権限管理に関する型を定義
  */
 
-import type { BaseEntity, UUID, DateString, Timestamp, Settings } from './common';
+import type {
+  BaseEntity,
+  UUID,
+  DateString,
+  Timestamp,
+  Settings,
+} from "./common";
 
 // ================================
 // ユーザーロール型
@@ -12,11 +18,11 @@ import type { BaseEntity, UUID, DateString, Timestamp, Settings } from './common
 
 /**
  * ユーザーロール
- * - system_admin: システム管理者（全権限）
+ * - system-admin: システム管理者（全権限）
  * - admin: 管理者（組織内管理権限）
  * - member: 一般ユーザー（個人データのみ）
  */
-export type UserRole = 'system_admin' | 'admin' | 'member';
+export type UserRole = "system-admin" | "admin" | "member";
 
 // ================================
 // ユーザープロフィール型
@@ -196,7 +202,7 @@ export interface ResourcePermission {
   /** リソースID */
   resource_id?: UUID;
   /** アクション */
-  action: 'create' | 'read' | 'update' | 'delete';
+  action: "create" | "read" | "update" | "delete";
   /** 権限があるか */
   allowed: boolean;
 }
