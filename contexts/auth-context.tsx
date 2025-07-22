@@ -205,11 +205,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const authUser: AuthUser = {
             id: profileData.id,
             employee_id: profileData.code || '',
-            full_name: `${profileData.family_name} ${profileData.first_name}`,
+            full_name:
+              `${profileData.family_name || ''} ${profileData.first_name || ''}`.trim() ||
+              'Unknown User',
             email: profileData.email,
             role: profileData.role as UserRole,
-            primary_group_id: groupData?.group_id || null,
-            company_id: companyId || null,
+            primary_group_id: groupData?.group_id || undefined,
+            company_id: companyId || undefined,
           };
           console.log('認証ユーザーオブジェクト作成完了');
 

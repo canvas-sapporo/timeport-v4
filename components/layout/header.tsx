@@ -101,7 +101,9 @@ export default function Header() {
 
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
-            <span className="text-sm font-medium text-white">{user?.full_name.charAt(0)}</span>
+            <span className="text-sm font-medium text-white">
+              {user?.full_name?.charAt(0) || 'U'}
+            </span>
           </div>
           <div className="hidden md:block">
             <div className="text-sm font-medium text-white">{user?.full_name}</div>
