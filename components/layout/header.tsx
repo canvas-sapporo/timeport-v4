@@ -63,8 +63,8 @@ export default function Header() {
         {/* Navigation Button - Show different button based on current page */}
         {(user?.role === 'admin' || user?.role === 'system-admin') && (
           <>
-            {/* Show "メンバー画面" button when on admin/system-admin pages */}
-            {(pathname.startsWith('/admin') || pathname.startsWith('/system-admin')) && (
+            {/* Show "メンバー画面" button when on admin pages (but not for system-admin) */}
+            {pathname.startsWith('/admin') && user?.role !== 'system-admin' && (
               <Button
                 variant="ghost"
                 size="sm"
