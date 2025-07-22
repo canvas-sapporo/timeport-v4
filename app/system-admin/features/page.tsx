@@ -98,7 +98,7 @@ export default function SuperAdminFeaturesPage() {
     {
       key: 'organizationManagement',
       name: '組織管理',
-      description: '部署・勤務地の管理',
+      description: 'グループ・勤務地の管理',
     },
     {
       key: 'analytics',

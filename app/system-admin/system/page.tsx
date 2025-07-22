@@ -388,7 +388,7 @@ export default function SuperAdminSystemPage() {
                 <span className="font-medium text-red-800">メンテナンスモード有効</span>
               </div>
               <p className="text-sm text-red-700 mt-1">
-                現在システムはメンテナンスモードです。一般ユーザーはアクセスできません。
+                現在システムはメンテナンスモードです。メンバーはアクセスできません。
               </p>
             </div>
           )}

@@ -37,7 +37,7 @@ export default function SuperAdminDashboard() {
   const totalUsers = users.filter((u) => u.is_active).length;
   const totalWorkplaces = workplaces.length;
   const totalDepartments = departments.length;
-  const pendingRequests = requests.filter((r) => r.status === 'pending').length;
+  const pendingRequests = requests.filter((r) => r.status_id === 'status_pending').length;
 
   const stats = [
     {
@@ -53,7 +53,7 @@ export default function SuperAdminDashboard() {
       icon: <Building className="w-6 h-6" />,
     },
     {
-      title: '部署数',
+      title: 'グループ数',
       value: totalDepartments,
       change: 1,
       icon: <BarChart3 className="w-6 h-6" />,
@@ -180,7 +180,7 @@ export default function SuperAdminDashboard() {
             <TableHeader>
               <TableRow>
                 <TableHead>勤務地</TableHead>
-                <TableHead>部署数</TableHead>
+                <TableHead>グループ数</TableHead>
                 <TableHead>従業員数</TableHead>
                 <TableHead>ステータス</TableHead>
               </TableRow>
