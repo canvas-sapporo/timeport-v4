@@ -3,15 +3,23 @@
 import { useState, useEffect } from 'react';
 
 export default function TimeDisplay() {
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState<Date | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+    setTime(new Date());
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
+
     const interval = setInterval(() => {
       setTime(new Date());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isClient]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('ja-JP', {
@@ -29,6 +37,15 @@ export default function TimeDisplay() {
       weekday: 'long',
     });
   };
+
+  if (!time) {
+    return (
+      <div className="text-center">
+        <div className="text-4xl font-bold text-gray-900 mb-2">--:--:--</div>
+        <div className="text-lg text-gray-600">読み込み中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="text-center">
