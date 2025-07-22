@@ -1,57 +1,132 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Clock, Calendar, FileText, TrendingUp, Plus, LogIn, LogOut, Coffee } from 'lucide-react';
 import Link from 'next/link';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
+import { formatDateTime, formatTime } from '@/lib/utils';
 import StatsCard from '@/components/ui/stats-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import TimeDisplay from '@/components/ui/time-display';
-import type { BreakRecord } from '@/types/attendance';
+import { useToast } from '@/hooks/use-toast';
+import ClockHistory from '@/components/member/ClockHistory';
+import AdminCsvExportDialog from '@/components/admin/CsvExportDialog';
+import {
+  clockIn,
+  clockOut,
+  startBreak,
+  endBreak,
+  getTodayAttendance,
+  getUserAttendance,
+} from '@/lib/actions/attendance';
+import type { Attendance, BreakRecord } from '@/types/attendance';
 
 export default function MemberDashboard() {
   const { user } = useAuth();
   const router = useRouter();
-  const {
-    getUserAttendance,
-    getTodayAttendance,
-    requests,
-    notifications,
-    clockIn,
-    clockOut,
-    startBreak,
-    endBreak,
-  } = useData();
+  const { toast } = useToast();
+  const { requests, notifications } = useData();
 
+  // 状態管理
+  const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
+  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentTime, setCurrentTime] = useState<string>('');
+  const [isClient, setIsClient] = useState(false);
+  const [csvExportOpen, setCsvExportOpen] = useState(false);
+
+  // データ取得関数
+  const fetchAttendanceData = useCallback(async () => {
+    if (!user) return;
+
+    console.log('fetchAttendanceData 開始:', { userId: user.id });
+
+    try {
+      const [todayData, recordsData] = await Promise.all([
+        getTodayAttendance(user.id),
+        getUserAttendance(user.id),
+      ]);
+
+      console.log('データ取得結果:', { todayData, recordsDataCount: recordsData?.length });
+
+      // 詳細なデバッグ情報を追加
+      if (recordsData && recordsData.length > 0) {
+        const todayRecords = recordsData.filter(
+          (r) => r.work_date === new Date().toISOString().split('T')[0]
+        );
+        console.log(
+          '今日の記録詳細:',
+          todayRecords.map((r) => ({
+            id: r.id,
+            clock_in_time: r.clock_in_time,
+            clock_out_time: r.clock_out_time,
+            created_at: r.created_at,
+          }))
+        );
+      }
+
+      setTodayAttendance(todayData);
+      setAttendanceRecords(recordsData || []);
+    } catch (error) {
+      console.error('勤怠データ取得エラー:', error);
+      toast({
+        title: 'エラー',
+        description: '勤怠データの取得に失敗しました',
+        variant: 'destructive',
+      });
+    }
+  }, [user, toast]);
+
+  // 初期データ取得
   useEffect(() => {
-    if (!user || user.role !== 'member') {
+    if (!user || (user.role !== 'member' && user.role !== 'admin')) {
       router.push('/login');
       return;
     }
-  }, [user, router]);
 
-  if (!user || user.role !== 'member') {
+    fetchAttendanceData();
+  }, [user, router, fetchAttendanceData]);
+
+  // クライアントサイドでのみ実行
+  useEffect(() => {
+    setIsClient(true);
+    setCurrentTime(new Date().toTimeString().slice(0, 5));
+  }, []);
+
+  // リアルタイム時刻更新
+  useEffect(() => {
+    if (!isClient) return;
+
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toTimeString().slice(0, 5));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isClient]);
+
+  if (!user || (user.role !== 'member' && user.role !== 'admin')) {
     return null;
   }
 
-  const attendanceRecords = getUserAttendance(user.id);
-  const todayAttendance = getTodayAttendance(user.id);
-  const thisMonth = new Date().toISOString().slice(0, 7);
-  const thisMonthRecords = attendanceRecords.filter((r) => r.work_date?.startsWith(thisMonth));
+  // 統計計算
+  const thisMonth = isClient ? new Date().toISOString().slice(0, 7) : '';
+  const thisMonthRecords = isClient
+    ? attendanceRecords.filter((r) => r.work_date?.startsWith(thisMonth))
+    : [];
 
   const workDays = thisMonthRecords.length;
   const totalOvertimeMinutes = thisMonthRecords.reduce(
-    (sum, r) => sum + (r.overtime_minutes || 0),
+    (sum, r) => sum + 0, // overtime_minutesは現在のテーブル構造に存在しないため0で固定
     0
   );
   const overtimeHours = Math.round((totalOvertimeMinutes / 60) * 10) / 10;
 
   const userRequests = requests.filter((a) => a.user_id === user.id);
-  const pendingRequests = userRequests.filter((a) => a.status === 'pending');
+  const pendingRequests = userRequests.filter((a) => a.status_id === 'pending');
   const userNotifications = notifications.filter((n) => n.user_id === user.id && !n.is_read);
 
   const stats = [
@@ -81,25 +156,219 @@ export default function MemberDashboard() {
     },
   ];
 
-  const currentTime = new Date().toTimeString().slice(0, 5);
-  const isOnBreak = todayAttendance?.break_records.some((br: BreakRecord) => br.start && !br.end);
-  const hasClockIn = todayAttendance?.clock_in_time;
-  const hasClockOut = todayAttendance?.clock_out_time;
+  // 複数回出退勤対応の状態管理
+  const today = new Date().toISOString().split('T')[0];
+  const todayRecords = attendanceRecords.filter((r) => r.work_date === today);
 
-  const handleClockIn = () => {
-    clockIn(user.id, currentTime);
+  // 日付でソートして最新のレコードを正確に取得
+  const sortedTodayRecords = todayRecords.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  // 退勤していない最新のレコードを取得（出勤中のレコード）
+  const activeRecord = sortedTodayRecords.filter((r) => r.clock_in_time && !r.clock_out_time)[0]; // 出勤済みで退勤していないレコードのみ、既にソート済みなので最初の要素が最新
+
+  // 最新のレコード（退勤済みも含む）
+  const latestRecord = sortedTodayRecords[0] || null;
+
+  // デバッグログ
+  console.log('状態管理デバッグ:', {
+    today,
+    todayRecordsCount: todayRecords.length,
+    activeRecord,
+    latestRecord,
+    hasClockInTime: !!activeRecord?.clock_in_time,
+    hasClockOutTime: !!activeRecord?.clock_out_time,
+  });
+
+  // 休憩状態の詳細なデバッグ
+  const activeRecordBreaks = activeRecord?.break_records || [];
+  const activeBreakExists = activeRecordBreaks.some((br: BreakRecord) => br.start && !br.end);
+
+  console.log('休憩状態デバッグ:', {
+    activeRecordBreaks,
+    activeBreakExists,
+    activeRecordId: activeRecord?.id,
+  });
+
+  const isOnBreak = activeBreakExists;
+  const hasClockIn = !!activeRecord; // 出勤中のレコードが存在する場合のみtrue
+  const hasClockOut = !activeRecord && latestRecord?.clock_out_time; // 出勤中のレコードがなく、最新レコードが退勤済みの場合
+
+  // デバッグ用：最新の退勤時刻を表示
+  const latestClockOutTime = latestRecord?.clock_out_time;
+
+  console.log('UI状態:', {
+    hasClockIn,
+    hasClockOut,
+    isOnBreak,
+    latestClockOutTime: latestClockOutTime ? new Date(latestClockOutTime).toISOString() : null,
+  });
+
+  // 打刻処理関数
+  const handleClockIn = async () => {
+    console.log('handleClockIn 開始');
+    if (!user) {
+      console.log('ユーザーが存在しません');
+      return;
+    }
+
+    console.log('ユーザーID:', user.id);
+    setIsLoading(true);
+
+    try {
+      const timestamp = new Date().toISOString();
+      console.log('打刻時刻:', timestamp);
+      console.log('clockIn関数呼び出し開始');
+
+      const result = await clockIn(user.id, timestamp);
+      console.log('clockIn結果:', result);
+
+      if (result.success) {
+        toast({
+          title: '成功',
+          description: result.message,
+        });
+        await fetchAttendanceData(); // データを再取得
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('打刻処理エラー:', error);
+      toast({
+        title: 'エラー',
+        description: '打刻に失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleClockOut = () => {
-    clockOut(user.id, currentTime);
+  const handleClockOut = async () => {
+    console.log('handleClockOut 開始');
+    if (!user) {
+      console.log('ユーザーが存在しません');
+      return;
+    }
+
+    console.log('ユーザーID:', user.id);
+    setIsLoading(true);
+    try {
+      const timestamp = new Date().toISOString();
+      console.log('退勤時刻:', timestamp);
+      console.log('clockOut関数呼び出し開始');
+
+      const result = await clockOut(user.id, timestamp);
+      console.log('clockOut結果:', result);
+
+      if (result.success) {
+        toast({
+          title: '成功',
+          description: result.message,
+        });
+        await fetchAttendanceData(); // データを再取得
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('退勤処理エラー:', error);
+      toast({
+        title: 'エラー',
+        description: '打刻に失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleStartBreak = () => {
-    startBreak(user.id, currentTime);
+  const handleStartBreak = async () => {
+    console.log('handleStartBreak 開始');
+    if (!user) {
+      console.log('ユーザーが存在しません');
+      return;
+    }
+    console.log('ユーザーID:', user.id);
+    setIsLoading(true);
+    try {
+      const timestamp = new Date().toISOString();
+      console.log('休憩開始時刻:', timestamp);
+      console.log('startBreak関数呼び出し開始');
+      const result = await startBreak(user.id, timestamp);
+      console.log('startBreak結果:', result);
+      if (result.success) {
+        toast({
+          title: '成功',
+          description: result.message,
+        });
+        console.log('fetchAttendanceData呼び出し開始');
+        await fetchAttendanceData(); // データを再取得
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('休憩開始処理エラー:', error);
+      toast({
+        title: 'エラー',
+        description: '休憩開始に失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleEndBreak = () => {
-    endBreak(user.id, currentTime);
+  const handleEndBreak = async () => {
+    console.log('handleEndBreak 開始');
+    if (!user) {
+      console.log('ユーザーが存在しません');
+      return;
+    }
+    console.log('ユーザーID:', user.id);
+    setIsLoading(true);
+    try {
+      const timestamp = new Date().toISOString();
+      console.log('休憩終了時刻:', timestamp);
+      console.log('endBreak関数呼び出し開始');
+      const result = await endBreak(user.id, timestamp);
+      console.log('endBreak結果:', result);
+      if (result.success) {
+        toast({
+          title: '成功',
+          description: result.message,
+        });
+        console.log('fetchAttendanceData呼び出し開始');
+        await fetchAttendanceData(); // データを再取得
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('休憩終了処理エラー:', error);
+      toast({
+        title: 'エラー',
+        description: '休憩終了に失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -112,11 +381,13 @@ export default function MemberDashboard() {
         <div className="text-right">
           <p className="text-sm text-gray-500">今日の日付</p>
           <p className="text-lg font-semibold text-gray-900">
-            {new Date().toLocaleDateString('ja-JP', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
+            {isClient
+              ? new Date().toLocaleDateString('ja-JP', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })
+              : '読み込み中...'}
           </p>
         </div>
       </div>
@@ -146,78 +417,65 @@ export default function MemberDashboard() {
           <CardContent className="space-y-4">
             <TimeDisplay />
 
+            {/* 出勤ボタン - 出勤していない場合のみ表示 */}
             {!hasClockIn && (
               <Button
-                onClick={handleClockIn}
+                onClick={() => {
+                  console.log('出勤ボタンがクリックされました');
+                  handleClockIn();
+                }}
+                disabled={isLoading}
                 className="w-full h-12 bg-green-600 hover:bg-green-700"
               >
                 <LogIn className="w-5 h-5 mr-2" />
-                出勤
+                {isLoading ? '処理中...' : '出勤'}
               </Button>
             )}
 
+            {/* 退勤・休憩ボタン - 出勤済みで退勤していない場合のみ表示 */}
             {hasClockIn && !hasClockOut && (
               <>
                 {!isOnBreak ? (
-                  <Button onClick={handleStartBreak} variant="outline" className="w-full h-12">
+                  <Button
+                    onClick={handleStartBreak}
+                    disabled={isLoading}
+                    className="w-full h-12 bg-orange-200 hover:bg-orange-300 text-orange-800 border-orange-300"
+                  >
                     <Coffee className="w-5 h-5 mr-2" />
-                    休憩開始
+                    {isLoading ? '処理中...' : '休憩開始'}
                   </Button>
                 ) : (
-                  <Button onClick={handleEndBreak} variant="outline" className="w-full h-12">
+                  <Button
+                    onClick={handleEndBreak}
+                    disabled={isLoading}
+                    className="w-full h-12 bg-orange-200 hover:bg-orange-300 text-orange-800 border-orange-300"
+                  >
                     <Coffee className="w-5 h-5 mr-2" />
-                    休憩終了
+                    {isLoading ? '処理中...' : '休憩終了'}
                   </Button>
                 )}
 
                 <Button
                   onClick={handleClockOut}
-                  disabled={isOnBreak}
+                  disabled={isOnBreak || isLoading}
                   className="w-full h-12 bg-red-600 hover:bg-red-700"
                 >
                   <LogOut className="w-5 h-5 mr-2" />
-                  退勤
+                  {isLoading ? '処理中...' : '退勤'}
                 </Button>
               </>
             )}
-
-            {hasClockOut && (
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-gray-600">本日の勤務は終了しました</p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Plus className="w-5 h-5" />
-              <span>クイックアクション</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Link href="/member/attendance">
-              <Button className="w-full justify-start" variant="outline">
-                <Clock className="w-4 h-4 mr-2" />
-                勤怠履歴
-              </Button>
-            </Link>
-            <Link href="/member/requests">
-              <Button className="w-full justify-start" variant="outline">
-                <FileText className="w-4 h-4 mr-2" />
-                申請作成
-              </Button>
-            </Link>
-            <Link href="/member/profile">
-              <Button className="w-full justify-start" variant="outline">
-                <Calendar className="w-4 h-4 mr-2" />
-                プロフィール
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        {/* Clock History */}
+        <ClockHistory
+          userId={user.id}
+          todayAttendance={todayAttendance}
+          attendanceRecords={attendanceRecords}
+          onRefresh={fetchAttendanceData}
+          onCsvExport={() => setCsvExportOpen(true)}
+        />
       </div>
 
       {/* Today's Status */}
@@ -230,14 +488,14 @@ export default function MemberDashboard() {
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <div className="text-sm text-blue-600 font-medium">出勤時刻</div>
               <div className="text-lg font-bold text-blue-900">
-                {todayAttendance?.clock_in_time || '--:--'}
+                {formatTime(todayAttendance?.clock_in_time)}
               </div>
             </div>
 
             <div className="text-center p-4 bg-red-50 rounded-lg">
               <div className="text-sm text-red-600 font-medium">退勤時刻</div>
               <div className="text-lg font-bold text-red-900">
-                {todayAttendance?.clock_out_time || '--:--'}
+                {formatTime(todayAttendance?.clock_out_time)}
               </div>
             </div>
 
@@ -252,11 +510,7 @@ export default function MemberDashboard() {
 
             <div className="text-center p-4 bg-yellow-50 rounded-lg">
               <div className="text-sm text-yellow-600 font-medium">残業時間</div>
-              <div className="text-lg font-bold text-yellow-900">
-                {todayAttendance?.overtime_minutes
-                  ? `${Math.floor(todayAttendance.overtime_minutes / 60)}:${(todayAttendance.overtime_minutes % 60).toString().padStart(2, '0')}`
-                  : '--:--'}
-              </div>
+              <div className="text-lg font-bold text-yellow-900">--:--</div>
             </div>
           </div>
         </CardContent>
@@ -280,6 +534,15 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* CSV出力ダイアログ */}
+      <AdminCsvExportDialog
+        open={csvExportOpen}
+        onOpenChange={setCsvExportOpen}
+        attendanceRecords={attendanceRecords}
+        users={[]}
+        groups={[]}
+      />
     </div>
   );
 }
