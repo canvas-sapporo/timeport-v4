@@ -65,7 +65,7 @@ const validateCreateCompanyForm = (form: CreateCompanyFormData): CompanyValidati
   if (groupNameError) errors.push(groupNameError);
 
   // 管理者情報のバリデーション
-  const adminCodeError = validateRequired(form.admin_code, '管理者社員番号');
+  const adminCodeError = validateRequired(form.admin_code, '管理者メンバー番号');
   if (adminCodeError) errors.push(adminCodeError);
 
   const familyNameError = validateRequired(form.admin_family_name, '管理者姓');
@@ -154,7 +154,7 @@ const checkEmailExists = async (email: string): Promise<boolean> => {
 };
 
 /**
- * 社員番号の重複チェック
+ * メンバー番号の重複チェック
  */
 const checkUserCodeExists = async (code: string): Promise<boolean> => {
   const { data } = await supabaseAdmin
@@ -206,10 +206,10 @@ export const createCompany = async (
       throw AppError.duplicate('メールアドレス', form.admin_email);
     }
 
-    // 管理者社員番号の重複チェック
+    // 管理者メンバー番号の重複チェック
     const adminCodeExists = await checkUserCodeExists(form.admin_code);
     if (adminCodeExists) {
-      throw AppError.duplicate('管理者社員番号', form.admin_code);
+      throw AppError.duplicate('管理者メンバー番号', form.admin_code);
     }
 
     // 1. 企業作成

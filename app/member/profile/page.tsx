@@ -22,13 +22,13 @@ export default function MemberProfilePage() {
   });
 
   useEffect(() => {
-    if (!user || user.role !== 'member') {
+    if (!user || (user.role !== 'member' && user.role !== 'admin')) {
       router.push('/login');
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'member') {
+  if (!user || (user.role !== 'member' && user.role !== 'admin')) {
     return null;
   }
 
@@ -104,7 +104,7 @@ export default function MemberProfilePage() {
             </div>
 
             <div>
-              <Label>社員番号</Label>
+              <Label>メンバー番号</Label>
               <div className="mt-1 text-sm text-gray-900">{userDetails?.code || '-'}</div>
             </div>
 

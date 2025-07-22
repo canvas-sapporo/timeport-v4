@@ -141,6 +141,7 @@ export default function CompanyEditDialog({
             <Label htmlFor="edit-company-phone">電話番号</Label>
             <Input
               id="edit-company-phone"
+              type="tel"
               value={editForm.phone}
               onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
             />

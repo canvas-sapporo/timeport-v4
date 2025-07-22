@@ -14,6 +14,9 @@ import {
   Edit,
   Trash2,
   FormInput,
+  Users,
+  Briefcase,
+  Loader2,
 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -41,12 +44,60 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { getEmploymentTypes, getEmploymentTypeStats } from '@/lib/actions/admin/employment-types';
+import { getWorkTypes, getWorkTypeStats } from '@/lib/actions/admin/work-types';
+import type { EmploymentType, WorkType } from '@/types/employment_type';
+
+// 雇用形態管理用ダイアログコンポーネントをインポート
+import EmploymentTypeCreateDialog from '@/components/admin/employment-types/EmploymentTypeCreateDialog';
+import EmploymentTypeEditDialog from '@/components/admin/employment-types/EmploymentTypeEditDialog';
+import EmploymentTypeDeleteDialog from '@/components/admin/employment-types/EmploymentTypeDeleteDialog';
+
+// 勤務形態管理用ダイアログコンポーネントをインポート
+import WorkTypeCreateDialog from '@/components/admin/work-types/WorkTypeCreateDialog';
+import WorkTypeEditDialog from '@/components/admin/work-types/WorkTypeEditDialog';
+import WorkTypeDeleteDialog from '@/components/admin/work-types/WorkTypeDeleteDialog';
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('system');
+
+  // Employment Types State
+  const [employmentTypes, setEmploymentTypes] = useState<EmploymentType[]>([]);
+  const [employmentTypeStats, setEmploymentTypeStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
+  const [isEmploymentTypesLoading, setIsEmploymentTypesLoading] = useState(false);
+
+  // 雇用形態ダイアログの状態管理
+  const [createEmploymentTypeDialogOpen, setCreateEmploymentTypeDialogOpen] = useState(false);
+  const [editEmploymentTypeDialogOpen, setEditEmploymentTypeDialogOpen] = useState(false);
+  const [editEmploymentTypeTarget, setEditEmploymentTypeTarget] = useState<EmploymentType | null>(
+    null
+  );
+  const [deleteEmploymentTypeDialogOpen, setDeleteEmploymentTypeDialogOpen] = useState(false);
+  const [deleteEmploymentTypeTarget, setDeleteEmploymentTypeTarget] =
+    useState<EmploymentType | null>(null);
+
+  // Work Types State
+  const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
+  const [workTypeStats, setWorkTypeStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
+  const [isWorkTypesLoading, setIsWorkTypesLoading] = useState(false);
+
+  // 勤務形態ダイアログの状態管理
+  const [createWorkTypeDialogOpen, setCreateWorkTypeDialogOpen] = useState(false);
+  const [editWorkTypeDialogOpen, setEditWorkTypeDialogOpen] = useState(false);
+  const [editWorkTypeTarget, setEditWorkTypeTarget] = useState<WorkType | null>(null);
+  const [deleteWorkTypeDialogOpen, setDeleteWorkTypeDialogOpen] = useState(false);
+  const [deleteWorkTypeTarget, setDeleteWorkTypeTarget] = useState<WorkType | null>(null);
 
   // System Settings State
   const [systemSettings, setSystemSettings] = useState({
@@ -78,53 +129,80 @@ export default function AdminSettingsPage() {
     systemMaintenance: true,
   });
 
-  // Mock Request Types for Form Builder
-  const [requestTypes] = useState([
-    {
-      id: '1',
-      name: '休暇申請',
-      code: 'vacation',
-      description: '年次有給休暇や特別休暇の申請',
-      form_fields: [],
-      is_active: true,
-      created_at: '2024-01-20T00:00:00Z',
-      updated_at: '2024-01-20T00:00:00Z',
-    },
-    {
-      id: '2',
-      name: '残業申請',
-      code: 'overtime',
-      description: '時間外労働の事前申請',
-      form_fields: [],
-      is_active: true,
-      created_at: '2024-01-18T00:00:00Z',
-      updated_at: '2024-01-18T00:00:00Z',
-    },
-    {
-      id: '3',
-      name: '時刻修正申請',
-      code: 'time_correction',
-      description: '出退勤時刻の修正申請',
-      form_fields: [],
-      is_active: false,
-      created_at: '2024-01-15T00:00:00Z',
-      updated_at: '2024-01-15T00:00:00Z',
-    },
-  ]);
+  // 雇用形態データ取得
+  const fetchEmploymentTypes = async () => {
+    if (!user?.company_id) return;
 
-  // Organization Settings State
-  const [organizationSettings, setOrganizationSettings] = useState({
-    companyName: '株式会社TimePort',
-    departments: ['開発部', '営業部', '管理部'],
-    workplaces: ['本社', '大阪支社'],
-  });
+    setIsEmploymentTypesLoading(true);
+    try {
+      const [typesResult, statsResult] = await Promise.all([
+        getEmploymentTypes(user.company_id),
+        getEmploymentTypeStats(user.company_id),
+      ]);
+
+      if (typesResult.success) {
+        setEmploymentTypes(typesResult.data.employment_types);
+      } else {
+        console.error('雇用形態取得失敗:', typesResult.error);
+      }
+
+      if (statsResult.success) {
+        setEmploymentTypeStats(statsResult.data);
+      } else {
+        console.error('雇用形態統計取得失敗:', statsResult.error);
+      }
+    } catch (error) {
+      console.error('雇用形態データ取得エラー:', error);
+    } finally {
+      setIsEmploymentTypesLoading(false);
+    }
+  };
+
+  // 勤務形態データ取得
+  const fetchWorkTypes = async () => {
+    if (!user?.company_id) return;
+
+    setIsWorkTypesLoading(true);
+    try {
+      const [typesResult, statsResult] = await Promise.all([
+        getWorkTypes(user.company_id, { page: 1, limit: 100 }),
+        getWorkTypeStats(user.company_id),
+      ]);
+
+      if (typesResult.success) {
+        setWorkTypes(typesResult.data.work_types);
+      } else {
+        console.error('勤務形態取得失敗:', typesResult.error);
+      }
+
+      if (statsResult.success) {
+        setWorkTypeStats(statsResult.data);
+      } else {
+        console.error('勤務形態統計取得失敗:', statsResult.error);
+      }
+    } catch (error) {
+      console.error('勤務形態データ取得エラー:', error);
+    } finally {
+      setIsWorkTypesLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       router.push('/login');
       return;
     }
-  }, [user, router]);
+
+    // 雇用形態タブがアクティブになったときにデータを取得
+    if (activeTab === 'employment-types') {
+      fetchEmploymentTypes();
+    }
+
+    // 勤務形態タブがアクティブになったときにデータを取得
+    if (activeTab === 'work-types') {
+      fetchWorkTypes();
+    }
+  }, [user, router, activeTab]);
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -144,9 +222,34 @@ export default function AdminSettingsPage() {
     { id: 'system', label: 'システム', icon: Settings },
     { id: 'notifications', label: '通知', icon: Bell },
     { id: 'features', label: '機能設定', icon: FormInput },
-    { id: 'form-builder', label: '申請フォーム', icon: FormInput },
-    { id: 'group', label: 'グループ', icon: Building },
+
+    { id: 'employment-types', label: '雇用形態', icon: Users },
+    { id: 'work-types', label: '勤務形態', icon: Briefcase },
   ];
+
+  // 雇用形態編集ボタン押下時
+  const handleEditEmploymentType = (employmentType: EmploymentType) => {
+    setEditEmploymentTypeTarget(employmentType);
+    setEditEmploymentTypeDialogOpen(true);
+  };
+
+  // 雇用形態削除ボタン押下時
+  const handleDeleteEmploymentType = (employmentType: EmploymentType) => {
+    setDeleteEmploymentTypeTarget(employmentType);
+    setDeleteEmploymentTypeDialogOpen(true);
+  };
+
+  // 勤務形態編集ボタン押下時
+  const handleEditWorkType = (workType: WorkType) => {
+    setEditWorkTypeTarget(workType);
+    setEditWorkTypeDialogOpen(true);
+  };
+
+  // 勤務形態削除ボタン押下時
+  const handleDeleteWorkType = (workType: WorkType) => {
+    setDeleteWorkTypeTarget(workType);
+    setDeleteWorkTypeDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -251,35 +354,29 @@ export default function AdminSettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="startTime">開始時刻</Label>
+                      <Label htmlFor="workStart">勤務開始時刻</Label>
                       <Input
-                        id="startTime"
+                        id="workStart"
                         type="time"
                         value={systemSettings.workingHours.start}
                         onChange={(e) =>
                           setSystemSettings((prev) => ({
                             ...prev,
-                            workingHours: {
-                              ...prev.workingHours,
-                              start: e.target.value,
-                            },
+                            workingHours: { ...prev.workingHours, start: e.target.value },
                           }))
                         }
                       />
                     </div>
                     <div>
-                      <Label htmlFor="endTime">終了時刻</Label>
+                      <Label htmlFor="workEnd">勤務終了時刻</Label>
                       <Input
-                        id="endTime"
+                        id="workEnd"
                         type="time"
                         value={systemSettings.workingHours.end}
                         onChange={(e) =>
                           setSystemSettings((prev) => ({
                             ...prev,
-                            workingHours: {
-                              ...prev.workingHours,
-                              end: e.target.value,
-                            },
+                            workingHours: { ...prev.workingHours, end: e.target.value },
                           }))
                         }
                       />
@@ -302,15 +399,16 @@ export default function AdminSettingsPage() {
                       }
                     />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="autoClockOut">自動退勤</Label>
-                    <Switch
-                      id="autoClockOut"
-                      checked={systemSettings.autoClockOut}
-                      onCheckedChange={(checked) =>
+                  <div>
+                    <Label htmlFor="overtimeThreshold">残業開始閾値（分）</Label>
+                    <Input
+                      id="overtimeThreshold"
+                      type="number"
+                      value={systemSettings.overtimeThreshold}
+                      onChange={(e) =>
                         setSystemSettings((prev) => ({
                           ...prev,
-                          autoClockOut: checked,
+                          overtimeThreshold: parseInt(e.target.value),
                         }))
                       }
                     />
@@ -327,6 +425,52 @@ export default function AdminSettingsPage() {
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Shield className="w-5 h-5" />
+                  <span>システム設定</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>自動退勤</Label>
+                    <p className="text-sm text-gray-500">勤務終了時刻に自動で退勤処理</p>
+                  </div>
+                  <Switch
+                    checked={systemSettings.autoClockOut}
+                    onCheckedChange={(checked) =>
+                      setSystemSettings((prev) => ({ ...prev, autoClockOut: checked }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>承認必須</Label>
+                    <p className="text-sm text-gray-500">勤怠記録の承認を必須にする</p>
+                  </div>
+                  <Switch
+                    checked={systemSettings.requireApproval}
+                    onCheckedChange={(checked) =>
+                      setSystemSettings((prev) => ({ ...prev, requireApproval: checked }))
+                    }
+                  />
+                </div>
+
+                <Button
+                  onClick={() => handleSaveSettings('system')}
+                  disabled={isLoading}
+                  className="w-full"
+                  variant="timeport-primary"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  保存
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -339,89 +483,70 @@ export default function AdminSettingsPage() {
                 <span>通知設定</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>メール通知</Label>
-                    <p className="text-sm text-gray-500">システムからのメール通知を有効にする</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.emailNotifications}
-                    onCheckedChange={(checked) =>
-                      setNotificationSettings((prev) => ({
-                        ...prev,
-                        emailNotifications: checked,
-                      }))
-                    }
-                  />
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>メール通知</Label>
+                  <p className="text-sm text-gray-500">システムからのメール通知</p>
                 </div>
+                <Switch
+                  checked={notificationSettings.emailNotifications}
+                  onCheckedChange={(checked) =>
+                    setNotificationSettings((prev) => ({ ...prev, emailNotifications: checked }))
+                  }
+                />
+              </div>
 
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>遅刻アラート</Label>
-                    <p className="text-sm text-gray-500">遅刻時にアラートを送信</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.lateArrivalAlert}
-                    onCheckedChange={(checked) =>
-                      setNotificationSettings((prev) => ({
-                        ...prev,
-                        lateArrivalAlert: checked,
-                      }))
-                    }
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>遅刻アラート</Label>
+                  <p className="text-sm text-gray-500">遅刻時の通知</p>
                 </div>
+                <Switch
+                  checked={notificationSettings.lateArrivalAlert}
+                  onCheckedChange={(checked) =>
+                    setNotificationSettings((prev) => ({ ...prev, lateArrivalAlert: checked }))
+                  }
+                />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>残業アラート</Label>
-                    <p className="text-sm text-gray-500">残業時間超過時にアラートを送信</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.overtimeAlert}
-                    onCheckedChange={(checked) =>
-                      setNotificationSettings((prev) => ({
-                        ...prev,
-                        overtimeAlert: checked,
-                      }))
-                    }
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>残業アラート</Label>
+                  <p className="text-sm text-gray-500">残業時間の通知</p>
                 </div>
+                <Switch
+                  checked={notificationSettings.overtimeAlert}
+                  onCheckedChange={(checked) =>
+                    setNotificationSettings((prev) => ({ ...prev, overtimeAlert: checked }))
+                  }
+                />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>申請アラート</Label>
-                    <p className="text-sm text-gray-500">新規申請時にアラートを送信</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.applicationAlert}
-                    onCheckedChange={(checked) =>
-                      setNotificationSettings((prev) => ({
-                        ...prev,
-                        applicationAlert: checked,
-                      }))
-                    }
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>申請アラート</Label>
+                  <p className="text-sm text-gray-500">申請・承認の通知</p>
                 </div>
+                <Switch
+                  checked={notificationSettings.applicationAlert}
+                  onCheckedChange={(checked) =>
+                    setNotificationSettings((prev) => ({ ...prev, applicationAlert: checked }))
+                  }
+                />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>メンテナンス通知</Label>
-                    <p className="text-sm text-gray-500">システムメンテナンス時に通知</p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.systemMaintenance}
-                    onCheckedChange={(checked) =>
-                      setNotificationSettings((prev) => ({
-                        ...prev,
-                        systemMaintenance: checked,
-                      }))
-                    }
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>システムメンテナンス</Label>
+                  <p className="text-sm text-gray-500">メンテナンス情報の通知</p>
                 </div>
+                <Switch
+                  checked={notificationSettings.systemMaintenance}
+                  onCheckedChange={(checked) =>
+                    setNotificationSettings((prev) => ({ ...prev, systemMaintenance: checked }))
+                  }
+                />
               </div>
 
               <Button
@@ -446,89 +571,85 @@ export default function AdminSettingsPage() {
                 <span>機能設定</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>勤怠管理機能</Label>
-                    <p className="text-sm text-gray-500">出退勤打刻、勤怠履歴の管理</p>
-                  </div>
-                  <Switch
-                    checked={systemSettings.features.attendance}
-                    onCheckedChange={(checked) =>
-                      setSystemSettings((prev) => ({
-                        ...prev,
-                        features: { ...prev.features, attendance: checked },
-                      }))
-                    }
-                  />
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>勤怠管理</Label>
+                  <p className="text-sm text-gray-500">出退勤記録・勤怠管理機能</p>
                 </div>
+                <Switch
+                  checked={systemSettings.features.attendance}
+                  onCheckedChange={(checked) =>
+                    setSystemSettings((prev) => ({
+                      ...prev,
+                      features: { ...prev.features, attendance: checked },
+                    }))
+                  }
+                />
+              </div>
 
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>申請機能</Label>
-                    <p className="text-sm text-gray-500">各種申請の作成・承認機能</p>
-                  </div>
-                  <Switch
-                    checked={systemSettings.features.requests}
-                    onCheckedChange={(checked) =>
-                      setSystemSettings((prev) => ({
-                        ...prev,
-                        features: { ...prev.features, requests: checked },
-                      }))
-                    }
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>申請・承認</Label>
+                  <p className="text-sm text-gray-500">各種申請・承認機能</p>
                 </div>
+                <Switch
+                  checked={systemSettings.features.requests}
+                  onCheckedChange={(checked) =>
+                    setSystemSettings((prev) => ({
+                      ...prev,
+                      features: { ...prev.features, requests: checked },
+                    }))
+                  }
+                />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>ユーザー管理</Label>
-                    <p className="text-sm text-gray-500">ユーザーアカウントの管理</p>
-                  </div>
-                  <Switch
-                    checked={systemSettings.features.userManagement}
-                    onCheckedChange={(checked) =>
-                      setSystemSettings((prev) => ({
-                        ...prev,
-                        features: { ...prev.features, userManagement: checked },
-                      }))
-                    }
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>ユーザー管理</Label>
+                  <p className="text-sm text-gray-500">ユーザーの追加・編集・削除</p>
                 </div>
+                <Switch
+                  checked={systemSettings.features.userManagement}
+                  onCheckedChange={(checked) =>
+                    setSystemSettings((prev) => ({
+                      ...prev,
+                      features: { ...prev.features, userManagement: checked },
+                    }))
+                  }
+                />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>グループ管理</Label>
-                    <p className="text-sm text-gray-500">グループの階層管理</p>
-                  </div>
-                  <Switch
-                    checked={systemSettings.features.organizationManagement}
-                    onCheckedChange={(checked) =>
-                      setSystemSettings((prev) => ({
-                        ...prev,
-                        features: { ...prev.features, organizationManagement: checked },
-                      }))
-                    }
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>組織管理</Label>
+                  <p className="text-sm text-gray-500">グループ・グループの管理</p>
                 </div>
+                <Switch
+                  checked={systemSettings.features.organizationManagement}
+                  onCheckedChange={(checked) =>
+                    setSystemSettings((prev) => ({
+                      ...prev,
+                      features: { ...prev.features, organizationManagement: checked },
+                    }))
+                  }
+                />
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>分析機能</Label>
-                    <p className="text-sm text-gray-500">勤怠データの分析・レポート</p>
-                  </div>
-                  <Switch
-                    checked={systemSettings.features.analytics}
-                    onCheckedChange={(checked) =>
-                      setSystemSettings((prev) => ({
-                        ...prev,
-                        features: { ...prev.features, analytics: checked },
-                      }))
-                    }
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>分析機能</Label>
+                  <p className="text-sm text-gray-500">勤怠データの分析・レポート</p>
                 </div>
+                <Switch
+                  checked={systemSettings.features.analytics}
+                  onCheckedChange={(checked) =>
+                    setSystemSettings((prev) => ({
+                      ...prev,
+                      features: { ...prev.features, analytics: checked },
+                    }))
+                  }
+                />
               </div>
 
               <Button
@@ -544,146 +665,269 @@ export default function AdminSettingsPage() {
           </Card>
         )}
 
-        {/* 申請フォーム */}
-        {activeTab === 'form-builder' && (
+        {/* 雇用形態設定 */}
+        {activeTab === 'employment-types' && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <FormInput className="w-5 h-5" />
-                  <span>申請フォーム</span>
+                  <Users className="w-5 h-5" />
+                  <span>雇用形態設定</span>
                 </div>
                 <Button
-                  onClick={() => (window.location.href = '/admin/request-types/new')}
+                  onClick={() => setCreateEmploymentTypeDialogOpen(true)}
                   variant="timeport-primary"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  新規フォーム作成
+                  新規雇用形態
                 </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>申請名</TableHead>
-                    <TableHead>コード</TableHead>
-                    <TableHead>説明</TableHead>
-                    <TableHead>項目数</TableHead>
-                    <TableHead>ステータス</TableHead>
-                    <TableHead>更新日</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {requestTypes.map((type) => (
-                    <TableRow key={type.id}>
-                      <TableCell className="font-medium">{type.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{type.code}</Badge>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">{type.description}</TableCell>
-                      <TableCell>{type.form_fields.length}項目</TableCell>
-                      <TableCell>
-                        <Badge variant={type.is_active ? 'default' : 'secondary'}>
-                          {type.is_active ? '有効' : '無効'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(type.updated_at).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              (window.location.href = `/admin/request-types/${type.id}/edit`)
-                            }
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600"
-                            onClick={() => {
-                              if (confirm(`申請種別「${type.name}」を削除しますか？`)) {
-                                console.log('Delete application type:', type.id);
-                                // 実際の削除処理はここに実装
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              {isEmploymentTypesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>データを読み込み中...</span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold">{employmentTypeStats.total}</div>
+                      <div className="text-sm text-gray-600">総雇用形態数</div>
+                    </div>
+                    <div className="p-4 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">
+                        {employmentTypeStats.active}
+                      </div>
+                      <div className="text-sm text-gray-600">有効</div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-400">
+                        {employmentTypeStats.inactive}
+                      </div>
+                      <div className="text-sm text-gray-600">無効</div>
+                    </div>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>雇用形態名</TableHead>
+                        <TableHead>コード</TableHead>
+                        <TableHead>説明</TableHead>
+                        <TableHead>表示順序</TableHead>
+                        <TableHead>ステータス</TableHead>
+                        <TableHead>更新日</TableHead>
+                        <TableHead>操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {employmentTypes.map((type) => (
+                        <TableRow key={type.id}>
+                          <TableCell className="font-medium">{type.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{type.code}</Badge>
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">{type.description}</TableCell>
+                          <TableCell>{type.display_order}</TableCell>
+                          <TableCell>
+                            <Badge variant={type.is_active ? 'default' : 'secondary'}>
+                              {type.is_active ? '有効' : '無効'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(type.updated_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditEmploymentType(type)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600"
+                                onClick={() => handleDeleteEmploymentType(type)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {employmentTypes.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">雇用形態が登録されていません</p>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* 組織設定 */}
-        {activeTab === 'group' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Building className="w-5 h-5" />
-                  <span>グループ設定</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="orgCompanyName">会社名</Label>
-                  <Input
-                    id="orgCompanyName"
-                    value={organizationSettings.companyName}
-                    onChange={(e) =>
-                      setOrganizationSettings((prev) => ({
-                        ...prev,
-                        companyName: e.target.value,
-                      }))
-                    }
-                  />
+        {/* 勤務形態設定 */}
+        {activeTab === 'work-types' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Briefcase className="w-5 h-5" />
+                  <span>勤務形態設定</span>
                 </div>
-
-                <div>
-                  <Label>グループ一覧</Label>
-                  <div className="mt-2 space-y-2">
-                    {organizationSettings.departments.map((group, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                      >
-                        <span>{group}</span>
-                        <Button variant="ghost" size="sm" className="text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Plus className="w-4 h-4 mr-2" />
-                      グループを追加
-                    </Button>
-                  </div>
-                </div>
-
                 <Button
-                  onClick={() => handleSaveSettings('group')}
-                  disabled={isLoading}
-                  className="w-full"
+                  onClick={() => setCreateWorkTypeDialogOpen(true)}
                   variant="timeport-primary"
                 >
-                  <Save className="w-4 h-4 mr-2" />
-                  保存
+                  <Plus className="w-4 h-4 mr-2" />
+                  新規勤務形態
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isWorkTypesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>データを読み込み中...</span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold">{workTypeStats.total}</div>
+                      <div className="text-sm text-gray-600">総勤務形態数</div>
+                    </div>
+                    <div className="p-4 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">
+                        {workTypeStats.active}
+                      </div>
+                      <div className="text-sm text-gray-600">有効</div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-gray-400">
+                        {workTypeStats.inactive}
+                      </div>
+                      <div className="text-sm text-gray-600">無効</div>
+                    </div>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>勤務形態名</TableHead>
+                        <TableHead>コード</TableHead>
+                        <TableHead>勤務時間</TableHead>
+                        <TableHead>休憩時間</TableHead>
+                        <TableHead>フレックス</TableHead>
+                        <TableHead>ステータス</TableHead>
+                        <TableHead>更新日</TableHead>
+                        <TableHead>操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {workTypes.map((type) => (
+                        <TableRow key={type.id}>
+                          <TableCell className="font-medium">{type.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{type.code}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {type.work_start_time} - {type.work_end_time}
+                          </TableCell>
+                          <TableCell>{type.break_duration_minutes}分</TableCell>
+                          <TableCell>
+                            <Badge variant={type.is_flexible ? 'default' : 'secondary'}>
+                              {type.is_flexible ? 'フレックス' : '固定'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={type.is_active ? 'default' : 'secondary'}>
+                              {type.is_active ? '有効' : '無効'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(type.updated_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditWorkType(type)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600"
+                                onClick={() => handleDeleteWorkType(type)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {workTypes.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">勤務形態が登録されていません</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
+
+      {/* 雇用形態管理ダイアログ */}
+      <EmploymentTypeCreateDialog
+        open={createEmploymentTypeDialogOpen}
+        onOpenChange={setCreateEmploymentTypeDialogOpen}
+        onSuccess={fetchEmploymentTypes}
+      />
+      <EmploymentTypeEditDialog
+        open={editEmploymentTypeDialogOpen}
+        onOpenChange={setEditEmploymentTypeDialogOpen}
+        employmentType={editEmploymentTypeTarget}
+        onSuccess={fetchEmploymentTypes}
+      />
+      <EmploymentTypeDeleteDialog
+        open={deleteEmploymentTypeDialogOpen}
+        onOpenChange={setDeleteEmploymentTypeDialogOpen}
+        employmentType={deleteEmploymentTypeTarget}
+        onSuccess={fetchEmploymentTypes}
+      />
+
+      {/* 勤務形態管理ダイアログ */}
+      <WorkTypeCreateDialog
+        open={createWorkTypeDialogOpen}
+        onOpenChange={setCreateWorkTypeDialogOpen}
+        companyId={user?.company_id || ''}
+        onSuccess={fetchWorkTypes}
+      />
+      <WorkTypeEditDialog
+        open={editWorkTypeDialogOpen}
+        onOpenChange={setEditWorkTypeDialogOpen}
+        workType={editWorkTypeTarget}
+        companyId={user?.company_id || ''}
+        onSuccess={fetchWorkTypes}
+      />
+      <WorkTypeDeleteDialog
+        open={deleteWorkTypeDialogOpen}
+        onOpenChange={setDeleteWorkTypeDialogOpen}
+        workType={deleteWorkTypeTarget}
+        companyId={user?.company_id || ''}
+        onSuccess={fetchWorkTypes}
+      />
     </div>
   );
 }
