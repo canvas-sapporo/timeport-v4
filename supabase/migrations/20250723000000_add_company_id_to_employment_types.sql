@@ -27,8 +27,8 @@ BEGIN
 
     -- デフォルトの雇用形態を作成
     INSERT INTO employment_types (company_id, code, name, description, is_active, display_order) VALUES
-        (company_id, 'REGULAR', '正社員', '正社員として雇用される形態', true, 1),
-        (company_id, 'CONTRACT', '契約社員', '契約に基づく雇用形態', true, 2),
+        (company_id, 'REGULAR', '正メンバー', '正メンバーとして雇用される形態', true, 1),
+        (company_id, 'CONTRACT', '契約メンバー', '契約に基づく雇用形態', true, 2),
         (company_id, 'PART_TIME', 'パートタイム', 'パートタイム勤務の雇用形態', true, 3),
         (company_id, 'INTERN', 'インターン', 'インターンシップの雇用形態', true, 4);
 END;

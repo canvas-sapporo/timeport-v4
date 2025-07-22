@@ -1,11 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Clock, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import {
+  Users,
+  Clock,
+  FileText,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle,
+  Briefcase,
+} from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
+import { useToast } from '@/hooks/use-toast';
+import { getWorkTypes } from '@/lib/actions/admin/work-types';
 import StatsCard from '@/components/ui/stats-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -22,20 +32,44 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const router = useRouter();
   const { users, requests, attendanceRecords, notifications } = useData();
+  const { toast } = useToast();
+  const [hasCheckedWorkTypes, setHasCheckedWorkTypes] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       router.push('/login');
       return;
     }
-  }, [user, router]);
+
+    // 勤務形態の確認（一度だけ実行）
+    if (user?.company_id && !hasCheckedWorkTypes) {
+      const checkWorkTypes = async () => {
+        try {
+          const result = await getWorkTypes(user.company_id!, { page: 1, limit: 1 });
+          if (result.success && result.data.work_types.length === 0) {
+            toast({
+              title: '勤務形態が未設定です',
+              description: '勤務形態を設定してください。設定画面から勤務形態を追加できます。',
+              variant: 'destructive',
+            });
+          }
+          setHasCheckedWorkTypes(true);
+        } catch (error) {
+          console.error('勤務形態確認エラー:', error);
+          setHasCheckedWorkTypes(true);
+        }
+      };
+
+      checkWorkTypes();
+    }
+  }, [user, router, hasCheckedWorkTypes, toast]);
 
   if (!user || user.role !== 'admin') {
     return null;
   }
 
   const activeUsers = users.filter((u) => u.is_active).length;
-  const pendingRequests = requests.filter((a) => a.status === 'pending').length;
+  const pendingRequests = requests.filter((a) => a.status_id === 'pending').length;
   const todayAttendance = attendanceRecords.filter(
     (r) => r.work_date === new Date().toISOString().split('T')[0]
   ).length;
@@ -121,11 +155,15 @@ export default function AdminDashboard() {
                       </TableCell>
                       <TableCell>{request.title}</TableCell>
                       <TableCell>
-                        {request.status === 'pending' && (
+                        {request.status_id === 'pending' && (
                           <Badge variant="secondary">承認待ち</Badge>
                         )}
-                        {request.status === 'approved' && <Badge variant="default">承認済み</Badge>}
-                        {request.status === 'rejected' && <Badge variant="destructive">却下</Badge>}
+                        {request.status_id === 'approved' && (
+                          <Badge variant="default">承認済み</Badge>
+                        )}
+                        {request.status_id === 'rejected' && (
+                          <Badge variant="destructive">却下</Badge>
+                        )}
                       </TableCell>
                     </TableRow>
                   );

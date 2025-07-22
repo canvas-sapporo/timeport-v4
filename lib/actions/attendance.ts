@@ -248,11 +248,30 @@ export const clockIn = async (
 
     const today = new Date().toISOString().split('T')[0];
 
+    // workTypeIdが指定されていない場合、user_profilesから取得
+    let finalWorkTypeId = workTypeId;
+    if (!finalWorkTypeId) {
+      console.log('workTypeIdが指定されていないため、user_profilesから取得します');
+      const { data: userProfile, error: profileError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('current_work_type_id')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.warn('user_profiles取得エラー:', profileError);
+        // エラーの場合はworkTypeIdをnullのままにする
+      } else if (userProfile?.current_work_type_id) {
+        finalWorkTypeId = userProfile.current_work_type_id;
+        console.log('user_profilesから取得したworkTypeId:', finalWorkTypeId);
+      }
+    }
+
     // 勤怠記録を作成または更新
     console.log('Supabase upsert 開始:', {
       user_id: userId,
       work_date: today,
-      work_type_id: workTypeId,
+      work_type_id: finalWorkTypeId,
       clock_in_time: timestamp,
     });
 
@@ -261,7 +280,7 @@ export const clockIn = async (
       .upsert({
         user_id: userId,
         work_date: today,
-        work_type_id: workTypeId,
+        work_type_id: finalWorkTypeId,
         clock_in_time: timestamp,
         break_records: [],
         actual_work_minutes: 0,
@@ -359,13 +378,32 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
       };
     }
 
+    // work_type_idが設定されていない場合、user_profilesから取得
+    let finalWorkTypeId = existingRecord.work_type_id;
+    if (!finalWorkTypeId) {
+      console.log('workTypeIdが設定されていないため、user_profilesから取得します');
+      const { data: userProfile, error: profileError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('current_work_type_id')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.warn('user_profiles取得エラー:', profileError);
+        // エラーの場合はworkTypeIdをnullのままにする
+      } else if (userProfile?.current_work_type_id) {
+        finalWorkTypeId = userProfile.current_work_type_id;
+        console.log('user_profilesから取得したworkTypeId:', finalWorkTypeId);
+      }
+    }
+
     // 勤務時間を計算
     console.log('勤務時間計算開始');
     const { actualWorkMinutes, overtimeMinutes } = await calculateWorkTime(
       existingRecord.clock_in_time,
       timestamp,
       existingRecord.break_records || [],
-      existingRecord.work_type_id
+      finalWorkTypeId
     );
     console.log('勤務時間計算結果:', { actualWorkMinutes, overtimeMinutes });
 
@@ -373,6 +411,7 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
     console.log('勤怠記録更新開始:', {
       id: existingRecord.id,
       clock_out_time: timestamp,
+      work_type_id: finalWorkTypeId,
       actual_work_minutes: actualWorkMinutes,
       overtime_minutes: overtimeMinutes,
     });
@@ -381,6 +420,7 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
       .from('attendances')
       .update({
         clock_out_time: timestamp,
+        work_type_id: finalWorkTypeId,
         actual_work_minutes: actualWorkMinutes,
         overtime_minutes: overtimeMinutes,
       })
@@ -469,6 +509,25 @@ export const startBreak = async (userId: string, timestamp: string): Promise<Clo
       };
     }
 
+    // work_type_idが設定されていない場合、user_profilesから取得
+    let finalWorkTypeId = existingRecord.work_type_id;
+    if (!finalWorkTypeId) {
+      console.log('workTypeIdが設定されていないため、user_profilesから取得します');
+      const { data: userProfile, error: profileError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('current_work_type_id')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.warn('user_profiles取得エラー:', profileError);
+        // エラーの場合はworkTypeIdをnullのままにする
+      } else if (userProfile?.current_work_type_id) {
+        finalWorkTypeId = userProfile.current_work_type_id;
+        console.log('user_profilesから取得したworkTypeId:', finalWorkTypeId);
+      }
+    }
+
     // 新しい休憩記録を追加
     const newBreakRecord: BreakRecord = {
       start: timestamp,
@@ -482,6 +541,7 @@ export const startBreak = async (userId: string, timestamp: string): Promise<Clo
     const { data, error } = await supabaseAdmin
       .from('attendances')
       .update({
+        work_type_id: finalWorkTypeId,
         break_records: updatedBreakRecords,
       })
       .eq('id', existingRecord.id)
@@ -565,6 +625,25 @@ export const endBreak = async (userId: string, timestamp: string): Promise<Clock
       };
     }
 
+    // work_type_idが設定されていない場合、user_profilesから取得
+    let finalWorkTypeId = existingRecord.work_type_id;
+    if (!finalWorkTypeId) {
+      console.log('workTypeIdが設定されていないため、user_profilesから取得します');
+      const { data: userProfile, error: profileError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('current_work_type_id')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.warn('user_profiles取得エラー:', profileError);
+        // エラーの場合はworkTypeIdをnullのままにする
+      } else if (userProfile?.current_work_type_id) {
+        finalWorkTypeId = userProfile.current_work_type_id;
+        console.log('user_profilesから取得したworkTypeId:', finalWorkTypeId);
+      }
+    }
+
     // 最後の休憩記録を終了
     const updatedBreakRecords = [...(existingRecord.break_records || [])];
     const lastBreak = updatedBreakRecords[updatedBreakRecords.length - 1];
@@ -591,7 +670,7 @@ export const endBreak = async (userId: string, timestamp: string): Promise<Clock
         existingRecord.clock_in_time!,
         existingRecord.clock_out_time,
         updatedBreakRecords,
-        existingRecord.work_type_id
+        finalWorkTypeId
       );
       actualWorkMinutes = recalculatedWorkMinutes;
       overtimeMinutes = recalculatedOvertimeMinutes;
@@ -601,6 +680,7 @@ export const endBreak = async (userId: string, timestamp: string): Promise<Clock
     const { data, error } = await supabaseAdmin
       .from('attendances')
       .update({
+        work_type_id: finalWorkTypeId,
         break_records: updatedBreakRecords,
         actual_work_minutes: actualWorkMinutes,
         overtime_minutes: overtimeMinutes,
@@ -698,6 +778,7 @@ export const getUserAttendance = async (
     }
 
     console.log('基本的な勤怠データ取得成功:', basicData?.length, '件');
+    console.log('取得されたデータの詳細:', basicData);
 
     // work_typesとuser_profilesの情報を個別に取得
     const workTypeIds = Array.from(
@@ -830,7 +911,7 @@ export const getUserWorkTypes = async (userId: string): Promise<{ id: string; na
 };
 
 /**
- * 管理者用：全社員の勤怠記録一覧を取得
+ * 管理者用：全メンバーの勤怠記録一覧を取得
  */
 export const getAllAttendance = async (
   companyId: string,
@@ -1035,7 +1116,7 @@ export const getCompanyUsers = async (
 };
 
 /**
- * 管理者用：企業内の全部署一覧を取得
+ * 管理者用：企業内の全グループ一覧を取得
  */
 export const getCompanyGroups = async (
   companyId: string
@@ -1051,7 +1132,7 @@ export const getCompanyGroups = async (
       .order('name', { ascending: true });
 
     if (error) {
-      console.error('部署取得エラー:', error);
+      console.error('グループ取得エラー:', error);
       throw error;
     }
 

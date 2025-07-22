@@ -80,7 +80,7 @@ CREATE TABLE leave_types (
 -- 2. 組織・グループ関連テーブル
 -- ================================
 
--- グループテーブル（部署・チーム・勤務地等）
+-- グループテーブル（グループ・チーム・勤務地等）
 CREATE TABLE groups (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
