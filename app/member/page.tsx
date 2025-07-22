@@ -264,6 +264,7 @@ export default function MemberDashboard() {
       console.log('打刻時刻:', timestamp);
       console.log('clockIn関数呼び出し開始');
 
+      // user_profilesからwork_type_idを取得して渡す
       const result = await clockIn(user.id, timestamp);
       console.log('clockIn結果:', result);
 
