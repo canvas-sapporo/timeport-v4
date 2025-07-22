@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Search, Menu } from 'lucide-react';
+import { Bell, Search, Menu, Users, Settings } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
@@ -13,16 +14,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import NotificationSystem from '@/components/notifications/notification-system';
 
 export default function Header() {
   const { user } = useAuth();
   const { notifications, markNotificationAsRead } = useData();
   const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+  const pathname = usePathname();
 
   const unreadNotifications = notifications.filter((n) => !n.is_read && n.user_id === user?.id);
 
   const handleNotificationClick = (notificationId: string) => {
     markNotificationAsRead(notificationId);
+  };
+
+  const handleMemberViewClick = () => {
+    router.push('/member');
+  };
+
+  const handleAdminViewClick = () => {
+    if (user?.role === 'system-admin') {
+      router.push('/system-admin');
+    } else {
+      router.push('/admin');
+    }
   };
 
   return (
@@ -44,41 +60,44 @@ export default function Header() {
       </div>
 
       <div className="flex items-center space-x-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10">
-              <Bell className="w-5 h-5" />
-              {unreadNotifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
-                  {unreadNotifications.length}
-                </span>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 glass-effect">
-            <div className="p-2">
-              <h3 className="font-medium text-gray-900 mb-2">通知</h3>
-              {unreadNotifications.length === 0 ? (
-                <p className="text-sm text-gray-500">新しい通知はありません</p>
-              ) : (
-                <div className="space-y-2">
-                  {unreadNotifications.slice(0, 3).map((notification) => (
-                    <DropdownMenuItem
-                      key={notification.id}
-                      onClick={() => handleNotificationClick(notification.id)}
-                      className="p-3 cursor-pointer rounded-lg hover:bg-white/50"
-                    >
-                      <div>
-                        <div className="font-medium text-sm">{notification.title}</div>
-                        <div className="text-xs text-gray-500 mt-1">{notification.message}</div>
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Navigation Button - Show different button based on current page */}
+        {(user?.role === 'admin' || user?.role === 'system-admin') && (
+          <>
+            {/* Show "メンバー画面" button when on admin/system-admin pages */}
+            {(pathname.startsWith('/admin') || pathname.startsWith('/system-admin')) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleMemberViewClick}
+                className="text-white hover:text-gray-100 bg-gradient-to-r from-blue-500/90 to-purple-600/90 hover:bg-gradient-to-l hover:from-blue-600 hover:to-purple-700 focus:ring-4 focus:outline-none focus:ring-blue-300/30 font-medium rounded-lg text-sm px-4 py-2 transition-all duration-300 flex items-center space-x-2 shadow-lg hover:shadow-xl group border-0 backdrop-blur-sm"
+              >
+                <Users className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+                <span className="hidden sm:inline">メンバー画面</span>
+              </Button>
+            )}
+
+            {/* Show "管理者画面" button when on member pages */}
+            {pathname.startsWith('/member') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleAdminViewClick}
+                className="text-white hover:text-gray-100 bg-gradient-to-r from-blue-500/90 to-purple-600/90 hover:bg-gradient-to-l hover:from-blue-600 hover:to-purple-700 focus:ring-4 focus:outline-none focus:ring-blue-300/30 font-medium rounded-lg text-sm px-4 py-2 transition-all duration-300 flex items-center space-x-2 shadow-lg hover:shadow-xl group border-0 backdrop-blur-sm"
+              >
+                <Settings className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+                <span className="hidden sm:inline">管理者画面</span>
+              </Button>
+            )}
+          </>
+        )}
+
+        <NotificationSystem
+          onNotificationClick={(notification) => {
+            if (notification.related_request_id) {
+              router.push(`/member/requests/${notification.related_request_id}`);
+            }
+          }}
+        />
 
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
@@ -87,11 +106,13 @@ export default function Header() {
           <div className="hidden md:block">
             <div className="text-sm font-medium text-white">{user?.full_name}</div>
             <div className="text-xs text-white/70">
-              {user?.role === 'system-admin'
-                ? 'システム管理者'
-                : user?.role === 'admin'
-                  ? '管理者'
-                  : 'メンバー'}
+              {pathname.startsWith('/member')
+                ? 'メンバー'
+                : user?.role === 'system-admin'
+                  ? 'システム管理者'
+                  : user?.role === 'admin'
+                    ? '管理者'
+                    : 'メンバー'}
             </div>
           </div>
         </div>

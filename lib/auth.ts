@@ -97,7 +97,9 @@ export const loginUser = async (
 export const logoutUser = async (): Promise<void> => {
   try {
     await supabase.auth.signOut();
-    localStorage.removeItem('auth-user');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth-user');
+    }
   } catch (error) {
     console.error('ログアウトエラー:', error);
   }
@@ -105,6 +107,7 @@ export const logoutUser = async (): Promise<void> => {
 
 export const getCurrentUser = (): AuthUser | null => {
   try {
+    if (typeof window === 'undefined') return null;
     const stored = localStorage.getItem('auth-user');
     return stored ? JSON.parse(stored) : null;
   } catch {
@@ -113,5 +116,7 @@ export const getCurrentUser = (): AuthUser | null => {
 };
 
 export const setCurrentUser = (user: AuthUser): void => {
-  localStorage.setItem('auth-user', JSON.stringify(user));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('auth-user', JSON.stringify(user));
+  }
 };

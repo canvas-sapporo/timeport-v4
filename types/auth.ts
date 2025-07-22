@@ -14,7 +14,7 @@ import type { BaseEntity, UUID, DateString, Timestamp, Settings } from './common
  * ユーザーロール
  * - system-admin: システム管理者（全権限）
  * - admin: 管理者（組織内管理権限）
- * - member: 一般ユーザー（個人データのみ）
+ * - member: メンバー（個人データのみ）
  */
 export type UserRole = 'system-admin' | 'admin' | 'member';
 
@@ -64,7 +64,7 @@ export interface CreateUserProfileInput {
   /** メールアドレス */
   email: string;
   /** ユーザーロール */
-  role?: UserRole;
+  role: UserRole;
   /** 主所属グループID */
   primary_group_id?: UUID;
   /** 雇用形態ID */
@@ -123,6 +123,8 @@ export interface AuthUser {
   role: UserRole;
   /** 主所属グループID */
   primary_group_id?: UUID;
+  /** 所属企業ID */
+  company_id?: UUID;
 }
 
 /**

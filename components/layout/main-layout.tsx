@@ -21,6 +21,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     return <>{children}</>;
   }
 
+  // ローディング中はローディング画面を表示
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center timeport-main-background">
@@ -32,6 +33,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
+  // ログアウト中はローディング画面を表示
   if (isLoggingOut) {
     return (
       <div className="min-h-screen flex items-center justify-center timeport-main-background">
@@ -43,7 +45,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
+  // ユーザーが認証されていない場合は、ログインページにリダイレクト
   if (!user) {
+    // ログインページ以外の場合は、ログインページにリダイレクト
+    if (pathname !== '/login') {
+      // クライアントサイドでのみリダイレクト
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+        return null;
+      }
+    }
     return <>{children}</>;
   }
 

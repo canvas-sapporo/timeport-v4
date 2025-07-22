@@ -181,9 +181,8 @@ export interface ApprovalStep {
   required: boolean;
 }
 
-export interface RequestType extends BaseEntity {
-  company_id: UUID;
-  code: string;
+export interface RequestForm extends BaseEntity {
+  code?: string;
   name: string;
   description?: string;
   category: string;
@@ -195,7 +194,7 @@ export interface RequestType extends BaseEntity {
 }
 
 export interface Request extends BaseEntity {
-  request_type_id: UUID;
+  request_form_id: UUID;
   user_id: UUID;
   title: string;
   form_data: Record<string, any>;
@@ -219,7 +218,7 @@ export interface Request extends BaseEntity {
 // ================================
 
 export interface Form extends BaseEntity {
-  request_type_id: UUID;
+  request_form_id: UUID;
   field_name: string;
   field_type: string;
   field_label: string;
@@ -546,7 +545,7 @@ export type DatabaseTables = {
   user_work_types: UserWorkType;
   attendances: Attendance;
   request_statuses: RequestStatus;
-  request_types: RequestType;
+  request_forms: RequestForm;
   requests: Request;
   forms: Form;
   validations: Validation;

@@ -34,13 +34,16 @@
   * {
     @apply border-border;
   }
-  html, body {
+  html,
+  body {
     height: 100%;
     overflow: hidden;
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 }
 
@@ -51,8 +54,9 @@
 
 /* メイン背景グラデーション - より薄く、透明度を調整 */
 .timeport-main-background {
-  background: linear-gradient(135deg, 
-    rgba(102, 126, 234, 0.03) 0%, 
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.03) 0%,
     rgba(118, 75, 162, 0.05) 25%,
     rgba(236, 72, 153, 0.03) 50%,
     rgba(59, 130, 246, 0.04) 75%,
@@ -69,7 +73,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
     radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
     radial-gradient(circle at 60% 20%, rgba(236, 72, 153, 0.05) 0%, transparent 50%),
@@ -92,19 +96,13 @@
 }
 
 .timeport-sidebar {
-  background: linear-gradient(135deg, 
-    rgba(102, 126, 234, 0.95) 0%, 
-    rgba(118, 75, 162, 0.95) 100%
-  );
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
   backdrop-filter: blur(20px);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .timeport-header {
-  background: linear-gradient(135deg, 
-    rgba(102, 126, 234, 0.95) 0%, 
-    rgba(118, 75, 162, 0.95) 100%
-  );
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -131,14 +129,26 @@
 
 /* パーティクルアニメーション */
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-10px) rotate(120deg); }
-  66% { transform: translateY(5px) rotate(240deg); }
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-10px) rotate(120deg);
+  }
+  66% {
+    transform: translateY(5px) rotate(240deg);
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .timeport-particle {
@@ -198,6 +208,39 @@
   @apply bg-gray-400;
 }
 
+/* ダイアログ専用スクロールバー - より洗練されたデザイン */
+.dialog-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dialog-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+.dialog-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(125, 86, 169, 0.8) 0%, rgba(107, 70, 193, 0.8) 100%);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.dialog-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, rgba(139, 91, 185, 0.9) 0%, rgba(124, 58, 237, 0.9) 100%);
+  transform: scale(1.05);
+}
+
+.dialog-scrollbar::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(135deg, rgba(155, 107, 201, 1) 0%, rgba(139, 92, 246, 1) 100%);
+}
+
+/* Firefox用スクロールバー */
+.dialog-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 86, 169, 0.8) rgba(0, 0, 0, 0.05);
+}
+
 /* カード要素の強化 */
 .enhanced-card {
   background: rgba(255, 255, 255, 0.9);
@@ -233,10 +276,7 @@
 
 /* 統計カードの強化 */
 .stats-card-enhanced {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.9) 0%, 
-    rgba(255, 255, 255, 0.8) 100%
-  );
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.8) 100%);
   backdrop-filter: blur(15px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
@@ -245,10 +285,7 @@
 .stats-card-enhanced:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.95) 0%, 
-    rgba(255, 255, 255, 0.9) 100%
-  );
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
 }
 
 /* ページ遷移ローディングアニメーション */

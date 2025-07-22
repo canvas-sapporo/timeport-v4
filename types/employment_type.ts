@@ -63,8 +63,159 @@ export interface UpdateEmploymentTypeInput {
 }
 
 // ================================
+// 雇用形態管理用型定義
+// ================================
+
+/**
+ * 雇用形態作成フォームデータ
+ */
+export interface CreateEmploymentTypeFormData {
+  /** 雇用形態コード */
+  code: string;
+  /** 雇用形態名 */
+  name: string;
+  /** 説明 */
+  description: string;
+}
+
+/**
+ * 雇用形態編集フォームデータ
+ */
+export interface EditEmploymentTypeFormData {
+  /** 雇用形態コード */
+  code: string;
+  /** 雇用形態名 */
+  name: string;
+  /** 説明 */
+  description: string;
+}
+
+/**
+ * 雇用形態作成結果
+ */
+export interface CreateEmploymentTypeResult {
+  /** 雇用形態ID */
+  id: UUID;
+  /** 雇用形態コード */
+  code: string;
+  /** 雇用形態名 */
+  name: string;
+  /** 説明 */
+  description: string;
+  /** 作成日時 */
+  created_at: string;
+}
+
+/**
+ * 雇用形態更新結果
+ */
+export interface UpdateEmploymentTypeResult {
+  /** 雇用形態ID */
+  id: UUID;
+  /** 雇用形態コード */
+  code: string;
+  /** 雇用形態名 */
+  name: string;
+  /** 説明 */
+  description: string;
+  /** 更新日時 */
+  updated_at: string;
+}
+
+/**
+ * 雇用形態削除結果
+ */
+export interface DeleteEmploymentTypeResult {
+  /** 雇用形態ID */
+  id: UUID;
+  /** 削除日時 */
+  deleted_at: string;
+}
+
+/**
+ * 雇用形態一覧レスポンス
+ */
+export interface EmploymentTypeListResponse {
+  /** 雇用形態一覧 */
+  employment_types: EmploymentType[];
+  /** 総件数 */
+  total: number;
+  /** 現在のページ */
+  page: number;
+  /** 1ページあたりの件数 */
+  limit: number;
+}
+
+/**
+ * 雇用形態検索パラメータ
+ */
+export interface EmploymentTypeSearchParams {
+  /** 検索キーワード */
+  search?: string;
+  /** ステータス */
+  status?: 'all' | 'active' | 'inactive';
+  /** ページ番号 */
+  page?: number;
+  /** 1ページあたりの件数 */
+  limit?: number;
+  /** ソート項目 */
+  orderBy?: string;
+  /** 昇順フラグ */
+  ascending?: boolean;
+}
+
+/**
+ * 雇用形態統計情報
+ */
+export interface EmploymentTypeStats {
+  /** 総件数 */
+  total: number;
+  /** 有効件数 */
+  active: number;
+  /** 無効件数 */
+  inactive: number;
+}
+
+/**
+ * 雇用形態バリデーション結果
+ */
+export interface EmploymentTypeValidationResult {
+  /** バリデーション成功フラグ */
+  isValid: boolean;
+  /** エラー一覧 */
+  errors: {
+    /** フィールド名 */
+    field: keyof CreateEmploymentTypeFormData | keyof EditEmploymentTypeFormData;
+    /** エラーメッセージ */
+    message: string;
+    /** エラーコード */
+    code: string;
+  }[];
+}
+
+// ================================
 // 勤務パターン型
 // ================================
+
+/**
+ * 勤務形態設定
+ */
+export interface WorkTypeSettings {
+  /** 残業許可フラグ */
+  allow_overtime?: boolean;
+  /** 最大残業時間（時間） */
+  max_overtime_hours?: number;
+  /** 深夜勤務手当フラグ */
+  night_work_allowance?: boolean;
+  /** 休日勤務手当フラグ */
+  holiday_work_allowance?: boolean;
+  /** 特別休憩時間 */
+  special_break_times?: string[];
+  /** フレックス勤務可能曜日 */
+  flexible_work_days?: string[];
+  /** カスタムルール */
+  custom_rules?: Record<string, unknown>;
+}
 
 /**
  * 勤務パターンエンティティ
@@ -96,6 +247,8 @@ export interface WorkType extends BaseEntity {
   overtime_threshold_minutes: number;
   /** 説明 */
   description?: string;
+  /** 設定情報 */
+  settings: WorkTypeSettings;
   /** 有効フラグ */
   is_active: boolean;
   /** 表示順序 */
@@ -132,6 +285,8 @@ export interface CreateWorkTypeInput {
   overtime_threshold_minutes?: number;
   /** 説明 */
   description?: string;
+  /** 設定情報 */
+  settings?: WorkTypeSettings;
   /** 有効フラグ */
   is_active?: boolean;
   /** 表示順序 */
@@ -166,10 +321,195 @@ export interface UpdateWorkTypeInput {
   overtime_threshold_minutes?: number;
   /** 説明 */
   description?: string;
+  /** 設定情報 */
+  settings?: WorkTypeSettings;
   /** 有効フラグ */
   is_active?: boolean;
   /** 表示順序 */
   display_order?: number;
+}
+
+// ================================
+// 勤務形態フォーム・レスポンス型
+// ================================
+
+/**
+ * 勤務形態作成用フォームデータ
+ */
+export interface CreateWorkTypeFormData {
+  /** 勤務形態コード */
+  code: string;
+  /** 勤務形態名 */
+  name: string;
+  /** 勤務開始時刻 */
+  work_start_time: string;
+  /** 勤務終了時刻 */
+  work_end_time: string;
+  /** 休憩時間（分） */
+  break_duration_minutes: number;
+  /** フレックス勤務フラグ */
+  is_flexible: boolean;
+  /** フレックス開始可能時刻 */
+  flex_start_time?: string;
+  /** フレックス終了可能時刻 */
+  flex_end_time?: string;
+  /** コアタイム開始時刻 */
+  core_start_time?: string;
+  /** コアタイム終了時刻 */
+  core_end_time?: string;
+  /** 残業開始閾値（分） */
+  overtime_threshold_minutes: number;
+  /** 説明 */
+  description: string;
+}
+
+/**
+ * 勤務形態編集用フォームデータ
+ */
+export interface EditWorkTypeFormData {
+  /** 勤務形態コード */
+  code: string;
+  /** 勤務形態名 */
+  name: string;
+  /** 勤務開始時刻 */
+  work_start_time: string;
+  /** 勤務終了時刻 */
+  work_end_time: string;
+  /** 休憩時間（分） */
+  break_duration_minutes: number;
+  /** フレックス勤務フラグ */
+  is_flexible: boolean;
+  /** フレックス開始可能時刻 */
+  flex_start_time?: string;
+  /** フレックス終了可能時刻 */
+  flex_end_time?: string;
+  /** コアタイム開始時刻 */
+  core_start_time?: string;
+  /** コアタイム終了時刻 */
+  core_end_time?: string;
+  /** 残業開始閾値（分） */
+  overtime_threshold_minutes: number;
+  /** 説明 */
+  description: string;
+}
+
+/**
+ * 勤務形態作成結果
+ */
+export interface CreateWorkTypeResult {
+  /** 勤務形態ID */
+  id: UUID;
+  /** 勤務形態コード */
+  code: string;
+  /** 勤務形態名 */
+  name: string;
+  /** 勤務開始時刻 */
+  work_start_time: TimeString;
+  /** 勤務終了時刻 */
+  work_end_time: TimeString;
+  /** 休憩時間（分） */
+  break_duration_minutes: number;
+  /** フレックス勤務フラグ */
+  is_flexible: boolean;
+  /** 作成日時 */
+  created_at: string;
+}
+
+/**
+ * 勤務形態更新結果
+ */
+export interface UpdateWorkTypeResult {
+  /** 勤務形態ID */
+  id: UUID;
+  /** 勤務形態コード */
+  code: string;
+  /** 勤務形態名 */
+  name: string;
+  /** 勤務開始時刻 */
+  work_start_time: TimeString;
+  /** 勤務終了時刻 */
+  work_end_time: TimeString;
+  /** 休憩時間（分） */
+  break_duration_minutes: number;
+  /** フレックス勤務フラグ */
+  is_flexible: boolean;
+  /** 更新日時 */
+  updated_at: string;
+}
+
+/**
+ * 勤務形態削除結果
+ */
+export interface DeleteWorkTypeResult {
+  /** 勤務形態ID */
+  id: UUID;
+  /** 削除日時 */
+  deleted_at: string;
+}
+
+/**
+ * 勤務形態一覧レスポンス
+ */
+export interface WorkTypeListResponse {
+  /** 勤務形態一覧 */
+  work_types: WorkType[];
+  /** 総件数 */
+  total: number;
+  /** 現在のページ */
+  page: number;
+  /** 1ページあたりの件数 */
+  limit: number;
+}
+
+/**
+ * 勤務形態検索パラメータ
+ */
+export interface WorkTypeSearchParams {
+  /** 検索キーワード */
+  search?: string;
+  /** フレックス勤務フラグ */
+  is_flexible?: boolean;
+  /** ステータス */
+  status?: 'all' | 'active' | 'inactive';
+  /** ページ番号 */
+  page?: number;
+  /** 1ページあたりの件数 */
+  limit?: number;
+  /** ソート項目 */
+  orderBy?: string;
+  /** 昇順フラグ */
+  ascending?: boolean;
+}
+
+/**
+ * 勤務形態統計情報
+ */
+export interface WorkTypeStats {
+  /** 総件数 */
+  total: number;
+  /** 有効件数 */
+  active: number;
+  /** 無効件数 */
+  inactive: number;
+  /** フレックス勤務件数 */
+  flexible: number;
+}
+
+/**
+ * 勤務形態バリデーション結果
+ */
+export interface WorkTypeValidationResult {
+  /** バリデーション成功フラグ */
+  isValid: boolean;
+  /** エラー一覧 */
+  errors: {
+    /** フィールド名 */
+    field: keyof CreateWorkTypeFormData | keyof EditWorkTypeFormData;
+    /** エラーメッセージ */
+    message: string;
+    /** エラーコード */
+    code: string;
+  }[];
 }
 
 // ================================
@@ -294,12 +634,24 @@ export interface CreateUserWorkTypeHistoryInput {
   effective_to?: DateString;
 }
 
+/**
+ * ユーザー勤務タイプ履歴更新用入力型
+ */
+export interface UpdateUserWorkTypeHistoryInput {
+  /** 勤務タイプID */
+  work_type_id?: UUID;
+  /** 適用開始日 */
+  effective_from?: DateString;
+  /** 適用終了日 */
+  effective_to?: DateString;
+}
+
 // ================================
-// 勤務時間計算型
+// 勤務時間計算・制約型
 // ================================
 
 /**
- * 勤務時間計算結果
+ * 勤務時間計算情報
  */
 export interface WorkTimeCalculation {
   /** 標準勤務時間（分） */
@@ -366,7 +718,7 @@ export interface WorkTypeDetail extends WorkType {
 }
 
 // ================================
-// 検索・フィルター型
+// 検索・フィルタリング型
 // ================================
 
 /**

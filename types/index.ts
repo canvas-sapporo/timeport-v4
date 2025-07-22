@@ -19,7 +19,7 @@ export type { UserProfile, AuthUser, LoginCredentials } from './auth';
 
 // 会社・雇用関連
 export type { Company } from './company';
-export type { EmploymentType, LeaveType, WorkType } from './employment';
+export type { EmploymentType, LeaveType, WorkType } from './employment_type';
 
 // グループ関連
 export type { Group } from './groups';
@@ -57,7 +57,7 @@ export type {
 } from './form';
 
 // リクエスト関連
-export type { Request, RequestType, RequestStatus, RequestStatistics } from './request';
+export type { Request, RequestForm, RequestStatus, RequestStatistics } from './request';
 
 // システム関連
 export type {

@@ -9,7 +9,7 @@
 
 ## 📋 概要
 
-TimePortは、現代の企業ニーズに応える高機能な勤怠管理システムです。システム管理者と管理者、一般ユーザーの両方に対応し、柔軟な設定機能と直感的なUIを提供します。
+TimePortは、現代の企業ニーズに応える高機能な勤怠管理システムです。システム管理者と管理者、メンバーの両方に対応し、柔軟な設定機能と直感的なUIを提供します。
 
 ### ✨ 主な特徴
 
@@ -23,6 +23,7 @@ TimePortは、現代の企業ニーズに応える高機能な勤怠管理シス
 ## 🏗️ 技術スタック
 
 ### フロントエンド
+
 - **Next.js 15** (App Router)
 - **TypeScript** - 型安全性
 - **Tailwind CSS** - スタイリング
@@ -30,11 +31,13 @@ TimePortは、現代の企業ニーズに応える高機能な勤怠管理シス
 - **React Hook Form + Zod** - フォーム管理・バリデーション
 
 ### バックエンド
+
 - **Supabase** - データベース・認証
 - **PostgreSQL** - データストレージ
 - **Row Level Security** - データセキュリティ
 
 ### 開発ツール
+
 - **date-fns** - 日付処理
 - **Lucide React** - アイコン
 - **React Query/SWR** - データフェッチング
@@ -51,12 +54,14 @@ TimePortは、現代の企業ニーズに応える高機能な勤怠管理シス
 ### インストール
 
 1. **リポジトリのクローン**
+
 ```bash
 git clone https://github.com/canvas-sapporo/timeport-v4.git
 cd timeport-v4
 ```
 
 2. **依存関係のインストール**
+
 ```bash
 npm install
 # または
@@ -66,11 +71,13 @@ pnpm install
 ```
 
 3. **環境変数の設定**
+
 ```bash
 cp .env.example .env.development
 ```
 
 `.env.development` を編集：
+
 ```env
 # データソース切り替え（開発初期はモック使用）
 NEXT_PUBLIC_USE_SUPABASE=false
@@ -82,6 +89,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 4. **開発サーバーの起動**
+
 ```bash
 npm run dev
 # または
@@ -99,7 +107,7 @@ src/
 ├── app/                              # Next.js App Router
 │   ├── admin/                       # 管理者ページ
 │   ├── login/                       # ログインページ
-│   ├── member/                      # 一般ユーザーページ
+│   ├── member/                      # メンバーページ
 │   └── system-admin/                # システム管理者ページ
 ├── components/                       # 再利用可能コンポーネント
 │   ├── form/                        # フォーム関連
@@ -132,11 +140,13 @@ TimePortは開発段階に応じてモックデータとSupabaseを切り替え�
 ### 切り替え方法
 
 **開発初期（モックデータ使用）:**
+
 ```env
 NEXT_PUBLIC_USE_SUPABASE=false
 ```
 
 **本番環境（Supabase使用）:**
+
 ```env
 NEXT_PUBLIC_USE_SUPABASE=true
 ```
@@ -167,7 +177,7 @@ const userData = await getUserData();
   - 申請フォームビルダー（動的フォーム作成）
   - 組織設定（会社・部署・個人階層）
 
-### 👤 一般ユーザー機能
+### 👤 メンバー機能
 
 - **ダッシュボード** - 個人統計・クイックアクション
 - **打刻** - 出勤・退勤・休憩の記録
@@ -180,6 +190,7 @@ const userData = await getUserData();
 管理者が自由に申請フォームを作成できる動的フォーム機能：
 
 ### サポートする入力タイプ
+
 - テキスト（一行・複数行）
 - 数値・日付・時刻・日時
 - メールアドレス・電話番号
@@ -187,6 +198,7 @@ const userData = await getUserData();
 - チェックボックス・ファイル
 
 ### 入力規則設定
+
 - 必須/任意の設定
 - 文字数制限・数値範囲
 - 正規表現パターン
@@ -213,12 +225,14 @@ const userData = await getUserData();
 
 1. [Supabase](https://supabase.com/) でプロジェクト作成
 2. データベーススキーマの適用:
+
 ```bash
 # Supabase CLIを使用
 supabase db reset --db-url YOUR_DATABASE_URL
 ```
 
 3. 環境変数の更新:
+
 ```env
 NEXT_PUBLIC_USE_SUPABASE=true
 NEXT_PUBLIC_SUPABASE_URL=your_project_url
@@ -240,7 +254,7 @@ npm run start
 
 - **Row Level Security** - Supabaseによるデータアクセス制御
 - **認証** - Supabase Auth による安全な認証
-- **権限管理** - 管理者・一般ユーザーの明確な権限分離
+- **権限管理** - 管理者・メンバーの明確な権限分離
 - **入力検証** - Zodによる厳密なバリデーション
 
 ## 🛠️ 開発

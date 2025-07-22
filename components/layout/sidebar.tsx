@@ -54,6 +54,16 @@ export default function Sidebar() {
   if (!user) return null;
 
   const getMenuItems = () => {
+    // admin権限のユーザーがmemberの画面にアクセスしている場合、member用のメニューを表示
+    if (user.role === 'admin' && pathname.startsWith('/member')) {
+      return userMenuItems;
+    }
+
+    // system-admin権限のユーザーがmemberの画面にアクセスしている場合、member用のメニューを表示
+    if (user.role === 'system-admin' && pathname.startsWith('/member')) {
+      return userMenuItems;
+    }
+
     switch (user.role) {
       case 'system-admin':
         return systemAdminMenuItems;
@@ -118,11 +128,13 @@ export default function Sidebar() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user.full_name}</p>
                 <p className="text-xs text-white/80 truncate">
-                  {user.role === 'system-admin'
-                    ? 'システム管理者'
-                    : user.role === 'admin'
-                      ? '管理者'
-                      : 'メンバー'}
+                  {pathname.startsWith('/member')
+                    ? 'メンバー'
+                    : user.role === 'system-admin'
+                      ? 'システム管理者'
+                      : user.role === 'admin'
+                        ? '管理者'
+                        : 'メンバー'}
                 </p>
               </div>
             )}
@@ -134,6 +146,16 @@ export default function Sidebar() {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
+
+            // セパレーターの場合
+            if (item.href === '') {
+              return (
+                <div
+                  key={`separator-${item.label}`}
+                  className={cn('border-t border-white/20 my-4', isCollapsed && 'mx-2')}
+                />
+              );
+            }
 
             return (
               <Link

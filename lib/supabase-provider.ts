@@ -1,13 +1,7 @@
 // TimePort Supabase Data Provider
 // 本番環境用のSupabase接続実装
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-// Supabaseクライアントは実際に使用される時のみ初期化
-const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+import { supabase } from './supabase';
 
 // Helper function to convert snake_case to camelCase
 const toCamelCase = (obj: any): any => {
@@ -53,10 +47,7 @@ const toSnakeCase = (obj: any): any => {
 export const getAttendanceData = async (userId?: string) => {
   if (!supabase) throw new Error('Supabase not configured');
 
-  let query = supabase
-    .from('attendance_records')
-    .select('*')
-    .order('work_date', { ascending: false });
+  let query = supabase.from('attendances').select('*').order('work_date', { ascending: false });
 
   if (userId) {
     query = query.eq('user_id', userId);
@@ -74,7 +65,7 @@ export const getTodayAttendance = async (userId: string) => {
   const today = new Date().toISOString().split('T')[0];
 
   const { data, error } = await supabase
-    .from('attendance_records')
+    .from('attendances')
     .select('*')
     .eq('user_id', userId)
     .eq('work_date', today)
@@ -90,7 +81,7 @@ export const clockIn = async (userId: string, time: string) => {
   const today = new Date().toISOString().split('T')[0];
 
   const { data, error } = await supabase
-    .from('attendance_records')
+    .from('attendances')
     .upsert({
       user_id: userId,
       work_date: today,
@@ -122,7 +113,7 @@ export const clockOut = async (userId: string, time: string) => {
   const overtimeMinutes = Math.max(0, workMinutes - 480);
 
   const { data, error } = await supabase
-    .from('attendance_records')
+    .from('attendances')
     .update({
       clock_out_time: time,
       actual_work_minutes: workMinutes,
@@ -148,7 +139,7 @@ export const startBreak = async (userId: string, time: string) => {
   breakRecords.push({ start: time, end: '' });
 
   const { data, error } = await supabase
-    .from('attendance_records')
+    .from('attendances')
     .update({ break_records: breakRecords })
     .eq('id', existingRecord.id)
     .select()
@@ -176,7 +167,7 @@ export const endBreak = async (userId: string, time: string) => {
   lastBreak.end = time;
 
   const { data, error } = await supabase
-    .from('attendance_records')
+    .from('attendances')
     .update({ break_records: breakRecords })
     .eq('id', existingRecord.id)
     .select()

@@ -2,7 +2,7 @@
 // 開発・テスト用のモックデータ実装
 
 import { Attendance } from '@/types/attendance';
-import { Request, RequestType } from '@/types/request';
+import { Request, RequestForm } from '@/types/request';
 import { UserProfile } from '@/types/auth';
 import { Notification } from '@/types/system';
 import { Group } from '@/types/groups';
@@ -15,6 +15,7 @@ export const mockGroups: Group[] = [
     company_id: 'company1',
     name: '本社',
     description: '東京都渋谷区1-1-1',
+    is_active: true,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
   },
@@ -23,6 +24,7 @@ export const mockGroups: Group[] = [
     company_id: 'company1',
     name: '大阪支社',
     description: '大阪府大阪市北区2-2-2',
+    is_active: true,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
   },
@@ -32,6 +34,7 @@ export const mockGroups: Group[] = [
     parent_group_id: 'group1',
     name: '開発部',
     description: 'システム開発を担当',
+    is_active: true,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
   },
@@ -41,6 +44,7 @@ export const mockGroups: Group[] = [
     parent_group_id: 'group1',
     name: '営業部',
     description: '営業活動を担当',
+    is_active: true,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
   },
@@ -50,6 +54,7 @@ export const mockGroups: Group[] = [
     parent_group_id: 'group2',
     name: '開発部',
     description: 'システム開発を担当',
+    is_active: true,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
   },
@@ -59,6 +64,7 @@ export const mockGroups: Group[] = [
     parent_group_id: 'group2',
     name: '営業部',
     description: '営業活動を担当',
+    is_active: true,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
   },
@@ -68,6 +74,7 @@ export const mockGroups: Group[] = [
     parent_group_id: 'group3',
     name: 'フロントエンドチーム',
     description: 'UI/UX開発チーム',
+    is_active: true,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
   },
@@ -77,6 +84,7 @@ export const mockGroups: Group[] = [
     parent_group_id: 'group3',
     name: 'バックエンドチーム',
     description: 'サーバーサイド開発チーム',
+    is_active: true,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
   },
@@ -163,13 +171,12 @@ export const mockUsers: UserProfile[] = [
   },
 ];
 
-export const mockRequestTypes: RequestType[] = [
+export const mockRequestTypes: RequestForm[] = [
   {
     id: 'app_type_1',
     code: 'vacation',
     name: '休暇申請',
     description: '年次有給休暇や特別休暇の申請',
-    company_id: 'company1',
     category: 'leave',
     approval_flow: [
       {
@@ -249,7 +256,6 @@ export const mockRequestTypes: RequestType[] = [
     code: 'overtime',
     name: '残業申請',
     description: '時間外労働の事前申請',
-    company_id: 'company1',
     category: 'overtime',
     approval_flow: [
       {
@@ -353,6 +359,7 @@ export const generateAttendanceRecords = (userId: string): Attendance[] => {
       overtime_minutes: overtimeMinutes,
       late_minutes: clockInVariation > 0 ? Math.abs(clockInVariation) : 0,
       early_leave_minutes: 0,
+      status: clockInVariation > 0 ? 'late' : 'normal',
       auto_calculated: true,
       description: clockInVariation > 0 ? '遅刻' : undefined,
       created_at: date.toISOString(),
@@ -363,13 +370,13 @@ export const generateAttendanceRecords = (userId: string): Attendance[] => {
   return records;
 };
 
-const mockAttendanceRecords = mockUsers.flatMap((user) => generateAttendanceRecords(user.id));
+let mockAttendanceRecords = mockUsers.flatMap((user) => generateAttendanceRecords(user.id));
 
 const mockRequests: Request[] = [
   {
     id: 'app1',
     user_id: 'user3',
-    request_type_id: 'app_type_1',
+    request_form_id: 'app_type_1',
     title: '休暇申請',
     form_data: {
       vacation_type: '年次有給休暇',
@@ -377,17 +384,21 @@ const mockRequests: Request[] = [
       end_date: '2024-02-02',
       reason: '家族旅行のため',
     },
+    target_date: '2024-02-01',
     start_date: '2024-02-01',
     end_date: '2024-02-02',
-    status: 'pending' as const,
+    status_id: 'status_pending',
     current_approval_step: 1,
+    submission_comment: '家族旅行のため',
+    comments: [],
+    attachments: [],
     created_at: '2024-01-20T10:00:00Z',
     updated_at: '2024-01-20T10:00:00Z',
   },
   {
     id: 'app2',
     user_id: 'user4',
-    request_type_id: 'app_type_2',
+    request_form_id: 'app_type_2',
     title: '残業申請',
     form_data: {
       target_date: '2024-01-25',
@@ -396,10 +407,13 @@ const mockRequests: Request[] = [
       reason: 'プロジェクト締切対応のため',
     },
     target_date: '2024-01-25',
-    status: 'approved' as const,
+    start_date: '2024-01-25',
+    end_date: '2024-01-25',
+    status_id: 'status_approved',
     current_approval_step: 1,
-    approved_by: 'user2',
-    approved_at: '2024-01-24T16:00:00Z',
+    submission_comment: 'プロジェクト締切対応のため',
+    comments: [],
+    attachments: [],
     created_at: '2024-01-24T15:00:00Z',
     updated_at: '2024-01-24T16:00:00Z',
   },
@@ -452,32 +466,51 @@ export const getTodayAttendance = async (userId: string) => {
 };
 
 export const clockIn = async (userId: string, time: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  console.log('モック clockIn 開始:', { userId, time });
 
-  const today = new Date().toISOString().split('T')[0];
-  const recordId = `${userId}-${today}`;
+  try {
+    console.log('モック clockIn: 遅延開始');
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    console.log('モック clockIn: 遅延完了');
 
-  const existingIndex = mockAttendanceRecords.findIndex((r) => r.id === recordId);
-  if (existingIndex >= 0) {
-    mockAttendanceRecords[existingIndex].clock_in_time = time;
-    mockAttendanceRecords[existingIndex].updated_at = new Date().toISOString();
-  } else {
-    mockAttendanceRecords.push({
-      id: recordId,
-      user_id: userId,
-      work_date: today,
-      clock_in_time: time,
-      break_records: [],
-      overtime_minutes: 0,
-      late_minutes: 0,
-      early_leave_minutes: 0,
-      auto_calculated: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    const today = new Date().toISOString().split('T')[0];
+    const recordId = `${userId}-${today}`;
+    console.log('モック clockIn: 記録ID:', recordId);
+
+    console.log('モック clockIn: mockAttendanceRecords長さ:', mockAttendanceRecords.length);
+    const existingIndex = mockAttendanceRecords.findIndex((r) => r.id === recordId);
+    console.log('モック clockIn: 既存記録インデックス:', existingIndex);
+
+    if (existingIndex >= 0) {
+      console.log('モック clockIn: 既存記録を更新');
+      mockAttendanceRecords[existingIndex].clock_in_time = time;
+      mockAttendanceRecords[existingIndex].updated_at = new Date().toISOString();
+    } else {
+      console.log('モック clockIn: 新規記録を作成');
+      const newRecord = {
+        id: recordId,
+        user_id: userId,
+        work_date: today,
+        clock_in_time: time,
+        break_records: [],
+        overtime_minutes: 0,
+        late_minutes: 0,
+        early_leave_minutes: 0,
+        status: 'normal' as const,
+        auto_calculated: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      console.log('モック clockIn: 新規記録:', newRecord);
+      mockAttendanceRecords.push(newRecord);
+    }
+
+    console.log('モック clockIn: 成功');
+    return { success: true, message: '出勤しました' };
+  } catch (error) {
+    console.error('モック clockIn: エラー:', error);
+    throw error;
   }
-
-  return { success: true, message: '出勤しました' };
 };
 
 export const clockOut = async (userId: string, time: string) => {
@@ -614,12 +647,12 @@ export const updateRequestStatus = async (requestId: string, status: string, upd
   return { success: false, error: '申請が見つかりません' };
 };
 
-export const getRequestTypes = async (activeOnly: boolean = false) => {
+export const getRequestForms = async (activeOnly: boolean = false) => {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
-  const types = activeOnly ? mockRequestTypes.filter((t) => t.is_active) : mockRequestTypes;
+  const forms = activeOnly ? mockRequestTypes.filter((t) => t.is_active) : mockRequestTypes;
 
-  return types;
+  return forms;
 };
 
 export const getRequestType = async (id: string) => {
@@ -706,7 +739,7 @@ export const getDashboardData = async (userId: string) => {
   const overtimeHours = Math.round((totalOvertimeMinutes / 60) * 10) / 10;
 
   const userRequests = mockRequests.filter((a) => a.user_id === userId);
-  const pendingRequests = userRequests.filter((a) => a.status === 'pending');
+  const pendingRequests = userRequests.filter((a) => a.status_id === 'status_pending');
 
   return {
     stats: {
@@ -727,7 +760,7 @@ export const getAdminDashboardData = async () => {
   await new Promise((resolve) => setTimeout(resolve, 600));
 
   const activeUsers = mockUsers.filter((u) => u.is_active).length;
-  const pendingRequests = mockRequests.filter((a) => a.status === 'pending').length;
+  const pendingRequests = mockRequests.filter((a) => a.status_id === 'status_pending').length;
   const todayAttendance = mockAttendanceRecords.filter(
     (r) => r.work_date === new Date().toISOString().split('T')[0]
   ).length;
@@ -847,9 +880,14 @@ export const getWorkplaces = async () => {
 export const users = mockUsers;
 export const groups = mockGroups;
 export const requests = mockRequests;
-export const requestTypes = mockRequestTypes;
+export const requestForms = mockRequestTypes;
 export const notifications = mockNotifications;
 
 // 旧名称でのエクスポート（段階的移行用）
 export const workplaces = mockGroups.filter((g) => g.id.includes('work'));
 export const departments = mockGroups.filter((g) => g.id.includes('dept'));
+
+export const getRequestTypes = async () => {
+  // 必要に応じてmockデータを返す
+  return [];
+};

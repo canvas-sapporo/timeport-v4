@@ -50,7 +50,7 @@ const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
 /**
  * 会社作成フォームのバリデーション
  */
-function validateCreateCompanyForm(form: CreateCompanyFormData): CompanyValidationResult {
+const validateCreateCompanyForm = (form: CreateCompanyFormData): CompanyValidationResult => {
   const errors: ValidationError[] = [];
 
   // 企業情報のバリデーション
@@ -65,6 +65,9 @@ function validateCreateCompanyForm(form: CreateCompanyFormData): CompanyValidati
   if (groupNameError) errors.push(groupNameError);
 
   // 管理者情報のバリデーション
+  const adminCodeError = validateRequired(form.admin_code, '管理者社員番号');
+  if (adminCodeError) errors.push(adminCodeError);
+
   const familyNameError = validateRequired(form.admin_family_name, '管理者姓');
   if (familyNameError) errors.push(familyNameError);
 
@@ -91,12 +94,12 @@ function validateCreateCompanyForm(form: CreateCompanyFormData): CompanyValidati
       code: error.code || 'VALIDATION_ERROR',
     })),
   };
-}
+};
 
 /**
  * 会社編集フォームのバリデーション
  */
-function validateEditCompanyForm(form: EditCompanyFormData): CompanyValidationResult {
+const validateEditCompanyForm = (form: EditCompanyFormData): CompanyValidationResult => {
   const errors: ValidationError[] = [];
 
   const nameError = validateRequired(form.name, '企業名');
@@ -113,7 +116,7 @@ function validateEditCompanyForm(form: EditCompanyFormData): CompanyValidationRe
       code: error.code || 'VALIDATION_ERROR',
     })),
   };
-}
+};
 
 // ================================
 // データベース操作関数
@@ -122,7 +125,7 @@ function validateEditCompanyForm(form: EditCompanyFormData): CompanyValidationRe
 /**
  * 企業コードの重複チェック
  */
-async function checkCompanyCodeExists(code: string, excludeId?: string): Promise<boolean> {
+const checkCompanyCodeExists = async (code: string, excludeId?: string): Promise<boolean> => {
   const query = supabaseAdmin
     .from('companies')
     .select('id')
@@ -135,12 +138,12 @@ async function checkCompanyCodeExists(code: string, excludeId?: string): Promise
 
   const { data } = await query;
   return (data?.length || 0) > 0;
-}
+};
 
 /**
  * メールアドレスの重複チェック
  */
-async function checkEmailExists(email: string): Promise<boolean> {
+const checkEmailExists = async (email: string): Promise<boolean> => {
   const { data } = await supabaseAdmin
     .from('user_profiles')
     .select('id')
@@ -148,7 +151,20 @@ async function checkEmailExists(email: string): Promise<boolean> {
     .is('deleted_at', null);
 
   return (data?.length || 0) > 0;
-}
+};
+
+/**
+ * 社員番号の重複チェック
+ */
+const checkUserCodeExists = async (code: string): Promise<boolean> => {
+  const { data } = await supabaseAdmin
+    .from('user_profiles')
+    .select('id')
+    .eq('code', code)
+    .is('deleted_at', null);
+
+  return (data?.length || 0) > 0;
+};
 
 // ================================
 // Server Actions
@@ -157,9 +173,9 @@ async function checkEmailExists(email: string): Promise<boolean> {
 /**
  * 企業作成（管理者ユーザー・グループ同時作成）
  */
-export async function createCompany(
+export const createCompany = async (
   form: CreateCompanyFormData
-): Promise<{ success: true; data: CreateCompanyResult } | { success: false; error: AppError }> {
+): Promise<{ success: true; data: CreateCompanyResult } | { success: false; error: AppError }> => {
   console.log('createCompany called with form:', { ...form, admin_password: '[REDACTED]' });
 
   // 環境変数の確認
@@ -188,6 +204,12 @@ export async function createCompany(
     const emailExists = await checkEmailExists(form.admin_email);
     if (emailExists) {
       throw AppError.duplicate('メールアドレス', form.admin_email);
+    }
+
+    // 管理者社員番号の重複チェック
+    const adminCodeExists = await checkUserCodeExists(form.admin_code);
+    if (adminCodeExists) {
+      throw AppError.duplicate('管理者社員番号', form.admin_code);
     }
 
     // 1. 企業作成
@@ -242,7 +264,7 @@ export async function createCompany(
     const adminUserRes = await supabaseAdmin.auth.admin.createUser({
       email: form.admin_email,
       password: form.admin_password,
-      email_confirm: false,
+      email_confirm: true, // メール確認を自動的に完了
     });
 
     if (adminUserRes.error || !adminUserRes.data?.user) {
@@ -261,6 +283,7 @@ export async function createCompany(
     const { error: profileError } = await supabaseAdmin.from('user_profiles').insert([
       {
         id: adminUserId,
+        code: form.admin_code,
         family_name: form.admin_family_name,
         first_name: form.admin_first_name,
         family_name_kana: form.admin_family_name_kana,
@@ -303,15 +326,15 @@ export async function createCompany(
       adminUserId,
     };
   }, '企業作成');
-}
+};
 
 /**
  * 企業更新
  */
-export async function updateCompany(
+export const updateCompany = async (
   id: string,
   form: EditCompanyFormData
-): Promise<{ success: true; data: UpdateCompanyResult } | { success: false; error: AppError }> {
+): Promise<{ success: true; data: UpdateCompanyResult } | { success: false; error: AppError }> => {
   return withErrorHandling(async () => {
     // バリデーション
     const validation = validateEditCompanyForm(form);
@@ -369,14 +392,14 @@ export async function updateCompany(
       updatedFields,
     };
   }, '企業更新');
-}
+};
 
 /**
  * 企業削除（論理削除）
  */
-export async function deleteCompany(
+export const deleteCompany = async (
   id: string
-): Promise<{ success: true; data: DeleteCompanyResult } | { success: false; error: AppError }> {
+): Promise<{ success: true; data: DeleteCompanyResult } | { success: false; error: AppError }> => {
   return withErrorHandling(async () => {
     // 企業の存在確認
     const { data: existingCompany, error: fetchError } = await supabaseAdmin
@@ -417,14 +440,14 @@ export async function deleteCompany(
       deletedAt: company.deleted_at!,
     };
   }, '企業削除');
-}
+};
 
 /**
  * 企業一覧取得
  */
-export async function getCompanies(
+export const getCompanies = async (
   params: CompanySearchParams = {}
-): Promise<{ success: true; data: CompanyListResponse } | { success: false; error: AppError }> {
+): Promise<{ success: true; data: CompanyListResponse } | { success: false; error: AppError }> => {
   return withErrorHandling(async () => {
     const {
       search = '',
@@ -492,14 +515,14 @@ export async function getCompanies(
       },
     };
   }, '企業一覧取得');
-}
+};
 
 /**
  * 企業統計情報取得
  */
-export async function getCompanyStats(): Promise<
+export const getCompanyStats = async (): Promise<
   { success: true; data: CompanyStats } | { success: false; error: AppError }
-> {
+> => {
   return withErrorHandling(async () => {
     const { data: companies, error } = await supabaseAdmin
       .from('companies')
@@ -523,4 +546,4 @@ export async function getCompanyStats(): Promise<
 
     return stats;
   }, '企業統計取得');
-}
+};

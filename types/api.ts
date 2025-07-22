@@ -11,7 +11,7 @@ import type {
   UserProfile,
   Attendance,
   Request,
-  RequestType,
+  RequestForm,
   Group,
   Notification,
   MonthlyAttendanceStats,
@@ -396,7 +396,7 @@ export interface RequestResponse extends ApiResponse {
   /** レスポンスデータ */
   data: Request & {
     /** 申請種別 */
-    request_type: RequestType;
+    request_type: RequestForm;
     /** 申請者 */
     applicant: {
       id: UUID;

@@ -12,6 +12,10 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading) {
+      console.log('ホームページ - リダイレクト処理開始');
+      console.log('ユーザー情報:', user);
+      console.log('ユーザーロール:', user?.role);
+
       setIsRedirecting(true);
 
       const redirectPath = user
@@ -22,8 +26,11 @@ export default function Home() {
             : '/member'
         : '/login';
 
+      console.log('リダイレクト先:', redirectPath);
+
       // 短い遅延を追加してスムーズな遷移を確保
       const timer = setTimeout(() => {
+        console.log('リダイレクト実行:', redirectPath);
         router.push(redirectPath);
       }, 300);
 

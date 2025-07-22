@@ -86,7 +86,7 @@ export class AppError extends Error {
 /**
  * エラーレスポンスを生成
  */
-export function createErrorResponse(error: AppError): ErrorResponse {
+export const createErrorResponse = (error: AppError): ErrorResponse => {
   return {
     code: error.code,
     message: error.message,
@@ -94,7 +94,7 @@ export function createErrorResponse(error: AppError): ErrorResponse {
     validation_errors: error.validationErrors,
     timestamp: new Date().toISOString(),
   };
-}
+};
 
 // ================================
 // 操作結果生成
@@ -103,18 +103,18 @@ export function createErrorResponse(error: AppError): ErrorResponse {
 /**
  * 成功レスポンスを生成
  */
-export function createSuccessResponse<T>(data: T, message?: string) {
+export const createSuccessResponse = <T>(data: T, message?: string) => {
   return {
     success: true,
     data,
     message,
   };
-}
+};
 
 /**
  * 失敗レスポンスを生成
  */
-export function createFailureResponse(error: AppError) {
+export const createFailureResponse = (error: AppError) => {
   return {
     success: false,
     error: error.message,
@@ -122,7 +122,7 @@ export function createFailureResponse(error: AppError) {
     details: error.details,
     validation_errors: error.validationErrors,
   };
-}
+};
 
 // ================================
 // エラーハンドリング
@@ -131,10 +131,10 @@ export function createFailureResponse(error: AppError) {
 /**
  * 非同期関数をエラーハンドリングでラップ
  */
-export async function withErrorHandling<T>(
+export const withErrorHandling = async <T>(
   operation: () => Promise<T>,
   context?: string
-): Promise<{ success: true; data: T } | { success: false; error: AppError }> {
+): Promise<{ success: true; data: T } | { success: false; error: AppError }> => {
   try {
     const result = await operation();
     return { success: true, data: result };
@@ -149,12 +149,12 @@ export async function withErrorHandling<T>(
     const appError = AppError.fromSupabaseError(error, context);
     return { success: false, error: appError };
   }
-}
+};
 
 /**
  * バリデーション関数
  */
-export function validateRequired(value: any, fieldName: string): ValidationError | null {
+export const validateRequired = (value: unknown, fieldName: string): ValidationError | null => {
   if (!value || (typeof value === 'string' && !value.trim())) {
     return {
       field: fieldName,
@@ -164,9 +164,12 @@ export function validateRequired(value: any, fieldName: string): ValidationError
     };
   }
   return null;
-}
+};
 
-export function validateEmail(email: string, fieldName: string = 'email'): ValidationError | null {
+export const validateEmail = (
+  email: string,
+  fieldName: string = 'email'
+): ValidationError | null => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return {
@@ -177,12 +180,12 @@ export function validateEmail(email: string, fieldName: string = 'email'): Valid
     };
   }
   return null;
-}
+};
 
-export function validatePassword(
+export const validatePassword = (
   password: string,
   fieldName: string = 'password'
-): ValidationError | null {
+): ValidationError | null => {
   if (password.length < 8) {
     return {
       field: fieldName,
@@ -202,4 +205,4 @@ export function validatePassword(
   }
 
   return null;
-}
+};
