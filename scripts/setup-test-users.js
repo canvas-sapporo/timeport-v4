@@ -49,7 +49,7 @@ const testUsers = [
     },
   },
   {
-    email: 'tanaka@timeport.com',
+    email: 'member.kyaru@timeport.com',
     password: 'Passw0rd!',
     profile: {
       code: 'B001',
@@ -57,7 +57,7 @@ const testUsers = [
       first_name: '花子',
       family_name_kana: 'タナカ',
       first_name_kana: 'ハナコ',
-      email: 'tanaka@timeport.com',
+      email: 'member.kyaru@timeport.com',
       role: 'member',
       is_active: true,
     },

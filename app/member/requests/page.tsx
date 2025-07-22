@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,57 +38,82 @@ import { Label } from '@/components/ui/label';
 
 export default function MemberRequestsPage() {
   const { user } = useAuth();
-  const { requests, requestTypes, createRequest } = useData();
+  const { requests, requestForms, createRequest } = useData();
   const router = useRouter();
   const [selectedRequestType, setSelectedRequestType] = useState<string>('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<
+    Record<string, string | number | boolean | Date | string[]>
+  >({});
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    if (!user || user.role !== 'member') {
+    if (!user || (user.role !== 'member' && user.role !== 'admin')) {
       router.push('/login');
       return;
     }
   }, [user, router]);
 
-  if (!user || user.role !== 'member') {
+  if (!user || (user.role !== 'member' && user.role !== 'admin')) {
     return null;
   }
 
   const userRequests = requests.filter((r) => r.user_id === user.id);
-  const activeRequestTypes = requestTypes.filter((rt) => rt.is_active);
+  const activeRequestForms = requestForms.filter((rf) => rf.is_active && !rf.deleted_at);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary">承認待ち</Badge>;
-      case 'approved':
-        return <Badge variant="default">承認済み</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">却下</Badge>;
-      default:
-        return <Badge variant="outline">-</Badge>;
+  const getStatusBadge = (statusId: string) => {
+    // ステータスIDからステータスを判定（簡易版）
+    if (statusId === 'pending' || statusId === '1') {
+      return <Badge variant="secondary">承認待ち</Badge>;
+    } else if (statusId === 'approved' || statusId === '2') {
+      return <Badge variant="default">承認済み</Badge>;
+    } else if (statusId === 'rejected' || statusId === '3') {
+      return <Badge variant="destructive">却下</Badge>;
+    } else {
+      return <Badge variant="outline">-</Badge>;
     }
   };
 
-  const handleCreateRequest = () => {
-    if (!selectedRequestType) return;
+  const handleCreateRequest = async () => {
+    console.log('handleCreateRequest: 開始');
 
-    const requestType = requestTypes.find((rt) => rt.id === selectedRequestType);
-    if (!requestType) return;
+    if (!selectedRequestType) {
+      console.log('handleCreateRequest: selectedRequestTypeが未選択');
+      return;
+    }
 
-    createRequest({
+    console.log('handleCreateRequest: selectedRequestType:', selectedRequestType);
+
+    const requestForm = requestForms.find((rf) => rf.id === selectedRequestType);
+    if (!requestForm) {
+      console.log('handleCreateRequest: requestFormが見つかりません');
+      return;
+    }
+
+    console.log('handleCreateRequest: requestForm:', requestForm);
+
+    const requestData = {
       user_id: user.id,
-      request_type_id: selectedRequestType,
-      title: requestType.name,
+      request_form_id: selectedRequestType,
+      title: requestForm.name,
       form_data: formData,
-      target_date: formData.target_date,
-      start_date: formData.start_date,
-      end_date: formData.end_date,
-      status: 'pending',
+      target_date: (formData.target_date as string) || new Date().toISOString().split('T')[0],
+      start_date: (formData.start_date as string) || new Date().toISOString().split('T')[0],
+      end_date: (formData.end_date as string) || new Date().toISOString().split('T')[0],
+      submission_comment: '',
       current_approval_step: 1,
-    });
+      comments: [],
+      attachments: [],
+    };
+
+    console.log('handleCreateRequest: 送信データ:', requestData);
+
+    try {
+      await createRequest(requestData);
+      console.log('handleCreateRequest: 申請作成成功');
+    } catch (error) {
+      console.error('handleCreateRequest: 申請作成エラー:', error);
+    }
 
     setIsCreateDialogOpen(false);
     setSelectedRequestType('');
@@ -95,11 +121,14 @@ export default function MemberRequestsPage() {
   };
 
   const renderFormField = (field: any) => {
+    const value = formData[field.name];
+    const inputValue = formData[field.name];
+    const selectValue = formData[field.name];
     switch (field.type) {
       case 'textarea':
         return (
           <Textarea
-            value={formData[field.name] || ''}
+            value={typeof value === 'string' || typeof value === 'number' ? value : ''}
             onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
             placeholder={field.placeholder}
             rows={3}
@@ -108,7 +137,7 @@ export default function MemberRequestsPage() {
       case 'select':
         return (
           <Select
-            value={formData[field.name] || ''}
+            value={typeof selectValue === 'string' ? selectValue : ''}
             onValueChange={(value) => setFormData((prev) => ({ ...prev, [field.name]: value }))}
           >
             <SelectTrigger>
@@ -127,7 +156,7 @@ export default function MemberRequestsPage() {
         return (
           <Input
             type={field.type}
-            value={formData[field.name] || ''}
+            value={typeof inputValue === 'string' ? inputValue : ''}
             onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
             placeholder={field.placeholder}
           />
@@ -135,7 +164,7 @@ export default function MemberRequestsPage() {
     }
   };
 
-  const selectedType = requestTypes.find((rt) => rt.id === selectedRequestType);
+  const selectedType = requestForms.find((rf) => rf.id === selectedRequestType);
 
   return (
     <div className="space-y-6">
@@ -151,9 +180,12 @@ export default function MemberRequestsPage() {
               新規申請
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto dialog-scrollbar">
             <DialogHeader>
               <DialogTitle>新規申請作成</DialogTitle>
+              <DialogDescription>
+                申請種別を選択し、必要な情報を入力して申請を作成してください。
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -163,9 +195,9 @@ export default function MemberRequestsPage() {
                     <SelectValue placeholder="申請種別を選択してください" />
                   </SelectTrigger>
                   <SelectContent>
-                    {activeRequestTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
+                    {activeRequestForms.map((form) => (
+                      <SelectItem key={form.id} value={form.id}>
+                        {form.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -239,7 +271,7 @@ export default function MemberRequestsPage() {
                           ? new Date(request.start_date).toLocaleDateString('ja-JP')
                           : '-'}
                   </TableCell>
-                  <TableCell>{getStatusBadge(request.status ?? '-')}</TableCell>
+                  <TableCell>{getStatusBadge(request.status_id || 'pending')}</TableCell>
                   <TableCell>{'-'}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm">

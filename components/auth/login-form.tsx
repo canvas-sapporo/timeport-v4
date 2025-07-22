@@ -212,7 +212,7 @@ export const LoginForm = () => {
               </div>
               <div className="flex justify-between">
                 <span className="font-medium text-green-200">メンバー:</span>
-                <span>tanaka@timeport.com</span>
+                <span>member.kyaru@timeport.com</span>
               </div>
               <div className="flex justify-between pt-1 border-t border-white/10">
                 <span className="font-medium text-yellow-200">パスワード:</span>

@@ -220,7 +220,7 @@ export const getRequestData = async (userId?: string) => {
       `
       *,
       users!requests_user_id_fkey(name, employee_id),
-      request_types!requests_request_type_id_fkey(name)
+      request_forms!requests_request_form_id_fkey(name)
     `
     )
     .order('created_at', { ascending: false });
@@ -236,15 +236,23 @@ export const getRequestData = async (userId?: string) => {
 };
 
 export const createRequest = async (requestData: any) => {
+  console.log('supabase-provider createRequest: 開始', requestData);
+
   if (!supabase) throw new Error('Supabase not configured');
 
-  const { data, error } = await supabase
-    .from('requests')
-    .insert([toSnakeCase(requestData)])
-    .select()
-    .single();
+  const snakeCaseData = toSnakeCase(requestData);
+  console.log('supabase-provider createRequest: snakeCaseData', snakeCaseData);
 
-  if (error) throw error;
+  const { data, error } = await supabase.from('requests').insert([snakeCaseData]).select().single();
+
+  console.log('supabase-provider createRequest: 結果', { data, error });
+
+  if (error) {
+    console.error('supabase-provider createRequest: エラー', error);
+    throw error;
+  }
+
+  console.log('supabase-provider createRequest: 成功', data);
   return { success: true, message: '申請を提出しました', data: toCamelCase(data) };
 };
 
@@ -272,10 +280,10 @@ export const updateRequestStatus = async (requestId: string, status: string, upd
   };
 };
 
-export const getRequestTypes = async (activeOnly: boolean = false) => {
+export const getRequestForms = async (activeOnly: boolean = false) => {
   if (!supabase) throw new Error('Supabase not configured');
 
-  let query = supabase.from('request_types').select('*').order('created_at', { ascending: false });
+  let query = supabase.from('request_forms').select('*').order('created_at', { ascending: false });
 
   if (activeOnly) {
     query = query.eq('is_active', true);
@@ -287,29 +295,29 @@ export const getRequestTypes = async (activeOnly: boolean = false) => {
   return toCamelCase(data || []);
 };
 
-export const getRequestType = async (id: string) => {
+export const getRequestForm = async (id: string) => {
   if (!supabase) throw new Error('Supabase not configured');
 
-  const { data, error } = await supabase.from('request_types').select('*').eq('id', id).single();
+  const { data, error } = await supabase.from('request_forms').select('*').eq('id', id).single();
 
   if (error && error.code !== 'PGRST116') throw error;
   return data ? toCamelCase(data) : null;
 };
 
-export const createRequestType = async (typeData: any) => {
+export const createRequestForm = async (formData: any) => {
   if (!supabase) throw new Error('Supabase not configured');
 
   const { data, error } = await supabase
-    .from('request_types')
-    .insert([toSnakeCase(typeData)])
+    .from('request_forms')
+    .insert([toSnakeCase(formData)])
     .select()
     .single();
 
   if (error) throw error;
-  return { success: true, message: '申請種別を作成しました', data: toCamelCase(data) };
+  return { success: true, message: '申請フォームを作成しました', data: toCamelCase(data) };
 };
 
-export const updateRequestType = async (id: string, updates: any) => {
+export const updateRequestForm = async (id: string, updates: any) => {
   if (!supabase) throw new Error('Supabase not configured');
 
   const updateData = {
@@ -318,30 +326,30 @@ export const updateRequestType = async (id: string, updates: any) => {
   };
 
   const { data, error } = await supabase
-    .from('request_types')
+    .from('request_forms')
     .update(updateData)
     .eq('id', id)
     .select()
     .single();
 
   if (error) throw error;
-  return { success: true, message: '申請種別を更新しました', data: toCamelCase(data) };
+  return { success: true, message: '申請フォームを更新しました', data: toCamelCase(data) };
 };
 
-export const deleteRequestType = async (id: string) => {
+export const deleteRequestForm = async (id: string) => {
   if (!supabase) throw new Error('Supabase not configured');
 
-  const { error } = await supabase.from('request_types').delete().eq('id', id);
+  const { error } = await supabase.from('request_forms').delete().eq('id', id);
 
   if (error) throw error;
-  return { success: true, message: '申請種別を削除しました' };
+  return { success: true, message: '申請フォームを削除しました' };
 };
 
-export const toggleRequestTypeStatus = async (id: string, isActive: boolean) => {
+export const toggleRequestFormStatus = async (id: string, isActive: boolean) => {
   if (!supabase) throw new Error('Supabase not configured');
 
   const { data, error } = await supabase
-    .from('request_types')
+    .from('request_forms')
     .update({
       is_active: isActive,
       updated_at: new Date().toISOString(),
@@ -352,7 +360,7 @@ export const toggleRequestTypeStatus = async (id: string, isActive: boolean) => 
 
   if (error) throw error;
   const status = isActive ? '有効' : '無効';
-  return { success: true, message: `申請種別を${status}にしました`, data: toCamelCase(data) };
+  return { success: true, message: `申請フォームを${status}にしました`, data: toCamelCase(data) };
 };
 
 // ダッシュボードデータ

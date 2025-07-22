@@ -1,15 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { Plus, Settings, Trash2, Eye } from 'lucide-react';
-
-import { RequestType } from '@/types';
-import { FormFieldConfig, ValidationRule } from '@/types/request';
+import { useState, useCallback } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { Plus, GripVertical, Trash2, Settings, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -17,560 +14,968 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-
-import DynamicForm from './dynamic-form';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type {
+  FormFieldConfig,
+  FormFieldType,
+  ValidationRule,
+  ConditionalLogic,
+  CalculationConfig,
+} from '@/types/request';
 
 interface FormBuilderProps {
-  initialData?: RequestType;
-  onSaveAction: (data: RequestType) => void;
-  onCancelAction: () => void;
-  isLoading?: boolean;
+  formConfig: FormFieldConfig[];
+  onFormConfigChange: (config: FormFieldConfig[]) => void;
 }
 
-const fieldTypeOptions = [
-  { value: 'text', label: '一行テキスト' },
-  { value: 'textarea', label: '複数行テキスト' },
-  { value: 'number', label: '数値' },
-  { value: 'date', label: '日付' },
-  { value: 'time', label: '時刻' },
-  { value: 'datetime-local', label: '日時' },
-  { value: 'email', label: 'メールアドレス' },
-  { value: 'tel', label: '電話番号' },
-  { value: 'select', label: 'ドロップダウン選択' },
-  { value: 'radio', label: 'ラジオボタン' },
-  { value: 'checkbox', label: 'チェックボックス' },
-  { value: 'file', label: 'ファイルアップロード' },
+const FIELD_TYPES: { value: FormFieldType; label: string; icon: string }[] = [
+  { value: 'text', label: 'テキスト', icon: '📝' },
+  { value: 'textarea', label: 'テキストエリア', icon: '📄' },
+  { value: 'number', label: '数値', icon: '🔢' },
+  { value: 'date', label: '日付', icon: '📅' },
+  { value: 'time', label: '時刻', icon: '🕐' },
+  { value: 'datetime-local', label: '日時', icon: '📅🕐' },
+  { value: 'email', label: 'メール', icon: '📧' },
+  { value: 'tel', label: '電話番号', icon: '📞' },
+  { value: 'url', label: 'URL', icon: '🔗' },
+  { value: 'select', label: 'セレクト', icon: '📋' },
+  { value: 'radio', label: 'ラジオ', icon: '🔘' },
+  { value: 'checkbox', label: 'チェックボックス', icon: '☑️' },
+  { value: 'file', label: 'ファイル', icon: '📎' },
+  { value: 'hidden', label: '隠しフィールド', icon: '👻' },
 ];
 
-interface ValidationModalProps {
-  field: FormFieldConfig;
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (fieldId: string, validationRules: ValidationRule[], options?: string[]) => void;
-}
+const VALIDATION_TYPES = [
+  { value: 'required', label: '必須' },
+  { value: 'minLength', label: '最小文字数' },
+  { value: 'maxLength', label: '最大文字数' },
+  { value: 'min', label: '最小値' },
+  { value: 'max', label: '最大値' },
+  { value: 'pattern', label: '正規表現' },
+  { value: 'email', label: 'メール形式' },
+  { value: 'tel', label: '電話番号形式' },
+  { value: 'url', label: 'URL形式' },
+  { value: 'custom', label: 'カスタム' },
+];
 
-const ValidationModal = ({ field, isOpen, onClose, onSave }: ValidationModalProps) => {
-  const [validationRules, setValidationRules] = useState<ValidationRule[]>(
-    field.validation_rules || []
-  );
-  const [options, setOptions] = useState<string[]>(field.options || []);
-  const [optionsText, setOptionsText] = useState(field.options?.join('\n') || '');
+const WIDTH_OPTIONS = [
+  { value: 'full', label: '全幅' },
+  { value: 'half', label: '半幅' },
+  { value: 'third', label: '1/3幅' },
+  { value: 'quarter', label: '1/4幅' },
+];
 
-  const handleSave = () => {
-    const updatedOptions =
-      field.type === 'select' || field.type === 'radio'
-        ? optionsText.split('\n').filter((option) => option.trim() !== '')
-        : undefined;
-
-    onSave(field.id, validationRules, updatedOptions);
-    onClose();
-  };
-
-  const isTextType = (type: string) => ['text', 'textarea', 'email', 'tel'].includes(type);
-  const isSelectType = (type: string) => ['select', 'radio'].includes(type);
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>入力規則設定: {field.label}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {/* 必須設定 */}
-          <div className="flex items-center space-x-2">
-            <Checkbox checked={field.required} disabled />
-            <Label>必須項目</Label>
-          </div>
-
-          {/* テキスト系の設定 */}
-          {isTextType(field.type) && (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>最小文字数</Label>
-                  <Input
-                    type="number"
-                    value={validationRules.find((r) => r.type === 'minLength')?.value || ''}
-                    onChange={(e) =>
-                      setValidationRules((prev) =>
-                        prev.map((r) =>
-                          r.type === 'minLength'
-                            ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined }
-                            : r
-                        )
-                      )
-                    }
-                  />
-                </div>
-                <div>
-                  <Label>最大文字数</Label>
-                  <Input
-                    type="number"
-                    value={validationRules.find((r) => r.type === 'maxLength')?.value || ''}
-                    onChange={(e) =>
-                      setValidationRules((prev) =>
-                        prev.map((r) =>
-                          r.type === 'maxLength'
-                            ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined }
-                            : r
-                        )
-                      )
-                    }
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>正規表現パターン</Label>
-                <Input
-                  value={validationRules.find((r) => r.type === 'pattern')?.value || ''}
-                  placeholder="例: ^[0-9]+$"
-                  onChange={(e) =>
-                    setValidationRules((prev) =>
-                      prev.map((r) =>
-                        r.type === 'pattern' ? { ...r, value: e.target.value || undefined } : r
-                      )
-                    )
-                  }
-                />
-              </div>
-            </>
-          )}
-
-          {/* 数値系の設定 */}
-          {field.type === 'number' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>最小値</Label>
-                <Input
-                  type="number"
-                  value={validationRules.find((r) => r.type === 'min')?.value || ''}
-                  onChange={(e) =>
-                    setValidationRules((prev) =>
-                      prev.map((r) =>
-                        r.type === 'min'
-                          ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined }
-                          : r
-                      )
-                    )
-                  }
-                />
-              </div>
-              <div>
-                <Label>最大値</Label>
-                <Input
-                  type="number"
-                  value={validationRules.find((r) => r.type === 'max')?.value || ''}
-                  onChange={(e) =>
-                    setValidationRules((prev) =>
-                      prev.map((r) =>
-                        r.type === 'max'
-                          ? { ...r, value: e.target.value ? parseInt(e.target.value) : undefined }
-                          : r
-                      )
-                    )
-                  }
-                />
-              </div>
-            </div>
-          )}
-
-          {/* 選択肢系の設定 */}
-          {isSelectType(field.type) && (
-            <div>
-              <Label>選択肢（1行につき1つ）</Label>
-              <Textarea
-                value={optionsText}
-                onChange={(e) => setOptionsText(e.target.value)}
-                placeholder="選択肢1&#10;選択肢2&#10;選択肢3"
-                rows={5}
-              />
-            </div>
-          )}
-
-          {/* カスタムエラーメッセージ */}
-          <div>
-            <Label>カスタムエラーメッセージ</Label>
-            <Input
-              value={validationRules.find((r) => r.type === 'custom')?.value || ''}
-              placeholder="エラー時に表示するメッセージ"
-              onChange={(e) =>
-                setValidationRules((prev) =>
-                  prev.map((r) =>
-                    r.type === 'custom' ? { ...r, value: e.target.value || undefined } : r
-                  )
-                )
-              }
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={onClose}>
-            キャンセル
-          </Button>
-          <Button onClick={handleSave}>保存</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-export default function FormBuilder({
-  initialData,
-  onSaveAction,
-  onCancelAction,
-  isLoading,
-}: FormBuilderProps) {
-  const [formData, setFormData] = useState<RequestType>(
-    initialData || {
-      id: '', // または一時的なユニークID
-      name: '',
-      description: '',
-      code: '',
-      form_config: [],
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      deleted_at: undefined,
-      company_id: '',
-      category: '',
-      approval_flow: [],
-      display_order: 0,
-    }
-  );
+export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuilderProps) {
   const [selectedField, setSelectedField] = useState<FormFieldConfig | null>(null);
-  const [validationModalOpen, setValidationModalOpen] = useState(false);
-  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [fieldSettingsOpen, setFieldSettingsOpen] = useState(false);
+  const [calculationSettingsOpen, setCalculationSettingsOpen] = useState(false);
 
-  const addField = () => {
-    const newField: FormFieldConfig = {
-      id: `field_${Date.now()}`,
-      name: `field_${formData.form_config.length + 1}`,
-      type: 'text',
-      label: '',
-      placeholder: '',
-      required: false,
-      validation_rules: [], // 初期値を空の配列に変更
-      options: [],
-      order: formData.form_config.length + 1,
-    };
+  // フィールドを追加
+  const addField = useCallback(
+    (type: FormFieldType) => {
+      const newField: FormFieldConfig = {
+        id: `field_${Date.now()}`,
+        name: '',
+        type,
+        label: '',
+        required: false,
+        validation_rules: [],
+        order: formConfig.length + 1,
+        width: 'full',
+      };
 
-    setFormData((prev) => ({
-      ...prev,
-      form_config: [...prev.form_config, newField],
-    }));
-  };
+      const newConfig = [...formConfig, newField];
+      onFormConfigChange(newConfig);
+      setSelectedField(newField);
+      // 少し遅延を入れてダイアログを開く
+      setTimeout(() => {
+        setFieldSettingsOpen(true);
+      }, 10);
+    },
+    [formConfig.length, onFormConfigChange]
+  );
 
-  const updateField = (fieldId: string, key: keyof FormFieldConfig, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      form_config: prev.form_config.map((field) =>
-        field.id === fieldId ? { ...field, [key]: value } : field
-      ),
-    }));
-  };
+  // フィールドを削除
+  const removeField = useCallback(
+    (fieldId: string) => {
+      const newConfig = formConfig.filter((field) => field.id !== fieldId);
+      newConfig.forEach((field, index) => {
+        field.order = index + 1;
+      });
+      onFormConfigChange(newConfig);
+      if (selectedField && selectedField.id === fieldId) {
+        setSelectedField(null);
+        setFieldSettingsOpen(false);
+      }
+    },
+    [formConfig, selectedField, onFormConfigChange]
+  );
 
-  const removeField = (fieldId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      form_config: prev.form_config.filter((field) => field.id !== fieldId),
-    }));
-  };
+  // フィールドを複製
+  const duplicateField = useCallback(
+    (field: FormFieldConfig) => {
+      const newField: FormFieldConfig = {
+        ...field,
+        id: `field_${Date.now()}`,
+        name: `${field.name}_copy`,
+        label: `${field.label} (コピー)`,
+        order: formConfig.length + 1,
+      };
+      const newConfig = [...formConfig, newField];
+      onFormConfigChange(newConfig);
+    },
+    [formConfig.length, onFormConfigChange]
+  );
 
-  const openValidationModal = (fieldId: string) => {
-    const field = formData.form_config.find((f) => f.id === fieldId);
-    if (field) {
-      setSelectedField(field);
-      setValidationModalOpen(true);
-    }
-  };
+  // フィールド設定を更新
+  const updateField = useCallback(
+    (fieldId: string, updates: Partial<FormFieldConfig>) => {
+      const newConfig = formConfig.map((field) =>
+        field.id === fieldId ? { ...field, ...updates } : field
+      );
+      onFormConfigChange(newConfig);
+    },
+    [formConfig, onFormConfigChange]
+  );
 
-  const saveValidationRules = (
-    fieldId: string,
-    validationRules: ValidationRule[],
-    options?: string[]
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      form_config: prev.form_config.map((field) =>
-        field.id === fieldId
-          ? {
-              ...field,
-              validation_rules: validationRules,
-              options: options || field.options,
-            }
-          : field
-      ),
-    }));
-  };
+  // ドラッグ&ドロップで順序を変更
+  const handleDragEnd = useCallback(
+    (result: DropResult) => {
+      if (!result.destination) return;
 
-  const handleSave = () => {
-    // バリデーション
-    if (!formData.name.trim()) {
-      alert('申請名を入力してください');
-      return;
-    }
+      const items = Array.from(formConfig);
+      const [reorderedItem] = items.splice(result.source.index, 1);
+      items.splice(result.destination.index, 0, reorderedItem);
 
-    if (!formData.code.trim()) {
-      alert('申請コードを入力してください');
-      return;
-    }
+      // 順序を再設定
+      items.forEach((item, index) => {
+        item.order = index + 1;
+      });
 
-    if (formData.form_config.length === 0) {
-      alert('少なくとも1つの項目を追加してください');
-      return;
-    }
+      onFormConfigChange(items);
+    },
+    [onFormConfigChange]
+  );
 
-    // 項目名の重複チェック
-    const fieldNames = formData.form_config.map((f) => f.name);
-    const duplicateNames = fieldNames.filter((name, index) => fieldNames.indexOf(name) !== index);
-    if (duplicateNames.length > 0) {
-      alert('項目名が重複しています');
-      return;
-    }
+  // バリデーションルールを追加
+  const addValidationRule = useCallback(
+    (fieldId: string) => {
+      const newRule: ValidationRule = {
+        type: 'required',
+        value: '',
+        message: '',
+      };
 
-    onSaveAction(formData);
-  };
+      const field = formConfig.find((f) => f.id === fieldId);
+      if (field) {
+        const newRules = [...field.validation_rules, newRule];
+        const newConfig = formConfig.map((f) =>
+          f.id === fieldId ? { ...f, validation_rules: newRules } : f
+        );
+        onFormConfigChange(newConfig);
+      }
+    },
+    [formConfig, onFormConfigChange]
+  );
 
-  const previewRequestType: RequestType = {
-    id: 'preview',
-    code: formData.code,
-    name: formData.name,
-    description: formData.description,
-    form_config: formData.form_config,
-    is_active: formData.is_active,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    company_id: '',
-    category: '',
-    approval_flow: [],
-    display_order: 0,
-  };
+  // バリデーションルールを削除
+  const removeValidationRule = useCallback(
+    (fieldId: string, ruleIndex: number) => {
+      const field = formConfig.find((f) => f.id === fieldId);
+      if (field) {
+        const newRules = field.validation_rules.filter((_, index) => index !== ruleIndex);
+        const newConfig = formConfig.map((f) =>
+          f.id === fieldId ? { ...f, validation_rules: newRules } : f
+        );
+        onFormConfigChange(newConfig);
+      }
+    },
+    [formConfig, onFormConfigChange]
+  );
+
+  // 条件表示ロジックを追加
+  const addConditionalLogic = useCallback(
+    (fieldId: string) => {
+      const newLogic: ConditionalLogic = {
+        field: '',
+        operator: 'equals',
+        value: '',
+        action: 'show',
+      };
+
+      const field = formConfig.find((f) => f.id === fieldId);
+      if (field) {
+        const newLogicList = [...(field.conditional_logic || []), newLogic];
+        const newConfig = formConfig.map((f) =>
+          f.id === fieldId ? { ...f, conditional_logic: newLogicList } : f
+        );
+        onFormConfigChange(newConfig);
+      }
+    },
+    [formConfig, onFormConfigChange]
+  );
+
+  // 条件表示ロジックを削除
+  const removeConditionalLogic = useCallback(
+    (fieldId: string, logicIndex: number) => {
+      const field = formConfig.find((f) => f.id === fieldId);
+      if (field && field.conditional_logic) {
+        const newLogicList = field.conditional_logic.filter((_, index) => index !== logicIndex);
+        const newConfig = formConfig.map((f) =>
+          f.id === fieldId ? { ...f, conditional_logic: newLogicList } : f
+        );
+        onFormConfigChange(newConfig);
+      }
+    },
+    [formConfig, onFormConfigChange]
+  );
 
   return (
     <div className="space-y-6">
-      {/* 基本情報 */}
+      {/* フィールドタイプ選択 */}
       <Card>
         <CardHeader>
-          <CardTitle>基本情報</CardTitle>
+          <CardTitle className="flex items-center space-x-2">
+            <Plus className="w-5 h-5" />
+            <span>フィールドを追加</span>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="name">申請名 *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="例：休暇申請"
-              />
-            </div>
-            <div>
-              <Label htmlFor="code">申請コード *</Label>
-              <Input
-                id="code"
-                value={formData.code}
-                onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
-                placeholder="例：vacation"
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="description">説明</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="申請の説明を入力してください"
-              rows={3}
-            />
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {FIELD_TYPES.map((fieldType) => (
+              <Button
+                key={fieldType.value}
+                variant="outline"
+                className="h-20 flex flex-col items-center justify-center space-y-1"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addField(fieldType.value);
+                }}
+              >
+                <span className="text-lg">{fieldType.icon}</span>
+                <span className="text-xs">{fieldType.label}</span>
+              </Button>
+            ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* 項目管理 */}
+      {/* フィールド一覧 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            フォーム項目設定
-            <Button onClick={addField} size="sm" variant="timeport-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              項目追加
-            </Button>
-          </CardTitle>
+          <CardTitle>フォーム項目</CardTitle>
         </CardHeader>
         <CardContent>
-          {formData.form_config.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">項目を追加してください</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>項目名</TableHead>
-                  <TableHead>入力タイプ</TableHead>
-                  <TableHead>必須</TableHead>
-                  <TableHead>入力規則</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {formData.form_config.map((field) => (
-                  <TableRow key={field.id}>
-                    <TableCell>
-                      <Input
-                        value={field.label}
-                        onChange={(e) => {
-                          updateField(field.id, 'label', e.target.value);
-                          updateField(
-                            field.id,
-                            'name',
-                            e.target.value.toLowerCase().replace(/\s+/g, '_')
-                          );
-                        }}
-                        placeholder="項目名を入力"
-                        className="min-w-32"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={field.type}
-                        onValueChange={(value) => updateField(field.id, 'type', value)}
-                      >
-                        <SelectTrigger className="min-w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fieldTypeOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Checkbox
-                        checked={field.required}
-                        onCheckedChange={(checked) => updateField(field.id, 'required', checked)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openValidationModal(field.id)}
-                      >
-                        <Settings className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="destructive" size="sm" onClick={() => removeField(field.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="fields">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                  {formConfig.map((field, index) => (
+                    <Draggable key={field.id} draggableId={field.id} index={index}>
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div {...provided.dragHandleProps}>
+                                <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Badge variant="outline">{field.type}</Badge>
+                                <span className="font-medium">{field.label || '未設定'}</span>
+                                {field.required && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    必須
+                                  </Badge>
+                                )}
+                                <Badge variant="secondary" className="text-xs">
+                                  {field.width}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedField(field);
+                                  setFieldSettingsOpen(true);
+                                }}
+                              >
+                                <Settings className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  duplicateField(field);
+                                }}
+                              >
+                                <Copy className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  removeField(field.id);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+
+          {formConfig.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <p>フィールドがありません。上記からフィールドを追加してください。</p>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* プレビュー */}
-      {formData.form_config.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              プレビュー
-              <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Eye className="w-4 h-4 mr-2" />
-                    フルプレビュー
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>フォームプレビュー</DialogTitle>
-                  </DialogHeader>
-                  <DynamicForm
-                    requestType={previewRequestType}
-                    onSubmitAction={(data) => {
-                      console.log('Preview form data:', data);
-                      alert('プレビューモードです');
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <h3 className="font-medium mb-4">{formData.name || '申請名'}</h3>
-              <div className="space-y-3">
-                {formData.form_config.slice(0, 3).map((field) => (
-                  <div key={field.id}>
-                    <Label>
-                      {field.label || '項目名'}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
-                    </Label>
-                    <div className="mt-1">
-                      <Badge variant="outline">
-                        {fieldTypeOptions.find((opt) => opt.value === field.type)?.label}
-                      </Badge>
-                    </div>
+      {/* フィールド設定ダイアログ */}
+      <Dialog
+        open={fieldSettingsOpen}
+        onOpenChange={(open) => {
+          // 意図しない閉じる動作を防ぐ
+          if (!open && selectedField) {
+            // フィールドが選択されている場合は、明示的に閉じる操作のみ許可
+            setFieldSettingsOpen(false);
+            setSelectedField(null);
+          } else if (open) {
+            setFieldSettingsOpen(true);
+          }
+        }}
+      >
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          onPointerDownOutside={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onInteractOutside={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onEscapeKeyDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>フィールド設定</DialogTitle>
+            <DialogDescription>フォームフィールドの詳細設定を行います。</DialogDescription>
+          </DialogHeader>
+
+          {selectedField &&
+            (() => {
+              // formConfigから最新のフィールド情報を取得
+              const currentField = formConfig.find((f) => f.id === selectedField.id);
+              if (!currentField) return null;
+
+              return (
+                <>
+                  <Tabs key={currentField.id} defaultValue="basic" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4">
+                      <TabsTrigger value="basic">基本設定</TabsTrigger>
+                      <TabsTrigger value="validation">バリデーション</TabsTrigger>
+                      <TabsTrigger value="conditional">条件表示</TabsTrigger>
+                      <TabsTrigger value="calculation">計算設定</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="basic" className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="fieldName">フィールド名 *</Label>
+                          <Input
+                            id="fieldName"
+                            value={currentField.name}
+                            onChange={(e) => updateField(currentField.id, { name: e.target.value })}
+                            placeholder="例: start_date"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="fieldLabel">ラベル *</Label>
+                          <Input
+                            id="fieldLabel"
+                            value={currentField.label}
+                            onChange={(e) =>
+                              updateField(currentField.id, { label: e.target.value })
+                            }
+                            placeholder="例: 開始日"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="fieldDescription">説明</Label>
+                        <Textarea
+                          id="fieldDescription"
+                          value={currentField.description || ''}
+                          onChange={(e) =>
+                            updateField(currentField.id, { description: e.target.value })
+                          }
+                          placeholder="フィールドの説明を入力"
+                          rows={2}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="fieldWidth">表示幅</Label>
+                          <Select
+                            value={currentField.width || 'full'}
+                            onValueChange={(value) =>
+                              updateField(currentField.id, {
+                                width: value as 'full' | 'half' | 'third' | 'quarter',
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {WIDTH_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="fieldOrder">表示順序</Label>
+                          <Input
+                            id="fieldOrder"
+                            type="number"
+                            value={currentField.order}
+                            onChange={(e) =>
+                              updateField(currentField.id, { order: parseInt(e.target.value) })
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="fieldRequired"
+                          checked={currentField.required}
+                          onCheckedChange={(checked) =>
+                            updateField(currentField.id, { required: checked })
+                          }
+                        />
+                        <Label htmlFor="fieldRequired">必須フィールド</Label>
+                      </div>
+
+                      {/* 選択肢フィールドの場合 */}
+                      {(currentField.type === 'select' ||
+                        currentField.type === 'radio' ||
+                        currentField.type === 'checkbox') && (
+                        <div>
+                          <Label htmlFor="fieldOptions">選択肢</Label>
+                          <Textarea
+                            id="fieldOptions"
+                            value={currentField.options?.join('\n') || ''}
+                            onChange={(e) => {
+                              const options = e.target.value
+                                .split('\n')
+                                .filter((option) => option.trim());
+                              updateField(currentField.id, { options });
+                            }}
+                            placeholder="選択肢を1行に1つずつ入力"
+                            rows={4}
+                          />
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="validation" className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label>バリデーションルール</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addValidationRule(currentField.id)}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          ルール追加
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {currentField.validation_rules.map((rule, index) => (
+                          <div key={index} className="border rounded-lg p-3 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">ルール {index + 1}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600"
+                                onClick={() => removeValidationRule(currentField.id, index)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label>タイプ</Label>
+                                <Select
+                                  value={rule.type}
+                                  onValueChange={(value) => {
+                                    const newRules = [...currentField.validation_rules];
+                                    newRules[index] = {
+                                      ...rule,
+                                      type: value as ValidationRule['type'],
+                                    };
+                                    updateField(currentField.id, { validation_rules: newRules });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {VALIDATION_TYPES.map((type) => (
+                                      <SelectItem key={type.value} value={type.value}>
+                                        {type.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div>
+                                <Label>値</Label>
+                                <Input
+                                  value={rule.value || ''}
+                                  onChange={(e) => {
+                                    const newRules = [...currentField.validation_rules];
+                                    newRules[index] = { ...rule, value: e.target.value };
+                                    updateField(currentField.id, { validation_rules: newRules });
+                                  }}
+                                  placeholder="バリデーション値"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label>エラーメッセージ</Label>
+                              <Input
+                                value={rule.message || ''}
+                                onChange={(e) => {
+                                  const newRules = [...currentField.validation_rules];
+                                  newRules[index] = { ...rule, message: e.target.value };
+                                  updateField(currentField.id, { validation_rules: newRules });
+                                }}
+                                placeholder="エラーメッセージ"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="conditional" className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label>条件表示ロジック</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addConditionalLogic(currentField.id)}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          条件追加
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {currentField.conditional_logic?.map((logic, index) => (
+                          <div key={index} className="border rounded-lg p-3 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">条件 {index + 1}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600"
+                                onClick={() => removeConditionalLogic(currentField.id, index)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-3">
+                              <div>
+                                <Label>対象フィールド</Label>
+                                <Select
+                                  value={logic.field}
+                                  onValueChange={(value) => {
+                                    const newLogic = [...(currentField.conditional_logic || [])];
+                                    newLogic[index] = { ...logic, field: value };
+                                    updateField(currentField.id, { conditional_logic: newLogic });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="フィールド選択" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {formConfig
+                                      .filter((f) => f.id !== currentField.id)
+                                      .map((field) => (
+                                        <SelectItem key={field.id} value={field.id}>
+                                          {field.label}
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div>
+                                <Label>演算子</Label>
+                                <Select
+                                  value={logic.operator}
+                                  onValueChange={(value) => {
+                                    const newLogic = [...(currentField.conditional_logic || [])];
+                                    newLogic[index] = {
+                                      ...logic,
+                                      operator: value as ConditionalLogic['operator'],
+                                    };
+                                    updateField(currentField.id, { conditional_logic: newLogic });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="equals">等しい</SelectItem>
+                                    <SelectItem value="not_equals">等しくない</SelectItem>
+                                    <SelectItem value="contains">含む</SelectItem>
+                                    <SelectItem value="not_contains">含まない</SelectItem>
+                                    <SelectItem value="greater_than">より大きい</SelectItem>
+                                    <SelectItem value="less_than">より小さい</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div>
+                                <Label>値</Label>
+                                <Input
+                                  value={logic.value as string}
+                                  onChange={(e) => {
+                                    const newLogic = [...(currentField.conditional_logic || [])];
+                                    newLogic[index] = { ...logic, value: e.target.value };
+                                    updateField(currentField.id, { conditional_logic: newLogic });
+                                  }}
+                                  placeholder="条件値"
+                                />
+                              </div>
+
+                              <div>
+                                <Label>アクション</Label>
+                                <Select
+                                  value={logic.action}
+                                  onValueChange={(value) => {
+                                    const newLogic = [...(currentField.conditional_logic || [])];
+                                    newLogic[index] = {
+                                      ...logic,
+                                      action: value as ConditionalLogic['action'],
+                                    };
+                                    updateField(currentField.id, { conditional_logic: newLogic });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="show">表示</SelectItem>
+                                    <SelectItem value="hide">非表示</SelectItem>
+                                    <SelectItem value="require">必須化</SelectItem>
+                                    <SelectItem value="disable">無効化</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="calculation" className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label>計算設定</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCalculationSettingsOpen(true)}
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          計算設定
+                        </Button>
+                      </div>
+
+                      {currentField.calculation_config ? (
+                        <div className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              計算タイプ: {currentField.calculation_config.type}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600"
+                              onClick={() =>
+                                updateField(currentField.id, { calculation_config: undefined })
+                              }
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            対象フィールド:{' '}
+                            {currentField.calculation_config.target_fields.join(', ')}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            結果フィールド: {currentField.calculation_config.result_field}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>計算設定がありません</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+
+                  {/* 操作ボタン */}
+                  <div className="flex justify-end space-x-2 pt-4 border-t">
+                    <Button variant="outline" onClick={() => setFieldSettingsOpen(false)}>
+                      キャンセル
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // 必須フィールドのバリデーション
+                        if (!currentField?.name.trim()) {
+                          alert('フィールド名を入力してください');
+                          return;
+                        }
+                        if (!currentField?.label.trim()) {
+                          alert('ラベルを入力してください');
+                          return;
+                        }
+                        setFieldSettingsOpen(false);
+                        setSelectedField(null);
+                      }}
+                      disabled={!currentField?.name.trim() || !currentField?.label.trim()}
+                    >
+                      保存
+                    </Button>
                   </div>
-                ))}
-                {formData.form_config.length > 3 && (
-                  <div className="text-sm text-gray-500">
-                    他 {formData.form_config.length - 3} 項目...
-                  </div>
-                )}
+                </>
+              );
+            })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* 計算設定ダイアログ */}
+      <Dialog open={calculationSettingsOpen} onOpenChange={setCalculationSettingsOpen}>
+        <DialogContent
+          className="max-w-lg"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>計算設定</DialogTitle>
+            <DialogDescription>フィールドの計算設定を行います。</DialogDescription>
+          </DialogHeader>
+
+          {selectedField && (
+            <div className="space-y-4">
+              <div>
+                <Label>計算タイプ</Label>
+                <Select
+                  value={selectedField.calculation_config?.type || 'sum'}
+                  onValueChange={(value) => {
+                    const newConfig: CalculationConfig = {
+                      type: value as CalculationConfig['type'],
+                      target_fields: selectedField.calculation_config?.target_fields || [],
+                      result_field: selectedField.calculation_config?.result_field || '',
+                    };
+                    updateField(selectedField.id, { calculation_config: newConfig });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sum">合計</SelectItem>
+                    <SelectItem value="multiply">乗算</SelectItem>
+                    <SelectItem value="divide">除算</SelectItem>
+                    <SelectItem value="subtract">減算</SelectItem>
+                    <SelectItem value="date_diff">日数差</SelectItem>
+                    <SelectItem value="time_diff">時間差</SelectItem>
+                    <SelectItem value="custom">カスタム</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              <div>
+                <Label>対象フィールド</Label>
+                <Select
+                  value=""
+                  onValueChange={(value) => {
+                    const currentConfig = selectedField.calculation_config;
+                    if (currentConfig) {
+                      const newTargetFields = [...currentConfig.target_fields, value];
+                      updateField(selectedField.id, {
+                        calculation_config: { ...currentConfig, target_fields: newTargetFields },
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="フィールドを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formConfig
+                      .filter((f) => f.type === 'number' && f.id !== selectedField.id)
+                      .map((field) => (
+                        <SelectItem key={field.id} value={field.id}>
+                          {field.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {selectedField.calculation_config?.target_fields.map((fieldId, index) => {
+                  const field = formConfig.find((f) => f.id === fieldId);
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between mt-2 p-2 bg-gray-50 rounded"
+                    >
+                      <span className="text-sm">{field?.label}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const currentConfig = selectedField.calculation_config;
+                          if (currentConfig) {
+                            const newTargetFields = currentConfig.target_fields.filter(
+                              (_, i) => i !== index
+                            );
+                            updateField(selectedField.id, {
+                              calculation_config: {
+                                ...currentConfig,
+                                target_fields: newTargetFields,
+                              },
+                            });
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div>
+                <Label>結果フィールド</Label>
+                <Select
+                  value={selectedField.calculation_config?.result_field || ''}
+                  onValueChange={(value) => {
+                    const currentConfig = selectedField.calculation_config;
+                    if (currentConfig) {
+                      updateField(selectedField.id, {
+                        calculation_config: { ...currentConfig, result_field: value },
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="結果を格納するフィールド" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formConfig
+                      .filter((f) => f.type === 'number' && f.id !== selectedField.id)
+                      .map((field) => (
+                        <SelectItem key={field.id} value={field.id}>
+                          {field.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedField.calculation_config?.type === 'custom' && (
+                <div>
+                  <Label>計算式</Label>
+                  <Textarea
+                    value={selectedField.calculation_config?.formula || ''}
+                    onChange={(e) => {
+                      const currentConfig = selectedField.calculation_config;
+                      if (currentConfig) {
+                        updateField(selectedField.id, {
+                          calculation_config: { ...currentConfig, formula: e.target.value },
+                        });
+                      }
+                    }}
+                    placeholder="例: field1 + field2 * 0.1"
+                    rows={3}
+                  />
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
 
-      {/* 保存・キャンセル */}
-      <div className="flex justify-end space-x-4">
-        <Button variant="outline" onClick={onCancelAction}>
-          キャンセル
-        </Button>
-        <Button onClick={handleSave} disabled={isLoading} variant="timeport-primary">
-          {isLoading ? '保存中...' : '保存'}
-        </Button>
-      </div>
-
-      {/* バリデーション設定モーダル */}
-      {selectedField && (
-        <ValidationModal
-          field={selectedField}
-          isOpen={validationModalOpen}
-          onClose={() => setValidationModalOpen(false)}
-          onSave={saveValidationRules}
-        />
-      )}
+          {/* 操作ボタン */}
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setCalculationSettingsOpen(false)}>
+              キャンセル
+            </Button>
+            <Button type="button" onClick={() => setCalculationSettingsOpen(false)}>
+              保存
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

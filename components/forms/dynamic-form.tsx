@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import { RequestType } from '@/types';
+import { RequestForm } from '@/types/request';
 import { FormFieldConfig } from '@/types/request';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface DynamicFormProps {
-  requestType: RequestType;
+  requestType: RequestForm;
   onSubmitAction: (data: Record<string, any>) => void;
   isLoading?: boolean;
 }

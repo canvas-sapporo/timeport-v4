@@ -59,11 +59,11 @@ npm run setup-users
 
 ### 作成されるテストユーザー
 
-| メールアドレス      | パスワード | 役割           |
-| ------------------- | ---------- | -------------- |
-| system@timeport.com | Passw0rd!  | システム管理者 |
-| admin@timeport.com  | Passw0rd!  | 管理者         |
-| tanaka@timeport.com | Passw0rd!  | メンバー       |
+| メールアドレス            | パスワード | 役割           |
+| ------------------------- | ---------- | -------------- |
+| system@timeport.com       | Passw0rd!  | システム管理者 |
+| admin@timeport.com        | Passw0rd!  | 管理者         |
+| member.kyaru@timeport.com | Passw0rd!  | メンバー       |
 
 ## 4. 認証設定の確認
 

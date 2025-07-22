@@ -122,7 +122,7 @@ export const mockUsers: UserProfile[] = [
     code: 'B001',
     first_name: '田中',
     family_name: '花子',
-    email: 'tanaka@timeport.com',
+    email: 'member.kyaru@timeport.com',
     role: 'member',
     primary_group_id: 'group7',
     work_start_date: '2021-04-01',
@@ -655,73 +655,73 @@ export const getRequestForms = async (activeOnly: boolean = false) => {
   return forms;
 };
 
-export const getRequestType = async (id: string) => {
+export const getRequestForm = async (id: string) => {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   const type = mockRequestTypes.find((t) => t.id === id);
   return type || null;
 };
 
-export const createRequestType = async (typeData: any) => {
+export const createRequestForm = async (formData: any) => {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
-  const newType = {
-    id: `app_type_${Date.now()}`,
-    ...typeData,
+  const newForm = {
+    id: `app_form_${Date.now()}`,
+    ...formData,
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 
-  mockRequestTypes.push(newType);
-  return { success: true, message: '申請種別を作成しました', data: newType };
+  mockRequestTypes.push(newForm);
+  return { success: true, message: '申請フォームを作成しました', data: newForm };
 };
 
-export const updateRequestType = async (id: string, updates: any) => {
+export const updateRequestForm = async (id: string, updates: any) => {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
-  const typeIndex = mockRequestTypes.findIndex((t) => t.id === id);
-  if (typeIndex >= 0) {
-    mockRequestTypes[typeIndex] = {
-      ...mockRequestTypes[typeIndex],
+  const formIndex = mockRequestTypes.findIndex((t) => t.id === id);
+  if (formIndex >= 0) {
+    mockRequestTypes[formIndex] = {
+      ...mockRequestTypes[formIndex],
       ...updates,
       updatedAt: new Date().toISOString(),
     };
     return {
       success: true,
-      message: '申請種別を更新しました',
-      data: mockRequestTypes[typeIndex],
+      message: '申請フォームを更新しました',
+      data: mockRequestTypes[formIndex],
     };
   }
-  return { success: false, error: '申請種別が見つかりません' };
+  return { success: false, error: '申請フォームが見つかりません' };
 };
 
-export const deleteRequestType = async (id: string) => {
+export const deleteRequestForm = async (id: string) => {
   await new Promise((resolve) => setTimeout(resolve, 400));
 
-  const typeIndex = mockRequestTypes.findIndex((t) => t.id === id);
-  if (typeIndex >= 0) {
-    mockRequestTypes.splice(typeIndex, 1);
-    return { success: true, message: '申請種別を削除しました' };
+  const formIndex = mockRequestTypes.findIndex((t) => t.id === id);
+  if (formIndex >= 0) {
+    mockRequestTypes.splice(formIndex, 1);
+    return { success: true, message: '申請フォームを削除しました' };
   }
-  return { success: false, error: '申請種別が見つかりません' };
+  return { success: false, error: '申請フォームが見つかりません' };
 };
 
-export const toggleRequestTypeStatus = async (id: string, isActive: boolean) => {
+export const toggleRequestFormStatus = async (id: string, isActive: boolean) => {
   await new Promise((resolve) => setTimeout(resolve, 400));
 
-  const typeIndex = mockRequestTypes.findIndex((t) => t.id === id);
-  if (typeIndex >= 0) {
-    mockRequestTypes[typeIndex].is_active = isActive;
-    mockRequestTypes[typeIndex].updated_at = new Date().toISOString();
+  const formIndex = mockRequestTypes.findIndex((t) => t.id === id);
+  if (formIndex >= 0) {
+    mockRequestTypes[formIndex].is_active = isActive;
+    mockRequestTypes[formIndex].updated_at = new Date().toISOString();
     const status = isActive ? '有効' : '無効';
     return {
       success: true,
-      message: `申請種別を${status}にしました`,
-      data: mockRequestTypes[typeIndex],
+      message: `申請フォームを${status}にしました`,
+      data: mockRequestTypes[formIndex],
     };
   }
-  return { success: false, error: '申請種別が見つかりません' };
+  return { success: false, error: '申請フォームが見つかりません' };
 };
 
 export const getDashboardData = async (userId: string) => {
@@ -886,8 +886,3 @@ export const notifications = mockNotifications;
 // 旧名称でのエクスポート（段階的移行用）
 export const workplaces = mockGroups.filter((g) => g.id.includes('work'));
 export const departments = mockGroups.filter((g) => g.id.includes('dept'));
-
-export const getRequestTypes = async () => {
-  // 必要に応じてmockデータを返す
-  return [];
-};

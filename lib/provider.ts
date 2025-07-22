@@ -47,29 +47,29 @@ export const updateRequestStatus = USE_SUPABASE
   ? supabaseProvider.updateRequestStatus
   : mockProvider.updateRequestStatus;
 
-export const getRequestTypes = USE_SUPABASE
-  ? supabaseProvider.getRequestTypes
-  : mockProvider.getRequestTypes;
+export const getRequestForms = USE_SUPABASE
+  ? supabaseProvider.getRequestForms
+  : mockProvider.getRequestForms;
 
-export const getRequestType = USE_SUPABASE
-  ? supabaseProvider.getRequestType
-  : mockProvider.getRequestType;
+export const getRequestForm = USE_SUPABASE
+  ? supabaseProvider.getRequestForm
+  : mockProvider.getRequestForm;
 
-export const createRequestType = USE_SUPABASE
-  ? supabaseProvider.createRequestType
-  : mockProvider.createRequestType;
+export const createRequestForm = USE_SUPABASE
+  ? supabaseProvider.createRequestForm
+  : mockProvider.createRequestForm;
 
-export const updateRequestType = USE_SUPABASE
-  ? supabaseProvider.updateRequestType
-  : mockProvider.updateRequestType;
+export const updateRequestForm = USE_SUPABASE
+  ? supabaseProvider.updateRequestForm
+  : mockProvider.updateRequestForm;
 
-export const deleteRequestType = USE_SUPABASE
-  ? supabaseProvider.deleteRequestType
-  : mockProvider.deleteRequestType;
+export const deleteRequestForm = USE_SUPABASE
+  ? supabaseProvider.deleteRequestForm
+  : mockProvider.deleteRequestForm;
 
-export const toggleRequestTypeStatus = USE_SUPABASE
-  ? supabaseProvider.toggleRequestTypeStatus
-  : mockProvider.toggleRequestTypeStatus;
+export const toggleRequestFormStatus = USE_SUPABASE
+  ? supabaseProvider.toggleRequestFormStatus
+  : mockProvider.toggleRequestFormStatus;
 
 // ダッシュボードデータ
 export const getDashboardData = USE_SUPABASE
