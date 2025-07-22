@@ -18,7 +18,7 @@ import type { AttendanceStatus, BreakRecord } from './attendance';
 export interface UserDetailView {
   /** ユーザーID */
   id: UUID;
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** 名前（名） */
   first_name: string;
@@ -60,7 +60,7 @@ export interface AttendanceDetailView {
   id: UUID;
   /** ユーザーID */
   user_id: UUID;
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** フルネーム */
   full_name: string;
@@ -110,7 +110,7 @@ export interface RequestDetailView {
   id: UUID;
   /** ユーザーID */
   user_id: UUID;
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** 申請者名 */
   applicant_name: string;
@@ -204,7 +204,7 @@ export interface UserGroupDetailView {
   group_id: UUID;
   /** ユーザー名 */
   user_name: string;
-  /** 社員番号 */
+  /** メンバー番号 */
   user_code?: string;
   /** メールアドレス */
   user_email: string;
@@ -288,7 +288,7 @@ export interface MonthlyAttendanceStatsView {
   average_overtime_minutes: number;
   /** フルネーム */
   full_name: string;
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** 主所属グループ名 */
   primary_group_name?: string;
@@ -304,7 +304,7 @@ export interface MonthlyAttendanceStatsView {
 export interface RequestStatisticsView {
   /** ユーザーID */
   user_id: UUID;
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** フルネーム */
   full_name: string;
@@ -338,7 +338,7 @@ export interface RequestStatisticsView {
 export interface ActiveUserView {
   /** ユーザーID */
   id: UUID;
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** 名前（名） */
   first_name: string;

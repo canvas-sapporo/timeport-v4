@@ -189,7 +189,7 @@ export interface GetUsersParams extends QueryParams {
  * ユーザー作成リクエスト
  */
 export interface CreateUserRequest {
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** 名前（名） */
   first_name: string;
@@ -213,7 +213,7 @@ export interface CreateUserRequest {
  * ユーザー更新リクエスト
  */
 export interface UpdateUserRequest {
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** 名前（名） */
   first_name?: string;

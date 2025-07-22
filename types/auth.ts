@@ -27,7 +27,7 @@ export type UserRole = 'system-admin' | 'admin' | 'member';
  * Supabase auth.usersテーブルと連携
  */
 export interface UserProfile extends BaseEntity {
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** 名前（名） */
   first_name: string;
@@ -55,7 +55,7 @@ export interface UserProfile extends BaseEntity {
 export interface CreateUserProfileInput {
   /** Supabase auth.users.id */
   id: UUID;
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** 名前（名） */
   first_name: string;
@@ -81,7 +81,7 @@ export interface CreateUserProfileInput {
  * ユーザープロフィール更新用入力型
  */
 export interface UpdateUserProfileInput {
-  /** 社員番号 */
+  /** メンバー番号 */
   code?: string;
   /** 名前（名） */
   first_name?: string;
@@ -113,7 +113,7 @@ export interface UpdateUserProfileInput {
 export interface AuthUser {
   /** ユーザーID */
   id: UUID;
-  /** 社員番号 */
+  /** メンバー番号 */
   employee_id?: string;
   /** フルネーム */
   full_name: string;

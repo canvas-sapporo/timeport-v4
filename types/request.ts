@@ -12,13 +12,14 @@ import type { BaseEntity, UUID, DateString, Timestamp, Settings } from './common
 
 /**
  * 申請ステータス
+ * - draft: 下書き
  * - pending: 承認待ち
  * - approved: 承認済み
  * - rejected: 却下
  * - withdrawn: 取り下げ
  * - expired: 期限切れ
  */
-export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'expired';
+export type RequestStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'expired';
 
 // ================================
 // 申請コメント型
@@ -37,9 +38,13 @@ export interface RequestComment {
   /** コメント内容 */
   content: string;
   /** コメント種別 */
-  type: 'submission' | 'approval' | 'rejection' | 'modification' | 'withdrawal';
+  type: 'submission' | 'approval' | 'rejection' | 'modification' | 'withdrawal' | 'reply';
+  /** 親コメントID（返信の場合） */
+  parent_id?: string;
   /** 作成日時 */
   created_at: Timestamp;
+  /** 更新日時 */
+  updated_at?: Timestamp;
   /** 添付ファイル */
   attachments?: Array<{
     id: string;
@@ -47,6 +52,8 @@ export interface RequestComment {
     url: string;
     size: number;
   }>;
+  /** 返信一覧 */
+  replies?: RequestComment[];
 }
 
 // ================================
@@ -54,14 +61,12 @@ export interface RequestComment {
 // ================================
 
 /**
- * 申請種別エンティティ
+ * 申請フォームエンティティ
  */
-export interface RequestType extends BaseEntity {
-  /** 会社ID */
-  company_id: UUID;
-  /** 申請種別コード */
-  code: string;
-  /** 申請種別名 */
+export interface RequestForm extends BaseEntity {
+  /** 申請フォームコード */
+  code?: string;
+  /** 申請フォーム名 */
   name: string;
   /** 説明 */
   description?: string;
@@ -102,15 +107,17 @@ export interface FormFieldConfig {
   /** 選択肢（select, radio, checkbox用） */
   options?: string[];
   /** デフォルト値 */
-  default_value?: any;
+  default_value?: string | number | boolean | Date;
   /** 表示順序 */
   order: number;
   /** 表示幅 */
   width?: 'full' | 'half' | 'third' | 'quarter';
   /** 条件表示ロジック */
   conditional_logic?: ConditionalLogic[];
+  /** 計算設定 */
+  calculation_config?: CalculationConfig;
   /** メタデータ */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string | number | boolean>;
 }
 
 /**
@@ -166,9 +173,25 @@ export interface ConditionalLogic {
   /** 演算子 */
   operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'greater_than' | 'less_than';
   /** 条件値 */
-  value: any;
+  value: string | number | boolean;
   /** アクション */
   action: 'show' | 'hide' | 'require' | 'disable';
+}
+
+/**
+ * 計算設定
+ */
+export interface CalculationConfig {
+  /** 計算タイプ */
+  type: 'sum' | 'multiply' | 'divide' | 'subtract' | 'date_diff' | 'time_diff' | 'custom';
+  /** 計算式（カスタムの場合） */
+  formula?: string;
+  /** 計算対象フィールド */
+  target_fields: string[];
+  /** 結果を格納するフィールド */
+  result_field: string;
+  /** 計算条件 */
+  conditions?: ConditionalLogic[];
 }
 
 /**
@@ -205,61 +228,52 @@ export interface ApprovalStep {
  * 申請エンティティ
  */
 export interface Request extends BaseEntity {
-  /** 申請種別ID */
-  request_type_id: UUID;
+  /** 申請フォームID */
+  request_form_id: UUID;
   /** 申請者ID */
   user_id: UUID;
   /** 申請タイトル */
-  title: string;
+  title?: string;
   /** フォームデータ */
-  form_data: Record<string, any>;
+  form_data: Record<string, string | number | boolean | Date | string[]>;
   /** 対象日 */
-  target_date?: DateString;
+  target_date: DateString;
   /** 開始日 */
-  start_date?: DateString;
+  start_date: DateString;
   /** 終了日 */
-  end_date?: DateString;
-  /** 日数 */
-  days_count?: number;
-  /** 金額 */
-  amount?: number;
+  end_date: DateString;
   /** ステータスID */
   status_id?: UUID;
   /** 現在の承認ステップ */
   current_approval_step: number;
   /** 申請コメント */
-  submission_comment?: string;
-  /** ステータス */
-  status?: 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'expired';
-  approved_by?: string;
-  approved_at?: string;
-  rejection_reason?: string;
+  submission_comment: string;
+  /** コメント履歴 */
+  comments: RequestComment[];
+  /** 添付ファイル */
+  attachments: RequestAttachment[];
 }
 
 /**
  * 申請作成用入力型
  */
 export interface CreateRequestInput {
-  /** 申請種別ID */
-  request_type_id: UUID;
+  /** 申請フォームID */
+  request_form_id: UUID;
   /** 申請者ID */
   user_id: UUID;
   /** 申請タイトル */
-  title: string;
+  title?: string;
   /** フォームデータ */
-  form_data: Record<string, any>;
+  form_data: Record<string, string | number | boolean | Date | string[]>;
   /** 対象日 */
-  target_date?: DateString;
+  target_date: DateString;
   /** 開始日 */
-  start_date?: DateString;
+  start_date: DateString;
   /** 終了日 */
-  end_date?: DateString;
-  /** 日数 */
-  days_count?: number;
-  /** 金額 */
-  amount?: number;
+  end_date: DateString;
   /** 申請コメント */
-  submission_comment?: string;
+  submission_comment: string;
 }
 
 /**
@@ -269,33 +283,51 @@ export interface UpdateRequestInput {
   /** 申請タイトル */
   title?: string;
   /** フォームデータ */
-  form_data?: Record<string, any>;
+  form_data?: Record<string, string | number | boolean | Date | string[]>;
   /** 対象日 */
   target_date?: DateString;
   /** 開始日 */
   start_date?: DateString;
   /** 終了日 */
   end_date?: DateString;
-  /** 日数 */
-  days_count?: number;
-  /** 金額 */
-  amount?: number;
   /** ステータスID */
   status_id?: UUID;
   /** 現在の承認ステップ */
   current_approval_step?: number;
+  /** 申請コメント */
+  submission_comment?: string;
+}
+
+/**
+ * 申請添付ファイル
+ */
+export interface RequestAttachment {
+  /** ファイルID */
+  id: string;
+  /** ファイル名 */
+  name: string;
+  /** ファイルパス */
+  path: string;
+  /** ファイルサイズ */
+  size: number;
+  /** MIMEタイプ */
+  mime_type: string;
+  /** アップロード者ID */
+  uploaded_by: UUID;
+  /** アップロード日時 */
+  uploaded_at: Timestamp;
 }
 
 // ================================
-// 申請ステータスマスター型
+// ステータスマスター型
 // ================================
 
 /**
- * 申請ステータスマスターエンティティ
+ * ステータスマスターエンティティ（汎用）
  */
-export interface RequestStatusMaster extends BaseEntity {
+export interface StatusMaster extends BaseEntity {
   /** 会社ID */
-  company_id: UUID;
+  company_id?: UUID;
   /** ステータスコード */
   code: string;
   /** ステータス名 */
@@ -304,18 +336,20 @@ export interface RequestStatusMaster extends BaseEntity {
   description?: string;
   /** 表示色（HEXカラーコード） */
   color?: string;
+  /** カテゴリ */
+  category: string;
   /** 表示順序 */
   display_order: number;
   /** 設定情報 */
-  settings: RequestStatusSettings;
+  settings: StatusSettings;
   /** 有効フラグ */
   is_active: boolean;
 }
 
 /**
- * 申請ステータス設定
+ * ステータス設定
  */
-export interface RequestStatusSettings {
+export interface StatusSettings {
   /** 初期ステータスフラグ */
   is_initial?: boolean;
   /** 最終ステータスフラグ */
@@ -328,6 +362,8 @@ export interface RequestStatusSettings {
   is_editable?: boolean;
   /** 取り下げ可能フラグ */
   is_withdrawable?: boolean;
+  /** 有効フラグ */
+  is_active?: boolean;
 }
 
 // ================================
@@ -376,6 +412,24 @@ export interface ApprovalResult {
   error?: string;
 }
 
+/**
+ * 承認履歴
+ */
+export interface ApprovalHistory {
+  /** ステップ番号 */
+  step_number: number;
+  /** 承認者ID */
+  approver_id: UUID;
+  /** 承認者名 */
+  approver_name: string;
+  /** 操作 */
+  action: string;
+  /** コメント */
+  comment?: string;
+  /** 処理日時 */
+  processed_at: Timestamp;
+}
+
 // ================================
 // 申請詳細型
 // ================================
@@ -384,8 +438,8 @@ export interface ApprovalResult {
  * 申請詳細（リレーション含む）
  */
 export interface RequestDetail extends Request {
-  /** 申請種別情報 */
-  request_type: {
+  /** 申請フォーム情報 */
+  request_form: {
     id: UUID;
     name: string;
     category: string;
@@ -400,32 +454,15 @@ export interface RequestDetail extends Request {
     group_name?: string;
   };
   /** ステータス情報 */
-  // status: {
-  //   id: UUID;
-  //   name: string;
-  //   code: string;
-  //   color?: string;
-  // };
-  /** 承認履歴 */
-  approval_history: Array<{
-    step: number;
-    approver_id: UUID;
-    approver_name: string;
-    action: string;
-    comment?: string;
-    processed_at: Timestamp;
-  }>;
-  /** コメント履歴 */
-  comments: RequestComment[];
-  /** 添付ファイル */
-  attachments: Array<{
-    id: string;
+  status: {
+    id: UUID;
     name: string;
-    url: string;
-    size: number;
-    uploaded_by: UUID;
-    uploaded_at: Timestamp;
-  }>;
+    code: string;
+    color?: string;
+    settings: StatusSettings;
+  };
+  /** 承認履歴 */
+  approval_history: ApprovalHistory[];
   /** 次の承認者 */
   next_approver?: {
     id: UUID;
@@ -450,8 +487,10 @@ export interface RequestStatistics {
   total_requests: number;
   /** ステータス別件数 */
   by_status: Record<string, number>;
-  /** 種別別件数 */
-  by_type: Record<string, number>;
+  /** フォーム別件数 */
+  by_form: Record<string, number>;
+  /** カテゴリ別件数 */
+  by_category: Record<string, number>;
   /** 月別件数 */
   by_month: Record<string, number>;
   /** 平均処理時間（時間） */
@@ -482,8 +521,8 @@ export interface UserRequestStatistics {
   approval_rate: number;
   /** 平均処理時間（時間） */
   average_processing_hours: number;
-  /** 種別別申請数 */
-  by_type: Record<string, number>;
+  /** フォーム別申請数 */
+  by_form: Record<string, number>;
 }
 
 // ================================
@@ -498,8 +537,8 @@ export interface RequestSearchCriteria {
   user_id?: UUID;
   /** グループID */
   group_id?: UUID;
-  /** 申請種別ID */
-  request_type_id?: UUID;
+  /** 申請フォームID */
+  request_form_id?: UUID;
   /** ステータス */
   status?: RequestStatus;
   /** カテゴリ */
@@ -516,16 +555,12 @@ export interface RequestSearchCriteria {
   approver_id?: UUID;
   /** 検索キーワード */
   keyword?: string;
-  /** 金額範囲最小 */
-  amount_min?: number;
-  /** 金額範囲最大 */
-  amount_max?: number;
 }
 
 /**
- * 申請種別検索条件
+ * 申請フォーム検索条件
  */
-export interface RequestTypeSearchCriteria {
+export interface RequestFormSearchCriteria {
   /** 会社ID */
   company_id?: UUID;
   /** カテゴリ */
