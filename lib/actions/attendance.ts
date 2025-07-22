@@ -680,7 +680,8 @@ export const getUserAttendance = async (
       .select('*')
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .order('work_date', { ascending: false });
+      .order('work_date', { ascending: false })
+      .order('created_at', { ascending: false }); // 同じ日付内では作成時刻の降順でソート
 
     if (startDate) {
       basicQuery = basicQuery.gte('work_date', startDate);
