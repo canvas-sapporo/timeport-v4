@@ -118,12 +118,55 @@ export default function MemberDashboard() {
     ? attendanceRecords.filter((r) => r.work_date?.startsWith(thisMonth))
     : [];
 
-  const workDays = thisMonthRecords.length;
+  // 前月のデータを取得
+  const getPreviousMonth = () => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return date.toISOString().slice(0, 7);
+  };
+  const previousMonth = isClient ? getPreviousMonth() : '';
+  const previousMonthRecords = isClient
+    ? attendanceRecords.filter((r) => r.work_date?.startsWith(previousMonth))
+    : [];
+
+  // 変化率計算関数
+  const calculateChangeRate = (current: number, previous: number): number => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100 * 10) / 10;
+  };
+
+  // 出勤日数：1日2回以上出勤している場合は1日としてカウント
+  const uniqueWorkDays = new Set(thisMonthRecords.map((r) => r.work_date)).size;
+  const previousUniqueWorkDays = new Set(previousMonthRecords.map((r) => r.work_date)).size;
+  const workDaysChange = calculateChangeRate(uniqueWorkDays, previousUniqueWorkDays);
+
+  // 残業時間：attendancesテーブルから取得
   const totalOvertimeMinutes = thisMonthRecords.reduce(
-    (sum, r) => sum + 0, // overtime_minutesは現在のテーブル構造に存在しないため0で固定
+    (sum, r) => sum + (r.overtime_minutes || 0),
     0
   );
   const overtimeHours = Math.round((totalOvertimeMinutes / 60) * 10) / 10;
+
+  const previousTotalOvertimeMinutes = previousMonthRecords.reduce(
+    (sum, r) => sum + (r.overtime_minutes || 0),
+    0
+  );
+  const previousOvertimeHours = Math.round((previousTotalOvertimeMinutes / 60) * 10) / 10;
+  const overtimeChange = calculateChangeRate(overtimeHours, previousOvertimeHours);
+
+  // 勤務時間：attendancesテーブルから取得・算出
+  const totalWorkMinutes = thisMonthRecords.reduce(
+    (sum, r) => sum + (r.actual_work_minutes || 0),
+    0
+  );
+  const workHours = Math.round((totalWorkMinutes / 60) * 10) / 10;
+
+  const previousTotalWorkMinutes = previousMonthRecords.reduce(
+    (sum, r) => sum + (r.actual_work_minutes || 0),
+    0
+  );
+  const previousWorkHours = Math.round((previousTotalWorkMinutes / 60) * 10) / 10;
+  const workHoursChange = calculateChangeRate(workHours, previousWorkHours);
 
   const userRequests = requests.filter((a) => a.user_id === user.id);
   const pendingRequests = userRequests.filter((a) => a.status_id === 'pending');
@@ -132,26 +175,26 @@ export default function MemberDashboard() {
   const stats = [
     {
       title: '出勤日数',
-      value: `${workDays}日`,
-      change: 2,
+      value: `${uniqueWorkDays}日`,
+      change: workDaysChange,
       icon: <Calendar className="w-6 h-6" />,
     },
     {
       title: '残業時間',
       value: `${overtimeHours}時間`,
-      change: -1.5,
+      change: overtimeChange,
       icon: <Clock className="w-6 h-6" />,
     },
     {
       title: '申請中',
       value: `${pendingRequests.length}件`,
-      change: 1,
+      change: 0, // 申請中は前月比較が困難なため0で固定
       icon: <FileText className="w-6 h-6" />,
     },
     {
       title: '勤務時間',
-      value: `${workDays * 8}時間`,
-      change: 5.2,
+      value: `${workHours}時間`,
+      change: workHoursChange,
       icon: <TrendingUp className="w-6 h-6" />,
     },
   ];
@@ -393,16 +436,21 @@ export default function MemberDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <StatsCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            change={stat.change}
-            icon={stat.icon}
-          />
-        ))}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">今月の統計</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <StatsCard
+              key={index}
+              title={stat.title}
+              value={stat.value}
+              change={stat.change}
+              icon={stat.icon}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
