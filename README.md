@@ -5,51 +5,57 @@
   <img src="https://img.shields.io/badge/TypeScript-blue?style=for-the-badge&logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase">
   <img src="https://img.shields.io/badge/Tailwind%20CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
 </div>
 
 ## 📋 概要
 
-TimePortは、現代の企業ニーズに応える高機能な勤怠管理システムです。システム管理者と管理者、メンバーの両方に対応し、柔軟な設定機能と直感的なUIを提供します。
+TimePortは、現代の企業ニーズに応える高機能な勤怠管理システムです。システム管理者、管理者、メンバーの3つの役割に対応し、柔軟な設定機能と直感的なUIを提供します。
 
 ### ✨ 主な特徴
 
-- 🕐 **リアルタイム打刻** - 正確な勤怠記録
-- 📊 **ダッシュボード** - 勤怠状況の可視化
+- 🕐 **リアルタイム打刻** - 正確な勤怠記録と休憩管理
+- 📊 **ダッシュボード** - 勤怠状況の可視化と統計
 - 📝 **動的申請フォーム** - カスタマイズ可能な申請システム
-- 👥 **ユーザー管理** - 組織階層に応じた権限管理
-- ⚙️ **柔軟な設定** - 会社・グループ・個人レベルでの設定
+- 👥 **階層的ユーザー管理** - 会社・グループ・個人の3層構造
+- ⚙️ **柔軟な設定** - 機能ON/OFF、勤務時間、通知設定
 - 📱 **レスポンシブデザイン** - あらゆるデバイスに対応
+- 🔐 **Row Level Security** - データセキュリティの確保
 
 ## 🏗️ 技術スタック
 
 ### フロントエンド
 
 - **Next.js 15** (App Router)
-- **TypeScript** - 型安全性
-- **Tailwind CSS** - スタイリング
-- **shadcn/ui** - UIコンポーネント
-- **React Hook Form + Zod** - フォーム管理・バリデーション
+- **TypeScript 5.2** - 型安全性
+- **Tailwind CSS 3.3** - スタイリング
+- **shadcn/ui** - UIコンポーネントライブラリ
+- **React Hook Form 7.60** + **Zod 3.25** - フォーム管理・バリデーション
+- **date-fns 3.6** - 日付処理
+- **Lucide React 0.446** - アイコン
+- **Recharts 2.12** - チャート・グラフ
+- **Sonner 2.0** - トースト通知
 
 ### バックエンド
 
-- **Supabase** - データベース・認証
+- **Supabase 2.50** - データベース・認証・リアルタイム
 - **PostgreSQL** - データストレージ
-- **Row Level Security** - データセキュリティ
+- **Row Level Security (RLS)** - データセキュリティ
+- **Supabase Auth** - 認証システム
 
 ### 開発ツール
 
-- **date-fns** - 日付処理
-- **Lucide React** - アイコン
-- **React Query/SWR** - データフェッチング
+- **ESLint 8.49** + **Prettier 3.6** - コード品質
+- **TypeScript ESLint 8.36** - TypeScript用リント
+- **pnpm** - パッケージマネージャー
 
 ## 🚀 クイックスタート
 
 ### 前提条件
 
-- Node.js 22以上
-- npm または yarn、pnpm
-- Vercelアカウント
-- Supabaseアカウント（本番環境用）
+- **Node.js 22以上**
+- **pnpm** (推奨) または npm
+- **Supabaseアカウント** (本番環境用)
 
 ### インストール
 
@@ -63,26 +69,22 @@ cd timeport-v4
 2. **依存関係のインストール**
 
 ```bash
-npm install
-# または
-yarn install
-# または
 pnpm install
 ```
 
 3. **環境変数の設定**
 
 ```bash
-cp .env.example .env.development
+cp .env.example .env.local
 ```
 
-`.env.development` を編集：
+`.env.local` を編集：
 
 ```env
 # データソース切り替え（開発初期はモック使用）
-NEXT_PUBLIC_USE_SUPABASE=false
+NEXT_PUBLIC_USE_SUPABASE=true
 
-# Supabase設定（将来使用）
+# Supabase設定（本番環境用）
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
@@ -91,11 +93,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 4. **開発サーバーの起動**
 
 ```bash
-npm run dev
-# または
-yarn dev
-# または
-pnpm run dev
+pnpm dev
 ```
 
 アプリケーションは `http://localhost:3000` で起動します。
@@ -103,34 +101,64 @@ pnpm run dev
 ## 📁 プロジェクト構造
 
 ```
-src/
+timeport-v4/
 ├── app/                              # Next.js App Router
 │   ├── admin/                       # 管理者ページ
+│   │   ├── attendance/              # 勤怠管理
+│   │   ├── group/                   # グループ管理
+│   │   ├── request-forms/           # 申請フォーム管理
+│   │   ├── requests/                # 申請管理
+│   │   ├── settings/                # 設定管理
+│   │   └── users/                   # ユーザー管理
+│   ├── api/                         # API Routes
+│   │   └── csv-export/              # CSV出力API
 │   ├── login/                       # ログインページ
 │   ├── member/                      # メンバーページ
-│   └── system-admin/                # システム管理者ページ
+│   │   ├── attendance/              # 勤怠記録
+│   │   ├── profile/                 # プロフィール
+│   │   └── requests/                # 申請機能
+│   ├── system-admin/                # システム管理者ページ
+│   │   ├── company/                 # 会社管理
+│   │   ├── features/                # 機能管理
+│   │   └── system/                  # システム設定
+│   └── debug/                       # デバッグページ
 ├── components/                       # 再利用可能コンポーネント
-│   ├── form/                        # フォーム関連
+│   ├── admin/                       # 管理者用コンポーネント
+│   ├── auth/                        # 認証関連
+│   ├── forms/                       # フォーム関連
 │   ├── layout/                      # レイアウト関連
-│   └── ui/                           # UI関連
-├── contexts/                        # グローバルな値
-│   ├── auth-context.tsx             # 認証関連
-│   ├── data-context.tsx             # その他データ
-│   └── page-transition-context.tsx  # ローディング関連
-├── doc/
-│   └── data-provider-guide.md       # データプロバイダー設計ガイド
-├── hooks/                            # カスタムフック
-│   └── use-toast.ts                 # 通知システム（成功、エラー、警告、情報などの一時的なメッセージを表示）
-├── lib/                              # ユーティリティ・設定
-│   ├── provider.ts                  # 認証
-│   ├── provider.ts                 # データプロバイダー（モック/Supabase切り替え）
-│   ├── mock.ts                     # モックデータ
-│   ├── supabase.ts                 # Supabase接続
-│   └── utils/                      # ヘルパー関数
-├── supabase/                              # データベース
-│   └── migrations/                 # データベース構築用SQL
-└── types/                           # TypeScript型定義
-
+│   ├── member/                      # メンバー用コンポーネント
+│   ├── notifications/               # 通知システム
+│   ├── system-admin/                # システム管理者用
+│   └── ui/                          # 基本UIコンポーネント
+├── contexts/                        # React Context
+│   ├── auth-context.tsx             # 認証状態管理
+│   ├── data-context.tsx             # データ状態管理
+│   └── page-transition-context.tsx  # ページ遷移管理
+├── hooks/                           # カスタムフック
+│   └── use-toast.ts                 # トースト通知
+├── lib/                             # ユーティリティ・設定
+│   ├── actions/                     # Server Actions
+│   │   ├── admin/                   # 管理者用アクション
+│   │   ├── attendance.ts            # 勤怠関連
+│   │   ├── auth.ts                  # 認証関連
+│   │   ├── settings.ts              # 設定関連
+│   │   └── system-admin/            # システム管理者用
+│   ├── provider.ts                  # データプロバイダー
+│   ├── mock.ts                      # モックデータ
+│   ├── supabase-provider.ts         # Supabase接続
+│   ├── supabase.ts                  # Supabase設定
+│   └── utils/                       # ヘルパー関数
+├── scripts/                         # スクリプト
+│   ├── setup-test-users.js          # テストユーザー作成
+│   ├── insert-test-attendance.js    # テスト勤怠データ作成
+│   └── check-user-work-type.js      # 勤務タイプチェック
+├── supabase/                        # データベース
+│   └── migrations/                  # マイグレーションファイル
+├── types/                           # TypeScript型定義
+└── doc/                             # ドキュメント
+    ├── data-provider-guide.md       # データプロバイダー設計
+    └── db_design.svg                # データベース設計図
 ```
 
 ## 🔧 データプロバイダー設計
@@ -154,11 +182,11 @@ NEXT_PUBLIC_USE_SUPABASE=true
 ### 使用例
 
 ```typescript
-import { getAttendanceData, getUserData } from '@/lib/provider';
+import { getAttendanceData, createRequest } from '@/lib/provider';
 
 // データソースに関係なく同じAPIで使用
-const attendanceData = await getAttendanceData();
-const userData = await getUserData();
+const attendanceData = await getAttendanceData(userId);
+const result = await createRequest(requestData);
 ```
 
 詳細は [データプロバイダー設計ガイド](./doc/data-provider-guide.md) を参照してください。
@@ -168,14 +196,16 @@ const userData = await getUserData();
 ### 👨‍💼 管理者機能
 
 - **ダッシュボード** - 全社統計・未処理申請の確認
-- **勤怠管理** - 全社員の勤怠データ管理・Excel出力
+- **勤怠管理** - 全メンバーの勤怠データ管理・CSV出力
 - **申請管理** - 申請の承認・却下処理
 - **ユーザー管理** - アカウント作成・編集・削除
-- **設定**
+- **グループ管理** - 組織構造の管理
+- **申請フォーム管理** - 動的フォームの作成・編集
+- **設定管理**
   - システム設定（会社情報・タイムゾーン）
   - 通知設定
-  - 申請フォームビルダー（動的フォーム作成）
-  - 組織設定（会社・部署・個人階層）
+  - 勤務時間設定
+  - 雇用形態・勤務パターン管理
 
 ### 👤 メンバー機能
 
@@ -184,6 +214,13 @@ const userData = await getUserData();
 - **勤怠一覧** - 個人の勤怠履歴確認
 - **申請** - 動的フォームによる各種申請
 - **申請一覧** - 申請状況の確認
+- **プロフィール** - 個人情報の管理
+
+### 🔧 システム管理者機能
+
+- **会社管理** - 複数会社の管理
+- **機能管理** - 機能のON/OFF制御
+- **システム設定** - 全体設定の管理
 
 ## 🔧 申請フォームビルダー
 
@@ -208,16 +245,35 @@ const userData = await getUserData();
 
 ### 主要テーブル
 
+- **companies** - 会社情報
+- **groups** - グループ・組織情報
 - **user_profiles** - ユーザー情報
-- **attendance_records** - 勤怠記録
+- **user_groups** - ユーザーとグループの関連
+- **attendances** - 勤怠記録
+- **request_forms** - 申請フォーム定義
 - **requests** - 申請データ
-- **request_types** - 申請種別（動的フォーム定義）
-- **feature_settings** - 機能ON/OFF設定
-- **work_time_settings** - 勤務時間設定
+- **request_statuses** - 申請ステータス
+- **work_types** - 勤務パターン
+- **employment_types** - 雇用形態
+- **leave_types** - 休暇種別
+- **notifications** - 通知データ
+- **features** - 機能設定
 
-組織階層：`会社 < グループ < 個人`
+### 組織階層
 
-詳細なスキーマは [00_initial.sql](./doc/sql/00_initial.sql) を参照してください。
+```
+会社 (companies)
+├── グループ (groups)
+│   ├── 子グループ
+│   └── ユーザー (user_profiles)
+└── 機能設定 (features)
+```
+
+### セキュリティ
+
+- **Row Level Security (RLS)** - データアクセス制御
+- **認証** - Supabase Auth による安全な認証
+- **権限管理** - 役割ベースのアクセス制御
 
 ## 🚀 本番デプロイ
 
@@ -229,6 +285,9 @@ const userData = await getUserData();
 ```bash
 # Supabase CLIを使用
 supabase db reset --db-url YOUR_DATABASE_URL
+
+# または手動でマイグレーション実行
+# supabase/migrations/ 内のSQLファイルを順次実行
 ```
 
 3. 環境変数の更新:
@@ -237,25 +296,19 @@ supabase db reset --db-url YOUR_DATABASE_URL
 NEXT_PUBLIC_USE_SUPABASE=true
 NEXT_PUBLIC_SUPABASE_URL=your_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 ### Vercelへのデプロイ
 
 ```bash
-npm run build
-npm run start
+pnpm build
+pnpm start
 ```
 
 または、Vercelに直接デプロイ：
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/canvas-sapporo/timeport-v4)
-
-## 🔐 セキュリティ
-
-- **Row Level Security** - Supabaseによるデータアクセス制御
-- **認証** - Supabase Auth による安全な認証
-- **権限管理** - 管理者・メンバーの明確な権限分離
-- **入力検証** - Zodによる厳密なバリデーション
 
 ## 🛠️ 開発
 
@@ -266,11 +319,33 @@ npm run start
 3. **Supabase設定** (`NEXT_PUBLIC_USE_SUPABASE=true`)
 4. **本番デプロイ**
 
+### 利用可能なスクリプト
+
+```bash
+# 開発サーバー起動
+pnpm dev
+
+# ビルド
+pnpm build
+
+# 本番サーバー起動
+pnpm start
+
+# リント
+pnpm lint
+
+# 型チェック
+pnpm type-check
+
+# テストユーザー作成
+pnpm setup-users
+```
+
 ### コード品質
 
 - **TypeScript** - 型安全性の確保
 - **ESLint + Prettier** - コード品質の維持
-- **Husky** - コミット前チェック
+- **shadcn/ui** - 一貫したUIコンポーネント
 
 ## 📝 ライセンス
 
@@ -292,8 +367,8 @@ npm run start
 ## 📚 関連ドキュメント
 
 - [データプロバイダー設計ガイド](./doc/data-provider-guide.md)
-- [API仕様書](./doc/api-specification.md)
-- [デプロイメントガイド](./doc/deployment-guide.md)
+- [Supabase設定ガイド](./README-SUPABASE-SETUP.md)
+- [データベース設計図](./doc/db_design.svg)
 
 ---
 
