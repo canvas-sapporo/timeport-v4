@@ -65,6 +65,8 @@ export interface Attendance extends BaseEntity {
   late_minutes: number;
   /** 早退時間（分） */
   early_leave_minutes: number;
+  /** ステータス */
+  status: 'normal' | 'late' | 'early_leave' | 'absent';
   /** 自動計算フラグ */
   auto_calculated: boolean;
   /** 備考 */
@@ -73,6 +75,20 @@ export interface Attendance extends BaseEntity {
   approved_by?: UUID;
   /** 承認日時 */
   approved_at?: Timestamp;
+  /** 総休憩時間（分）- 計算フィールド */
+  total_break_minutes?: number;
+  /** 休憩回数 - 計算フィールド */
+  break_count?: number;
+  /** 承認状態 - 計算フィールド */
+  approval_status?: 'approved' | 'pending';
+  /** 承認者名 - 計算フィールド */
+  approver_name?: string;
+  /** 勤務タイプ名 - 計算フィールド */
+  work_type_name?: string;
+  /** ユーザー名 - 計算フィールド（admin用） */
+  user_name?: string;
+  /** ユーザーコード - 計算フィールド（admin用） */
+  user_code?: string;
 }
 
 /**
@@ -93,14 +109,6 @@ export interface CreateAttendanceInput {
   break_records?: BreakRecord[];
   /** 実勤務時間（分） */
   actual_work_minutes?: number;
-  /** 残業時間（分） */
-  overtime_minutes?: number;
-  /** 遅刻時間（分） */
-  late_minutes?: number;
-  /** 早退時間（分） */
-  early_leave_minutes?: number;
-  /** 自動計算フラグ */
-  auto_calculated?: boolean;
   /** 備考 */
   description?: string;
 }
@@ -119,14 +127,6 @@ export interface UpdateAttendanceInput {
   break_records?: BreakRecord[];
   /** 実勤務時間（分） */
   actual_work_minutes?: number;
-  /** 残業時間（分） */
-  overtime_minutes?: number;
-  /** 遅刻時間（分） */
-  late_minutes?: number;
-  /** 早退時間（分） */
-  early_leave_minutes?: number;
-  /** 自動計算フラグ */
-  auto_calculated?: boolean;
   /** 備考 */
   description?: string;
   /** 承認者ID */
@@ -344,6 +344,29 @@ export interface AttendanceSearchCriteria {
 }
 
 /**
+ * 勤怠フィルター設定
+ */
+export interface AttendanceFilters {
+  /** 日付範囲 */
+  dateRange: {
+    startDate: DateString | null;
+    endDate: DateString | null;
+  };
+  /** ステータス（複数選択可能） */
+  status: AttendanceStatus[];
+  /** 残業フィルター */
+  hasOvertime: boolean | null;
+  /** 勤務タイプID */
+  workTypeId: UUID | null;
+  /** 承認状態 */
+  approvalStatus: 'pending' | 'approved' | 'rejected' | null;
+  /** ユーザーID（admin用） */
+  userId?: UUID | null;
+  /** グループID（admin用） */
+  groupId?: UUID | null;
+}
+
+/**
  * 勤怠統計検索条件
  */
 export interface AttendanceStatsSearchCriteria {
@@ -413,7 +436,7 @@ export interface AttendanceError {
   /** エラーメッセージ */
   message: string;
   /** エラー詳細 */
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   /** 修正提案 */
   suggestions?: string[];
 }
