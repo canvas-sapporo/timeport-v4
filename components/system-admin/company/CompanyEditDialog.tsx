@@ -93,7 +93,7 @@ export default function CompanyEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>企業編集</DialogTitle>
           <DialogDescription>企業情報を変更できます。</DialogDescription>

@@ -39,6 +39,7 @@ export default function CompanyCreateDialog({
     address: '',
     phone: '',
     is_active: true,
+    admin_code: '',
     admin_family_name: '',
     admin_first_name: '',
     admin_family_name_kana: '',
@@ -68,6 +69,7 @@ export default function CompanyCreateDialog({
           address: '',
           phone: '',
           is_active: true,
+          admin_code: '',
           admin_family_name: '',
           admin_first_name: '',
           admin_family_name_kana: '',
@@ -185,6 +187,20 @@ export default function CompanyCreateDialog({
       case 2:
         return (
           <>
+            <Label htmlFor="admin-code">
+              管理者社員番号<span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="admin-code"
+              value={form.admin_code}
+              onChange={(e) => setForm((f) => ({ ...f, admin_code: e.target.value }))}
+              required
+              className={getFieldError('admin_code') ? 'border-red-500' : ''}
+            />
+            {getFieldError('admin_code') && (
+              <div className="text-red-500 text-sm">{getFieldError('admin_code')}</div>
+            )}
+
             <Label htmlFor="admin-family-name">
               管理者姓<span className="text-red-500 ml-1">*</span>
             </Label>
@@ -193,6 +209,7 @@ export default function CompanyCreateDialog({
               value={form.admin_family_name}
               onChange={(e) => setForm((f) => ({ ...f, admin_family_name: e.target.value }))}
               required
+              autoComplete="family-name"
               className={getFieldError('admin_family_name') ? 'border-red-500' : ''}
             />
             {getFieldError('admin_family_name') && (
@@ -221,6 +238,7 @@ export default function CompanyCreateDialog({
               value={form.admin_first_name}
               onChange={(e) => setForm((f) => ({ ...f, admin_first_name: e.target.value }))}
               required
+              autoComplete="given-name"
               className={getFieldError('admin_first_name') ? 'border-red-500' : ''}
             />
             {getFieldError('admin_first_name') && (
@@ -250,6 +268,7 @@ export default function CompanyCreateDialog({
               value={form.admin_email}
               onChange={(e) => setForm((f) => ({ ...f, admin_email: e.target.value }))}
               required
+              autoComplete="email"
               className={getFieldError('admin_email') ? 'border-red-500' : ''}
             />
             {getFieldError('admin_email') && (
@@ -267,6 +286,7 @@ export default function CompanyCreateDialog({
                 onChange={(e) => setForm((f) => ({ ...f, admin_password: e.target.value }))}
                 required
                 minLength={8}
+                autoComplete="new-password"
                 className={getFieldError('admin_password') ? 'border-red-500' : ''}
               />
               <button
@@ -288,7 +308,7 @@ export default function CompanyCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>企業追加</DialogTitle>
           <DialogDescription>新しい企業情報を入力してください。</DialogDescription>

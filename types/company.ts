@@ -76,6 +76,7 @@ export interface CreateCompanyFormData {
   group_name: string;
 
   // 管理者ユーザー情報
+  admin_code: string;
   admin_family_name: string;
   admin_first_name: string;
   admin_family_name_kana: string;

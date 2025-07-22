@@ -50,7 +50,7 @@ export default function CompanyDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>本当に削除しますか？</DialogTitle>
           <DialogDescription>
