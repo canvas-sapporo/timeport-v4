@@ -53,7 +53,12 @@ export default function MemberDashboard() {
           getMemberAttendance(user.id),
         ]);
 
-        console.log('データ取得結果:', { todayData, recordsDataCount: recordsData?.length });
+        console.log('データ取得結果:', {
+          todayData,
+          recordsDataCount: recordsData?.length,
+          todayDataId: todayData?.id,
+          recordsDataIds: recordsData?.map((r) => r.id),
+        });
 
         // 詳細なデバッグ情報を追加
         if (recordsData && recordsData.length > 0) {
@@ -292,7 +297,7 @@ export default function MemberDashboard() {
           setTodayAttendance(result.attendance);
           // 既存の記録を更新
           setAttendanceRecords((prev) => {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().slice(0, 10);
             const filtered = prev.filter(
               (r) => r.work_date !== today || r.id !== result.attendance!.id
             );
@@ -300,7 +305,8 @@ export default function MemberDashboard() {
           });
         }
         // バックグラウンドでデータを再取得（遅延を短縮）
-        setTimeout(() => fetchAttendanceData(true), 500);
+        // 注意: 即座の更新で十分なので、バックグラウンド再取得は無効化
+        // setTimeout(() => fetchAttendanceData(true), 500);
 
         const endTime = performance.now();
         console.log(`出勤処理完了: ${(endTime - startTime).toFixed(2)}ms`);
@@ -358,7 +364,8 @@ export default function MemberDashboard() {
           });
         }
         // バックグラウンドでデータを再取得（遅延を短縮）
-        setTimeout(() => fetchAttendanceData(true), 500);
+        // 注意: 即座の更新で十分なので、バックグラウンド再取得は無効化
+        // setTimeout(() => fetchAttendanceData(true), 500);
       } else {
         toast({
           title: 'エラー',
@@ -410,7 +417,8 @@ export default function MemberDashboard() {
           });
         }
         // バックグラウンドでデータを再取得（遅延を短縮）
-        setTimeout(() => fetchAttendanceData(true), 500);
+        // 注意: 即座の更新で十分なので、バックグラウンド再取得は無効化
+        // setTimeout(() => fetchAttendanceData(true), 500);
       } else {
         toast({
           title: 'エラー',
@@ -454,7 +462,7 @@ export default function MemberDashboard() {
           setTodayAttendance(result.attendance);
           // 既存の記録を更新
           setAttendanceRecords((prev) => {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().slice(0, 10);
             const filtered = prev.filter(
               (r) => r.work_date !== today || r.id !== result.attendance!.id
             );
@@ -462,7 +470,8 @@ export default function MemberDashboard() {
           });
         }
         // バックグラウンドでデータを再取得（遅延を短縮）
-        setTimeout(() => fetchAttendanceData(true), 500);
+        // 注意: 即座の更新で十分なので、バックグラウンド再取得は無効化
+        // setTimeout(() => fetchAttendanceData(true), 500);
       } else {
         toast({
           title: 'エラー',

@@ -778,8 +778,11 @@ export const getMemberAttendance = async (userId: string): Promise<Attendance[]>
     console.log('getMemberAttendance 開始:', { userId });
 
     const now = new Date();
-    const currentMonth = now.toISOString().slice(0, 7);
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 7);
+    // 正しい日付形式で前月の1日を取得
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthStr = lastMonth.toISOString().slice(0, 10); // YYYY-MM-DD形式
+
+    console.log('日付フィルター:', { lastMonthStr });
 
     // 今月と前月のデータのみを取得
     const { data: basicData, error: basicError } = await supabaseAdmin
@@ -787,7 +790,7 @@ export const getMemberAttendance = async (userId: string): Promise<Attendance[]>
       .select('*')
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .gte('work_date', lastMonth)
+      .gte('work_date', lastMonthStr)
       .order('work_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(60); // 最大60件（今月と前月分）
@@ -839,13 +842,11 @@ export const getUserAttendance = async (
     // デフォルトで今月と前月のみ取得（より厳密な制限）
     if (!startDate && !endDate) {
       const now = new Date();
-      const currentMonth = now.toISOString().slice(0, 7);
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-        .toISOString()
-        .slice(0, 7);
-      basicQuery = basicQuery.gte('work_date', lastMonth);
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthStr = lastMonth.toISOString().slice(0, 10); // YYYY-MM-DD形式
+      basicQuery = basicQuery.gte('work_date', lastMonthStr);
 
-      console.log('日付フィルター適用:', { currentMonth, lastMonth });
+      console.log('日付フィルター適用:', { lastMonthStr });
     }
 
     const { data: basicData, error: basicError } = await basicQuery;
