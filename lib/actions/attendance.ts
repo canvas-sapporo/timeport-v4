@@ -791,11 +791,22 @@ export const getUserAttendance = async (
       .order('created_at', { ascending: false }) // 同じ日付内では作成時刻の降順でソート
       .limit(30); // 最新30日分に制限
 
+    // 日付フィルターを追加（さらに制限）
     if (startDate) {
       basicQuery = basicQuery.gte('work_date', startDate);
     }
     if (endDate) {
       basicQuery = basicQuery.lte('work_date', endDate);
+    }
+
+    // デフォルトで今月と前月のみ取得
+    if (!startDate && !endDate) {
+      const now = new Date();
+      const currentMonth = now.toISOString().slice(0, 7);
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        .toISOString()
+        .slice(0, 7);
+      basicQuery = basicQuery.gte('work_date', lastMonth);
     }
 
     const { data: basicData, error: basicError } = await basicQuery;
@@ -807,6 +818,7 @@ export const getUserAttendance = async (
 
     console.log('基本的な勤怠データ取得成功:', basicData?.length, '件');
     console.log('取得されたデータの詳細:', basicData);
+    console.log('クエリ条件:', { userId, startDate, endDate, limit: 30 });
 
     // work_typesとuser_profilesの情報を個別に取得
     const workTypeIds = Array.from(

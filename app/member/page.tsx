@@ -212,7 +212,7 @@ export default function MemberDashboard() {
   );
 
   // 退勤していない最新のレコードを取得（出勤中のレコード）
-  const activeRecord = sortedTodayRecords.filter((r) => r.clock_in_time && !r.clock_out_time)[0]; // 出勤済みで退勤していないレコードのみ、既にソート済みなので最初の要素が最新
+  const activeRecord = sortedTodayRecords.find((r) => r.clock_in_time && !r.clock_out_time); // 出勤済みで退勤していないレコードのみ
 
   // 最新のレコード（退勤済みも含む）
   const latestRecord = sortedTodayRecords[0] || null;
@@ -238,7 +238,7 @@ export default function MemberDashboard() {
   });
 
   const isOnBreak = activeBreakExists;
-  const hasClockIn = !!activeRecord && !activeRecord.clock_out_time; // 出勤中で退勤していない場合
+  const hasClockIn = !!activeRecord; // 出勤中のレコードが存在する場合
   const hasClockOut = !!latestRecord?.clock_out_time; // 最新レコードが退勤済みの場合
 
   // デバッグ用：最新の退勤時刻を表示
@@ -251,6 +251,8 @@ export default function MemberDashboard() {
     latestClockOutTime: latestClockOutTime ? new Date(latestClockOutTime).toISOString() : null,
     activeRecordClockOut: activeRecord?.clock_out_time,
     latestRecordClockOut: latestRecord?.clock_out_time,
+    activeRecordId: activeRecord?.id,
+    latestRecordId: latestRecord?.id,
   });
 
   // 打刻処理関数
@@ -513,7 +515,7 @@ export default function MemberDashboard() {
             )}
 
             {/* 退勤・休憩ボタン - 出勤済みで退勤していない場合のみ表示 */}
-            {hasClockIn && !hasClockOut && (
+            {hasClockIn && !latestRecord?.clock_out_time && (
               <>
                 {!isOnBreak ? (
                   <Button
