@@ -223,6 +223,16 @@ export const clockIn = async (
 ): Promise<ClockResult> => {
   console.log('clockIn 開始:', { userId, timestamp, workTypeId });
 
+  // 環境変数の確認
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('clockIn: 環境変数が設定されていません');
+    return {
+      success: false,
+      message: 'システム設定エラー: 環境変数が正しく設定されていません',
+      error: 'ENV_ERROR',
+    };
+  }
+
   try {
     // バリデーション
     if (!validateClockTime(timestamp)) {
@@ -292,7 +302,7 @@ export const clockIn = async (
       console.error('Supabase upsert error:', error);
       return {
         success: false,
-        message: '出勤打刻に失敗しました',
+        message: `出勤打刻に失敗しました: ${error.message}`,
         error: error.message,
       };
     }
@@ -307,9 +317,10 @@ export const clockIn = async (
       attendance: data as Attendance,
     };
   } catch (error) {
+    console.error('clockIn 予期しないエラー:', error);
     return {
       success: false,
-      message: '予期しないエラーが発生しました',
+      message: `予期しないエラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
@@ -320,6 +331,17 @@ export const clockIn = async (
  */
 export const clockOut = async (userId: string, timestamp: string): Promise<ClockResult> => {
   console.log('clockOut 開始:', { userId, timestamp });
+
+  // 環境変数の確認
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('clockOut: 環境変数が設定されていません');
+    return {
+      success: false,
+      message: 'システム設定エラー: 環境変数が正しく設定されていません',
+      error: 'ENV_ERROR',
+    };
+  }
+
   try {
     // バリデーション
     if (!validateClockTime(timestamp)) {
@@ -364,7 +386,7 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
       console.error('勤怠記録取得エラー:', fetchError);
       return {
         success: false,
-        message: '勤怠記録の取得に失敗しました',
+        message: `勤怠記録の取得に失敗しました: ${fetchError.message}`,
         error: fetchError.message,
       };
     }
