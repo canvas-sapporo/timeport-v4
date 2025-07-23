@@ -771,6 +771,43 @@ export const getTodayAttendance = async (userId: string): Promise<Attendance | n
 };
 
 /**
+ * メンバーページ用の軽量な勤怠記録取得（今月と前月のみ）
+ */
+export const getMemberAttendance = async (userId: string): Promise<Attendance[]> => {
+  try {
+    console.log('getMemberAttendance 開始:', { userId });
+
+    const now = new Date();
+    const currentMonth = now.toISOString().slice(0, 7);
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 7);
+
+    // 今月と前月のデータのみを取得
+    const { data: basicData, error: basicError } = await supabaseAdmin
+      .from('attendances')
+      .select('*')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .gte('work_date', lastMonth)
+      .order('work_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(60); // 最大60件（今月と前月分）
+
+    if (basicError) {
+      console.error('メンバー勤怠データ取得エラー:', basicError);
+      throw basicError;
+    }
+
+    console.log('メンバー勤怠データ取得成功:', basicData?.length, '件');
+
+    // 基本的なデータのみを返す（詳細な加工は不要）
+    return basicData || [];
+  } catch (error) {
+    console.error('getMemberAttendance エラー:', error);
+    return [];
+  }
+};
+
+/**
  * ユーザーの勤怠記録一覧を取得（拡張版）
  */
 export const getUserAttendance = async (
@@ -799,7 +836,7 @@ export const getUserAttendance = async (
       basicQuery = basicQuery.lte('work_date', endDate);
     }
 
-    // デフォルトで今月と前月のみ取得
+    // デフォルトで今月と前月のみ取得（より厳密な制限）
     if (!startDate && !endDate) {
       const now = new Date();
       const currentMonth = now.toISOString().slice(0, 7);
@@ -807,6 +844,8 @@ export const getUserAttendance = async (
         .toISOString()
         .slice(0, 7);
       basicQuery = basicQuery.gte('work_date', lastMonth);
+
+      console.log('日付フィルター適用:', { currentMonth, lastMonth });
     }
 
     const { data: basicData, error: basicError } = await basicQuery;

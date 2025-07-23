@@ -21,7 +21,7 @@ import {
   startBreak,
   endBreak,
   getTodayAttendance,
-  getUserAttendance,
+  getMemberAttendance,
 } from '@/lib/actions/attendance';
 import type { Attendance, BreakRecord } from '@/types/attendance';
 
@@ -44,12 +44,13 @@ export default function MemberDashboard() {
     async (forceRefresh = false) => {
       if (!user) return;
 
+      const startTime = performance.now();
       console.log('fetchAttendanceData 開始:', { userId: user.id, forceRefresh });
 
       try {
         const [todayData, recordsData] = await Promise.all([
           getTodayAttendance(user.id),
-          getUserAttendance(user.id),
+          getMemberAttendance(user.id),
         ]);
 
         console.log('データ取得結果:', { todayData, recordsDataCount: recordsData?.length });
@@ -72,6 +73,11 @@ export default function MemberDashboard() {
 
         setTodayAttendance(todayData);
         setAttendanceRecords(recordsData || []);
+
+        const endTime = performance.now();
+        console.log(`データ取得完了: ${(endTime - startTime).toFixed(2)}ms`, {
+          recordsCount: recordsData?.length || 0,
+        });
       } catch (error) {
         console.error('勤怠データ取得エラー:', error);
         toast({
@@ -257,6 +263,7 @@ export default function MemberDashboard() {
 
   // 打刻処理関数
   const handleClockIn = async () => {
+    const startTime = performance.now();
     console.log('handleClockIn 開始');
     if (!user) {
       console.log('ユーザーが存在しません');
@@ -292,8 +299,11 @@ export default function MemberDashboard() {
             return [result.attendance!, ...filtered];
           });
         }
-        // バックグラウンドでデータを再取得
-        setTimeout(() => fetchAttendanceData(true), 1000);
+        // バックグラウンドでデータを再取得（遅延を短縮）
+        setTimeout(() => fetchAttendanceData(true), 500);
+
+        const endTime = performance.now();
+        console.log(`出勤処理完了: ${(endTime - startTime).toFixed(2)}ms`);
       } else {
         toast({
           title: 'エラー',
@@ -347,8 +357,8 @@ export default function MemberDashboard() {
             return [result.attendance!, ...filtered];
           });
         }
-        // バックグラウンドでデータを再取得
-        setTimeout(() => fetchAttendanceData(true), 1000);
+        // バックグラウンドでデータを再取得（遅延を短縮）
+        setTimeout(() => fetchAttendanceData(true), 500);
       } else {
         toast({
           title: 'エラー',
@@ -387,8 +397,20 @@ export default function MemberDashboard() {
           title: '成功',
           description: result.message,
         });
-        console.log('fetchAttendanceData呼び出し開始');
-        await fetchAttendanceData(); // データを再取得
+        // 即座にデータを更新
+        if (result.attendance) {
+          setTodayAttendance(result.attendance);
+          // 既存の記録を更新
+          setAttendanceRecords((prev) => {
+            const today = new Date().toISOString().split('T')[0];
+            const filtered = prev.filter(
+              (r) => r.work_date !== today || r.id !== result.attendance!.id
+            );
+            return [result.attendance!, ...filtered];
+          });
+        }
+        // バックグラウンドでデータを再取得（遅延を短縮）
+        setTimeout(() => fetchAttendanceData(true), 500);
       } else {
         toast({
           title: 'エラー',
@@ -427,8 +449,20 @@ export default function MemberDashboard() {
           title: '成功',
           description: result.message,
         });
-        console.log('fetchAttendanceData呼び出し開始');
-        await fetchAttendanceData(); // データを再取得
+        // 即座にデータを更新
+        if (result.attendance) {
+          setTodayAttendance(result.attendance);
+          // 既存の記録を更新
+          setAttendanceRecords((prev) => {
+            const today = new Date().toISOString().split('T')[0];
+            const filtered = prev.filter(
+              (r) => r.work_date !== today || r.id !== result.attendance!.id
+            );
+            return [result.attendance!, ...filtered];
+          });
+        }
+        // バックグラウンドでデータを再取得（遅延を短縮）
+        setTimeout(() => fetchAttendanceData(true), 500);
       } else {
         toast({
           title: 'エラー',
