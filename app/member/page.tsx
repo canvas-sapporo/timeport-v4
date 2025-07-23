@@ -39,47 +39,50 @@ export default function MemberDashboard() {
   const [isClient, setIsClient] = useState(false);
   const [csvExportOpen, setCsvExportOpen] = useState(false);
 
-  // データ取得関数
-  const fetchAttendanceData = useCallback(async () => {
-    if (!user) return;
+  // データ取得関数（キャッシュ付き）
+  const fetchAttendanceData = useCallback(
+    async (forceRefresh = false) => {
+      if (!user) return;
 
-    console.log('fetchAttendanceData 開始:', { userId: user.id });
+      console.log('fetchAttendanceData 開始:', { userId: user.id, forceRefresh });
 
-    try {
-      const [todayData, recordsData] = await Promise.all([
-        getTodayAttendance(user.id),
-        getUserAttendance(user.id),
-      ]);
+      try {
+        const [todayData, recordsData] = await Promise.all([
+          getTodayAttendance(user.id),
+          getUserAttendance(user.id),
+        ]);
 
-      console.log('データ取得結果:', { todayData, recordsDataCount: recordsData?.length });
+        console.log('データ取得結果:', { todayData, recordsDataCount: recordsData?.length });
 
-      // 詳細なデバッグ情報を追加
-      if (recordsData && recordsData.length > 0) {
-        const todayRecords = recordsData.filter(
-          (r) => r.work_date === new Date().toISOString().split('T')[0]
-        );
-        console.log(
-          '今日の記録詳細:',
-          todayRecords.map((r) => ({
-            id: r.id,
-            clock_in_time: r.clock_in_time,
-            clock_out_time: r.clock_out_time,
-            created_at: r.created_at,
-          }))
-        );
+        // 詳細なデバッグ情報を追加
+        if (recordsData && recordsData.length > 0) {
+          const todayRecords = recordsData.filter(
+            (r) => r.work_date === new Date().toISOString().split('T')[0]
+          );
+          console.log(
+            '今日の記録詳細:',
+            todayRecords.map((r) => ({
+              id: r.id,
+              clock_in_time: r.clock_in_time,
+              clock_out_time: r.clock_out_time,
+              created_at: r.created_at,
+            }))
+          );
+        }
+
+        setTodayAttendance(todayData);
+        setAttendanceRecords(recordsData || []);
+      } catch (error) {
+        console.error('勤怠データ取得エラー:', error);
+        toast({
+          title: 'エラー',
+          description: '勤怠データの取得に失敗しました',
+          variant: 'destructive',
+        });
       }
-
-      setTodayAttendance(todayData);
-      setAttendanceRecords(recordsData || []);
-    } catch (error) {
-      console.error('勤怠データ取得エラー:', error);
-      toast({
-        title: 'エラー',
-        description: '勤怠データの取得に失敗しました',
-        variant: 'destructive',
-      });
-    }
-  }, [user, toast]);
+    },
+    [user, toast]
+  );
 
   // 初期データ取得
   useEffect(() => {
@@ -235,8 +238,8 @@ export default function MemberDashboard() {
   });
 
   const isOnBreak = activeBreakExists;
-  const hasClockIn = !!activeRecord; // 出勤中のレコードが存在する場合のみtrue
-  const hasClockOut = !activeRecord && latestRecord?.clock_out_time; // 出勤中のレコードがなく、最新レコードが退勤済みの場合
+  const hasClockIn = !!activeRecord && !activeRecord.clock_out_time; // 出勤中で退勤していない場合
+  const hasClockOut = !!latestRecord?.clock_out_time; // 最新レコードが退勤済みの場合
 
   // デバッグ用：最新の退勤時刻を表示
   const latestClockOutTime = latestRecord?.clock_out_time;
@@ -246,6 +249,8 @@ export default function MemberDashboard() {
     hasClockOut,
     isOnBreak,
     latestClockOutTime: latestClockOutTime ? new Date(latestClockOutTime).toISOString() : null,
+    activeRecordClockOut: activeRecord?.clock_out_time,
+    latestRecordClockOut: latestRecord?.clock_out_time,
   });
 
   // 打刻処理関数
@@ -273,7 +278,20 @@ export default function MemberDashboard() {
           title: '成功',
           description: result.message,
         });
-        await fetchAttendanceData(); // データを再取得
+        // 即座にデータを更新
+        if (result.attendance) {
+          setTodayAttendance(result.attendance);
+          // 既存の記録を更新
+          setAttendanceRecords((prev) => {
+            const today = new Date().toISOString().split('T')[0];
+            const filtered = prev.filter(
+              (r) => r.work_date !== today || r.id !== result.attendance!.id
+            );
+            return [result.attendance!, ...filtered];
+          });
+        }
+        // バックグラウンドでデータを再取得
+        setTimeout(() => fetchAttendanceData(true), 1000);
       } else {
         toast({
           title: 'エラー',
@@ -315,7 +333,20 @@ export default function MemberDashboard() {
           title: '成功',
           description: result.message,
         });
-        await fetchAttendanceData(); // データを再取得
+        // 即座にデータを更新
+        if (result.attendance) {
+          setTodayAttendance(result.attendance);
+          // 既存の記録を更新
+          setAttendanceRecords((prev) => {
+            const today = new Date().toISOString().split('T')[0];
+            const filtered = prev.filter(
+              (r) => r.work_date !== today || r.id !== result.attendance!.id
+            );
+            return [result.attendance!, ...filtered];
+          });
+        }
+        // バックグラウンドでデータを再取得
+        setTimeout(() => fetchAttendanceData(true), 1000);
       } else {
         toast({
           title: 'エラー',

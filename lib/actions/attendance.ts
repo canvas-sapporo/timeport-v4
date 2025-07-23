@@ -461,7 +461,12 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
       };
     }
 
-    console.log('退勤処理成功');
+    console.log('退勤処理成功:', {
+      attendanceId: data?.id,
+      clockOutTime: data?.clock_out_time,
+      actualWorkMinutes: data?.actual_work_minutes,
+      overtimeMinutes: data?.overtime_minutes,
+    });
     revalidatePath('/member');
 
     return {
@@ -776,14 +781,15 @@ export const getUserAttendance = async (
   try {
     console.log('getUserAttendance 開始:', { userId, startDate, endDate });
 
-    // まず基本的なデータを取得
+    // まず基本的なデータを取得（最新30日分に制限）
     let basicQuery = supabaseAdmin
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('work_date', { ascending: false })
-      .order('created_at', { ascending: false }); // 同じ日付内では作成時刻の降順でソート
+      .order('created_at', { ascending: false }) // 同じ日付内では作成時刻の降順でソート
+      .limit(30); // 最新30日分に制限
 
     if (startDate) {
       basicQuery = basicQuery.gte('work_date', startDate);
