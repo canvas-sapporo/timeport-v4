@@ -9,8 +9,9 @@ import type {
   ClockOperation,
   ClockResult,
   Attendance,
-  BreakRecord,
+  ClockBreakRecord,
   ClockType,
+  ClockRecord,
 } from '@/types/attendance';
 import {
   AppError,
@@ -67,22 +68,15 @@ const validateClockOperation = async (
 
   // 今日の勤怠記録を取得（複数回出退勤対応）
   console.log('バリデーション用勤怠記録取得開始');
-  let query = supabaseAdmin
+  const { data: existingRecord, error } = await supabaseAdmin
     .from('attendances')
     .select('*')
     .eq('user_id', userId)
     .eq('work_date', today)
-    .is('deleted_at', null);
-
-  // clock_outの場合は、退勤していない最新の記録を取得
-  if (type === 'clock_out') {
-    query = query.is('clock_out_time', null).order('created_at', { ascending: false }).limit(1);
-  } else {
-    // その他の場合は、最新の記録を取得
-    query = query.order('created_at', { ascending: false }).limit(1);
-  }
-
-  const { data: existingRecord, error } = await query.single();
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
 
   console.log('バリデーション用勤怠記録取得結果:', { existingRecord, error });
 
@@ -90,6 +84,10 @@ const validateClockOperation = async (
     console.error('バリデーション用勤怠記録取得エラー:', error);
     throw AppError.fromSupabaseError(error, '勤怠記録取得');
   }
+
+  // clock_recordsから最新のセッション情報を取得
+  const latestSession = existingRecord?.clock_records?.[existingRecord.clock_records.length - 1];
+  const hasActiveSession = latestSession && latestSession.in_time && !latestSession.out_time;
 
   // 打刻タイプ別のバリデーション
   switch (type) {
@@ -100,18 +98,10 @@ const validateClockOperation = async (
     }
 
     case 'clock_out': {
-      // その日の最後の出勤記録（退勤していない記録）を確認
-      console.log('clock_out バリデーション: 最後の出勤記録を確認');
-
-      // 既存の記録が退勤済みの場合は、新しい出勤記録を作成する必要がある
-      if (existingRecord?.clock_out_time) {
-        console.log('既存の記録は退勤済みです。新しい出勤記録が必要です');
+      // アクティブなセッションがあるかチェック
+      if (!hasActiveSession) {
+        console.log('アクティブな出勤セッションが見つかりません');
         return { isValid: false, error: '出勤記録が見つかりません。先に出勤してください' };
-      }
-
-      if (!existingRecord?.clock_in_time) {
-        console.log('出勤記録が見つかりません');
-        return { isValid: false, error: '出勤記録が見つかりません' };
       }
 
       console.log('clock_out バリデーション成功');
@@ -119,28 +109,22 @@ const validateClockOperation = async (
     }
 
     case 'break_start': {
-      if (!existingRecord?.clock_in_time) {
+      if (!hasActiveSession) {
         return { isValid: false, error: '出勤記録が見つかりません' };
-      }
-      if (existingRecord?.clock_out_time) {
-        return { isValid: false, error: '退勤済みのため休憩できません' };
       }
       // 休憩中の場合は新しい休憩を開始
       break;
     }
 
     case 'break_end': {
-      if (!existingRecord?.clock_in_time) {
+      if (!hasActiveSession) {
         return { isValid: false, error: '出勤記録が見つかりません' };
       }
-      if (existingRecord?.clock_out_time) {
-        return { isValid: false, error: '退勤済みのため休憩終了できません' };
-      }
       // 休憩中でない場合はエラー
-      const isOnBreak = existingRecord?.break_records?.some(
-        (br: BreakRecord) => br.start && !br.end
+      const hasActiveBreak = latestSession?.breaks?.some(
+        (br: ClockBreakRecord) => br.break_start && !br.break_end
       );
-      if (!isOnBreak) {
+      if (!hasActiveBreak) {
         return { isValid: false, error: '休憩中ではありません' };
       }
       break;
@@ -161,7 +145,7 @@ const validateClockOperation = async (
 const calculateWorkTime = async (
   clockInTime: string,
   clockOutTime: string,
-  breakRecords: BreakRecord[],
+  breakRecords: ClockBreakRecord[],
   workTypeId?: string
 ): Promise<{ actualWorkMinutes: number; overtimeMinutes: number }> => {
   const clockIn = new Date(clockInTime);
@@ -172,9 +156,9 @@ const calculateWorkTime = async (
 
   // 休憩時間（分）
   const breakMinutes = breakRecords.reduce((total, br) => {
-    if (br.start && br.end) {
-      const breakStart = new Date(`${clockIn.toISOString().split('T')[0]}T${br.start}:00`);
-      const breakEnd = new Date(`${clockIn.toISOString().split('T')[0]}T${br.end}:00`);
+    if (br.break_start && br.break_end) {
+      const breakStart = new Date(`${clockIn.toISOString().split('T')[0]}T${br.break_start}:00`);
+      const breakEnd = new Date(`${clockIn.toISOString().split('T')[0]}T${br.break_end}:00`);
       return total + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
     }
     return total;
@@ -258,43 +242,45 @@ export const clockIn = async (
 
     const today = new Date().toISOString().split('T')[0];
 
-    // workTypeIdが指定されていない場合、user_profilesから取得
-    let finalWorkTypeId = workTypeId;
-    if (!finalWorkTypeId) {
-      console.log('workTypeIdが指定されていないため、user_profilesから取得します');
-      const { data: userProfile, error: profileError } = await supabaseAdmin
-        .from('user_profiles')
-        .select('current_work_type_id')
-        .eq('id', userId)
-        .single();
+    // 既存の勤怠レコード取得
+    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+      .from('attendances')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('work_date', today)
+      .is('deleted_at', null)
+      .single();
 
-      if (profileError) {
-        console.warn('user_profiles取得エラー:', profileError);
-        // エラーの場合はworkTypeIdをnullのままにする
-      } else if (userProfile?.current_work_type_id) {
-        finalWorkTypeId = userProfile.current_work_type_id;
-        console.log('user_profilesから取得したworkTypeId:', finalWorkTypeId);
-      }
+    let newClockRecords: ClockRecord[] = [];
+    if (
+      existingRecord &&
+      existingRecord.clock_records &&
+      Array.isArray(existingRecord.clock_records)
+    ) {
+      newClockRecords = [...existingRecord.clock_records];
     }
+    // 新しい勤務セッションを追加
+    newClockRecords.push({
+      in_time: timestamp,
+      out_time: '',
+      breaks: [],
+      note: '',
+    });
 
-    // 勤怠記録を作成または更新
-    console.log('Supabase upsert 開始:', {
+    // 互換用: 旧カラムも最新セッションで同期
+    const latest = newClockRecords[newClockRecords.length - 1];
+
+    const upsertData = {
       user_id: userId,
       work_date: today,
-      work_type_id: finalWorkTypeId,
-      clock_in_time: timestamp,
-    });
+      work_type_id: workTypeId,
+      clock_records: newClockRecords,
+      actual_work_minutes: 0,
+    };
 
     const { data, error } = await supabaseAdmin
       .from('attendances')
-      .upsert({
-        user_id: userId,
-        work_date: today,
-        work_type_id: finalWorkTypeId,
-        clock_in_time: timestamp,
-        break_records: [],
-        actual_work_minutes: 0,
-      })
+      .upsert(upsertData)
       .select()
       .single();
 
@@ -367,32 +353,25 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
     const today = new Date().toISOString().split('T')[0];
     console.log('今日の日付:', today);
 
-    // 現在の勤怠記録を取得（退勤していない最新の記録）
-    console.log('勤怠記録取得開始');
-    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+    // 勤怠レコード取得（複数レコードがある場合は最新のものを取得）
+    const { data: existingRecords, error: fetchError } = await supabaseAdmin
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
       .eq('work_date', today)
       .is('deleted_at', null)
-      .is('clock_out_time', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    console.log('勤怠記録取得結果:', { existingRecord, fetchError });
+      .order('created_at', { ascending: false });
 
     if (fetchError) {
-      console.error('勤怠記録取得エラー:', fetchError);
+      console.error('勤怠レコード取得エラー:', fetchError);
       return {
         success: false,
-        message: `勤怠記録の取得に失敗しました: ${fetchError.message}`,
+        message: '勤怠記録の取得に失敗しました',
         error: fetchError.message,
       };
     }
 
-    if (!existingRecord?.clock_in_time) {
-      console.log('出勤記録が見つかりません');
+    if (!existingRecords || existingRecords.length === 0) {
       return {
         success: false,
         message: '出勤記録が見つかりません',
@@ -400,57 +379,39 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
       };
     }
 
-    // work_type_idが設定されていない場合、user_profilesから取得
-    let finalWorkTypeId = existingRecord.work_type_id;
-    if (!finalWorkTypeId) {
-      console.log('workTypeIdが設定されていないため、user_profilesから取得します');
-      const { data: userProfile, error: profileError } = await supabaseAdmin
-        .from('user_profiles')
-        .select('current_work_type_id')
-        .eq('id', userId)
-        .single();
+    const existingRecord = existingRecords[0]; // 最新のレコードを使用
 
-      if (profileError) {
-        console.warn('user_profiles取得エラー:', profileError);
-        // エラーの場合はworkTypeIdをnullのままにする
-      } else if (userProfile?.current_work_type_id) {
-        finalWorkTypeId = userProfile.current_work_type_id;
-        console.log('user_profilesから取得したworkTypeId:', finalWorkTypeId);
-      }
+    if (!existingRecord.clock_records || existingRecord.clock_records.length === 0) {
+      return {
+        success: false,
+        message: '出勤記録が見つかりません',
+        error: 'NOT_FOUND',
+      };
     }
+    // 最後の勤務セッションに退勤時刻をセット
+    const newClockRecords: ClockRecord[] = [...existingRecord.clock_records];
+    const lastIdx = newClockRecords.length - 1;
+    if (!newClockRecords[lastIdx].in_time || newClockRecords[lastIdx].out_time) {
+      return {
+        success: false,
+        message: '退勤可能な勤務セッションがありません',
+        error: 'NO_ACTIVE_SESSION',
+      };
+    }
+    newClockRecords[lastIdx].out_time = timestamp;
 
-    // 勤務時間を計算
-    console.log('勤務時間計算開始');
-    const { actualWorkMinutes, overtimeMinutes } = await calculateWorkTime(
-      existingRecord.clock_in_time,
-      timestamp,
-      existingRecord.break_records || [],
-      finalWorkTypeId
-    );
-    console.log('勤務時間計算結果:', { actualWorkMinutes, overtimeMinutes });
-
-    // 勤怠記録を更新
-    console.log('勤怠記録更新開始:', {
-      id: existingRecord.id,
-      clock_out_time: timestamp,
-      work_type_id: finalWorkTypeId,
-      actual_work_minutes: actualWorkMinutes,
-      overtime_minutes: overtimeMinutes,
-    });
+    // 互換用: 旧カラムも同期
+    const latest = newClockRecords[lastIdx];
+    const upsertData = {
+      clock_records: newClockRecords,
+    };
 
     const { data, error } = await supabaseAdmin
       .from('attendances')
-      .update({
-        clock_out_time: timestamp,
-        work_type_id: finalWorkTypeId,
-        actual_work_minutes: actualWorkMinutes,
-        overtime_minutes: overtimeMinutes,
-      })
+      .update(upsertData)
       .eq('id', existingRecord.id)
       .select()
       .single();
-
-    console.log('勤怠記録更新結果:', { data, error });
 
     if (error) {
       console.error('勤怠記録更新エラー:', error);
@@ -463,7 +424,6 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
 
     console.log('退勤処理成功:', {
       attendanceId: data?.id,
-      clockOutTime: data?.clock_out_time,
       actualWorkMinutes: data?.actual_work_minutes,
       overtimeMinutes: data?.overtime_minutes,
     });
@@ -488,7 +448,6 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
  */
 export const startBreak = async (userId: string, timestamp: string): Promise<ClockResult> => {
   try {
-    // バリデーション
     if (!validateClockTime(timestamp)) {
       return {
         success: false,
@@ -496,7 +455,6 @@ export const startBreak = async (userId: string, timestamp: string): Promise<Clo
         error: 'INVALID_TIME',
       };
     }
-
     const validation = await validateClockOperation(userId, 'break_start', timestamp);
     if (!validation.isValid) {
       return {
@@ -505,22 +463,18 @@ export const startBreak = async (userId: string, timestamp: string): Promise<Clo
         error: 'VALIDATION_ERROR',
       };
     }
-
     const today = new Date().toISOString().split('T')[0];
-
-    // 現在の勤怠記録を取得（最新の出勤中のレコード）
-    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+    // 勤怠レコード取得（複数レコードがある場合は最新のものを取得）
+    const { data: existingRecords, error: fetchError } = await supabaseAdmin
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
       .eq('work_date', today)
       .is('deleted_at', null)
-      .is('clock_out_time', null) // 退勤していないレコードのみ
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .order('created_at', { ascending: false });
 
     if (fetchError) {
+      console.error('勤怠レコード取得エラー:', fetchError);
       return {
         success: false,
         message: '勤怠記録の取得に失敗しました',
@@ -528,53 +482,41 @@ export const startBreak = async (userId: string, timestamp: string): Promise<Clo
       };
     }
 
-    if (!existingRecord) {
+    if (!existingRecords || existingRecords.length === 0) {
       return {
         success: false,
-        message: '勤怠記録が見つかりません',
+        message: '出勤記録が見つかりません',
         error: 'NOT_FOUND',
       };
     }
 
-    // work_type_idが設定されていない場合、user_profilesから取得
-    let finalWorkTypeId = existingRecord.work_type_id;
-    if (!finalWorkTypeId) {
-      console.log('workTypeIdが設定されていないため、user_profilesから取得します');
-      const { data: userProfile, error: profileError } = await supabaseAdmin
-        .from('user_profiles')
-        .select('current_work_type_id')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        console.warn('user_profiles取得エラー:', profileError);
-        // エラーの場合はworkTypeIdをnullのままにする
-      } else if (userProfile?.current_work_type_id) {
-        finalWorkTypeId = userProfile.current_work_type_id;
-        console.log('user_profilesから取得したworkTypeId:', finalWorkTypeId);
-      }
+    const existingRecord = existingRecords[0]; // 最新のレコードを使用
+    // 退勤前の最新セッションを取得
+    const newClockRecords: ClockRecord[] = [...existingRecord.clock_records];
+    const lastIdx = newClockRecords.length - 1;
+    if (!newClockRecords[lastIdx].in_time || newClockRecords[lastIdx].out_time) {
+      return {
+        success: false,
+        message: '休憩開始可能な勤務セッションがありません',
+        error: 'NO_ACTIVE_SESSION',
+      };
     }
-
-    // 新しい休憩記録を追加
-    const newBreakRecord: BreakRecord = {
-      start: timestamp,
-      end: '',
-      type: 'break',
+    // 新しい休憩を追加
+    newClockRecords[lastIdx].breaks = [
+      ...(newClockRecords[lastIdx].breaks || []),
+      { break_start: timestamp, break_end: '', note: '' },
+    ];
+    // 互換用: clock_recordsのみ使用
+    const latest = newClockRecords[lastIdx];
+    const upsertData = {
+      clock_records: newClockRecords,
     };
-
-    const updatedBreakRecords = [...(existingRecord.break_records || []), newBreakRecord];
-
-    // 勤怠記録を更新
     const { data, error } = await supabaseAdmin
       .from('attendances')
-      .update({
-        work_type_id: finalWorkTypeId,
-        break_records: updatedBreakRecords,
-      })
+      .update(upsertData)
       .eq('id', existingRecord.id)
       .select()
       .single();
-
     if (error) {
       return {
         success: false,
@@ -582,9 +524,7 @@ export const startBreak = async (userId: string, timestamp: string): Promise<Clo
         error: error.message,
       };
     }
-
     revalidatePath('/member');
-
     return {
       success: true,
       message: '休憩を開始しました',
@@ -604,7 +544,6 @@ export const startBreak = async (userId: string, timestamp: string): Promise<Clo
  */
 export const endBreak = async (userId: string, timestamp: string): Promise<ClockResult> => {
   try {
-    // バリデーション
     if (!validateClockTime(timestamp)) {
       return {
         success: false,
@@ -612,7 +551,6 @@ export const endBreak = async (userId: string, timestamp: string): Promise<Clock
         error: 'INVALID_TIME',
       };
     }
-
     const validation = await validateClockOperation(userId, 'break_end', timestamp);
     if (!validation.isValid) {
       return {
@@ -621,22 +559,18 @@ export const endBreak = async (userId: string, timestamp: string): Promise<Clock
         error: 'VALIDATION_ERROR',
       };
     }
-
     const today = new Date().toISOString().split('T')[0];
-
-    // 現在の勤怠記録を取得（最新の出勤中のレコード）
-    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+    // 勤怠レコード取得（複数レコードがある場合は最新のものを取得）
+    const { data: existingRecords, error: fetchError } = await supabaseAdmin
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
       .eq('work_date', today)
       .is('deleted_at', null)
-      .is('clock_out_time', null) // 退勤していないレコードのみ
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .order('created_at', { ascending: false });
 
     if (fetchError) {
+      console.error('勤怠レコード取得エラー:', fetchError);
       return {
         success: false,
         message: '勤怠記録の取得に失敗しました',
@@ -644,78 +578,47 @@ export const endBreak = async (userId: string, timestamp: string): Promise<Clock
       };
     }
 
-    if (!existingRecord) {
+    if (!existingRecords || existingRecords.length === 0) {
       return {
         success: false,
-        message: '勤怠記録が見つかりません',
+        message: '出勤記録が見つかりません',
         error: 'NOT_FOUND',
       };
     }
 
-    // work_type_idが設定されていない場合、user_profilesから取得
-    let finalWorkTypeId = existingRecord.work_type_id;
-    if (!finalWorkTypeId) {
-      console.log('workTypeIdが設定されていないため、user_profilesから取得します');
-      const { data: userProfile, error: profileError } = await supabaseAdmin
-        .from('user_profiles')
-        .select('current_work_type_id')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        console.warn('user_profiles取得エラー:', profileError);
-        // エラーの場合はworkTypeIdをnullのままにする
-      } else if (userProfile?.current_work_type_id) {
-        finalWorkTypeId = userProfile.current_work_type_id;
-        console.log('user_profilesから取得したworkTypeId:', finalWorkTypeId);
-      }
+    const existingRecord = existingRecords[0]; // 最新のレコードを使用
+    // 退勤前の最新セッションを取得
+    const newClockRecords: ClockRecord[] = [...existingRecord.clock_records];
+    const lastIdx = newClockRecords.length - 1;
+    if (!newClockRecords[lastIdx].in_time || newClockRecords[lastIdx].out_time) {
+      return {
+        success: false,
+        message: '休憩終了可能な勤務セッションがありません',
+        error: 'NO_ACTIVE_SESSION',
+      };
     }
-
-    // 最後の休憩記録を終了
-    const updatedBreakRecords = [...(existingRecord.break_records || [])];
-    const lastBreak = updatedBreakRecords[updatedBreakRecords.length - 1];
-
-    if (lastBreak && !lastBreak.end) {
-      lastBreak.end = timestamp;
-    } else {
+    // 最後の休憩のbreak_endをセット
+    const breaks = [...(newClockRecords[lastIdx].breaks || [])];
+    if (breaks.length === 0 || breaks[breaks.length - 1].break_end) {
       return {
         success: false,
         message: '終了する休憩が見つかりません',
         error: 'NOT_FOUND',
       };
     }
-
-    // 勤務時間を再計算（退勤済みの場合）
-    let actualWorkMinutes = existingRecord.actual_work_minutes;
-    let overtimeMinutes = existingRecord.overtime_minutes;
-
-    if (existingRecord.clock_out_time) {
-      const {
-        actualWorkMinutes: recalculatedWorkMinutes,
-        overtimeMinutes: recalculatedOvertimeMinutes,
-      } = await calculateWorkTime(
-        existingRecord.clock_in_time!,
-        existingRecord.clock_out_time,
-        updatedBreakRecords,
-        finalWorkTypeId
-      );
-      actualWorkMinutes = recalculatedWorkMinutes;
-      overtimeMinutes = recalculatedOvertimeMinutes;
-    }
-
-    // 勤怠記録を更新
+    breaks[breaks.length - 1].break_end = timestamp;
+    newClockRecords[lastIdx].breaks = breaks;
+    // 互換用: clock_recordsのみ使用
+    const latest = newClockRecords[lastIdx];
+    const upsertData = {
+      clock_records: newClockRecords,
+    };
     const { data, error } = await supabaseAdmin
       .from('attendances')
-      .update({
-        work_type_id: finalWorkTypeId,
-        break_records: updatedBreakRecords,
-        actual_work_minutes: actualWorkMinutes,
-        overtime_minutes: overtimeMinutes,
-      })
+      .update(upsertData)
       .eq('id', existingRecord.id)
       .select()
       .single();
-
     if (error) {
       return {
         success: false,
@@ -723,9 +626,7 @@ export const endBreak = async (userId: string, timestamp: string): Promise<Clock
         error: error.message,
       };
     }
-
     revalidatePath('/member');
-
     return {
       success: true,
       message: '休憩を終了しました',
@@ -747,23 +648,38 @@ export const getTodayAttendance = async (userId: string): Promise<Attendance | n
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    // 今日の最新の勤怠記録を取得
-    const { data, error } = await supabaseAdmin
+    // 今日の勤怠記録を取得（複数レコードがある場合は最新のものを取得）
+    const { data: records, error } = await supabaseAdmin
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
       .eq('work_date', today)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .order('created_at', { ascending: false });
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('今日の勤怠記録取得エラー:', error);
       return null;
     }
 
-    return data as Attendance | null;
+    if (!records || records.length === 0) {
+      return null;
+    }
+
+    // 最新のレコードを使用
+    const data = records[0];
+
+    // clock_recordsから旧カラムを自動生成
+    const attendance = data as Attendance;
+    if (attendance.clock_records && attendance.clock_records.length > 0) {
+      const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
+
+      // 旧カラムを最新セッションで同期（互換性のため）
+      // attendance.clock_in_time = latestSession.in_time;
+      // attendance.clock_out_time = latestSession.out_time || undefined;
+    }
+
+    return attendance;
   } catch (error) {
     console.error('今日の勤怠記録取得エラー:', error);
     return null;
@@ -778,13 +694,11 @@ export const getMemberAttendance = async (userId: string): Promise<Attendance[]>
     console.log('getMemberAttendance 開始:', { userId });
 
     const now = new Date();
-    // 正しい日付形式で前月の1日を取得
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthStr = lastMonth.toISOString().slice(0, 10); // YYYY-MM-DD形式
+    const lastMonthStr = lastMonth.toISOString().slice(0, 10);
 
     console.log('日付フィルター:', { lastMonthStr });
 
-    // 今月と前月のデータのみを取得
     const { data: basicData, error: basicError } = await supabaseAdmin
       .from('attendances')
       .select('*')
@@ -793,7 +707,7 @@ export const getMemberAttendance = async (userId: string): Promise<Attendance[]>
       .gte('work_date', lastMonthStr)
       .order('work_date', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(60); // 最大60件（今月と前月分）
+      .limit(60);
 
     if (basicError) {
       console.error('メンバー勤怠データ取得エラー:', basicError);
@@ -802,8 +716,19 @@ export const getMemberAttendance = async (userId: string): Promise<Attendance[]>
 
     console.log('メンバー勤怠データ取得成功:', basicData?.length, '件');
 
-    // 基本的なデータのみを返す（詳細な加工は不要）
-    return basicData || [];
+    // clock_recordsから旧カラムを自動生成
+    const processedData = (basicData || []).map((record) => {
+      const attendance = record as Attendance;
+      if (attendance.clock_records && attendance.clock_records.length > 0) {
+        const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
+        // 旧カラムを最新セッションで同期（互換性のため）
+        // attendance.clock_in_time = latestSession.in_time;
+        // attendance.clock_out_time = latestSession.out_time || undefined;
+      }
+      return attendance;
+    });
+
+    return processedData;
   } catch (error) {
     console.error('getMemberAttendance エラー:', error);
     return [];
@@ -821,17 +746,15 @@ export const getUserAttendance = async (
   try {
     console.log('getUserAttendance 開始:', { userId, startDate, endDate });
 
-    // まず基本的なデータを取得（最新30日分に制限）
     let basicQuery = supabaseAdmin
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('work_date', { ascending: false })
-      .order('created_at', { ascending: false }) // 同じ日付内では作成時刻の降順でソート
-      .limit(30); // 最新30日分に制限
+      .order('created_at', { ascending: false })
+      .limit(30);
 
-    // 日付フィルターを追加（さらに制限）
     if (startDate) {
       basicQuery = basicQuery.gte('work_date', startDate);
     }
@@ -839,13 +762,11 @@ export const getUserAttendance = async (
       basicQuery = basicQuery.lte('work_date', endDate);
     }
 
-    // デフォルトで今月と前月のみ取得（より厳密な制限）
     if (!startDate && !endDate) {
       const now = new Date();
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastMonthStr = lastMonth.toISOString().slice(0, 10); // YYYY-MM-DD形式
+      const lastMonthStr = lastMonth.toISOString().slice(0, 10);
       basicQuery = basicQuery.gte('work_date', lastMonthStr);
-
       console.log('日付フィルター適用:', { lastMonthStr });
     }
 
@@ -857,8 +778,6 @@ export const getUserAttendance = async (
     }
 
     console.log('基本的な勤怠データ取得成功:', basicData?.length, '件');
-    console.log('取得されたデータの詳細:', basicData);
-    console.log('クエリ条件:', { userId, startDate, endDate, limit: 30 });
 
     // work_typesとuser_profilesの情報を個別に取得
     const workTypeIds = Array.from(
@@ -866,7 +785,6 @@ export const getUserAttendance = async (
     );
     const userIds = Array.from(new Set(basicData?.map((r) => r.user_id).filter(Boolean) || []));
 
-    // work_types情報を取得
     let workTypesData: { id: string; name: string; overtime_threshold_minutes: number }[] = [];
     if (workTypeIds.length > 0) {
       const { data: wtData, error: wtError } = await supabaseAdmin
@@ -880,7 +798,6 @@ export const getUserAttendance = async (
       }
     }
 
-    // user_profiles情報を取得
     let userProfilesData: { id: string; family_name: string; first_name: string }[] = [];
     if (userIds.length > 0) {
       const { data: upData, error: upError } = await supabaseAdmin
@@ -894,37 +811,86 @@ export const getUserAttendance = async (
       }
     }
 
-    // データを結合して加工
+    // データを結合して加工（clock_recordsベース）
     const processedData =
       basicData?.map((record) => {
         const workType = workTypesData.find((wt) => wt.id === record.work_type_id);
         const userProfile = userProfilesData.find((up) => up.id === record.user_id);
 
+        // clock_recordsから旧カラムを自動生成
+        const attendance = record as Attendance;
+        if (attendance.clock_records && attendance.clock_records.length > 0) {
+          const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
+          // 旧カラムを最新セッションで同期（互換性のため）
+          // attendance.clock_in_time = latestSession.in_time;
+          // attendance.clock_out_time = latestSession.out_time || undefined;
+        }
+
+        // clock_recordsから総勤務時間を計算
+        const totalWorkMinutes =
+          attendance.clock_records?.reduce((total, session) => {
+            if (session.in_time && session.out_time) {
+              const inTime = new Date(session.in_time);
+              const outTime = new Date(session.out_time);
+              const sessionMinutes = Math.floor((outTime.getTime() - inTime.getTime()) / 60000);
+
+              // 休憩時間を差し引く
+              const breakMinutes =
+                session.breaks?.reduce((breakTotal, br) => {
+                  if (br.break_start && br.break_end) {
+                    const breakStart = new Date(br.break_start);
+                    const breakEnd = new Date(br.break_end);
+                    return (
+                      breakTotal + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                    );
+                  }
+                  return breakTotal;
+                }, 0) || 0;
+
+              return total + (sessionMinutes - breakMinutes);
+            }
+            return total;
+          }, 0) || 0;
+
         // 残業時間を計算（デフォルト480分 = 8時間）
         const overtimeThreshold = workType?.overtime_threshold_minutes || 480;
-        const overtimeMinutes = record.actual_work_minutes
-          ? Math.max(0, record.actual_work_minutes - overtimeThreshold)
-          : 0;
+        const overtimeMinutes = Math.max(0, totalWorkMinutes - overtimeThreshold);
 
         // 休憩時間を計算
-        const breakRecords = record.break_records || [];
-        const totalBreakMinutes = breakRecords.reduce((total: number, br: BreakRecord) => {
-          if (br.start && br.end) {
-            const breakStart = new Date(`${record.work_date}T${br.start}:00`);
-            const breakEnd = new Date(`${record.work_date}T${br.end}:00`);
-            return total + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
-          }
-          return total;
-        }, 0);
+        const totalBreakMinutes =
+          attendance.clock_records?.reduce((total, session) => {
+            return (
+              total +
+              (session.breaks?.reduce((sessionBreakTotal, br) => {
+                if (br.break_start && br.break_end) {
+                  const breakStart = new Date(br.break_start);
+                  const breakEnd = new Date(br.break_end);
+                  return (
+                    sessionBreakTotal +
+                    Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                  );
+                }
+                return sessionBreakTotal;
+              }, 0) || 0)
+            );
+          }, 0) || 0;
+
+        const breakCount =
+          attendance.clock_records?.reduce((total, session) => {
+            return total + (session.breaks?.length || 0);
+          }, 0) || 0;
 
         return {
-          ...record,
+          ...attendance,
+          actual_work_minutes: totalWorkMinutes,
           overtime_minutes: overtimeMinutes,
           total_break_minutes: totalBreakMinutes,
-          break_count: breakRecords.length,
+          break_count: breakCount,
           work_type_name: workType?.name,
-          approver_name: null, // 承認者名は別途取得が必要
-          approval_status: record.approved_by ? 'approved' : 'pending',
+          approver_name: undefined,
+          approval_status: (attendance.approved_by ? 'approved' : 'pending') as
+            | 'approved'
+            | 'pending',
         };
       }) || [];
 
@@ -1001,7 +967,6 @@ export const getAllAttendance = async (
   try {
     console.log('getAllAttendance 開始:', { companyId, startDate, endDate });
 
-    // まず基本的なデータを取得
     let basicQuery = supabaseAdmin
       .from('attendances')
       .select('*')
@@ -1045,11 +1010,9 @@ export const getAllAttendance = async (
       throw userGroupsError;
     }
 
-    // 企業内のユーザーIDを抽出
     const companyUserIds = userGroupsData?.map((ug) => ug.user_id) || [];
     console.log('企業内ユーザーID:', companyUserIds);
 
-    // 企業内のユーザーの勤怠データのみをフィルタリング
     const filteredData =
       basicData?.filter((record) => companyUserIds.includes(record.user_id)) || [];
 
@@ -1061,7 +1024,6 @@ export const getAllAttendance = async (
     );
     const userIds = Array.from(new Set(filteredData.map((r) => r.user_id).filter(Boolean)));
 
-    // work_types情報を取得
     let workTypesData: { id: string; name: string; overtime_threshold_minutes: number }[] = [];
     if (workTypeIds.length > 0) {
       const { data: wtData, error: wtError } = await supabaseAdmin
@@ -1075,7 +1037,6 @@ export const getAllAttendance = async (
       }
     }
 
-    // user_profiles情報を取得
     let userProfilesData: { id: string; family_name: string; first_name: string; code?: string }[] =
       [];
     if (userIds.length > 0) {
@@ -1090,36 +1051,85 @@ export const getAllAttendance = async (
       }
     }
 
-    // データを結合して加工
+    // データを結合して加工（clock_recordsベース）
     const processedData = filteredData.map((record) => {
       const workType = workTypesData.find((wt) => wt.id === record.work_type_id);
       const userProfile = userProfilesData.find((up) => up.id === record.user_id);
 
+      // clock_recordsから旧カラムを自動生成
+      const attendance = record as Attendance;
+      if (attendance.clock_records && attendance.clock_records.length > 0) {
+        const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
+        // 旧カラムを最新セッションで同期（互換性のため）
+        // attendance.clock_in_time = latestSession.in_time;
+        // attendance.clock_out_time = latestSession.out_time || undefined;
+      }
+
+      // clock_recordsから総勤務時間を計算
+      const totalWorkMinutes =
+        attendance.clock_records?.reduce((total, session) => {
+          if (session.in_time && session.out_time) {
+            const inTime = new Date(session.in_time);
+            const outTime = new Date(session.out_time);
+            const sessionMinutes = Math.floor((outTime.getTime() - inTime.getTime()) / 60000);
+
+            // 休憩時間を差し引く
+            const breakMinutes =
+              session.breaks?.reduce((breakTotal, br) => {
+                if (br.break_start && br.break_end) {
+                  const breakStart = new Date(br.break_start);
+                  const breakEnd = new Date(br.break_end);
+                  return (
+                    breakTotal + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                  );
+                }
+                return breakTotal;
+              }, 0) || 0;
+
+            return total + (sessionMinutes - breakMinutes);
+          }
+          return total;
+        }, 0) || 0;
+
       // 残業時間を計算（デフォルト480分 = 8時間）
       const overtimeThreshold = workType?.overtime_threshold_minutes || 480;
-      const overtimeMinutes = record.actual_work_minutes
-        ? Math.max(0, record.actual_work_minutes - overtimeThreshold)
-        : 0;
+      const overtimeMinutes = Math.max(0, totalWorkMinutes - overtimeThreshold);
 
       // 休憩時間を計算
-      const breakRecords = record.break_records || [];
-      const totalBreakMinutes = breakRecords.reduce((total: number, br: BreakRecord) => {
-        if (br.start && br.end) {
-          const breakStart = new Date(`${record.work_date}T${br.start}:00`);
-          const breakEnd = new Date(`${record.work_date}T${br.end}:00`);
-          return total + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
-        }
-        return total;
-      }, 0);
+      const totalBreakMinutes =
+        attendance.clock_records?.reduce((total, session) => {
+          return (
+            total +
+            (session.breaks?.reduce((sessionBreakTotal, br) => {
+              if (br.break_start && br.break_end) {
+                const breakStart = new Date(br.break_start);
+                const breakEnd = new Date(br.break_end);
+                return (
+                  sessionBreakTotal +
+                  Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                );
+              }
+              return sessionBreakTotal;
+            }, 0) || 0)
+          );
+        }, 0) || 0;
+
+      const breakCount =
+        attendance.clock_records?.reduce((total, session) => {
+          return total + (session.breaks?.length || 0);
+        }, 0) || 0;
 
       return {
-        ...record,
+        ...attendance,
+        actual_work_minutes: totalWorkMinutes,
         overtime_minutes: overtimeMinutes,
         total_break_minutes: totalBreakMinutes,
-        break_count: breakRecords.length,
+        break_count: breakCount,
         work_type_name: workType?.name,
-        approver_name: null, // 承認者名は別途取得が必要
-        approval_status: record.approved_by ? 'approved' : 'pending',
+        approver_name: undefined,
+        approval_status: (attendance.approved_by ? 'approved' : 'pending') as
+          | 'approved'
+          | 'pending',
         user_name: userProfile ? `${userProfile.family_name} ${userProfile.first_name}` : 'Unknown',
         user_code: userProfile?.code || '-',
       };

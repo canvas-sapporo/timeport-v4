@@ -256,7 +256,14 @@ export default function AdminAttendancePage() {
   };
 
   const getAttendanceStatus = (record?: Attendance): AttendanceStatus => {
-    if (!record || !record.clock_in_time) return 'absent';
+    if (!record) return 'absent';
+
+    const clockRecords = record.clock_records || [];
+    const hasAnySession = clockRecords.length > 0;
+    const hasCompletedSession = clockRecords.some((session) => session.in_time && session.out_time);
+
+    if (!hasAnySession) return 'absent';
+    if (!hasCompletedSession) return 'normal'; // 勤務中
     return 'normal';
   };
 
@@ -428,9 +435,8 @@ export default function AdminAttendancePage() {
           id: `${user.id}-${date}`,
           user_id: user.id,
           work_date: date,
-          clock_in_time: undefined,
-          clock_out_time: undefined,
-          break_records: [],
+          clock_records: [], // 欠勤時は空のclock_recordsを設定
+          break_records: [], // 互換性のため追加
           actual_work_minutes: 0,
           overtime_minutes: 0,
           late_minutes: 0,
@@ -465,7 +471,7 @@ export default function AdminAttendancePage() {
   // 出勤日数を計算（同じ日付の複数回出勤は1日としてカウント）
   const uniqueWorkDays = new Set(
     filteredRecords
-      .filter((r) => r.clock_in_time && getAttendanceStatus(r) !== 'absent')
+      .filter((r) => r.clock_records && r.clock_records.some((session) => session.in_time))
       .map((r) => r.work_date)
   );
   const actualWorkDays = uniqueWorkDays.size;
@@ -693,17 +699,42 @@ export default function AdminAttendancePage() {
                       )}
                       {visibleColumns.clockIn && (
                         <TableCell className="text-sm">
-                          {formatTime(record.clock_in_time)}
+                          {(() => {
+                            const clockRecords = record.clock_records || [];
+                            const firstSession = clockRecords[0];
+                            return firstSession?.in_time
+                              ? formatTime(firstSession.in_time)
+                              : '--:--';
+                          })()}
                         </TableCell>
                       )}
                       {visibleColumns.clockOut && (
                         <TableCell className="text-sm">
-                          {formatTime(record.clock_out_time)}
+                          {(() => {
+                            const clockRecords = record.clock_records || [];
+                            const lastSession = clockRecords[clockRecords.length - 1];
+                            return lastSession?.out_time
+                              ? formatTime(lastSession.out_time)
+                              : '--:--';
+                          })()}
                         </TableCell>
                       )}
                       {visibleColumns.workTime && (
                         <TableCell className="text-sm">
-                          {formatMinutes(record.actual_work_minutes)}
+                          {(() => {
+                            const clockRecords = record.clock_records || [];
+                            const totalWorkMinutes = clockRecords.reduce((total, session) => {
+                              if (session.in_time && session.out_time) {
+                                const inTime = new Date(session.in_time);
+                                const outTime = new Date(session.out_time);
+                                return (
+                                  total + Math.floor((outTime.getTime() - inTime.getTime()) / 60000)
+                                );
+                              }
+                              return total;
+                            }, 0);
+                            return formatMinutes(totalWorkMinutes);
+                          })()}
                         </TableCell>
                       )}
                       {visibleColumns.overtime && (
@@ -715,21 +746,48 @@ export default function AdminAttendancePage() {
                         <TableCell>
                           <div className="flex items-center space-x-1 whitespace-nowrap">
                             <span className="text-xs">
-                              {formatMinutes(record.total_break_minutes)}
+                              {(() => {
+                                const clockRecords = record.clock_records || [];
+                                const totalBreakMinutes = clockRecords.reduce((total, session) => {
+                                  return (
+                                    total +
+                                    (session.breaks?.reduce((sessionBreakTotal, br) => {
+                                      if (br.break_start && br.break_end) {
+                                        const breakStart = new Date(br.break_start);
+                                        const breakEnd = new Date(br.break_end);
+                                        return (
+                                          sessionBreakTotal +
+                                          Math.floor(
+                                            (breakEnd.getTime() - breakStart.getTime()) / 60000
+                                          )
+                                        );
+                                      }
+                                      return sessionBreakTotal;
+                                    }, 0) || 0)
+                                  );
+                                }, 0);
+                                return formatMinutes(totalBreakMinutes);
+                              })()}
                             </span>
-                            {record.break_count && record.break_count > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleBreakDetailsClick(record);
-                                }}
-                                className="p-1 h-auto text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                              >
-                                <Info className="w-3 h-3" />
-                              </Button>
-                            )}
+                            {(() => {
+                              const clockRecords = record.clock_records || [];
+                              const totalBreaks = clockRecords.reduce((total, session) => {
+                                return total + (session.breaks?.length || 0);
+                              }, 0);
+                              return totalBreaks > 0 ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleBreakDetailsClick(record);
+                                  }}
+                                  className="p-1 h-auto text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                >
+                                  <Info className="w-3 h-3" />
+                                </Button>
+                              ) : null;
+                            })()}
                           </div>
                         </TableCell>
                       )}
@@ -866,40 +924,84 @@ export default function AdminAttendancePage() {
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium">総休憩時間</span>
                     <span className="text-lg font-bold">
-                      {formatMinutes(selectedBreakDetails.total_break_minutes)}
+                      {(() => {
+                        const clockRecords = selectedBreakDetails.clock_records || [];
+                        const totalBreakMinutes = clockRecords.reduce((total, session) => {
+                          return (
+                            total +
+                            (session.breaks?.reduce((sessionBreakTotal, br) => {
+                              if (br.break_start && br.break_end) {
+                                const breakStart = new Date(br.break_start);
+                                const breakEnd = new Date(br.break_end);
+                                return (
+                                  sessionBreakTotal +
+                                  Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                                );
+                              }
+                              return sessionBreakTotal;
+                            }, 0) || 0)
+                          );
+                        }, 0);
+                        return formatMinutes(totalBreakMinutes);
+                      })()}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-medium">休憩回数</span>
-                    <span className="text-lg font-bold">{selectedBreakDetails.break_count}回</span>
+                    <span className="text-lg font-bold">
+                      {(() => {
+                        const clockRecords = selectedBreakDetails.clock_records || [];
+                        const totalBreaks = clockRecords.reduce((total, session) => {
+                          return total + (session.breaks?.length || 0);
+                        }, 0);
+                        return totalBreaks;
+                      })()}
+                      回
+                    </span>
                   </div>
                 </div>
 
-                {selectedBreakDetails.break_records &&
-                  selectedBreakDetails.break_records.length > 0 && (
+                {selectedBreakDetails.clock_records &&
+                  selectedBreakDetails.clock_records.length > 0 && (
                     <div>
-                      <h4 className="font-medium mb-2">休憩記録</h4>
+                      <h4 className="font-medium mb-2">勤務セッション</h4>
                       <div className="space-y-2">
-                        {selectedBreakDetails.break_records.map((breakRecord, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-2 bg-white border rounded"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm font-medium">{index + 1}回目</span>
-                              {breakRecord.type && (
-                                <Badge variant="outline" className="text-xs">
-                                  {breakRecord.type === 'lunch'
-                                    ? '昼食'
-                                    : breakRecord.type === 'break'
-                                      ? '休憩'
-                                      : 'その他'}
-                                </Badge>
-                              )}
+                        {selectedBreakDetails.clock_records.map((session, sessionIndex) => (
+                          <div key={sessionIndex} className="p-3 bg-white border rounded">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">
+                                セッション {sessionIndex + 1}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                {session.in_time ? formatTime(session.in_time) : '--:--'} -{' '}
+                                {session.out_time ? formatTime(session.out_time) : '--:--'}
+                              </span>
                             </div>
-                            <div className="text-sm">
-                              {breakRecord.start} - {breakRecord.end || '終了未定'}
-                            </div>
+                            {session.breaks && session.breaks.length > 0 && (
+                              <div className="space-y-1">
+                                {session.breaks.map((breakRecord, breakIndex) => (
+                                  <div
+                                    key={breakIndex}
+                                    className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
+                                  >
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-medium">{breakIndex + 1}回目</span>
+                                      {breakRecord.note && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {breakRecord.note}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-sm">
+                                      {formatTime(breakRecord.break_start)} -{' '}
+                                      {breakRecord.break_end
+                                        ? formatTime(breakRecord.break_end)
+                                        : '終了未定'}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

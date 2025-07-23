@@ -24,15 +24,27 @@ export type AttendanceStatus = 'normal' | 'late' | 'early_leave' | 'absent';
 // ================================
 
 /**
- * 休憩記録（JSONB格納用）
+ * 休憩記録（新clock_records用）
  */
-export interface BreakRecord {
-  /** 休憩開始時刻 */
-  start: TimeString;
-  /** 休憩終了時刻 */
-  end: TimeString;
-  /** 休憩種別 */
-  type?: 'lunch' | 'break' | 'other';
+export interface ClockBreakRecord {
+  /** 休憩開始日時（ISO8601） */
+  break_start: string; // Timestamp
+  /** 休憩終了日時（ISO8601） */
+  break_end: string; // Timestamp
+  /** 備考 */
+  note?: string;
+}
+
+/**
+ * 1勤務セッション（出退勤＋休憩）
+ */
+export interface ClockRecord {
+  /** 出勤日時（ISO8601） */
+  in_time: string; // Timestamp
+  /** 退勤日時（ISO8601） */
+  out_time: string; // Timestamp
+  /** 休憩リスト */
+  breaks: ClockBreakRecord[];
   /** 備考 */
   note?: string;
 }
@@ -51,12 +63,20 @@ export interface Attendance extends BaseEntity {
   work_date: DateString;
   /** 勤務タイプID */
   work_type_id?: UUID;
-  /** 出勤時刻 */
+  /**
+   * @deprecated clock_recordsへ移行予定
+   */
   clock_in_time?: Timestamp;
-  /** 退勤時刻 */
+  /**
+   * @deprecated clock_recordsへ移行予定
+   */
   clock_out_time?: Timestamp;
-  /** 休憩記録一覧 */
-  break_records: BreakRecord[];
+  /**
+   * @deprecated clock_recordsへ移行予定
+   */
+  break_records: ClockBreakRecord[];
+  /** 新しい複数勤務セッション記録 */
+  clock_records: ClockRecord[];
   /** 実勤務時間（分） */
   actual_work_minutes?: number;
   /** 残業時間（分） */
@@ -101,12 +121,20 @@ export interface CreateAttendanceInput {
   work_date: DateString;
   /** 勤務タイプID */
   work_type_id?: UUID;
-  /** 出勤時刻 */
+  /**
+   * @deprecated clock_recordsへ移行予定
+   */
   clock_in_time?: Timestamp;
-  /** 退勤時刻 */
+  /**
+   * @deprecated clock_recordsへ移行予定
+   */
   clock_out_time?: Timestamp;
-  /** 休憩記録一覧 */
-  break_records?: BreakRecord[];
+  /**
+   * @deprecated clock_recordsへ移行予定
+   */
+  break_records?: ClockBreakRecord[];
+  /** 新しい複数勤務セッション記録 */
+  clock_records: ClockRecord[];
   /** 実勤務時間（分） */
   actual_work_minutes?: number;
   /** 備考 */
@@ -119,12 +147,20 @@ export interface CreateAttendanceInput {
 export interface UpdateAttendanceInput {
   /** 勤務タイプID */
   work_type_id?: UUID;
-  /** 出勤時刻 */
+  /**
+   * @deprecated clock_recordsへ移行予定
+   */
   clock_in_time?: Timestamp;
-  /** 退勤時刻 */
+  /**
+   * @deprecated clock_recordsへ移行予定
+   */
   clock_out_time?: Timestamp;
-  /** 休憩記録一覧 */
-  break_records?: BreakRecord[];
+  /**
+   * @deprecated clock_recordsへ移行予定
+   */
+  break_records?: ClockBreakRecord[];
+  /** 新しい複数勤務セッション記録 */
+  clock_records?: ClockRecord[];
   /** 実勤務時間（分） */
   actual_work_minutes?: number;
   /** 備考 */

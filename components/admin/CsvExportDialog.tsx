@@ -734,56 +734,116 @@ const getColumnValue = (
     }
     case 'date':
       return record.work_date ? formatDate(record.work_date, format.date_format) : emptyValue;
-    case 'clock_in':
-      return record.clock_in_time
-        ? formatTime(record.clock_in_time, format.time_format)
+    case 'clock_in': {
+      const clockRecords = record.clock_records || [];
+      const firstSession = clockRecords[0];
+      return firstSession?.in_time
+        ? formatTime(firstSession.in_time, format.time_format)
         : emptyValue;
-    case 'clock_out':
-      return record.clock_out_time
-        ? formatTime(record.clock_out_time, format.time_format)
+    }
+    case 'clock_out': {
+      const clockRecords = record.clock_records || [];
+      const lastSession = clockRecords[clockRecords.length - 1];
+      return lastSession?.out_time
+        ? formatTime(lastSession.out_time, format.time_format)
         : emptyValue;
-    case 'work_hours':
-      return record.actual_work_minutes ? formatMinutes(record.actual_work_minutes) : emptyValue;
+    }
+    case 'work_hours': {
+      const clockRecords = record.clock_records || [];
+      const totalWorkMinutes = clockRecords.reduce((total, session) => {
+        if (session.in_time && session.out_time) {
+          const inTime = new Date(session.in_time);
+          const outTime = new Date(session.out_time);
+          const sessionMinutes = Math.floor((outTime.getTime() - inTime.getTime()) / 60000);
+
+          // 休憩時間を差し引く
+          const breakMinutes =
+            session.breaks?.reduce((breakTotal, br) => {
+              if (br.break_start && br.break_end) {
+                const breakStart = new Date(br.break_start);
+                const breakEnd = new Date(br.break_end);
+                return breakTotal + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
+              }
+              return breakTotal;
+            }, 0) || 0;
+
+          return total + (sessionMinutes - breakMinutes);
+        }
+        return total;
+      }, 0);
+      return totalWorkMinutes > 0 ? formatMinutes(totalWorkMinutes) : emptyValue;
+    }
     case 'overtime': {
-      const workHours = record.actual_work_minutes || 0;
-      const overtime = Math.max(0, workHours - 480);
+      const clockRecords = record.clock_records || [];
+      const totalWorkMinutes = clockRecords.reduce((total, session) => {
+        if (session.in_time && session.out_time) {
+          const inTime = new Date(session.in_time);
+          const outTime = new Date(session.out_time);
+          const sessionMinutes = Math.floor((outTime.getTime() - inTime.getTime()) / 60000);
+
+          // 休憩時間を差し引く
+          const breakMinutes =
+            session.breaks?.reduce((breakTotal, br) => {
+              if (br.break_start && br.break_end) {
+                const breakStart = new Date(br.break_start);
+                const breakEnd = new Date(br.break_end);
+                return breakTotal + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
+              }
+              return breakTotal;
+            }, 0) || 0;
+
+          return total + (sessionMinutes - breakMinutes);
+        }
+        return total;
+      }, 0);
+      const overtime = Math.max(0, totalWorkMinutes - 480);
       return overtime > 0 ? formatMinutes(overtime) : emptyValue;
     }
     case 'break_time': {
-      const breakRecords = record.break_records || [];
-      const totalBreakMinutes = breakRecords.reduce(
-        (total: number, br: { start?: string; end?: string }) => {
-          if (br.start && br.end) {
-            const start = new Date(br.start);
-            const end = new Date(br.end);
-            return total + Math.floor((end.getTime() - start.getTime()) / (1000 * 60));
-          }
-          return total;
-        },
-        0
-      );
+      const clockRecords = record.clock_records || [];
+      const totalBreakMinutes = clockRecords.reduce((total, session) => {
+        return (
+          total +
+          (session.breaks?.reduce((sessionBreakTotal, br) => {
+            if (br.break_start && br.break_end) {
+              const breakStart = new Date(br.break_start);
+              const breakEnd = new Date(br.break_end);
+              return (
+                sessionBreakTotal + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+              );
+            }
+            return sessionBreakTotal;
+          }, 0) || 0)
+        );
+      }, 0);
       return totalBreakMinutes > 0 ? formatMinutes(totalBreakMinutes) : emptyValue;
     }
     case 'work_type':
       return record.work_type_name || emptyValue;
-    case 'late':
-      if (record.clock_in_time) {
-        const clockIn = new Date(record.clock_in_time);
+    case 'late': {
+      const clockRecords = record.clock_records || [];
+      const firstSession = clockRecords[0];
+      if (firstSession?.in_time) {
+        const clockIn = new Date(firstSession.in_time);
         const workStart = new Date(record.work_date);
         workStart.setHours(9, 0, 0, 0);
         const lateMinutes = Math.floor((clockIn.getTime() - workStart.getTime()) / (1000 * 60));
         return lateMinutes > 15 ? formatMinutes(lateMinutes) : emptyValue;
       }
       return emptyValue;
-    case 'early_leave':
-      if (record.clock_out_time) {
-        const clockOut = new Date(record.clock_out_time);
+    }
+    case 'early_leave': {
+      const clockRecords = record.clock_records || [];
+      const lastSession = clockRecords[clockRecords.length - 1];
+      if (lastSession?.out_time) {
+        const clockOut = new Date(lastSession.out_time);
         const workEnd = new Date(record.work_date);
         workEnd.setHours(18, 0, 0, 0);
         const earlyMinutes = Math.floor((workEnd.getTime() - clockOut.getTime()) / (1000 * 60));
         return earlyMinutes > 30 ? formatMinutes(earlyMinutes) : emptyValue;
       }
       return emptyValue;
+    }
     case 'status':
       return '正常';
     case 'approval_status':
@@ -869,58 +929,121 @@ const generateSimpleCsvData = (records: Attendance[], setting: CsvExportSetting)
           return record.work_date
             ? formatDate(record.work_date, setting.format.date_format)
             : emptyValue;
-        case 'clock_in':
-          return record.clock_in_time
-            ? formatTime(record.clock_in_time, setting.format.time_format)
+        case 'clock_in': {
+          const clockRecords = record.clock_records || [];
+          const firstSession = clockRecords[0];
+          return firstSession?.in_time
+            ? formatTime(firstSession.in_time, setting.format.time_format)
             : emptyValue;
-        case 'clock_out':
-          return record.clock_out_time
-            ? formatTime(record.clock_out_time, setting.format.time_format)
+        }
+        case 'clock_out': {
+          const clockRecords = record.clock_records || [];
+          const lastSession = clockRecords[clockRecords.length - 1];
+          return lastSession?.out_time
+            ? formatTime(lastSession.out_time, setting.format.time_format)
             : emptyValue;
-        case 'work_hours':
-          return record.actual_work_minutes
-            ? formatMinutes(record.actual_work_minutes)
-            : emptyValue;
+        }
+        case 'work_hours': {
+          const clockRecords = record.clock_records || [];
+          const totalWorkMinutes = clockRecords.reduce((total, session) => {
+            if (session.in_time && session.out_time) {
+              const inTime = new Date(session.in_time);
+              const outTime = new Date(session.out_time);
+              const sessionMinutes = Math.floor((outTime.getTime() - inTime.getTime()) / 60000);
+
+              // 休憩時間を差し引く
+              const breakMinutes =
+                session.breaks?.reduce((breakTotal, br) => {
+                  if (br.break_start && br.break_end) {
+                    const breakStart = new Date(br.break_start);
+                    const breakEnd = new Date(br.break_end);
+                    return (
+                      breakTotal + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                    );
+                  }
+                  return breakTotal;
+                }, 0) || 0;
+
+              return total + (sessionMinutes - breakMinutes);
+            }
+            return total;
+          }, 0);
+          return totalWorkMinutes > 0 ? formatMinutes(totalWorkMinutes) : emptyValue;
+        }
         case 'overtime': {
-          const workHours = record.actual_work_minutes || 0;
-          const overtime = Math.max(0, workHours - 480);
+          const clockRecords = record.clock_records || [];
+          const totalWorkMinutes = clockRecords.reduce((total, session) => {
+            if (session.in_time && session.out_time) {
+              const inTime = new Date(session.in_time);
+              const outTime = new Date(session.out_time);
+              const sessionMinutes = Math.floor((outTime.getTime() - inTime.getTime()) / 60000);
+
+              // 休憩時間を差し引く
+              const breakMinutes =
+                session.breaks?.reduce((breakTotal, br) => {
+                  if (br.break_start && br.break_end) {
+                    const breakStart = new Date(br.break_start);
+                    const breakEnd = new Date(br.break_end);
+                    return (
+                      breakTotal + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                    );
+                  }
+                  return breakTotal;
+                }, 0) || 0;
+
+              return total + (sessionMinutes - breakMinutes);
+            }
+            return total;
+          }, 0);
+          const overtime = Math.max(0, totalWorkMinutes - 480);
           return overtime > 0 ? formatMinutes(overtime) : emptyValue;
         }
         case 'break_time': {
-          const breakRecords = record.break_records || [];
-          const totalBreakMinutes = breakRecords.reduce(
-            (total: number, br: { start?: string; end?: string }) => {
-              if (br.start && br.end) {
-                const start = new Date(br.start);
-                const end = new Date(br.end);
-                return total + Math.floor((end.getTime() - start.getTime()) / (1000 * 60));
-              }
-              return total;
-            },
-            0
-          );
+          const clockRecords = record.clock_records || [];
+          const totalBreakMinutes = clockRecords.reduce((total, session) => {
+            return (
+              total +
+              (session.breaks?.reduce((sessionBreakTotal, br) => {
+                if (br.break_start && br.break_end) {
+                  const breakStart = new Date(br.break_start);
+                  const breakEnd = new Date(br.break_end);
+                  return (
+                    sessionBreakTotal +
+                    Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                  );
+                }
+                return sessionBreakTotal;
+              }, 0) || 0)
+            );
+          }, 0);
           return totalBreakMinutes > 0 ? formatMinutes(totalBreakMinutes) : emptyValue;
         }
         case 'work_type':
           return record.work_type_name || emptyValue;
-        case 'late':
-          if (record.clock_in_time) {
-            const clockIn = new Date(record.clock_in_time);
+        case 'late': {
+          const clockRecords = record.clock_records || [];
+          const firstSession = clockRecords[0];
+          if (firstSession?.in_time) {
+            const clockIn = new Date(firstSession.in_time);
             const workStart = new Date(record.work_date);
             workStart.setHours(9, 0, 0, 0);
             const lateMinutes = Math.floor((clockIn.getTime() - workStart.getTime()) / (1000 * 60));
             return lateMinutes > 15 ? formatMinutes(lateMinutes) : emptyValue;
           }
           return emptyValue;
-        case 'early_leave':
-          if (record.clock_out_time) {
-            const clockOut = new Date(record.clock_out_time);
+        }
+        case 'early_leave': {
+          const clockRecords = record.clock_records || [];
+          const lastSession = clockRecords[clockRecords.length - 1];
+          if (lastSession?.out_time) {
+            const clockOut = new Date(lastSession.out_time);
             const workEnd = new Date(record.work_date);
             workEnd.setHours(18, 0, 0, 0);
             const earlyMinutes = Math.floor((workEnd.getTime() - clockOut.getTime()) / (1000 * 60));
             return earlyMinutes > 30 ? formatMinutes(earlyMinutes) : emptyValue;
           }
           return emptyValue;
+        }
         case 'status':
           return '正常';
         case 'approval_status':

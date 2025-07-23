@@ -23,7 +23,9 @@ import {
   getTodayAttendance,
   getMemberAttendance,
 } from '@/lib/actions/attendance';
-import type { Attendance, BreakRecord } from '@/types/attendance';
+import type { Attendance, ClockBreakRecord, ClockRecord } from '@/types/attendance';
+import { refreshSchemaCache } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function MemberDashboard() {
   const { user } = useAuth();
@@ -39,61 +41,50 @@ export default function MemberDashboard() {
   const [isClient, setIsClient] = useState(false);
   const [csvExportOpen, setCsvExportOpen] = useState(false);
 
-  // データ取得関数（キャッシュ付き）
-  const fetchAttendanceData = useCallback(
-    async (forceRefresh = false) => {
-      if (!user) return;
+  // データ取得関数
+  const fetchAttendanceData = async (userId: string, forceRefresh = false) => {
+    const startTime = performance.now();
+    console.log('fetchAttendanceData 開始:', { userId, forceRefresh });
 
-      const startTime = performance.now();
-      console.log('fetchAttendanceData 開始:', { userId: user.id, forceRefresh });
+    try {
+      // スキーマキャッシュリフレッシュをスキップして直接データ取得
+      console.log('スキーマキャッシュリフレッシュをスキップして直接データ取得を実行');
 
-      try {
-        const [todayData, recordsData] = await Promise.all([
-          getTodayAttendance(user.id),
-          getMemberAttendance(user.id),
-        ]);
+      // 今日の日付を取得
+      const today = new Date().toISOString().split('T')[0];
 
-        console.log('データ取得結果:', {
-          todayData,
-          recordsDataCount: recordsData?.length,
-          todayDataId: todayData?.id,
-          recordsDataIds: recordsData?.map((r) => r.id),
-        });
+      // 今日の勤怠データを取得
+      const todayResult = await getTodayAttendance(userId);
+      const recordsResult = await getMemberAttendance(userId);
 
-        // 詳細なデバッグ情報を追加
-        if (recordsData && recordsData.length > 0) {
-          const todayRecords = recordsData.filter(
-            (r) => r.work_date === new Date().toISOString().split('T')[0]
-          );
-          console.log(
-            '今日の記録詳細:',
-            todayRecords.map((r) => ({
-              id: r.id,
-              clock_in_time: r.clock_in_time,
-              clock_out_time: r.clock_out_time,
-              created_at: r.created_at,
-            }))
-          );
-        }
+      console.log('データ取得結果:', {
+        todayData: todayResult ? 'success' : 'null',
+        recordsDataCount: recordsResult?.length || 0,
+        todayDataId: todayResult?.id,
+        recordsDataIds: recordsResult?.map((r) => r.id) || [],
+      });
 
-        setTodayAttendance(todayData);
-        setAttendanceRecords(recordsData || []);
-
-        const endTime = performance.now();
-        console.log(`データ取得完了: ${(endTime - startTime).toFixed(2)}ms`, {
-          recordsCount: recordsData?.length || 0,
-        });
-      } catch (error) {
-        console.error('勤怠データ取得エラー:', error);
-        toast({
-          title: 'エラー',
-          description: '勤怠データの取得に失敗しました',
-          variant: 'destructive',
-        });
+      if (todayResult) {
+        console.log('今日の記録詳細:', todayResult);
+        setTodayAttendance(todayResult);
+      } else {
+        setTodayAttendance(null);
       }
-    },
-    [user, toast]
-  );
+
+      if (recordsResult) {
+        setAttendanceRecords(recordsResult);
+        console.log('データ取得完了:', `${performance.now() - startTime}ms`, {
+          recordsCount: recordsResult.length,
+        });
+      } else {
+        setAttendanceRecords([]);
+      }
+    } catch (error) {
+      console.error('データ取得エラー:', error);
+      setTodayAttendance(null);
+      setAttendanceRecords([]);
+    }
+  };
 
   // 初期データ取得
   useEffect(() => {
@@ -102,8 +93,8 @@ export default function MemberDashboard() {
       return;
     }
 
-    fetchAttendanceData();
-  }, [user, router, fetchAttendanceData]);
+    fetchAttendanceData(user.id);
+  }, [user, router]);
 
   // クライアントサイドでのみ実行
   useEffect(() => {
@@ -222,47 +213,45 @@ export default function MemberDashboard() {
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
-  // 退勤していない最新のレコードを取得（出勤中のレコード）
-  const activeRecord = sortedTodayRecords.find((r) => r.clock_in_time && !r.clock_out_time); // 出勤済みで退勤していないレコードのみ
-
-  // 最新のレコード（退勤済みも含む）
+  // clock_recordsベースの状態管理
   const latestRecord = sortedTodayRecords[0] || null;
+  const latestClockRecords = latestRecord?.clock_records || [];
+  const latestSession =
+    latestClockRecords.length > 0 ? latestClockRecords[latestClockRecords.length - 1] : null;
+
+  // 出勤・退勤・休憩状態の判定
+  const hasClockIn = !!latestSession?.in_time && !latestSession?.out_time;
+  const hasClockOut = !!latestSession?.out_time;
+  const isOnBreak = latestSession?.breaks?.some((br) => br.break_start && !br.break_end) || false;
 
   // デバッグログ
-  console.log('状態管理デバッグ:', {
+  console.log('clock_records状態管理デバッグ:', {
     today,
     todayRecordsCount: todayRecords.length,
-    activeRecord,
     latestRecord,
-    hasClockInTime: !!activeRecord?.clock_in_time,
-    hasClockOutTime: !!activeRecord?.clock_out_time,
+    latestClockRecords,
+    latestSession,
+    hasClockIn,
+    hasClockOut,
+    isOnBreak,
   });
 
   // 休憩状態の詳細なデバッグ
-  const activeRecordBreaks = activeRecord?.break_records || [];
-  const activeBreakExists = activeRecordBreaks.some((br: BreakRecord) => br.start && !br.end);
+  const activeBreaks = latestSession?.breaks || [];
+  const activeBreakExists = activeBreaks.some((br) => br.break_start && !br.break_end);
 
   console.log('休憩状態デバッグ:', {
-    activeRecordBreaks,
+    activeBreaks,
     activeBreakExists,
-    activeRecordId: activeRecord?.id,
+    latestRecordId: latestRecord?.id,
   });
-
-  const isOnBreak = activeBreakExists;
-  const hasClockIn = !!activeRecord; // 出勤中のレコードが存在する場合
-  const hasClockOut = !!latestRecord?.clock_out_time; // 最新レコードが退勤済みの場合
-
-  // デバッグ用：最新の退勤時刻を表示
-  const latestClockOutTime = latestRecord?.clock_out_time;
 
   console.log('UI状態:', {
     hasClockIn,
     hasClockOut,
     isOnBreak,
-    latestClockOutTime: latestClockOutTime ? new Date(latestClockOutTime).toISOString() : null,
-    activeRecordClockOut: activeRecord?.clock_out_time,
-    latestRecordClockOut: latestRecord?.clock_out_time,
-    activeRecordId: activeRecord?.id,
+    latestSessionInTime: latestSession?.in_time,
+    latestSessionOutTime: latestSession?.out_time,
     latestRecordId: latestRecord?.id,
   });
 
@@ -270,6 +259,10 @@ export default function MemberDashboard() {
   const handleClockIn = async () => {
     const startTime = performance.now();
     console.log('handleClockIn 開始');
+    if (isLoading) {
+      console.log('既に処理中です');
+      return;
+    }
     if (!user) {
       console.log('ユーザーが存在しません');
       return;
@@ -284,7 +277,16 @@ export default function MemberDashboard() {
       console.log('clockIn関数呼び出し開始');
 
       // user_profilesからwork_type_idを取得して渡す
-      const result = await clockIn(user.id, timestamp);
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('current_work_type_id')
+        .eq('id', user.id)
+        .single();
+
+      const workTypeId = userProfile?.current_work_type_id;
+      console.log('取得したwork_type_id:', workTypeId);
+
+      const result = await clockIn(user.id, timestamp, workTypeId);
       console.log('clockIn結果:', result);
 
       if (result.success) {
@@ -304,9 +306,8 @@ export default function MemberDashboard() {
             return [result.attendance!, ...filtered];
           });
         }
-        // バックグラウンドでデータを再取得（遅延を短縮）
-        // 注意: 即座の更新で十分なので、バックグラウンド再取得は無効化
-        // setTimeout(() => fetchAttendanceData(true), 500);
+        // 新しいレコードが作成された場合は、即座にデータを再取得
+        setTimeout(() => fetchAttendanceData(user.id, true), 100);
 
         const endTime = performance.now();
         console.log(`出勤処理完了: ${(endTime - startTime).toFixed(2)}ms`);
@@ -331,6 +332,10 @@ export default function MemberDashboard() {
 
   const handleClockOut = async () => {
     console.log('handleClockOut 開始');
+    if (isLoading) {
+      console.log('既に処理中です');
+      return;
+    }
     if (!user) {
       console.log('ユーザーが存在しません');
       return;
@@ -363,9 +368,8 @@ export default function MemberDashboard() {
             return [result.attendance!, ...filtered];
           });
         }
-        // バックグラウンドでデータを再取得（遅延を短縮）
-        // 注意: 即座の更新で十分なので、バックグラウンド再取得は無効化
-        // setTimeout(() => fetchAttendanceData(true), 500);
+        // 即座にデータを再取得
+        setTimeout(() => fetchAttendanceData(user.id, true), 100);
       } else {
         toast({
           title: 'エラー',
@@ -387,6 +391,10 @@ export default function MemberDashboard() {
 
   const handleStartBreak = async () => {
     console.log('handleStartBreak 開始');
+    if (isLoading) {
+      console.log('既に処理中です');
+      return;
+    }
     if (!user) {
       console.log('ユーザーが存在しません');
       return;
@@ -416,9 +424,8 @@ export default function MemberDashboard() {
             return [result.attendance!, ...filtered];
           });
         }
-        // バックグラウンドでデータを再取得（遅延を短縮）
-        // 注意: 即座の更新で十分なので、バックグラウンド再取得は無効化
-        // setTimeout(() => fetchAttendanceData(true), 500);
+        // 即座にデータを再取得
+        setTimeout(() => fetchAttendanceData(user.id, true), 100);
       } else {
         toast({
           title: 'エラー',
@@ -440,6 +447,10 @@ export default function MemberDashboard() {
 
   const handleEndBreak = async () => {
     console.log('handleEndBreak 開始');
+    if (isLoading) {
+      console.log('既に処理中です');
+      return;
+    }
     if (!user) {
       console.log('ユーザーが存在しません');
       return;
@@ -469,9 +480,8 @@ export default function MemberDashboard() {
             return [result.attendance!, ...filtered];
           });
         }
-        // バックグラウンドでデータを再取得（遅延を短縮）
-        // 注意: 即座の更新で十分なので、バックグラウンド再取得は無効化
-        // setTimeout(() => fetchAttendanceData(true), 500);
+        // 即座にデータを再取得
+        setTimeout(() => fetchAttendanceData(user.id, true), 100);
       } else {
         toast({
           title: 'エラー',
@@ -598,7 +608,7 @@ export default function MemberDashboard() {
           userId={user.id}
           todayAttendance={todayAttendance}
           attendanceRecords={attendanceRecords}
-          onRefresh={fetchAttendanceData}
+          onRefresh={() => fetchAttendanceData(user.id)}
           onCsvExport={() => setCsvExportOpen(true)}
         />
       </div>
@@ -613,29 +623,103 @@ export default function MemberDashboard() {
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <div className="text-sm text-blue-600 font-medium">出勤時刻</div>
               <div className="text-lg font-bold text-blue-900">
-                {formatTime(todayAttendance?.clock_in_time)}
+                {latestSession?.in_time ? formatTime(latestSession.in_time) : '--:--'}
               </div>
             </div>
 
             <div className="text-center p-4 bg-red-50 rounded-lg">
               <div className="text-sm text-red-600 font-medium">退勤時刻</div>
               <div className="text-lg font-bold text-red-900">
-                {formatTime(todayAttendance?.clock_out_time)}
+                {latestSession?.out_time ? formatTime(latestSession.out_time) : '--:--'}
               </div>
             </div>
 
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <div className="text-sm text-green-600 font-medium">勤務時間</div>
               <div className="text-lg font-bold text-green-900">
-                {todayAttendance?.actual_work_minutes
-                  ? `${Math.floor(todayAttendance.actual_work_minutes / 60)}:${(todayAttendance.actual_work_minutes % 60).toString().padStart(2, '0')}`
-                  : '--:--'}
+                {(() => {
+                  // clock_recordsから総勤務時間を計算
+                  const totalWorkMinutes = latestClockRecords.reduce((total, session) => {
+                    if (session.in_time && session.out_time) {
+                      const inTime = new Date(session.in_time);
+                      const outTime = new Date(session.out_time);
+                      const sessionMinutes = Math.floor(
+                        (outTime.getTime() - inTime.getTime()) / 60000
+                      );
+
+                      // 休憩時間を差し引く
+                      const breakMinutes =
+                        session.breaks?.reduce((breakTotal, br) => {
+                          if (br.break_start && br.break_end) {
+                            const breakStart = new Date(br.break_start);
+                            const breakEnd = new Date(br.break_end);
+                            return (
+                              breakTotal +
+                              Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                            );
+                          }
+                          return breakTotal;
+                        }, 0) || 0;
+
+                      return total + (sessionMinutes - breakMinutes);
+                    }
+                    return total;
+                  }, 0);
+
+                  if (totalWorkMinutes > 0) {
+                    const hours = Math.floor(totalWorkMinutes / 60);
+                    const minutes = totalWorkMinutes % 60;
+                    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+                  }
+                  return '--:--';
+                })()}
               </div>
             </div>
 
             <div className="text-center p-4 bg-yellow-50 rounded-lg">
               <div className="text-sm text-yellow-600 font-medium">残業時間</div>
-              <div className="text-lg font-bold text-yellow-900">--:--</div>
+              <div className="text-lg font-bold text-yellow-900">
+                {(() => {
+                  // clock_recordsから総勤務時間を計算
+                  const totalWorkMinutes = latestClockRecords.reduce((total, session) => {
+                    if (session.in_time && session.out_time) {
+                      const inTime = new Date(session.in_time);
+                      const outTime = new Date(session.out_time);
+                      const sessionMinutes = Math.floor(
+                        (outTime.getTime() - inTime.getTime()) / 60000
+                      );
+
+                      // 休憩時間を差し引く
+                      const breakMinutes =
+                        session.breaks?.reduce((breakTotal, br) => {
+                          if (br.break_start && br.break_end) {
+                            const breakStart = new Date(br.break_start);
+                            const breakEnd = new Date(br.break_end);
+                            return (
+                              breakTotal +
+                              Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
+                            );
+                          }
+                          return breakTotal;
+                        }, 0) || 0;
+
+                      return total + (sessionMinutes - breakMinutes);
+                    }
+                    return total;
+                  }, 0);
+
+                  // 残業時間を計算（デフォルト8時間 = 480分）
+                  const overtimeThreshold = 480;
+                  const overtimeMinutes = Math.max(0, totalWorkMinutes - overtimeThreshold);
+
+                  if (overtimeMinutes > 0) {
+                    const hours = Math.floor(overtimeMinutes / 60);
+                    const minutes = overtimeMinutes % 60;
+                    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+                  }
+                  return '--:--';
+                })()}
+              </div>
             </div>
           </div>
         </CardContent>

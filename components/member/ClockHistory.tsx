@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Attendance, BreakRecord } from '@/types/attendance';
+import type { Attendance, ClockBreakRecord, ClockRecord } from '@/types/attendance';
 import { formatDateTime, formatTime } from '@/lib/utils';
 
 interface ClockHistoryProps {
@@ -46,7 +46,7 @@ export default function ClockHistory({
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [showDetails, setShowDetails] = useState(false);
 
-  // 今日の打刻記録を時系列で整理
+  // 今日の打刻記録を時系列で整理（clock_recordsベース）
   const getTodayClockEvents = () => {
     const events: Array<{
       id: string;
@@ -57,53 +57,60 @@ export default function ClockHistory({
       color: string;
     }> = [];
 
-    if (todayAttendance?.clock_in_time) {
-      events.push({
-        id: 'clock-in',
-        type: 'clock_in',
-        time: todayAttendance.clock_in_time,
-        icon: <LogIn className="w-4 h-4" />,
-        label: '出勤',
-        color: 'text-green-600',
-      });
-    }
+    // clock_recordsから全ての打刻イベントを取得
+    const clockRecords = todayAttendance?.clock_records || [];
 
-    // 休憩記録を追加
-    todayAttendance?.break_records?.forEach((breakRecord, index) => {
-      if (breakRecord.start) {
+    clockRecords.forEach((session, sessionIndex) => {
+      // 出勤
+      if (session.in_time) {
         events.push({
-          id: `break-start-${index}`,
-          type: 'break_start',
-          time: breakRecord.start,
-          icon: <Coffee className="w-4 h-4" />,
-          label: '休憩開始',
-          color: 'text-orange-600',
+          id: `clock-in-${sessionIndex}`,
+          type: 'clock_in',
+          time: session.in_time,
+          icon: <LogIn className="w-4 h-4" />,
+          label: '出勤',
+          color: 'text-green-600',
         });
       }
-      if (breakRecord.end) {
+
+      // 休憩記録
+      session.breaks?.forEach((breakRecord, breakIndex) => {
+        if (breakRecord.break_start) {
+          events.push({
+            id: `break-start-${sessionIndex}-${breakIndex}`,
+            type: 'break_start',
+            time: breakRecord.break_start,
+            icon: <Coffee className="w-4 h-4" />,
+            label: '休憩開始',
+            color: 'text-orange-600',
+          });
+        }
+        if (breakRecord.break_end) {
+          events.push({
+            id: `break-end-${sessionIndex}-${breakIndex}`,
+            type: 'break_end',
+            time: breakRecord.break_end,
+            icon: <Coffee className="w-4 h-4" />,
+            label: '休憩終了',
+            color: 'text-orange-600',
+          });
+        }
+      });
+
+      // 退勤
+      if (session.out_time) {
         events.push({
-          id: `break-end-${index}`,
-          type: 'break_end',
-          time: breakRecord.end,
-          icon: <Coffee className="w-4 h-4" />,
-          label: '休憩終了',
-          color: 'text-orange-600',
+          id: `clock-out-${sessionIndex}`,
+          type: 'clock_out',
+          time: session.out_time,
+          icon: <LogOut className="w-4 h-4" />,
+          label: '退勤',
+          color: 'text-red-600',
         });
       }
     });
 
-    if (todayAttendance?.clock_out_time) {
-      events.push({
-        id: 'clock-out',
-        type: 'clock_out',
-        time: todayAttendance.clock_out_time,
-        icon: <LogOut className="w-4 h-4" />,
-        label: '退勤',
-        color: 'text-red-600',
-      });
-    }
-
-    return events.sort((a, b) => b.time.localeCompare(a.time));
+    return events.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
   };
 
   // 過去の勤怠記録をフィルタリング
@@ -114,38 +121,51 @@ export default function ClockHistory({
       .slice(0, 10); // 最新10件まで表示
   };
 
-  // 勤務時間を計算
+  // 勤務時間を計算（clock_recordsベース）
   const calculateWorkTime = (attendance: Attendance) => {
-    if (!attendance.clock_in_time || !attendance.clock_out_time) {
-      return { hours: 0, minutes: 0 };
-    }
+    const clockRecords = attendance.clock_records || [];
 
-    const clockIn = new Date(`${attendance.work_date}T${attendance.clock_in_time}:00`);
-    const clockOut = new Date(`${attendance.work_date}T${attendance.clock_out_time}:00`);
-    const totalMinutes = Math.floor((clockOut.getTime() - clockIn.getTime()) / 60000);
+    // 全てのセッションの勤務時間を合計
+    const totalWorkMinutes = clockRecords.reduce((total, session) => {
+      if (session.in_time && session.out_time) {
+        const inTime = new Date(session.in_time);
+        const outTime = new Date(session.out_time);
+        const sessionMinutes = Math.floor((outTime.getTime() - inTime.getTime()) / 60000);
 
-    // 休憩時間を差し引く
-    const breakMinutes =
-      attendance.break_records?.reduce((total, br) => {
-        if (br.start && br.end) {
-          const breakStart = new Date(`${attendance.work_date}T${br.start}:00`);
-          const breakEnd = new Date(`${attendance.work_date}T${br.end}:00`);
-          return total + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
-        }
-        return total;
-      }, 0) || 0;
+        // 休憩時間を差し引く
+        const breakMinutes =
+          session.breaks?.reduce((breakTotal, br) => {
+            if (br.break_start && br.break_end) {
+              const breakStart = new Date(br.break_start);
+              const breakEnd = new Date(br.break_end);
+              return breakTotal + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
+            }
+            return breakTotal;
+          }, 0) || 0;
 
-    const actualMinutes = totalMinutes - breakMinutes;
-    const hours = Math.floor(actualMinutes / 60);
-    const minutes = actualMinutes % 60;
+        return total + (sessionMinutes - breakMinutes);
+      }
+      return total;
+    }, 0);
+
+    const hours = Math.floor(totalWorkMinutes / 60);
+    const minutes = totalWorkMinutes % 60;
 
     return { hours, minutes };
   };
 
-  // 勤怠ステータスを取得
+  // 勤怠ステータスを取得（clock_recordsベース）
   const getAttendanceStatus = (attendance: Attendance) => {
-    if (!attendance.clock_in_time)
+    const clockRecords = attendance.clock_records || [];
+    const hasAnySession = clockRecords.length > 0;
+    const hasCompletedSession = clockRecords.some((session) => session.in_time && session.out_time);
+
+    if (!hasAnySession) {
       return { status: 'absent', label: '欠勤', color: 'bg-gray-100 text-gray-800' };
+    }
+    if (!hasCompletedSession) {
+      return { status: 'in_progress', label: '勤務中', color: 'bg-blue-100 text-blue-800' };
+    }
     return { status: 'normal', label: '正常', color: 'bg-green-100 text-green-800' };
   };
 
@@ -202,28 +222,47 @@ export default function ClockHistory({
                   <div>
                     <span className="text-blue-700">勤務時間:</span>
                     <span className="ml-2">
-                      {todayAttendance.actual_work_minutes
-                        ? `${Math.floor(todayAttendance.actual_work_minutes / 60)}:${(todayAttendance.actual_work_minutes % 60).toString().padStart(2, '0')}`
-                        : '--:--'}
+                      {(() => {
+                        const { hours, minutes } = calculateWorkTime(todayAttendance);
+                        return hours > 0 || minutes > 0
+                          ? `${hours}:${minutes.toString().padStart(2, '0')}`
+                          : '--:--';
+                      })()}
                     </span>
                   </div>
                   <div>
                     <span className="text-blue-700">残業時間:</span>
-                    <span className="ml-2">--:--</span>
+                    <span className="ml-2">
+                      {(() => {
+                        const { hours, minutes } = calculateWorkTime(todayAttendance);
+                        const totalMinutes = hours * 60 + minutes;
+                        const overtimeThreshold = 480; // 8時間
+                        const overtimeMinutes = Math.max(0, totalMinutes - overtimeThreshold);
+
+                        if (overtimeMinutes > 0) {
+                          const overtimeHours = Math.floor(overtimeMinutes / 60);
+                          const overtimeMins = overtimeMinutes % 60;
+                          return `${overtimeHours}:${overtimeMins.toString().padStart(2, '0')}`;
+                        }
+                        return '--:--';
+                      })()}
+                    </span>
                   </div>
                   <div>
                     <span className="text-blue-700">休憩回数:</span>
                     <span className="ml-2">
-                      {todayAttendance.break_records?.filter((br) => br.start && br.end).length ||
-                        0}
-                      回
+                      {(() => {
+                        const clockRecords = todayAttendance.clock_records || [];
+                        const totalBreaks = clockRecords.reduce((total, session) => {
+                          return total + (session.breaks?.length || 0);
+                        }, 0);
+                        return `${totalBreaks}回`;
+                      })()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-blue-700">ステータス:</span>
-                    <Badge className="ml-2" variant="outline">
-                      {getAttendanceStatus(todayAttendance).label}
-                    </Badge>
+                    <span className="text-blue-700">セッション数:</span>
+                    <span className="ml-2">{todayAttendance.clock_records?.length || 0}回</span>
                   </div>
                 </div>
               </div>
@@ -295,33 +334,67 @@ export default function ClockHistory({
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-gray-600">出勤:</span>
-                          <span className="ml-2">{formatTime(record.clock_in_time)}</span>
+                          <span className="ml-2">
+                            {(() => {
+                              const clockRecords = record.clock_records || [];
+                              const firstSession = clockRecords[0];
+                              return firstSession?.in_time
+                                ? formatTime(firstSession.in_time)
+                                : '--:--';
+                            })()}
+                          </span>
                         </div>
                         <div>
                           <span className="text-gray-600">退勤:</span>
-                          <span className="ml-2">{formatTime(record.clock_out_time)}</span>
+                          <span className="ml-2">
+                            {(() => {
+                              const clockRecords = record.clock_records || [];
+                              const lastSession = clockRecords[clockRecords.length - 1];
+                              return lastSession?.out_time
+                                ? formatTime(lastSession.out_time)
+                                : '--:--';
+                            })()}
+                          </span>
                         </div>
                         <div>
                           <span className="text-gray-600">勤務時間:</span>
                           <span className="ml-2">
-                            {hours > 0 || minutes > 0
-                              ? `${hours}:${minutes.toString().padStart(2, '0')}`
-                              : '--:--'}
+                            {(() => {
+                              const { hours, minutes } = calculateWorkTime(record);
+                              return hours > 0 || minutes > 0
+                                ? `${hours}:${minutes.toString().padStart(2, '0')}`
+                                : '--:--';
+                            })()}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">残業:</span>
-                          <span className="ml-2">--:--</span>
+                          <span className="text-gray-600">セッション数:</span>
+                          <span className="ml-2">{record.clock_records?.length || 0}回</span>
                         </div>
                       </div>
 
-                      {record.break_records && record.break_records.length > 0 && (
+                      {record.clock_records && record.clock_records.length > 0 && (
                         <div className="mt-2 pt-2 border-t">
-                          <div className="text-sm text-gray-600 mb-1">休憩記録:</div>
+                          <div className="text-sm text-gray-600 mb-1">勤務セッション:</div>
                           <div className="space-y-1">
-                            {record.break_records.map((br, index) => (
-                              <div key={index} className="text-xs text-gray-500">
-                                {br.start} - {br.end || '進行中'}
+                            {record.clock_records.map((session, sessionIndex) => (
+                              <div key={sessionIndex} className="text-xs text-gray-500">
+                                <div className="font-medium">セッション {sessionIndex + 1}:</div>
+                                <div className="ml-2">
+                                  {session.in_time ? formatTime(session.in_time) : '--:--'} -{' '}
+                                  {session.out_time ? formatTime(session.out_time) : '--:--'}
+                                </div>
+                                {session.breaks && session.breaks.length > 0 && (
+                                  <div className="ml-2 text-gray-400">
+                                    休憩:{' '}
+                                    {session.breaks
+                                      .map(
+                                        (br) =>
+                                          `${formatTime(br.break_start)}-${br.break_end ? formatTime(br.break_end) : '進行中'}`
+                                      )
+                                      .join(', ')}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

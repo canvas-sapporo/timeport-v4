@@ -15,6 +15,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'X-Client-Info': 'timeport-v4',
     },
   },
+  db: {
+    schema: 'public',
+  },
 });
 
 // サーバーサイド用のクライアント
@@ -26,7 +29,41 @@ export const createServerClient = () => {
     throw new Error('Supabase URL and Service Role Key are required for server operations');
   }
 
-  return createClient(supabaseUrl, serviceRoleKey);
+  return createClient(supabaseUrl, serviceRoleKey, {
+    db: {
+      schema: 'public',
+    },
+  });
+};
+
+// スキーマキャッシュをリフレッシュする関数
+export const refreshSchemaCache = async () => {
+  try {
+    console.log('スキーマキャッシュリフレッシュ開始');
+
+    // 簡単なクエリでスキーマをリフレッシュ
+    const { data, error } = await supabase.from('attendances').select('id, clock_records').limit(1);
+
+    if (error) {
+      console.error('スキーマリフレッシュエラー詳細:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      return false;
+    }
+
+    console.log('スキーマキャッシュリフレッシュ成功:', { data });
+    return true;
+  } catch (error) {
+    console.error('スキーマリフレッシュ例外エラー:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return false;
+  }
 };
 
 // Supabase接続テスト用の関数
