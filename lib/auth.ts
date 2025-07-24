@@ -96,9 +96,29 @@ export const loginUser = async (
 
 export const logoutUser = async (): Promise<void> => {
   try {
-    await supabase.auth.signOut();
+    // Supabaseでサインアウト（グローバルスコープで実行）
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
+
+    if (error) {
+      console.error('Supabase signOut error:', error);
+    } else {
+      console.log('Supabase signOut 完了');
+    }
+
     if (typeof window !== 'undefined') {
+      // アプリケーション固有のユーザー情報を削除
       localStorage.removeItem('auth-user');
+
+      // Supabase関連のすべてのトークンを削除
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('sb-')) {
+          console.log('logoutUser: Supabaseトークンを削除:', key);
+          localStorage.removeItem(key);
+        }
+      });
+
+      // セッションストレージもクリア
+      sessionStorage.clear();
     }
   } catch (error) {
     console.error('ログアウトエラー:', error);

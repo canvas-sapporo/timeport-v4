@@ -79,4 +79,4 @@ export type { UserGroup } from './user_groups';
 export type { AttendanceDetailView, RequestDetailView, UserDetailView } from './views';
 
 // 出席関連
-export type { Attendance, BreakRecord, MonthlyAttendanceStats } from './attendance';
+export type { Attendance, MonthlyAttendanceStats } from './attendance';

@@ -6,7 +6,7 @@
 
 import type { UUID, DateString, TimeString, Timestamp } from './common';
 import type { UserRole } from './auth';
-import type { AttendanceStatus, BreakRecord } from './attendance';
+import type { AttendanceStatus, ClockBreakRecord } from './attendance';
 
 // ================================
 // ユーザー詳細ビュー型
@@ -73,7 +73,7 @@ export interface AttendanceDetailView {
   /** 退勤時刻 */
   clock_out_time?: Timestamp;
   /** 休憩記録一覧 */
-  break_records: BreakRecord[];
+  break_records: ClockBreakRecord[];
   /** 実勤務時間（分） */
   actual_work_minutes?: number;
   /** 残業時間（分） */
@@ -395,7 +395,7 @@ export interface ActiveAttendanceView {
   /** 退勤時刻 */
   clock_out_time?: Timestamp;
   /** 休憩記録一覧 */
-  break_records: BreakRecord[];
+  break_records: ClockBreakRecord[];
   /** 実勤務時間（分） */
   actual_work_minutes?: number;
   /** 残業時間（分） */

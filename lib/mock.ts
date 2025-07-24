@@ -354,7 +354,8 @@ export const generateAttendanceRecords = (userId: string): Attendance[] => {
       work_date: workDate,
       clock_in_time: clockInTime.toTimeString().slice(0, 5),
       clock_out_time: clockOutTime.toTimeString().slice(0, 5),
-      break_records: [{ start: '12:00', end: '13:00' }],
+      break_records: [{ break_start: '12:00', break_end: '13:00' }],
+      clock_records: [],
       actual_work_minutes: workMinutes,
       overtime_minutes: overtimeMinutes,
       late_minutes: clockInVariation > 0 ? Math.abs(clockInVariation) : 0,
@@ -493,6 +494,7 @@ export const clockIn = async (userId: string, time: string) => {
         work_date: today,
         clock_in_time: time,
         break_records: [],
+        clock_records: [],
         overtime_minutes: 0,
         late_minutes: 0,
         early_leave_minutes: 0,
@@ -549,7 +551,7 @@ export const startBreak = async (userId: string, time: string) => {
   const existingIndex = mockAttendanceRecords.findIndex((r) => r.id === recordId);
   if (existingIndex >= 0) {
     const record = mockAttendanceRecords[existingIndex];
-    const newBreakRecord = { start: time, end: '' };
+    const newBreakRecord = { break_start: time, break_end: '' };
     mockAttendanceRecords[existingIndex] = {
       ...record,
       break_records: [...record.break_records, newBreakRecord],
@@ -571,8 +573,8 @@ export const endBreak = async (userId: string, time: string) => {
     const record = mockAttendanceRecords[existingIndex];
     const updatedBreakRecords = [...record.break_records];
     const lastBreak = updatedBreakRecords[updatedBreakRecords.length - 1];
-    if (lastBreak && !lastBreak.end) {
-      lastBreak.end = time;
+    if (lastBreak && !lastBreak.break_end) {
+      lastBreak.break_end = time;
     }
     mockAttendanceRecords[existingIndex] = {
       ...record,

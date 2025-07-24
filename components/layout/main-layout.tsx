@@ -1,6 +1,7 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
 
@@ -15,6 +16,15 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   const { user, isLoading, isLoggingOut } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+
+  // ユーザーが認証されていない場合は、ログインページにリダイレクト
+  useEffect(() => {
+    if (!user && !isLoading && pathname !== '/login') {
+      console.log('認証されていないユーザーをログインページにリダイレクト');
+      router.push('/login');
+    }
+  }, [user, isLoading, pathname, router]);
 
   // ログインページの場合はレイアウトを適用しない
   if (pathname === '/login') {
@@ -45,15 +55,17 @@ export default function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
-  // ユーザーが認証されていない場合は、ログインページにリダイレクト
   if (!user) {
-    // ログインページ以外の場合は、ログインページにリダイレクト
+    // ログインページ以外の場合は、ローディング画面を表示
     if (pathname !== '/login') {
-      // クライアントサイドでのみリダイレクト
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-        return null;
-      }
+      return (
+        <div className="min-h-screen flex items-center justify-center timeport-main-background">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="text-gray-600">リダイレクト中...</p>
+          </div>
+        </div>
+      );
     }
     return <>{children}</>;
   }

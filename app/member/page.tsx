@@ -150,14 +150,30 @@ export default function MemberDashboard() {
     (sum, r) => sum + (r.overtime_minutes || 0),
     0
   );
-  const overtimeHours = Math.round((totalOvertimeMinutes / 60) * 10) / 10;
+  // 残業時間を分単位で表示（1時間未満でも表示）
+  const overtimeHoursValue = totalOvertimeMinutes > 0 ? totalOvertimeMinutes / 60 : 0;
+  const overtimeHours = overtimeHoursValue.toFixed(1);
+
+  // デバッグ用：残業時間の詳細ログ
+  console.log('残業時間計算デバッグ:', {
+    thisMonthRecordsCount: thisMonthRecords.length,
+    thisMonthRecords: thisMonthRecords.map((r) => ({
+      id: r.id,
+      work_date: r.work_date,
+      overtime_minutes: r.overtime_minutes,
+      actual_work_minutes: r.actual_work_minutes,
+    })),
+    totalOvertimeMinutes,
+    overtimeHoursValue,
+    overtimeHours,
+  });
 
   const previousTotalOvertimeMinutes = previousMonthRecords.reduce(
     (sum, r) => sum + (r.overtime_minutes || 0),
     0
   );
   const previousOvertimeHours = Math.round((previousTotalOvertimeMinutes / 60) * 10) / 10;
-  const overtimeChange = calculateChangeRate(overtimeHours, previousOvertimeHours);
+  const overtimeChange = calculateChangeRate(overtimeHoursValue, previousOvertimeHours);
 
   // 勤務時間：attendancesテーブルから取得・算出
   const totalWorkMinutes = thisMonthRecords.reduce(
@@ -186,7 +202,7 @@ export default function MemberDashboard() {
     },
     {
       title: '残業時間',
-      value: `${overtimeHours}時間`,
+      value: totalOvertimeMinutes > 0 ? `${totalOvertimeMinutes}分` : '0分',
       change: overtimeChange,
       icon: <Clock className="w-6 h-6" />,
     },
@@ -220,9 +236,20 @@ export default function MemberDashboard() {
     latestClockRecords.length > 0 ? latestClockRecords[latestClockRecords.length - 1] : null;
 
   // 出勤・退勤・休憩状態の判定
-  const hasClockIn = !!latestSession?.in_time && !latestSession?.out_time;
+  const hasClockIn = !!latestSession?.in_time;
   const hasClockOut = !!latestSession?.out_time;
-  const isOnBreak = latestSession?.breaks?.some((br) => br.break_start && !br.break_end) || false;
+
+  // 休憩状態の詳細な判定
+  const activeBreaks = latestSession?.breaks || [];
+  const isOnBreak = activeBreaks.some((br) => {
+    const hasBreakStart = !!br.break_start;
+    const hasBreakEnd = !!br.break_end;
+    return hasBreakStart && !hasBreakEnd;
+  });
+
+  // 現在の勤務状態を判定
+  const isCurrentlyWorking = hasClockIn && !hasClockOut;
+  const canStartNewSession = !hasClockIn || hasClockOut;
 
   // デバッグログ
   console.log('clock_records状態管理デバッグ:', {
@@ -230,26 +257,35 @@ export default function MemberDashboard() {
     todayRecordsCount: todayRecords.length,
     latestRecord,
     latestClockRecords,
+    latestClockRecordsLength: latestClockRecords.length,
     latestSession,
     hasClockIn,
     hasClockOut,
     isOnBreak,
+    isCurrentlyWorking,
+    canStartNewSession,
   });
-
-  // 休憩状態の詳細なデバッグ
-  const activeBreaks = latestSession?.breaks || [];
-  const activeBreakExists = activeBreaks.some((br) => br.break_start && !br.break_end);
 
   console.log('休憩状態デバッグ:', {
     activeBreaks,
-    activeBreakExists,
+    isOnBreak,
     latestRecordId: latestRecord?.id,
+    breakDetails: activeBreaks.map((br) => ({
+      break_start: br.break_start,
+      break_end: br.break_end,
+      hasStart: !!br.break_start,
+      hasEnd: !!br.break_end,
+      isActive: !!br.break_start && !br.break_end,
+    })),
   });
 
   console.log('UI状態:', {
     hasClockIn,
     hasClockOut,
     isOnBreak,
+    isCurrentlyWorking,
+    canStartNewSession,
+    isLoading,
     latestSessionInTime: latestSession?.in_time,
     latestSessionOutTime: latestSession?.out_time,
     latestRecordId: latestRecord?.id,
@@ -286,7 +322,9 @@ export default function MemberDashboard() {
       const workTypeId = userProfile?.current_work_type_id;
       console.log('取得したwork_type_id:', workTypeId);
 
+      console.log('clockIn関数呼び出し直前');
       const result = await clockIn(user.id, timestamp, workTypeId);
+      console.log('clockIn関数呼び出し完了');
       console.log('clockIn結果:', result);
 
       if (result.success) {
@@ -306,8 +344,8 @@ export default function MemberDashboard() {
             return [result.attendance!, ...filtered];
           });
         }
-        // 新しいレコードが作成された場合は、即座にデータを再取得
-        setTimeout(() => fetchAttendanceData(user.id, true), 100);
+        // 即座にデータを再取得
+        await fetchAttendanceData(user.id, true);
 
         const endTime = performance.now();
         console.log(`出勤処理完了: ${(endTime - startTime).toFixed(2)}ms`);
@@ -369,7 +407,7 @@ export default function MemberDashboard() {
           });
         }
         // 即座にデータを再取得
-        setTimeout(() => fetchAttendanceData(user.id, true), 100);
+        await fetchAttendanceData(user.id, true);
       } else {
         toast({
           title: 'エラー',
@@ -425,7 +463,7 @@ export default function MemberDashboard() {
           });
         }
         // 即座にデータを再取得
-        setTimeout(() => fetchAttendanceData(user.id, true), 100);
+        await fetchAttendanceData(user.id, true);
       } else {
         toast({
           title: 'エラー',
@@ -481,7 +519,7 @@ export default function MemberDashboard() {
           });
         }
         // 即座にデータを再取得
-        setTimeout(() => fetchAttendanceData(user.id, true), 100);
+        await fetchAttendanceData(user.id, true);
       } else {
         toast({
           title: 'エラー',
@@ -552,8 +590,9 @@ export default function MemberDashboard() {
           <CardContent className="space-y-4">
             <TimeDisplay />
 
-            {/* 出勤ボタン - 出勤していない場合のみ表示 */}
-            {!hasClockIn && (
+            {/* 出勤ボタン - 新しいセッションを開始できる場合のみ表示 */}
+            {/* canStartNewSession: 出勤していない OR 退勤済み */}
+            {canStartNewSession && (
               <Button
                 onClick={() => {
                   console.log('出勤ボタンがクリックされました');
@@ -567,8 +606,9 @@ export default function MemberDashboard() {
               </Button>
             )}
 
-            {/* 退勤・休憩ボタン - 出勤済みで退勤していない場合のみ表示 */}
-            {hasClockIn && !latestRecord?.clock_out_time && (
+            {/* 退勤・休憩ボタン - 現在勤務中の場合のみ表示 */}
+            {/* isCurrentlyWorking: 出勤済み AND 退勤していない */}
+            {isCurrentlyWorking && (
               <>
                 {!isOnBreak ? (
                   <Button
@@ -590,9 +630,10 @@ export default function MemberDashboard() {
                   </Button>
                 )}
 
+                {/* 退勤ボタン - 休憩中でも退勤可能 */}
                 <Button
                   onClick={handleClockOut}
-                  disabled={isOnBreak || isLoading}
+                  disabled={isLoading}
                   className="w-full h-12 bg-red-600 hover:bg-red-700"
                 >
                   <LogOut className="w-5 h-5 mr-2" />
@@ -680,37 +721,8 @@ export default function MemberDashboard() {
               <div className="text-sm text-yellow-600 font-medium">残業時間</div>
               <div className="text-lg font-bold text-yellow-900">
                 {(() => {
-                  // clock_recordsから総勤務時間を計算
-                  const totalWorkMinutes = latestClockRecords.reduce((total, session) => {
-                    if (session.in_time && session.out_time) {
-                      const inTime = new Date(session.in_time);
-                      const outTime = new Date(session.out_time);
-                      const sessionMinutes = Math.floor(
-                        (outTime.getTime() - inTime.getTime()) / 60000
-                      );
-
-                      // 休憩時間を差し引く
-                      const breakMinutes =
-                        session.breaks?.reduce((breakTotal, br) => {
-                          if (br.break_start && br.break_end) {
-                            const breakStart = new Date(br.break_start);
-                            const breakEnd = new Date(br.break_end);
-                            return (
-                              breakTotal +
-                              Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000)
-                            );
-                          }
-                          return breakTotal;
-                        }, 0) || 0;
-
-                      return total + (sessionMinutes - breakMinutes);
-                    }
-                    return total;
-                  }, 0);
-
-                  // 残業時間を計算（デフォルト8時間 = 480分）
-                  const overtimeThreshold = 480;
-                  const overtimeMinutes = Math.max(0, totalWorkMinutes - overtimeThreshold);
+                  // データベースの残業時間を使用
+                  const overtimeMinutes = latestRecord?.overtime_minutes || 0;
 
                   if (overtimeMinutes > 0) {
                     const hours = Math.floor(overtimeMinutes / 60);

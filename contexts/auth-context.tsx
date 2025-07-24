@@ -61,6 +61,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           let profileError = null;
 
           try {
+            console.log('プロフィール取得クエリ開始');
+            console.log('ユーザーID:', session.user.id);
+
+            // まず、テーブルが存在するかテスト
+            const testResult = await supabase.from('user_profiles').select('count').limit(1);
+
+            console.log('テーブル存在テスト結果:', testResult);
+
             const result = await supabase
               .from('user_profiles')
               .select(
@@ -81,8 +89,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             profileData = result.data;
             profileError = result.error;
             console.log('プロフィール取得結果:', { profileData, profileError });
+
+            if (profileError) {
+              console.error('プロフィール取得エラー詳細:', {
+                message: profileError.message,
+                code: profileError.code,
+                details: profileError.details,
+                hint: profileError.hint,
+              });
+            }
           } catch (error) {
             console.error('プロフィール取得で例外が発生:', error);
+            console.error('例外詳細:', {
+              name: error instanceof Error ? error.name : 'Unknown',
+              message: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+            });
             return;
           }
 
@@ -107,6 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(basicAuthUser);
             setCurrentUser(basicAuthUser);
             setIsLoading(false);
+            console.log('基本的な認証ユーザー設定完了');
             return;
           }
 
@@ -226,15 +249,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(authUser);
           setCurrentUser(authUser);
           console.log('認証コンテキスト - ユーザー状態更新完了');
+          setIsLoading(false);
         } catch (error) {
           console.error('認証状態更新エラー:', error);
+          console.error('エラー詳細:', {
+            name: error instanceof Error ? error.name : 'Unknown',
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          });
+          setIsLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         // ユーザーがサインアウトした場合
         console.log('Supabase認証状態変更: SIGNED_OUT');
         setUser(null);
         if (typeof window !== 'undefined') {
+          // アプリケーション固有のユーザー情報を削除
           localStorage.removeItem('auth-user');
+
+          // Supabase関連のすべてのトークンを削除
+          Object.keys(localStorage).forEach((key) => {
+            if (key.startsWith('sb-')) {
+              console.log('SIGNED_OUT: Supabaseトークンを削除:', key);
+              localStorage.removeItem(key);
+            }
+          });
+
+          // セッションストレージもクリア
+          sessionStorage.clear();
         }
         setIsLoggingOut(false);
       }
@@ -289,26 +331,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // クライアントサイドでのみlocalStorageを操作
       if (typeof window !== 'undefined') {
+        // アプリケーション固有のユーザー情報を削除
         localStorage.removeItem('auth-user');
+
+        // Supabase関連のすべてのトークンを削除
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('sb-')) {
+            console.log('Supabaseトークンを削除:', key);
+            localStorage.removeItem(key);
+          }
+        });
+
+        // セッションストレージもクリア
+        sessionStorage.clear();
       }
 
-      // Supabaseでサインアウト（非同期で実行、結果を待たない）
-      supabase.auth
-        .signOut()
-        .then(() => {
-          console.log('Supabase signOut 完了');
-        })
-        .catch((error) => {
-          console.error('Supabase signOut error:', error);
-        });
+      // Supabaseでサインアウト（グローバルスコープで実行）
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+
+      if (error) {
+        console.error('Supabase signOut error:', error);
+      } else {
+        console.log('Supabase signOut 完了');
+      }
 
       // 即座にログインページにリダイレクト
       console.log('ログインページにリダイレクト');
       router.push('/login');
+
+      // フォールバック: 3秒後に強制的にリダイレクト
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          console.log('フォールバックリダイレクト実行');
+          window.location.href = '/login';
+        }
+      }, 3000);
     } catch (error) {
       console.error('Logout error:', error);
       // エラーが発生した場合も確実にリダイレクト
       router.push('/login');
+
+      // フォールバック: エラー時も強制的にリダイレクト
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          console.log('エラー時のフォールバックリダイレクト実行');
+          window.location.href = '/login';
+        }
+      }, 1000);
     } finally {
       setIsLoggingOut(false);
     }

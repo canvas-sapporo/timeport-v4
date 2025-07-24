@@ -154,18 +154,33 @@ const calculateWorkTime = async (
   // 総勤務時間（分）
   const totalMinutes = Math.floor((clockOut.getTime() - clockIn.getTime()) / 60000);
 
-  // 休憩時間（分）
+  // 休憩時間（分）の計算を修正
   const breakMinutes = breakRecords.reduce((total, br) => {
     if (br.break_start && br.break_end) {
-      const breakStart = new Date(`${clockIn.toISOString().split('T')[0]}T${br.break_start}:00`);
-      const breakEnd = new Date(`${clockIn.toISOString().split('T')[0]}T${br.break_end}:00`);
-      return total + Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
+      try {
+        // 日付を正しく処理
+        const workDate = clockIn.toISOString().split('T')[0];
+        const breakStart = new Date(`${workDate}T${br.break_start}`);
+        const breakEnd = new Date(`${workDate}T${br.break_end}`);
+
+        // 有効な日付かチェック
+        if (isNaN(breakStart.getTime()) || isNaN(breakEnd.getTime())) {
+          console.warn('無効な休憩時間:', { break_start: br.break_start, break_end: br.break_end });
+          return total;
+        }
+
+        const breakDuration = Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
+        return total + Math.max(0, breakDuration); // 負の値を防ぐ
+      } catch (error) {
+        console.warn('休憩時間計算エラー:', error);
+        return total;
+      }
     }
     return total;
   }, 0);
 
   // 実勤務時間（分）
-  const actualWorkMinutes = totalMinutes - breakMinutes;
+  const actualWorkMinutes = Math.max(0, totalMinutes - breakMinutes);
 
   // work_typeから残業閾値を取得
   let overtimeThresholdMinutes = 480; // デフォルト8時間
@@ -190,6 +205,17 @@ const calculateWorkTime = async (
   // 残業時間（分）- work_typeの閾値を超えた分
   const overtimeMinutes = Math.max(0, actualWorkMinutes - overtimeThresholdMinutes);
 
+  console.log('calculateWorkTime 詳細:', {
+    clockInTime,
+    clockOutTime,
+    totalMinutes,
+    breakMinutes,
+    actualWorkMinutes,
+    overtimeThresholdMinutes,
+    overtimeMinutes,
+    breakRecords,
+  });
+
   return { actualWorkMinutes, overtimeMinutes };
 };
 
@@ -205,6 +231,7 @@ export const clockIn = async (
   timestamp: string,
   workTypeId?: string
 ): Promise<ClockResult> => {
+  console.log('=== clockIn Server Action 開始 ===');
   console.log('clockIn 開始:', { userId, timestamp, workTypeId });
 
   // 環境変数の確認
@@ -294,6 +321,7 @@ export const clockIn = async (
     }
 
     console.log('Supabase upsert 成功:', data);
+    console.log('=== clockIn Server Action 完了 ===');
 
     revalidatePath('/member');
 
@@ -400,40 +428,90 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
     }
     newClockRecords[lastIdx].out_time = timestamp;
 
-    // 互換用: 旧カラムも同期
+    // 勤務時間と残業時間を計算
     const latest = newClockRecords[lastIdx];
-    const upsertData = {
-      clock_records: newClockRecords,
-    };
+    if (latest.in_time && latest.out_time) {
+      const { actualWorkMinutes, overtimeMinutes } = await calculateWorkTime(
+        latest.in_time,
+        latest.out_time,
+        latest.breaks || [],
+        existingRecord.work_type_id
+      );
 
-    const { data, error } = await supabaseAdmin
-      .from('attendances')
-      .update(upsertData)
-      .eq('id', existingRecord.id)
-      .select()
-      .single();
+      console.log('勤務時間計算結果:', {
+        actualWorkMinutes,
+        overtimeMinutes,
+        inTime: latest.in_time,
+        outTime: latest.out_time,
+      });
 
-    if (error) {
-      console.error('勤怠記録更新エラー:', error);
+      const upsertData = {
+        clock_records: newClockRecords,
+        actual_work_minutes: actualWorkMinutes,
+        overtime_minutes: overtimeMinutes,
+      };
+
+      const { data, error } = await supabaseAdmin
+        .from('attendances')
+        .update(upsertData)
+        .eq('id', existingRecord.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('勤怠記録更新エラー:', error);
+        return {
+          success: false,
+          message: '退勤打刻に失敗しました',
+          error: error.message,
+        };
+      }
+
+      console.log('退勤処理成功:', {
+        attendanceId: data?.id,
+        actualWorkMinutes: data?.actual_work_minutes,
+        overtimeMinutes: data?.overtime_minutes,
+      });
+      revalidatePath('/member');
+
       return {
-        success: false,
-        message: '退勤打刻に失敗しました',
-        error: error.message,
+        success: true,
+        message: '退勤しました',
+        attendance: data as Attendance,
+      };
+    } else {
+      // 出勤・退勤時刻が不完全な場合
+      const upsertData = {
+        clock_records: newClockRecords,
+      };
+
+      const { data, error } = await supabaseAdmin
+        .from('attendances')
+        .update(upsertData)
+        .eq('id', existingRecord.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('勤怠記録更新エラー:', error);
+        return {
+          success: false,
+          message: '退勤打刻に失敗しました',
+          error: error.message,
+        };
+      }
+
+      console.log('退勤処理成功（時刻不完全）:', {
+        attendanceId: data?.id,
+      });
+      revalidatePath('/member');
+
+      return {
+        success: true,
+        message: '退勤しました',
+        attendance: data as Attendance,
       };
     }
-
-    console.log('退勤処理成功:', {
-      attendanceId: data?.id,
-      actualWorkMinutes: data?.actual_work_minutes,
-      overtimeMinutes: data?.overtime_minutes,
-    });
-    revalidatePath('/member');
-
-    return {
-      success: true,
-      message: '退勤しました',
-      attendance: data as Attendance,
-    };
   } catch (error) {
     return {
       success: false,

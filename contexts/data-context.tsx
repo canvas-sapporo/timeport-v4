@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-import { Attendance } from '@/types/attendance';
+import { Attendance, ClockBreakRecord } from '@/types/attendance';
 import { Request, RequestForm } from '@/types/request';
 import { UserProfile } from '@/types/auth';
 import { Notification } from '@/types/system';
@@ -134,6 +134,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         work_date: today,
         clock_in_time: time,
         break_records: [],
+        clock_records: [],
         overtime_minutes: 0,
         late_minutes: 0,
         early_leave_minutes: 0,
@@ -173,7 +174,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const existingRecord = attendanceRecords.find((r) => r.id === recordId);
     if (existingRecord) {
-      const newBreakRecord = { start: time, end: '' };
+      const newBreakRecord: ClockBreakRecord = {
+        break_start: time,
+        break_end: '',
+      };
       updateAttendance({
         ...existingRecord,
         break_records: [...existingRecord.break_records, newBreakRecord],
@@ -190,8 +194,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     if (existingRecord) {
       const updatedBreakRecords = [...existingRecord.break_records];
       const lastBreak = updatedBreakRecords[updatedBreakRecords.length - 1];
-      if (lastBreak && !lastBreak.end) {
-        lastBreak.end = time;
+      if (lastBreak && !lastBreak.break_end) {
+        lastBreak.break_end = time;
       }
       updateAttendance({
         ...existingRecord,

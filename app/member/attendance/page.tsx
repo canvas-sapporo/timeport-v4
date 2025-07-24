@@ -686,18 +686,9 @@ export default function MemberAttendancePage() {
                           >
                             <div className="flex items-center space-x-2">
                               <span className="text-sm font-medium">{index + 1}回目</span>
-                              {breakRecord.type && (
-                                <Badge variant="outline" className="text-xs">
-                                  {breakRecord.type === 'lunch'
-                                    ? '昼食'
-                                    : breakRecord.type === 'break'
-                                      ? '休憩'
-                                      : 'その他'}
-                                </Badge>
-                              )}
                             </div>
                             <div className="text-sm">
-                              {breakRecord.start} - {breakRecord.end || '終了未定'}
+                              {breakRecord.break_start} - {breakRecord.break_end || '終了未定'}
                             </div>
                           </div>
                         ))}
