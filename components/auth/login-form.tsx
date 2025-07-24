@@ -17,6 +17,50 @@ export const LoginForm = () => {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
 
+  // ページロード時にキャッシュをクリア
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // URLパラメータからキャッシュバストを確認
+      const urlParams = new URLSearchParams(window.location.search);
+      const cacheBust = urlParams.get('cache-bust');
+
+      if (cacheBust) {
+        console.log('キャッシュバストパラメータ検出、キャッシュをクリア中...');
+        // ローカルストレージとセッションストレージをクリア
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // Supabase関連のトークンを特に削除
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('sb-')) {
+            localStorage.removeItem(key);
+          }
+        });
+
+        // キャッシュバストパラメータを削除してクリーンなURLにする
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+
+      // ログインページにアクセスした際に、既存の認証情報をクリア
+      console.log('ログインページアクセス、既存の認証情報をクリア中...');
+
+      // アプリケーション固有のユーザー情報を削除
+      localStorage.removeItem('auth-user');
+
+      // Supabase関連のトークンを削除
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('sb-')) {
+          console.log('Supabaseトークンを削除:', key);
+          localStorage.removeItem(key);
+        }
+      });
+
+      // セッションストレージもクリア
+      sessionStorage.clear();
+    }
+  }, []);
+
   // ユーザーが認証されたら自動的にリダイレクト
   useEffect(() => {
     if (user && !authLoading) {

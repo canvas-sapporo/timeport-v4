@@ -205,6 +205,7 @@ export default function AdminAttendancePage() {
         id: user.id,
         name: user.full_name,
         role: user.role,
+        company_id: user.company_id,
       });
 
       try {
@@ -218,6 +219,8 @@ export default function AdminAttendancePage() {
         }
 
         console.log('使用する会社ID:', user.company_id);
+        console.log('会社IDの型:', typeof user.company_id);
+        console.log('会社IDが存在するか:', !!user.company_id);
 
         // 選択された月の日付範囲を計算
         const [year, month] = selectedMonth.split('-').map(Number);
@@ -225,8 +228,33 @@ export default function AdminAttendancePage() {
         const lastDay = new Date(year, month, 0).getDate();
         const endDate = `${year}-${month.toString().padStart(2, '0')}-${lastDay}`;
 
+        console.log('getAllAttendance呼び出し前:', {
+          companyId: user.company_id,
+          startDate,
+          endDate,
+        });
+
         const records = await getAllAttendance(user.company_id, startDate, endDate);
         console.log('取得された勤怠データ:', records);
+        console.log('取得された勤怠データ件数:', records?.length || 0);
+
+        // デバッグ用：clock_recordsを含むデータを詳細ログ
+        if (records.length > 0) {
+          console.log('clock_recordsを含むデータ詳細:');
+          records.forEach((record, index) => {
+            if (record.clock_records && record.clock_records.length > 0) {
+              console.log(`レコード${index + 1} (clock_recordsあり):`, {
+                id: record.id,
+                user_id: record.user_id,
+                work_date: record.work_date,
+                clock_records: record.clock_records,
+                clock_in_time: record.clock_in_time,
+                clock_out_time: record.clock_out_time,
+              });
+            }
+          });
+        }
+
         setAttendanceRecords(records);
       } catch (error) {
         console.error('勤怠データ取得エラー:', error);

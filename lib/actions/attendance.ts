@@ -729,8 +729,8 @@ export const getTodayAttendance = async (userId: string): Promise<Attendance | n
       const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
 
       // 旧カラムを最新セッションで同期（互換性のため）
-      // attendance.clock_in_time = latestSession.in_time;
-      // attendance.clock_out_time = latestSession.out_time || undefined;
+      attendance.clock_in_time = latestSession.in_time;
+      attendance.clock_out_time = latestSession.out_time || undefined;
     }
 
     return attendance;
@@ -776,13 +776,31 @@ export const getMemberAttendance = async (userId: string): Promise<Attendance[]>
       if (attendance.clock_records && attendance.clock_records.length > 0) {
         const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
         // 旧カラムを最新セッションで同期（互換性のため）
-        // attendance.clock_in_time = latestSession.in_time;
-        // attendance.clock_out_time = latestSession.out_time || undefined;
+        attendance.clock_in_time = latestSession.in_time;
+        attendance.clock_out_time = latestSession.out_time || undefined;
       }
       return attendance;
     });
 
-    return processedData;
+    // 一日に複数出勤した場合のソート処理
+    // 1. 日付で降順ソート（最新の日付が上）
+    // 2. 同じ日付内では出勤時刻で昇順ソート（早い出勤が上）
+    const sortedData = processedData.sort((a, b) => {
+      // まず日付で比較（降順）
+      const dateComparison = b.work_date.localeCompare(a.work_date);
+      if (dateComparison !== 0) {
+        return dateComparison;
+      }
+      
+      // 同じ日付の場合、出勤時刻で比較（昇順）
+      const aClockIn = a.clock_in_time || '';
+      const bClockIn = b.clock_in_time || '';
+      return aClockIn.localeCompare(bClockIn);
+    });
+
+    console.log('getMemberAttendance ソート後のデータ件数:', sortedData.length, '件');
+
+    return sortedData;
   } catch (error) {
     console.error('getMemberAttendance エラー:', error);
     return [];
@@ -876,8 +894,8 @@ export const getUserAttendance = async (
         if (attendance.clock_records && attendance.clock_records.length > 0) {
           const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
           // 旧カラムを最新セッションで同期（互換性のため）
-          // attendance.clock_in_time = latestSession.in_time;
-          // attendance.clock_out_time = latestSession.out_time || undefined;
+          attendance.clock_in_time = latestSession.in_time;
+          attendance.clock_out_time = latestSession.out_time || undefined;
         }
 
         // clock_recordsから総勤務時間を計算
@@ -950,7 +968,25 @@ export const getUserAttendance = async (
 
     console.log('getUserAttendance 加工後データ:', processedData.length, '件');
 
-    return processedData;
+    // 一日に複数出勤した場合のソート処理
+    // 1. 日付で降順ソート（最新の日付が上）
+    // 2. 同じ日付内では出勤時刻で昇順ソート（早い出勤が上）
+    const sortedData = processedData.sort((a, b) => {
+      // まず日付で比較（降順）
+      const dateComparison = b.work_date.localeCompare(a.work_date);
+      if (dateComparison !== 0) {
+        return dateComparison;
+      }
+      
+      // 同じ日付の場合、出勤時刻で比較（昇順）
+      const aClockIn = a.clock_in_time || '';
+      const bClockIn = b.clock_in_time || '';
+      return aClockIn.localeCompare(bClockIn);
+    });
+
+    console.log('getUserAttendance ソート後のデータ件数:', sortedData.length, '件');
+
+    return sortedData;
   } catch (error) {
     console.error('getUserAttendance エラー:', error);
     throw error;
@@ -1143,8 +1179,8 @@ export const getAllAttendance = async (
       if (attendance.clock_records && attendance.clock_records.length > 0) {
         const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
         // 旧カラムを最新セッションで同期（互換性のため）
-        // attendance.clock_in_time = latestSession.in_time;
-        // attendance.clock_out_time = latestSession.out_time || undefined;
+        attendance.clock_in_time = latestSession.in_time;
+        attendance.clock_out_time = latestSession.out_time || undefined;
       }
 
       // clock_recordsから総勤務時間を計算
@@ -1218,8 +1254,43 @@ export const getAllAttendance = async (
     });
 
     console.log('getAllAttendance 加工後データ:', processedData.length, '件');
+    
+    // デバッグ用：最初の数件のデータを詳細ログ
+    if (processedData.length > 0) {
+      console.log('最初の3件のデータ詳細:');
+      processedData.slice(0, 3).forEach((record, index) => {
+        console.log(`レコード${index + 1}:`, {
+          id: record.id,
+          user_id: record.user_id,
+          work_date: record.work_date,
+          clock_records: record.clock_records,
+          clock_in_time: record.clock_in_time,
+          clock_out_time: record.clock_out_time,
+          actual_work_minutes: record.actual_work_minutes,
+          user_name: record.user_name
+        });
+      });
+    }
 
-    return processedData;
+    // 一日に複数出勤した場合のソート処理
+    // 1. 日付で降順ソート（最新の日付が上）
+    // 2. 同じ日付内では出勤時刻で昇順ソート（早い出勤が上）
+    const sortedData = processedData.sort((a, b) => {
+      // まず日付で比較（降順）
+      const dateComparison = b.work_date.localeCompare(a.work_date);
+      if (dateComparison !== 0) {
+        return dateComparison;
+      }
+      
+      // 同じ日付の場合、出勤時刻で比較（昇順）
+      const aClockIn = a.clock_in_time || '';
+      const bClockIn = b.clock_in_time || '';
+      return aClockIn.localeCompare(bClockIn);
+    });
+
+    console.log('ソート後のデータ件数:', sortedData.length, '件');
+
+    return sortedData;
   } catch (error) {
     console.error('getAllAttendance エラー:', error);
     throw error;

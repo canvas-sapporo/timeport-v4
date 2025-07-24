@@ -35,9 +35,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedUser = getCurrentUser();
     if (storedUser && !isInitialized) {
       console.log('ローカルストレージからユーザー情報を復元:', storedUser);
-      setUser(storedUser);
-      setIsInitialized(true);
-      setIsLoading(false); // ローカルストレージから復元した場合はローディングを終了
+
+      // 復元したユーザー情報が有効かチェック
+      if (storedUser.id && storedUser.email) {
+        setUser(storedUser);
+        setIsInitialized(true);
+        setIsLoading(false); // ローカルストレージから復元した場合はローディングを終了
+      } else {
+        console.log('無効なユーザー情報を検出、クリアします');
+        localStorage.removeItem('auth-user');
+        setIsInitialized(true);
+        setIsLoading(false);
+      }
     }
 
     // Supabaseの認証状態を監視
@@ -277,6 +286,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           // セッションストレージもクリア
           sessionStorage.clear();
+
+          // ブラウザのキャッシュもクリア
+          if ('caches' in window) {
+            try {
+              const cacheNames = await caches.keys();
+              await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+              console.log('SIGNED_OUT: ブラウザキャッシュをクリアしました');
+            } catch (cacheError) {
+              console.log('SIGNED_OUT: キャッシュクリアエラー（無視）:', cacheError);
+            }
+          }
         }
         setIsLoggingOut(false);
       }
@@ -344,6 +364,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // セッションストレージもクリア
         sessionStorage.clear();
+
+        // ブラウザのキャッシュをクリアするためのヘッダーを設定
+        // これは次のページロード時にキャッシュを無効化する
+        if ('caches' in window) {
+          try {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+            console.log('ブラウザキャッシュをクリアしました');
+          } catch (cacheError) {
+            console.log('キャッシュクリアエラー（無視）:', cacheError);
+          }
+        }
       }
 
       // Supabaseでサインアウト（グローバルスコープで実行）
@@ -355,17 +387,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('Supabase signOut 完了');
       }
 
-      // 即座にログインページにリダイレクト
-      console.log('ログインページにリダイレクト');
+      // 追加のセッションクリア処理
+      try {
+        // 現在のセッションを取得して無効化
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          console.log('現在のセッションを無効化中...');
+          await supabase.auth.signOut({ scope: 'local' });
+        }
+      } catch (sessionError) {
+        console.log('セッションクリアエラー（無視）:', sessionError);
+      }
+
+      // 即座にログインページにリダイレクト（キャッシュを無効化）
+      console.log('ログインページにリダイレクト（キャッシュ無効化）');
       router.push('/login');
 
-      // フォールバック: 3秒後に強制的にリダイレクト
+      // フォールバック: 1秒後に強制的にリダイレクト（キャッシュを無効化）
       setTimeout(() => {
         if (typeof window !== 'undefined') {
-          console.log('フォールバックリダイレクト実行');
-          window.location.href = '/login';
+          console.log('フォールバックリダイレクト実行（キャッシュ無効化）');
+          // キャッシュを無効化してリダイレクト
+          window.location.href = '/login?cache-bust=' + Date.now();
         }
-      }, 3000);
+      }, 1000);
     } catch (error) {
       console.error('Logout error:', error);
       // エラーが発生した場合も確実にリダイレクト
@@ -375,9 +422,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setTimeout(() => {
         if (typeof window !== 'undefined') {
           console.log('エラー時のフォールバックリダイレクト実行');
-          window.location.href = '/login';
+          window.location.href = '/login?cache-bust=' + Date.now();
         }
-      }, 1000);
+      }, 500);
     } finally {
       setIsLoggingOut(false);
     }
