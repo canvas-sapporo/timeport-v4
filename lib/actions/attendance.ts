@@ -1393,3 +1393,313 @@ export const getCompanyGroups = async (
     throw error;
   }
 };
+
+/**
+ * 勤怠記録の更新
+ */
+export const updateAttendance = async (
+  attendanceId: string,
+  updateData: {
+    work_type_id?: string;
+    clock_records?: ClockRecord[];
+    actual_work_minutes?: number;
+    overtime_minutes?: number;
+    late_minutes?: number;
+    early_leave_minutes?: number;
+    status?: 'normal' | 'late' | 'early_leave' | 'absent';
+    auto_calculated?: boolean;
+    description?: string;
+    approved_by?: string;
+    approved_at?: string;
+  }
+): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> => {
+  try {
+    console.log('updateAttendance 開始:', { attendanceId, updateData });
+
+    // UUID形式チェック
+    if (attendanceId.startsWith('absent-')) {
+      return {
+        success: false,
+        message: '該当する勤怠記録が見つかりません',
+        error: 'NOT_FOUND',
+      };
+    }
+
+    // 既存の勤怠記録を取得
+    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+      .from('attendances')
+      .select('*')
+      .eq('id', attendanceId)
+      .is('deleted_at', null)
+      .single();
+
+    if (fetchError) {
+      console.error('勤怠記録取得エラー:', fetchError);
+      return {
+        success: false,
+        message: '勤怠記録の取得に失敗しました',
+        error: fetchError.message,
+      };
+    }
+
+    if (!existingRecord) {
+      return {
+        success: false,
+        message: '勤怠記録が見つかりません',
+        error: 'NOT_FOUND',
+      };
+    }
+
+    // 更新データを準備
+    const updatePayload: Record<string, unknown> = { ...updateData };
+
+    // clock_recordsが更新された場合、旧カラムも同期
+    if (updateData.clock_records && updateData.clock_records.length > 0) {
+      const latestSession = updateData.clock_records[updateData.clock_records.length - 1];
+      updatePayload.clock_in_time = latestSession.in_time;
+      updatePayload.clock_out_time = latestSession.out_time || null;
+    }
+
+    // 勤務時間の自動計算
+    if (updateData.clock_records && updateData.clock_records.length > 0) {
+      const latestSession = updateData.clock_records[updateData.clock_records.length - 1];
+      if (latestSession.in_time && latestSession.out_time) {
+        const { actualWorkMinutes, overtimeMinutes } = await calculateWorkTime(
+          latestSession.in_time,
+          latestSession.out_time,
+          latestSession.breaks || [],
+          updateData.work_type_id || existingRecord.work_type_id
+        );
+        updatePayload.actual_work_minutes = actualWorkMinutes;
+        updatePayload.overtime_minutes = overtimeMinutes;
+      }
+    }
+
+    // 更新を実行
+    const { data: updatedRecord, error: updateError } = await supabaseAdmin
+      .from('attendances')
+      .update(updatePayload)
+      .eq('id', attendanceId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('勤怠記録更新エラー:', updateError);
+      return {
+        success: false,
+        message: '勤怠記録の更新に失敗しました',
+        error: updateError.message,
+      };
+    }
+
+    console.log('勤怠記録更新成功:', updatedRecord);
+    revalidatePath('/admin/attendance');
+
+    return {
+      success: true,
+      message: '勤怠記録を更新しました',
+      attendance: updatedRecord as Attendance,
+    };
+  } catch (error) {
+    console.error('updateAttendance エラー:', error);
+    return {
+      success: false,
+      message: '予期しないエラーが発生しました',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+/**
+ * 勤怠記録の論理削除
+ */
+export const deleteAttendance = async (
+  attendanceId: string
+): Promise<{ success: boolean; message: string; error?: string }> => {
+  try {
+    console.log('deleteAttendance 開始:', { attendanceId });
+
+    // UUID形式チェック
+    if (attendanceId.startsWith('absent-')) {
+      return {
+        success: false,
+        message: '該当する勤怠記録が見つかりません',
+        error: 'NOT_FOUND',
+      };
+    }
+
+    // 既存の勤怠記録を取得
+    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+      .from('attendances')
+      .select('*')
+      .eq('id', attendanceId)
+      .is('deleted_at', null)
+      .single();
+
+    if (fetchError) {
+      console.error('勤怠記録取得エラー:', fetchError);
+      return {
+        success: false,
+        message: '勤怠記録の取得に失敗しました',
+        error: fetchError.message,
+      };
+    }
+
+    if (!existingRecord) {
+      return {
+        success: false,
+        message: '勤怠記録が見つかりません',
+        error: 'NOT_FOUND',
+      };
+    }
+
+    // 論理削除を実行
+    const { error: deleteError } = await supabaseAdmin
+      .from('attendances')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', attendanceId);
+
+    if (deleteError) {
+      console.error('勤怠記録削除エラー:', deleteError);
+      return {
+        success: false,
+        message: '勤怠記録の削除に失敗しました',
+        error: deleteError.message,
+      };
+    }
+
+    console.log('勤怠記録削除成功:', attendanceId);
+    revalidatePath('/admin/attendance');
+
+    return {
+      success: true,
+      message: '勤怠記録を削除しました',
+    };
+  } catch (error) {
+    console.error('deleteAttendance エラー:', error);
+    return {
+      success: false,
+      message: '予期しないエラーが発生しました',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+/**
+ * 勤怠記録の詳細取得（プレビュー用）
+ */
+export const getAttendanceDetail = async (
+  attendanceId: string
+): Promise<{ success: boolean; attendance?: Attendance; error?: string }> => {
+  try {
+    console.log('getAttendanceDetail 開始:', { attendanceId });
+
+    // UUID形式チェック
+    if (attendanceId.startsWith('absent-')) {
+      return {
+        success: false,
+        error: '該当する勤怠記録が見つかりません',
+      };
+    }
+
+    const { data: record, error } = await supabaseAdmin
+      .from('attendances')
+      .select('*')
+      .eq('id', attendanceId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error) {
+      console.error('勤怠記録取得エラー:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    if (!record) {
+      return {
+        success: false,
+        error: 'NOT_FOUND',
+      };
+    }
+
+    // 関連データを取得
+    const workTypeId = record.work_type_id;
+    const userId = record.user_id;
+
+    let workTypeName = '';
+    if (workTypeId) {
+      const { data: workType } = await supabaseAdmin
+        .from('work_types')
+        .select('name')
+        .eq('id', workTypeId)
+        .is('deleted_at', null)
+        .single();
+      workTypeName = workType?.name || '';
+    }
+
+    let userName = '';
+    if (userId) {
+      const { data: userProfile } = await supabaseAdmin
+        .from('user_profiles')
+        .select('family_name, first_name')
+        .eq('id', userId)
+        .is('deleted_at', null)
+        .single();
+      userName = userProfile ? `${userProfile.family_name} ${userProfile.first_name}` : '';
+    }
+
+    // clock_recordsから旧カラムを自動生成
+    const attendance = record as Attendance;
+    if (attendance.clock_records && attendance.clock_records.length > 0) {
+      const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
+      attendance.clock_in_time = latestSession.in_time;
+      attendance.clock_out_time = latestSession.out_time || undefined;
+    }
+
+    // 計算フィールドを追加
+    attendance.work_type_name = workTypeName;
+    attendance.user_name = userName;
+
+    console.log('getAttendanceDetail 取得成功');
+    return {
+      success: true,
+      attendance,
+    };
+  } catch (error) {
+    console.error('getAttendanceDetail エラー:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+/**
+ * 勤務タイプ一覧を取得
+ */
+export const getWorkTypes = async (): Promise<{ id: string; name: string }[]> => {
+  try {
+    console.log('getWorkTypes 開始');
+
+    const { data: workTypes, error } = await supabaseAdmin
+      .from('work_types')
+      .select('id, name')
+      .is('deleted_at', null)
+      .order('display_order', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('勤務タイプ取得エラー:', error);
+      throw error;
+    }
+
+    const result = workTypes || [];
+    console.log('getWorkTypes 取得成功:', result.length, '件');
+    return result;
+  } catch (error) {
+    console.error('getWorkTypes エラー:', error);
+    return [];
+  }
+};

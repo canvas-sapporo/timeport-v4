@@ -274,8 +274,8 @@ export default function MemberAttendancePage() {
       const day = dateObj.getDate().toString().padStart(2, '0');
 
       return (
-        <span className="text-sm font-medium whitespace-nowrap">
-          {year}/{month}/{day} <span className={`text-xs ${weekdayColor}`}>({weekday})</span>
+        <span className="font-medium whitespace-nowrap">
+          {year}/{month}/{day} <span className={`text-sm ml-1 ${weekdayColor}`}>({weekday})</span>
         </span>
       );
     } catch {

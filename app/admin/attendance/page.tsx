@@ -53,6 +53,9 @@ import {
 import type { Attendance, AttendanceStatus, AttendanceFilters } from '@/types/attendance';
 import AdminAttendanceFilters from '@/components/admin/AttendanceFilters';
 import AdminCsvExportDialog from '@/components/admin/CsvExportDialog';
+import AttendancePreviewDialog from '@/components/admin/AttendancePreviewDialog';
+import AttendanceEditDialog from '@/components/admin/AttendanceEditDialog';
+import AttendanceDeleteDialog from '@/components/admin/AttendanceDeleteDialog';
 
 export default function AdminAttendancePage() {
   const { user } = useAuth();
@@ -66,6 +69,12 @@ export default function AdminAttendancePage() {
   const [isBreakDetailsDialogOpen, setIsBreakDetailsDialogOpen] = useState(false);
   const [isColumnSettingsDialogOpen, setIsColumnSettingsDialogOpen] = useState(false);
   const [csvExportOpen, setCsvExportOpen] = useState(false);
+
+  // 操作ダイアログの状態
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedAttendanceId, setSelectedAttendanceId] = useState<string | null>(null);
 
   // フィルター状態
   const [filters, setFilters] = useState<AttendanceFilters>({
@@ -193,76 +202,77 @@ export default function AdminAttendancePage() {
     fetchUsersAndGroups();
   }, [user]);
 
-  // データ取得
-  useEffect(() => {
-    const fetchAttendanceData = async () => {
-      if (!user) {
-        console.log('ユーザーが存在しません');
+  // 勤怠データ取得関数
+  const fetchAttendanceData = async () => {
+    if (!user) {
+      console.log('ユーザーが存在しません');
+      return;
+    }
+
+    console.log('現在のユーザー情報:', {
+      id: user.id,
+      name: user.full_name,
+      role: user.role,
+      company_id: user.company_id,
+    });
+
+    try {
+      setIsLoading(true);
+      console.log('勤怠データ取得開始:', { selectedMonth });
+
+      // ユーザーの会社IDを使用
+      if (!user.company_id) {
+        console.error('ユーザーの会社IDが設定されていません');
         return;
       }
 
-      console.log('現在のユーザー情報:', {
-        id: user.id,
-        name: user.full_name,
-        role: user.role,
-        company_id: user.company_id,
+      console.log('使用する会社ID:', user.company_id);
+      console.log('会社IDの型:', typeof user.company_id);
+      console.log('会社IDが存在するか:', !!user.company_id);
+
+      // 選択された月の日付範囲を計算
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month, 0).getDate();
+      const endDate = `${year}-${month.toString().padStart(2, '0')}-${lastDay}`;
+
+      console.log('getAllAttendance呼び出し前:', {
+        companyId: user.company_id,
+        startDate,
+        endDate,
       });
 
-      try {
-        setIsLoading(true);
-        console.log('勤怠データ取得開始:', { selectedMonth });
+      const records = await getAllAttendance(user.company_id, startDate, endDate);
+      console.log('取得された勤怠データ:', records);
+      console.log('取得された勤怠データ件数:', records?.length || 0);
 
-        // ユーザーの会社IDを使用
-        if (!user.company_id) {
-          console.error('ユーザーの会社IDが設定されていません');
-          return;
-        }
-
-        console.log('使用する会社ID:', user.company_id);
-        console.log('会社IDの型:', typeof user.company_id);
-        console.log('会社IDが存在するか:', !!user.company_id);
-
-        // 選択された月の日付範囲を計算
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-        const lastDay = new Date(year, month, 0).getDate();
-        const endDate = `${year}-${month.toString().padStart(2, '0')}-${lastDay}`;
-
-        console.log('getAllAttendance呼び出し前:', {
-          companyId: user.company_id,
-          startDate,
-          endDate,
+      // デバッグ用：clock_recordsを含むデータを詳細ログ
+      if (records.length > 0) {
+        console.log('clock_recordsを含むデータ詳細:');
+        records.forEach((record, index) => {
+          if (record.clock_records && record.clock_records.length > 0) {
+            console.log(`レコード${index + 1} (clock_recordsあり):`, {
+              id: record.id,
+              user_id: record.user_id,
+              work_date: record.work_date,
+              clock_records: record.clock_records,
+              clock_in_time: record.clock_in_time,
+              clock_out_time: record.clock_out_time,
+            });
+          }
         });
-
-        const records = await getAllAttendance(user.company_id, startDate, endDate);
-        console.log('取得された勤怠データ:', records);
-        console.log('取得された勤怠データ件数:', records?.length || 0);
-
-        // デバッグ用：clock_recordsを含むデータを詳細ログ
-        if (records.length > 0) {
-          console.log('clock_recordsを含むデータ詳細:');
-          records.forEach((record, index) => {
-            if (record.clock_records && record.clock_records.length > 0) {
-              console.log(`レコード${index + 1} (clock_recordsあり):`, {
-                id: record.id,
-                user_id: record.user_id,
-                work_date: record.work_date,
-                clock_records: record.clock_records,
-                clock_in_time: record.clock_in_time,
-                clock_out_time: record.clock_out_time,
-              });
-            }
-          });
-        }
-
-        setAttendanceRecords(records);
-      } catch (error) {
-        console.error('勤怠データ取得エラー:', error);
-      } finally {
-        setIsLoading(false);
       }
-    };
 
+      setAttendanceRecords(records);
+    } catch (error) {
+      console.error('勤怠データ取得エラー:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // データ取得
+  useEffect(() => {
     fetchAttendanceData();
   }, [user, selectedMonth]);
 
@@ -281,6 +291,16 @@ export default function AdminAttendancePage() {
   const isWeekend = (date: string): boolean => {
     const dayOfWeek = new Date(date).getDay();
     return dayOfWeek === 0 || dayOfWeek === 6; // 0: 日曜日, 6: 土曜日
+  };
+
+  const getDayOfWeekColor = (date: string): string => {
+    const dayOfWeek = new Date(date).getDay();
+    if (dayOfWeek === 0) {
+      return 'text-red-600'; // 日曜日は赤
+    } else if (dayOfWeek === 6) {
+      return 'text-blue-600'; // 土曜日は青
+    }
+    return 'text-gray-600'; // 平日はグレー
   };
 
   const getAttendanceStatus = (record?: Attendance): AttendanceStatus => {
@@ -421,6 +441,27 @@ export default function AdminAttendancePage() {
     });
   };
 
+  // 操作ボタンのハンドラー
+  const handlePreviewClick = (attendanceId: string) => {
+    setSelectedAttendanceId(attendanceId);
+    setPreviewDialogOpen(true);
+  };
+
+  const handleEditClick = (attendanceId: string) => {
+    setSelectedAttendanceId(attendanceId);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (attendanceId: string) => {
+    setSelectedAttendanceId(attendanceId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleOperationSuccess = () => {
+    // データを再取得
+    fetchAttendanceData();
+  };
+
   // 月の全日期間を生成
   const generateMonthDays = (yearMonth: string): string[] => {
     const [year, month] = yearMonth.split('-').map(Number);
@@ -460,7 +501,7 @@ export default function AdminAttendancePage() {
         // 勤怠データがない場合の処理
         const isWeekendDay = isWeekend(date);
         const absentRecord: Attendance = {
-          id: `${user.id}-${date}`,
+          id: `absent-${user.id}-${date}`, // 欠勤データであることを明示
           user_id: user.id,
           work_date: date,
           clock_records: [], // 欠勤時は空のclock_recordsを設定
@@ -717,11 +758,13 @@ export default function AdminAttendancePage() {
                         <TableCell>
                           <div className="font-medium">
                             {new Date(record.work_date).toLocaleDateString('ja-JP')}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {new Date(record.work_date).toLocaleDateString('ja-JP', {
-                              weekday: 'short',
-                            })}
+                            <span className={`text-sm ml-1 ${getDayOfWeekColor(record.work_date)}`}>
+                              (
+                              {new Date(record.work_date).toLocaleDateString('ja-JP', {
+                                weekday: 'short',
+                              })}
+                              )
+                            </span>
                           </div>
                         </TableCell>
                       )}
@@ -852,7 +895,11 @@ export default function AdminAttendancePage() {
                       )}
                       {visibleColumns.status && (
                         <TableCell>
-                          {getStatusBadge(getAttendanceStatus(record), record.work_date)}
+                          {record.id.startsWith('absent-') ? (
+                            <span className="text-gray-400">-</span>
+                          ) : (
+                            getStatusBadge(getAttendanceStatus(record), record.work_date)
+                          )}
                         </TableCell>
                       )}
                       {visibleColumns.approval && (
@@ -886,21 +933,37 @@ export default function AdminAttendancePage() {
                         </TableCell>
                       )}
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        {record.id.startsWith('absent-') ? (
+                          <span className="text-gray-400 text-sm">-</span>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePreviewClick(record.id)}
+                              title="プレビュー"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditClick(record.id)}
+                              title="編集"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-800"
+                              onClick={() => handleDeleteClick(record.id)}
+                              title="削除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -1098,6 +1161,29 @@ export default function AdminAttendancePage() {
         groups={groups}
         attendanceFilters={filters}
         selectedMonth={selectedMonth}
+      />
+
+      {/* プレビューダイアログ */}
+      <AttendancePreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        attendanceId={selectedAttendanceId}
+      />
+
+      {/* 編集ダイアログ */}
+      <AttendanceEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        attendanceId={selectedAttendanceId}
+        onSuccess={handleOperationSuccess}
+      />
+
+      {/* 削除ダイアログ */}
+      <AttendanceDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        attendanceId={selectedAttendanceId}
+        onSuccess={handleOperationSuccess}
       />
     </div>
   );
