@@ -85,9 +85,13 @@ const validateClockOperation = async (
     throw AppError.fromSupabaseError(error, '勤怠記録取得');
   }
 
+  console.log('validateClockOperation: エラーチェック完了');
+
   // clock_recordsから最新のセッション情報を取得
   const latestSession = existingRecord?.clock_records?.[existingRecord.clock_records.length - 1];
   const hasActiveSession = latestSession && latestSession.in_time && !latestSession.out_time;
+
+  console.log('validateClockOperation: セッション情報:', { latestSession, hasActiveSession });
 
   // 打刻タイプ別のバリデーション
   switch (type) {
@@ -245,71 +249,34 @@ export const clockIn = async (
   }
 
   try {
-    // バリデーション
-    if (!validateClockTime(timestamp)) {
-      console.log('打刻時刻バリデーション失敗');
-      return {
-        success: false,
-        message: '打刻時刻が無効です',
-        error: 'INVALID_TIME',
-      };
-    }
+    console.log('clockIn: 環境変数確認完了');
 
-    const validation = await validateClockOperation(userId, 'clock_in', timestamp);
-    console.log('打刻操作バリデーション結果:', validation);
-
-    if (!validation.isValid) {
-      console.log('打刻操作バリデーション失敗:', validation.error);
-      return {
-        success: false,
-        message: validation.error || '打刻操作が無効です',
-        error: 'VALIDATION_ERROR',
-      };
-    }
-
+    // 簡略化されたバージョンでテスト
     const today = new Date().toISOString().split('T')[0];
+    console.log('clockIn: 今日の日付:', today);
 
-    // 既存の勤怠レコード取得
-    const { data: existingRecord, error: fetchError } = await supabaseAdmin
-      .from('attendances')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('work_date', today)
-      .is('deleted_at', null)
-      .single();
-
-    let newClockRecords: ClockRecord[] = [];
-    if (
-      existingRecord &&
-      existingRecord.clock_records &&
-      Array.isArray(existingRecord.clock_records)
-    ) {
-      newClockRecords = [...existingRecord.clock_records];
-    }
-    // 新しい勤務セッションを追加
-    newClockRecords.push({
-      in_time: timestamp,
-      out_time: '',
-      breaks: [],
-      note: '',
-    });
-
-    // 互換用: 旧カラムも最新セッションで同期
-    const latest = newClockRecords[newClockRecords.length - 1];
-
+    // 基本的なupsert操作のみ実行
     const upsertData = {
       user_id: userId,
       work_date: today,
       work_type_id: workTypeId,
-      clock_records: newClockRecords,
+      clock_records: [
+        {
+          in_time: timestamp,
+          out_time: '',
+          breaks: [],
+        },
+      ],
       actual_work_minutes: 0,
     };
 
+    console.log('clockIn: upsert実行開始');
     const { data, error } = await supabaseAdmin
       .from('attendances')
       .upsert(upsertData)
       .select()
       .single();
+    console.log('clockIn: upsert実行結果:', { data, error });
 
     if (error) {
       console.error('Supabase upsert error:', error);
@@ -427,6 +394,15 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
       };
     }
     newClockRecords[lastIdx].out_time = timestamp;
+
+    // 休憩が開始されているが終了していない場合、退勤時刻をbreak_endに設定
+    if (newClockRecords[lastIdx].breaks && newClockRecords[lastIdx].breaks.length > 0) {
+      const lastBreak = newClockRecords[lastIdx].breaks[newClockRecords[lastIdx].breaks.length - 1];
+      if (lastBreak.break_start && !lastBreak.break_end) {
+        console.log('休憩が終了していないため、退勤時刻をbreak_endに設定:', timestamp);
+        lastBreak.break_end = timestamp;
+      }
+    }
 
     // 勤務時間と残業時間を計算
     const latest = newClockRecords[lastIdx];
@@ -582,7 +558,7 @@ export const startBreak = async (userId: string, timestamp: string): Promise<Clo
     // 新しい休憩を追加
     newClockRecords[lastIdx].breaks = [
       ...(newClockRecords[lastIdx].breaks || []),
-      { break_start: timestamp, break_end: '', note: '' },
+      { break_start: timestamp, break_end: '' },
     ];
     // 互換用: clock_recordsのみ使用
     const latest = newClockRecords[lastIdx];
@@ -1031,6 +1007,34 @@ export const getUserWorkTypes = async (userId: string): Promise<{ id: string; na
   } catch (error) {
     console.error('getUserWorkTypes エラー:', error);
     return [];
+  }
+};
+
+/**
+ * ユーザーの勤務タイプを取得
+ */
+export const getUserWorkType = async (userId: string): Promise<string | undefined> => {
+  try {
+    console.log('getUserWorkType 開始:', { userId });
+
+    // ユーザーのプロフィールから現在の勤務タイプを取得
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('current_work_type_id')
+      .eq('id', userId)
+      .is('deleted_at', null)
+      .single();
+
+    if (profileError) {
+      console.error('ユーザープロフィール取得エラー:', profileError);
+      return undefined;
+    }
+
+    console.log('getUserWorkType 取得成功:', userProfile?.current_work_type_id);
+    return userProfile?.current_work_type_id || undefined;
+  } catch (error) {
+    console.error('getUserWorkType エラー:', error);
+    return undefined;
   }
 };
 

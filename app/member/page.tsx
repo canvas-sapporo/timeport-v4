@@ -22,6 +22,7 @@ import {
   endBreak,
   getTodayAttendance,
   getMemberAttendance,
+  getUserWorkType,
 } from '@/lib/actions/attendance';
 import type { Attendance, ClockBreakRecord, ClockRecord } from '@/types/attendance';
 import { refreshSchemaCache } from '@/lib/supabase';
@@ -312,17 +313,14 @@ export default function MemberDashboard() {
       console.log('打刻時刻:', timestamp);
       console.log('clockIn関数呼び出し開始');
 
-      // user_profilesからwork_type_idを取得して渡す
-      const { data: userProfile } = await supabase
-        .from('user_profiles')
-        .select('current_work_type_id')
-        .eq('id', user.id)
-        .single();
-
-      const workTypeId = userProfile?.current_work_type_id;
-      console.log('取得したwork_type_id:', workTypeId);
+      // ユーザーの勤務タイプを取得
+      console.log('ユーザーの勤務タイプを取得中...');
+      const workTypeId = await getUserWorkType(user.id);
+      console.log('取得した勤務タイプID:', workTypeId);
 
       console.log('clockIn関数呼び出し直前');
+      console.log('clockIn関数の引数:', { userId: user.id, timestamp, workTypeId });
+
       const result = await clockIn(user.id, timestamp, workTypeId);
       console.log('clockIn関数呼び出し完了');
       console.log('clockIn結果:', result);
@@ -596,7 +594,9 @@ export default function MemberDashboard() {
               <Button
                 onClick={() => {
                   console.log('出勤ボタンがクリックされました');
+                  console.log('handleClockIn関数を呼び出します');
                   handleClockIn();
+                  console.log('handleClockIn関数呼び出し完了');
                 }}
                 disabled={isLoading}
                 className="w-full h-12 bg-green-600 hover:bg-green-700"

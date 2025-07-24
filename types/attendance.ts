@@ -31,8 +31,6 @@ export interface ClockBreakRecord {
   break_start: string; // Timestamp
   /** 休憩終了日時（ISO8601） */
   break_end: string; // Timestamp
-  /** 備考 */
-  note?: string;
 }
 
 /**
@@ -45,8 +43,6 @@ export interface ClockRecord {
   out_time: string; // Timestamp
   /** 休憩リスト */
   breaks: ClockBreakRecord[];
-  /** 備考 */
-  note?: string;
 }
 
 // ================================

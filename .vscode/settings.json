@@ -1,13 +1,28 @@
 {
-  // 保存時にフォーマット
-  "editor.formatOnSave": true,
-
-  // Prettier を既定のフォーマッターに
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "cursor.assistant.inline.enabled": true,
+  "deno.enablePaths": [
+    "supabase/functions"
+  ],
+  "deno.lint": true,
+  "deno.unstable": [
+    "bare-node-builtins",
+    "byonm",
+    "sloppy-imports",
+    "unsafe-proto",
+    "webgpu",
+    "broadcast-channel",
+    "worker-options",
+    "cron",
+    "kv",
+    "ffi",
+    "fs",
+    "http",
+    "net"
+  ],
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-
-  // 保存時に自動保存
-  "files.autoSave": "onFocusChange",
-
-  // インラインAI補助（Cursor独自）
-  "cursor.assistant.inline.enabled": true
+  "editor.formatOnSave": true,
+  "files.autoSave": "onFocusChange"
 }

@@ -986,11 +986,6 @@ export default function AdminAttendancePage() {
                                   >
                                     <div className="flex items-center space-x-2">
                                       <span className="font-medium">{breakIndex + 1}回目</span>
-                                      {breakRecord.note && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {breakRecord.note}
-                                        </Badge>
-                                      )}
                                     </div>
                                     <div className="text-sm">
                                       {formatTime(breakRecord.break_start)} -{' '}
@@ -1073,6 +1068,8 @@ export default function AdminAttendancePage() {
         attendanceRecords={filteredRecords}
         users={users}
         groups={groups}
+        attendanceFilters={filters}
+        selectedMonth={selectedMonth}
       />
     </div>
   );

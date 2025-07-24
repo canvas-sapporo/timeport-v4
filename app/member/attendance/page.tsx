@@ -55,8 +55,7 @@ export default function MemberAttendancePage() {
   const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [selectedDescription, setSelectedDescription] = useState<string | null>(null);
-  const [isDescriptionDialogOpen, setIsDescriptionDialogOpen] = useState(false);
+
   const [selectedBreakDetails, setSelectedBreakDetails] = useState<Attendance | null>(null);
   const [isBreakDetailsDialogOpen, setIsBreakDetailsDialogOpen] = useState(false);
   const [isColumnSettingsDialogOpen, setIsColumnSettingsDialogOpen] = useState(false);
@@ -83,7 +82,6 @@ export default function MemberAttendancePage() {
     workTime: true,
     overtime: true,
     status: true,
-    notes: true,
     break: false,
     workType: false,
     late: false,
@@ -286,7 +284,12 @@ export default function MemberAttendancePage() {
   };
 
   const getAttendanceStatus = (record?: Attendance): AttendanceStatus => {
-    if (!record || !record.clock_in_time) return 'absent';
+    if (!record || !record.clock_records || record.clock_records.length === 0) return 'absent';
+
+    // 最新のセッションを取得
+    const latestSession = record.clock_records[record.clock_records.length - 1];
+    if (!latestSession.in_time) return 'absent';
+
     return 'normal';
   };
 
@@ -307,6 +310,20 @@ export default function MemberAttendancePage() {
       default:
         return <Badge variant="outline">-</Badge>;
     }
+  };
+
+  // 最新のセッションから出勤時刻を取得
+  const getClockInTime = (record?: Attendance): string | undefined => {
+    if (!record?.clock_records || record.clock_records.length === 0) return undefined;
+    const latestSession = record.clock_records[record.clock_records.length - 1];
+    return latestSession.in_time;
+  };
+
+  // 最新のセッションから退勤時刻を取得
+  const getClockOutTime = (record?: Attendance): string | undefined => {
+    if (!record?.clock_records || record.clock_records.length === 0) return undefined;
+    const latestSession = record.clock_records[record.clock_records.length - 1];
+    return latestSession.out_time;
   };
 
   const formatTime = (time?: string) => {
@@ -378,11 +395,6 @@ export default function MemberAttendancePage() {
     }
   };
 
-  const handleDescriptionClick = (description: string) => {
-    setSelectedDescription(description);
-    setIsDescriptionDialogOpen(true);
-  };
-
   const handleBreakDetailsClick = (record: Attendance) => {
     setSelectedBreakDetails(record);
     setIsBreakDetailsDialogOpen(true);
@@ -403,7 +415,6 @@ export default function MemberAttendancePage() {
       workTime: true,
       overtime: true,
       status: true,
-      notes: true,
       break: false,
       workType: false,
       late: false,
@@ -475,7 +486,6 @@ export default function MemberAttendancePage() {
                   {visibleColumns.updatedAt && (
                     <TableHead className="w-[120px]">更新日時</TableHead>
                   )}
-                  {visibleColumns.notes && <TableHead className="w-[60px]">備考</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -508,12 +518,12 @@ export default function MemberAttendancePage() {
                         )}
                         {visibleColumns.clockIn && (
                           <TableCell className="text-sm">
-                            {formatTime(record.clock_in_time)}
+                            {formatTime(getClockInTime(record))}
                           </TableCell>
                         )}
                         {visibleColumns.clockOut && (
                           <TableCell className="text-sm">
-                            {formatTime(record.clock_out_time)}
+                            {formatTime(getClockOutTime(record))}
                           </TableCell>
                         )}
                         {visibleColumns.workTime && (
@@ -595,25 +605,6 @@ export default function MemberAttendancePage() {
                         {visibleColumns.updatedAt && (
                           <TableCell>{formatDateTime(record.updated_at)}</TableCell>
                         )}
-                        {visibleColumns.notes && (
-                          <TableCell>
-                            {record.description ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDescriptionClick(record.description!);
-                                }}
-                                className="p-1 h-auto text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                              >
-                                <Info className="w-4 h-4" />
-                              </Button>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </TableCell>
-                        )}
                       </TableRow>
                     );
                   })
@@ -629,24 +620,6 @@ export default function MemberAttendancePage() {
           )}
         </CardContent>
       </Card>
-
-      {/* 備考詳細ダイアログ */}
-      <Dialog open={isDescriptionDialogOpen} onOpenChange={setIsDescriptionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Info className="w-5 h-5 text-blue-600" />
-              <span>備考詳細</span>
-            </DialogTitle>
-            <DialogDescription>勤怠記録の備考情報を確認できます</DialogDescription>
-          </DialogHeader>
-          <div className="mt-4">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-gray-700 whitespace-pre-wrap">{selectedDescription}</p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* 休憩詳細ダイアログ */}
       <Dialog open={isBreakDetailsDialogOpen} onOpenChange={setIsBreakDetailsDialogOpen}>
@@ -727,7 +700,6 @@ export default function MemberAttendancePage() {
                 { key: 'approval', label: '承認状態' },
                 { key: 'approver', label: '承認者' },
                 { key: 'updatedAt', label: '更新日時' },
-                { key: 'notes', label: '備考' },
               ].map(({ key, label }) => (
                 <div key={key} className="flex items-center space-x-2">
                   <input

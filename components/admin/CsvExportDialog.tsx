@@ -33,7 +33,7 @@ import { Calendar, Download, Settings, Eye, Users, Building } from 'lucide-react
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import type { CsvExportSetting } from '@/types/settings';
-import type { Attendance } from '@/types/attendance';
+import type { Attendance, AttendanceFilters } from '@/types/attendance';
 
 interface CsvExportDialogProps {
   open: boolean;
@@ -41,6 +41,8 @@ interface CsvExportDialogProps {
   attendanceRecords: Attendance[];
   users: { id: string; name: string; code?: string }[];
   groups: { id: string; name: string; code?: string }[];
+  attendanceFilters?: AttendanceFilters;
+  selectedMonth?: string;
 }
 
 const AVAILABLE_COLUMNS = [
@@ -67,6 +69,8 @@ export default function AdminCsvExportDialog({
   attendanceRecords,
   users,
   groups,
+  attendanceFilters,
+  selectedMonth,
 }: CsvExportDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -201,6 +205,58 @@ export default function AdminCsvExportDialog({
     setShowPreview(true);
   };
 
+  // フィルター情報を含むファイル名を生成
+  const generateFileName = (): string => {
+    const timestamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 14);
+    let fileName = `${timestamp}_admin_attendance`;
+
+    // 期間情報を追加
+    if (setting.period.start_date && setting.period.end_date) {
+      fileName += `_${setting.period.start_date}-${setting.period.end_date}`;
+    } else if (selectedMonth) {
+      fileName += `_${selectedMonth}`;
+    }
+
+    // フィルター情報を追加
+    const filterParts: string[] = [];
+
+    if (attendanceFilters?.userId) {
+      const selectedUser = users.find((u) => u.id === attendanceFilters.userId);
+      if (selectedUser) {
+        filterParts.push(`user_${selectedUser.name}`);
+      }
+    }
+
+    if (attendanceFilters?.groupId) {
+      const selectedGroup = groups.find((g) => g.id === attendanceFilters.groupId);
+      if (selectedGroup) {
+        filterParts.push(`group_${selectedGroup.name}`);
+      }
+    }
+
+    if (attendanceFilters?.status && attendanceFilters.status.length > 0) {
+      filterParts.push(`status_${attendanceFilters.status.join('_')}`);
+    }
+
+    if (attendanceFilters?.hasOvertime !== null && attendanceFilters?.hasOvertime !== undefined) {
+      filterParts.push(`overtime_${attendanceFilters.hasOvertime ? 'yes' : 'no'}`);
+    }
+
+    if (attendanceFilters?.workTypeId) {
+      filterParts.push(`worktype_${attendanceFilters.workTypeId}`);
+    }
+
+    if (attendanceFilters?.approvalStatus) {
+      filterParts.push(`approval_${attendanceFilters.approvalStatus}`);
+    }
+
+    if (filterParts.length > 0) {
+      fileName += `_filtered_${filterParts.join('_')}`;
+    }
+
+    return `${fileName}.csv`;
+  };
+
   // CSV出力を実行
   const handleExport = async () => {
     if (!user) return;
@@ -212,8 +268,7 @@ export default function AdminCsvExportDialog({
       const csvData = generateSimpleCsvData(filteredRecords, setting);
 
       // ファイル名を生成
-      const timestamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 14);
-      const fileName = `${timestamp}_admin_attendance_${setting.period.start_date || 'all'}-${setting.period.end_date || 'all'}.csv`;
+      const fileName = generateFileName();
 
       // ファイルをダウンロード
       const blob = new Blob([csvData], { type: 'text/csv; charset=utf-8' });
