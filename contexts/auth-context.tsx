@@ -297,6 +297,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               console.log('SIGNED_OUT: キャッシュクリアエラー（無視）:', cacheError);
             }
           }
+
+          // IndexedDBもクリア（もし存在する場合）
+          if ('indexedDB' in window) {
+            try {
+              const databases = await indexedDB.databases();
+              await Promise.all(
+                databases.map((db) => {
+                  if (db.name && typeof db.name === 'string') {
+                    return new Promise((resolve) => {
+                      const request = indexedDB.deleteDatabase(db.name as string);
+                      request.onsuccess = () => resolve(undefined);
+                      request.onerror = () => resolve(undefined);
+                    });
+                  }
+                  return Promise.resolve();
+                })
+              );
+              console.log('SIGNED_OUT: IndexedDBをクリアしました');
+            } catch (indexedDBError) {
+              console.log('SIGNED_OUT: IndexedDBクリアエラー（無視）:', indexedDBError);
+            }
+          }
         }
         setIsLoggingOut(false);
       }
@@ -348,6 +370,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       // ユーザー状態を即座にクリア（UIを即座に更新）
       setUser(null);
+      // localStorageから直接削除
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth-user');
+      }
 
       // クライアントサイドでのみlocalStorageを操作
       if (typeof window !== 'undefined') {
@@ -374,6 +400,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log('ブラウザキャッシュをクリアしました');
           } catch (cacheError) {
             console.log('キャッシュクリアエラー（無視）:', cacheError);
+          }
+        }
+
+        // IndexedDBもクリア（もし存在する場合）
+        if ('indexedDB' in window) {
+          try {
+            const databases = await indexedDB.databases();
+            await Promise.all(
+              databases.map((db) => {
+                if (db.name && typeof db.name === 'string') {
+                  return new Promise((resolve) => {
+                    const request = indexedDB.deleteDatabase(db.name as string);
+                    request.onsuccess = () => resolve(undefined);
+                    request.onerror = () => resolve(undefined);
+                  });
+                }
+                return Promise.resolve();
+              })
+            );
+            console.log('IndexedDBをクリアしました');
+          } catch (indexedDBError) {
+            console.log('IndexedDBクリアエラー（無視）:', indexedDBError);
           }
         }
       }

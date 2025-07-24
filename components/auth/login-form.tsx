@@ -19,46 +19,72 @@ export const LoginForm = () => {
 
   // ページロード時にキャッシュをクリア
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // URLパラメータからキャッシュバストを確認
-      const urlParams = new URLSearchParams(window.location.search);
-      const cacheBust = urlParams.get('cache-bust');
+    const clearStorage = async () => {
+      if (typeof window !== 'undefined') {
+        // URLパラメータからキャッシュバストを確認
+        const urlParams = new URLSearchParams(window.location.search);
+        const cacheBust = urlParams.get('cache-bust');
 
-      if (cacheBust) {
-        console.log('キャッシュバストパラメータ検出、キャッシュをクリア中...');
-        // ローカルストレージとセッションストレージをクリア
-        localStorage.clear();
-        sessionStorage.clear();
+        if (cacheBust) {
+          console.log('キャッシュバストパラメータ検出、キャッシュをクリア中...');
+          // ローカルストレージとセッションストレージをクリア
+          localStorage.clear();
+          sessionStorage.clear();
 
-        // Supabase関連のトークンを特に削除
+          // Supabase関連のトークンを特に削除
+          Object.keys(localStorage).forEach((key) => {
+            if (key.startsWith('sb-')) {
+              localStorage.removeItem(key);
+            }
+          });
+
+          // キャッシュバストパラメータを削除してクリーンなURLにする
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+
+        // ログインページにアクセスした際に、既存の認証情報をクリア
+        console.log('ログインページアクセス、既存の認証情報をクリア中...');
+
+        // アプリケーション固有のユーザー情報を削除
+        localStorage.removeItem('auth-user');
+
+        // Supabase関連のトークンを削除
         Object.keys(localStorage).forEach((key) => {
           if (key.startsWith('sb-')) {
+            console.log('Supabaseトークンを削除:', key);
             localStorage.removeItem(key);
           }
         });
 
-        // キャッシュバストパラメータを削除してクリーンなURLにする
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      }
+        // セッションストレージもクリア
+        sessionStorage.clear();
 
-      // ログインページにアクセスした際に、既存の認証情報をクリア
-      console.log('ログインページアクセス、既存の認証情報をクリア中...');
-
-      // アプリケーション固有のユーザー情報を削除
-      localStorage.removeItem('auth-user');
-
-      // Supabase関連のトークンを削除
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith('sb-')) {
-          console.log('Supabaseトークンを削除:', key);
-          localStorage.removeItem(key);
+        // IndexedDBもクリア（もし存在する場合）
+        if ('indexedDB' in window) {
+          try {
+            const databases = await indexedDB.databases();
+            await Promise.all(
+              databases.map((db) => {
+                if (db.name && typeof db.name === 'string') {
+                  return new Promise((resolve) => {
+                    const request = indexedDB.deleteDatabase(db.name as string);
+                    request.onsuccess = () => resolve(undefined);
+                    request.onerror = () => resolve(undefined);
+                  });
+                }
+                return Promise.resolve();
+              })
+            );
+            console.log('ログインページ: IndexedDBをクリアしました');
+          } catch (indexedDBError) {
+            console.log('ログインページ: IndexedDBクリアエラー（無視）:', indexedDBError);
+          }
         }
-      });
+      }
+    };
 
-      // セッションストレージもクリア
-      sessionStorage.clear();
-    }
+    clearStorage();
   }, []);
 
   // ユーザーが認証されたら自動的にリダイレクト
