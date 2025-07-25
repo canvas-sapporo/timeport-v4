@@ -162,10 +162,9 @@ const calculateWorkTime = async (
   const breakMinutes = breakRecords.reduce((total, br) => {
     if (br.break_start && br.break_end) {
       try {
-        // 日付を正しく処理
-        const workDate = clockIn.toISOString().split('T')[0];
-        const breakStart = new Date(`${workDate}T${br.break_start}`);
-        const breakEnd = new Date(`${workDate}T${br.break_end}`);
+        // ISO形式の文字列を直接Dateオブジェクトに変換
+        const breakStart = new Date(br.break_start);
+        const breakEnd = new Date(br.break_end);
 
         // 有効な日付かチェック
         if (isNaN(breakStart.getTime()) || isNaN(breakEnd.getTime())) {
@@ -195,10 +194,14 @@ const calculateWorkTime = async (
         .from('work_types')
         .select('overtime_threshold_minutes')
         .eq('id', workTypeId)
+        .is('deleted_at', null)
         .single();
 
       if (!error && workType?.overtime_threshold_minutes) {
         overtimeThresholdMinutes = workType.overtime_threshold_minutes;
+        console.log('work_type取得成功:', { workTypeId, overtimeThresholdMinutes });
+      } else {
+        console.warn('work_type取得エラーまたはデータなし:', { workTypeId, error });
       }
     } catch (error) {
       console.warn('work_type取得エラー:', error);
@@ -1169,8 +1172,27 @@ export const getAllAttendance = async (
       }
     }
 
+    // source_idで参照されていないデータのみを取得（編集履歴は除外）
+    const originalRecords = filteredData.filter((record) => {
+      // source_idがnullまたはundefinedのレコードのみを取得
+      return !record.source_id;
+    });
+
+    // 編集履歴の存在をチェック
+    const recordsWithEditHistory = originalRecords.map((record) => {
+      const hasEditHistory = filteredData.some((editRecord) => 
+        editRecord.source_id === record.id
+      );
+      return {
+        ...record,
+        has_edit_history: hasEditHistory
+      };
+    });
+
+    const latestData = recordsWithEditHistory;
+
     // データを結合して加工（clock_recordsベース）
-    const processedData = filteredData.map((record) => {
+    const processedData = latestData.map((record) => {
       const workType = workTypesData.find((wt) => wt.id === record.work_type_id);
       const userProfile = userProfilesData.find((up) => up.id === record.user_id);
 
@@ -1180,7 +1202,8 @@ export const getAllAttendance = async (
         const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
         // 旧カラムを最新セッションで同期（互換性のため）
         attendance.clock_in_time = latestSession.in_time;
-        attendance.clock_out_time = latestSession.out_time || undefined;
+        // out_timeが空文字列の場合はundefinedにしない
+        attendance.clock_out_time = latestSession.out_time === '' ? undefined : latestSession.out_time;
       }
 
       // clock_recordsから総勤務時間を計算
@@ -1655,7 +1678,8 @@ export const getAttendanceDetail = async (
     if (attendance.clock_records && attendance.clock_records.length > 0) {
       const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
       attendance.clock_in_time = latestSession.in_time;
-      attendance.clock_out_time = latestSession.out_time || undefined;
+      // out_timeが空文字列の場合はundefinedにしない
+      attendance.clock_out_time = latestSession.out_time === '' ? undefined : latestSession.out_time;
     }
 
     // 計算フィールドを追加
@@ -1701,5 +1725,210 @@ export const getWorkTypes = async (): Promise<{ id: string; name: string }[]> =>
   } catch (error) {
     console.error('getWorkTypes エラー:', error);
     return [];
+  }
+};
+
+/**
+ * 勤怠記録の時刻を編集（データ複製による履歴管理）
+ */
+export const editAttendanceTime = async (
+  attendanceId: string,
+  clockRecords: ClockRecord[],
+  editReason: string,
+  editedBy: string
+): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> => {
+  try {
+    console.log('editAttendanceTime 開始:', { attendanceId, editReason, editedBy });
+
+    // UUID形式チェック
+    if (attendanceId.startsWith('absent-')) {
+      return {
+        success: false,
+        message: '該当する勤怠記録が見つかりません',
+        error: 'NOT_FOUND',
+      };
+    }
+
+    // 元の勤怠記録を取得
+    const { data: originalRecord, error: fetchError } = await supabaseAdmin
+      .from('attendances')
+      .select('*')
+      .eq('id', attendanceId)
+      .is('deleted_at', null)
+      .single();
+
+    if (fetchError || !originalRecord) {
+      console.error('元の勤怠記録取得エラー:', fetchError);
+      return {
+        success: false,
+        message: '元の勤怠記録が見つかりません',
+        error: fetchError?.message || 'NOT_FOUND',
+      };
+    }
+
+    // バリデーション
+    const validationResult = validateClockRecords(clockRecords);
+    if (!validationResult.isValid) {
+      return {
+        success: false,
+        message: validationResult.error || '時刻データが無効です',
+        error: 'VALIDATION_ERROR',
+      };
+    }
+
+    // 勤務時間の計算
+    let actualWorkMinutes = 0;
+    let overtimeMinutes = 0;
+
+    if (clockRecords.length > 0) {
+      const latestSession = clockRecords[clockRecords.length - 1];
+      if (latestSession.in_time && latestSession.out_time) {
+        const { actualWorkMinutes: calculatedWork, overtimeMinutes: calculatedOvertime } = 
+          await calculateWorkTime(
+            latestSession.in_time,
+            latestSession.out_time,
+            latestSession.breaks || [],
+            originalRecord.work_type_id
+          );
+        actualWorkMinutes = calculatedWork;
+        overtimeMinutes = calculatedOvertime;
+      }
+    }
+
+    // 新しい勤怠記録を作成（データ複製）
+    const newAttendanceData = {
+      user_id: originalRecord.user_id,
+      work_date: originalRecord.work_date,
+      work_type_id: originalRecord.work_type_id,
+      clock_records: clockRecords,
+      actual_work_minutes: actualWorkMinutes,
+      overtime_minutes: overtimeMinutes,
+      description: originalRecord.description,
+      approved_by: originalRecord.approved_by,
+      approved_at: originalRecord.approved_at,
+      source_id: originalRecord.id, // 元のレコードを参照
+      edit_reason: editReason,
+      edited_by: editedBy,
+    };
+
+    const { data: newRecord, error: createError } = await supabaseAdmin
+      .from('attendances')
+      .insert(newAttendanceData)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('新しい勤怠記録作成エラー:', createError);
+      return {
+        success: false,
+        message: '勤怠記録の編集に失敗しました',
+        error: createError.message,
+      };
+    }
+
+    console.log('勤怠記録編集成功:', newRecord);
+    revalidatePath('/admin/attendance');
+
+    return {
+      success: true,
+      message: '勤怠記録を編集しました',
+      attendance: newRecord,
+    };
+  } catch (error) {
+    console.error('editAttendanceTime エラー:', error);
+    return {
+      success: false,
+      message: '予期しないエラーが発生しました',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+/**
+ * clock_recordsのバリデーション
+ */
+const validateClockRecords = (clockRecords: ClockRecord[]): { isValid: boolean; error?: string } => {
+  if (!clockRecords || clockRecords.length === 0) {
+    return { isValid: false, error: '勤務記録が入力されていません' };
+  }
+
+  for (let i = 0; i < clockRecords.length; i++) {
+    const session = clockRecords[i];
+    
+    // 出勤時刻のチェック
+    if (!session.in_time) {
+      return { isValid: false, error: `${i + 1}番目のセッションに出勤時刻が設定されていません` };
+    }
+
+    // 退勤時刻のチェック（最後のセッション以外は必須）
+    if (i === clockRecords.length - 1 && !session.out_time) {
+      return { isValid: false, error: '最後のセッションに退勤時刻が設定されていません' };
+    }
+
+    // 出勤時刻と退勤時刻の整合性チェック
+    if (session.out_time && new Date(session.in_time) >= new Date(session.out_time)) {
+      return { isValid: false, error: `${i + 1}番目のセッションで退勤時刻が出勤時刻より前になっています` };
+    }
+
+    // セッション間の整合性チェック
+    if (i > 0) {
+      const prevSession = clockRecords[i - 1];
+      if (prevSession.out_time && new Date(session.in_time) <= new Date(prevSession.out_time)) {
+        return { isValid: false, error: `${i + 1}番目のセッションの出勤時刻が前のセッションの退勤時刻より前になっています` };
+      }
+    }
+
+    // 休憩時間のチェック
+    if (session.breaks && session.breaks.length > 0) {
+      for (let j = 0; j < session.breaks.length; j++) {
+        const breakRecord = session.breaks[j];
+        
+        if (!breakRecord.break_start || !breakRecord.break_end) {
+          return { isValid: false, error: `${i + 1}番目のセッションの${j + 1}番目の休憩に開始時刻または終了時刻が設定されていません` };
+        }
+
+        if (new Date(breakRecord.break_start) >= new Date(breakRecord.break_end)) {
+          return { isValid: false, error: `${i + 1}番目のセッションの${j + 1}番目の休憩で終了時刻が開始時刻より前になっています` };
+        }
+
+        // 休憩時間が勤務時間内かチェック
+        if (new Date(breakRecord.break_start) < new Date(session.in_time) || 
+            (session.out_time && new Date(breakRecord.break_end) > new Date(session.out_time))) {
+          return { isValid: false, error: `${i + 1}番目のセッションの${j + 1}番目の休憩が勤務時間外になっています` };
+        }
+      }
+    }
+  }
+
+  return { isValid: true };
+};
+
+/**
+ * 最新の勤怠記録を取得（編集履歴を考慮）
+ */
+export const getLatestAttendance = async (
+  userId: string,
+  workDate: string
+): Promise<Attendance | null> => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('attendances')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('work_date', workDate)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.error('最新勤怠記録取得エラー:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('getLatestAttendance エラー:', error);
+    return null;
   }
 };

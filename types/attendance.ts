@@ -105,6 +105,14 @@ export interface Attendance extends BaseEntity {
   user_name?: string;
   /** ユーザーコード - 計算フィールド（admin用） */
   user_code?: string;
+  /** 元の勤怠記録ID（編集履歴管理用） */
+  source_id?: UUID;
+  /** 編集理由 */
+  edit_reason?: string;
+  /** 編集者ID */
+  edited_by?: UUID;
+  /** 編集履歴の有無 */
+  has_edit_history?: boolean;
 }
 
 /**
@@ -165,6 +173,42 @@ export interface UpdateAttendanceInput {
   approved_by?: UUID;
   /** 承認日時 */
   approved_at?: Timestamp;
+}
+
+/**
+ * 勤怠記録編集入力（時刻編集用）
+ */
+export interface EditAttendanceTimeInput {
+  /** 編集対象の勤怠記録ID */
+  attendance_id: UUID;
+  /** 編集するclock_records */
+  clock_records: ClockRecord[];
+  /** 編集理由 */
+  edit_reason: string;
+  /** 編集者ID */
+  edited_by: UUID;
+}
+
+/**
+ * 勤怠記録編集履歴
+ */
+export interface AttendanceEditHistory {
+  /** 編集履歴ID */
+  id: UUID;
+  /** 元の勤怠記録ID */
+  source_id: UUID;
+  /** 編集後の勤怠記録ID */
+  edited_id: UUID;
+  /** 編集理由 */
+  edit_reason: string;
+  /** 編集者ID */
+  edited_by: UUID;
+  /** 編集日時 */
+  edited_at: Timestamp;
+  /** 編集前のclock_records */
+  original_clock_records: ClockRecord[];
+  /** 編集後のclock_records */
+  edited_clock_records: ClockRecord[];
 }
 
 // ================================

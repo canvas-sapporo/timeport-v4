@@ -56,6 +56,7 @@ import AdminCsvExportDialog from '@/components/admin/CsvExportDialog';
 import AttendancePreviewDialog from '@/components/admin/AttendancePreviewDialog';
 import AttendanceEditDialog from '@/components/admin/AttendanceEditDialog';
 import AttendanceDeleteDialog from '@/components/admin/AttendanceDeleteDialog';
+import { AttendanceTimeEditDialog } from '@/components/admin/AttendanceTimeEditDialog';
 
 export default function AdminAttendancePage() {
   const { user } = useAuth();
@@ -73,6 +74,7 @@ export default function AdminAttendancePage() {
   // 操作ダイアログの状態
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [timeEditDialogOpen, setTimeEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAttendanceId, setSelectedAttendanceId] = useState<string | null>(null);
 
@@ -449,7 +451,7 @@ export default function AdminAttendancePage() {
 
   const handleEditClick = (attendanceId: string) => {
     setSelectedAttendanceId(attendanceId);
-    setEditDialogOpen(true);
+    setTimeEditDialogOpen(true);
   };
 
   const handleDeleteClick = (attendanceId: string) => {
@@ -532,7 +534,18 @@ export default function AdminAttendancePage() {
   });
 
   // フィルタリングされたデータを取得
-  const filteredRecords = applyFilters(allAttendanceData);
+  const filteredRecords = applyFilters(allAttendanceData).sort((a, b) => {
+    // 1. 日付順（古い順）
+    const dateComparison = new Date(a.work_date).getTime() - new Date(b.work_date).getTime();
+    if (dateComparison !== 0) return dateComparison;
+
+    // 2. ユーザー名順
+    const userComparison = (a.user_name || '').localeCompare(b.user_name || '');
+    if (userComparison !== 0) return userComparison;
+
+    // 3. 作成日時順（新しい順）
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 
   // 統計情報を計算
   const totalRecords = filteredRecords.length;
@@ -706,33 +719,91 @@ export default function AdminAttendancePage() {
             isLoading={isLoadingUsers || isLoadingGroups}
           />
 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {visibleColumns.employee && <TableHead className="w-[150px]">メンバー</TableHead>}
-                  {visibleColumns.date && <TableHead className="w-[120px]">日付</TableHead>}
-                  {visibleColumns.clockIn && <TableHead className="w-[80px]">出勤</TableHead>}
-                  {visibleColumns.clockOut && <TableHead className="w-[80px]">退勤</TableHead>}
-                  {visibleColumns.workTime && <TableHead className="w-[90px]">勤務時間</TableHead>}
-                  {visibleColumns.overtime && <TableHead className="w-[80px]">残業</TableHead>}
-                  {visibleColumns.break && <TableHead className="w-[80px]">休憩</TableHead>}
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto table-scrollbar">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="sticky top-0 bg-white z-20 border-b shadow-sm">
+                <tr>
+                  {visibleColumns.date && (
+                    <th className="w-[120px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      日付
+                    </th>
+                  )}
+                  {visibleColumns.employee && (
+                    <th className="w-[150px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      メンバー
+                    </th>
+                  )}
+                  {visibleColumns.clockIn && (
+                    <th className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      出勤
+                    </th>
+                  )}
+                  {visibleColumns.clockOut && (
+                    <th className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      退勤
+                    </th>
+                  )}
+                  {visibleColumns.workTime && (
+                    <th className="w-[90px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      勤務時間
+                    </th>
+                  )}
+                  {visibleColumns.overtime && (
+                    <th className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      残業
+                    </th>
+                  )}
+                  {visibleColumns.break && (
+                    <th className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      休憩
+                    </th>
+                  )}
                   {visibleColumns.workType && (
-                    <TableHead className="w-[100px]">勤務タイプ</TableHead>
+                    <th className="w-[100px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      勤務タイプ
+                    </th>
                   )}
-                  {visibleColumns.late && <TableHead className="w-[80px]">遅刻</TableHead>}
-                  {visibleColumns.earlyLeave && <TableHead className="w-[80px]">早退</TableHead>}
-                  {visibleColumns.status && <TableHead className="w-[100px]">ステータス</TableHead>}
-                  {visibleColumns.approval && <TableHead className="w-[80px]">承認</TableHead>}
-                  {visibleColumns.approver && <TableHead className="w-[100px]">承認者</TableHead>}
+                  {visibleColumns.late && (
+                    <th className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      遅刻
+                    </th>
+                  )}
+                  {visibleColumns.earlyLeave && (
+                    <th className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      早退
+                    </th>
+                  )}
+                  {visibleColumns.status && (
+                    <th className="w-[100px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      ステータス
+                    </th>
+                  )}
+                  {visibleColumns.approval && (
+                    <th className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      承認
+                    </th>
+                  )}
+                  {visibleColumns.approver && (
+                    <th className="w-[100px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      承認者
+                    </th>
+                  )}
                   {visibleColumns.updatedAt && (
-                    <TableHead className="w-[120px]">更新日時</TableHead>
+                    <th className="w-[120px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      更新日時
+                    </th>
                   )}
-                  {visibleColumns.notes && <TableHead className="w-[60px]">備考</TableHead>}
-                  <TableHead className="w-[100px]">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                  {visibleColumns.notes && (
+                    <th className="w-[60px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      備考
+                    </th>
+                  )}
+                  <th className="w-[100px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    操作
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell
@@ -748,12 +819,6 @@ export default function AdminAttendancePage() {
                 ) : (
                   filteredRecords.map((record) => (
                     <TableRow key={record.id} className="hover:bg-gray-50">
-                      {visibleColumns.employee && (
-                        <TableCell>
-                          <div className="font-medium">{record.user_name || 'Unknown'}</div>
-                          <div className="text-sm text-gray-500">{record.user_code || '-'}</div>
-                        </TableCell>
-                      )}
                       {visibleColumns.date && (
                         <TableCell>
                           <div className="font-medium">
@@ -766,6 +831,12 @@ export default function AdminAttendancePage() {
                               )
                             </span>
                           </div>
+                        </TableCell>
+                      )}
+                      {visibleColumns.employee && (
+                        <TableCell>
+                          <div className="font-medium">{record.user_name || 'Unknown'}</div>
+                          <div className="text-sm text-gray-500">{record.user_code || '-'}</div>
                         </TableCell>
                       )}
                       {visibleColumns.clockIn && (
@@ -895,11 +966,25 @@ export default function AdminAttendancePage() {
                       )}
                       {visibleColumns.status && (
                         <TableCell>
-                          {record.id.startsWith('absent-') ? (
-                            <span className="text-gray-400">-</span>
-                          ) : (
-                            getStatusBadge(getAttendanceStatus(record), record.work_date)
-                          )}
+                          <div className="flex items-center space-x-2">
+                            {record.id.startsWith('absent-') ? (
+                              <span className="text-gray-400">-</span>
+                            ) : (
+                              getStatusBadge(getAttendanceStatus(record), record.work_date)
+                            )}
+                            {/* 編集済みバッジ */}
+                            {record.source_id && (
+                              <Badge variant="secondary" className="text-xs px-1 py-0">
+                                編集済み
+                              </Badge>
+                            )}
+                            {/* 編集済みバッジ */}
+                            {record.has_edit_history && (
+                              <Badge variant="secondary" className="text-xs px-1 py-0">
+                                編集済み
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                       )}
                       {visibleColumns.approval && (
@@ -968,8 +1053,8 @@ export default function AdminAttendancePage() {
                     </TableRow>
                   ))
                 )}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
 
           {!isLoading && filteredRecords.length === 0 && (
@@ -1174,6 +1259,14 @@ export default function AdminAttendancePage() {
       <AttendanceEditDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+        attendanceId={selectedAttendanceId}
+        onSuccess={handleOperationSuccess}
+      />
+
+      {/* 時刻編集ダイアログ */}
+      <AttendanceTimeEditDialog
+        open={timeEditDialogOpen}
+        onOpenChange={setTimeEditDialogOpen}
         attendanceId={selectedAttendanceId}
         onSuccess={handleOperationSuccess}
       />

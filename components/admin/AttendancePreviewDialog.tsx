@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, User, Calendar, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { Clock, User, Calendar, FileText, AlertCircle, CheckCircle, History } from 'lucide-react';
 import { getAttendanceDetail } from '@/lib/actions/attendance';
 import { formatDate, formatTime } from '@/lib/utils';
 import type { Attendance } from '@/types/attendance';
@@ -50,6 +50,7 @@ export default function AttendancePreviewDialog({
     try {
       const result = await getAttendanceDetail(attendanceId);
       if (result.success && result.attendance) {
+        console.log('プレビューダイアログ - 取得したデータ:', result.attendance);
         setAttendance(result.attendance);
       } else {
         // UUID形式エラーの場合は適切なメッセージを表示
@@ -141,7 +142,7 @@ export default function AttendancePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto dialog-scrollbar">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
@@ -189,9 +190,55 @@ export default function AttendancePreviewDialog({
                   <span className="text-sm font-medium text-gray-600">自動計算</span>
                   <span className="text-sm">{attendance.auto_calculated ? '有効' : '無効'}</span>
                 </div>
+
+                {/* デバッグ情報 */}
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">デバッグ</span>
+                  <span className="text-sm">
+                    source_id: {attendance.source_id ? 'あり' : 'なし'}, edit_reason:{' '}
+                    {attendance.edit_reason ? 'あり' : 'なし'}
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* 編集履歴情報 */}
+          {(attendance.source_id || (attendance.has_edit_history && !attendance.source_id)) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="w-4 h-4" />
+                  編集履歴情報
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {attendance.source_id ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-gray-600">編集理由</span>
+                        <span className="text-sm">{attendance.edit_reason || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-gray-600">編集者</span>
+                        <span className="text-sm">{attendance.edited_by || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-gray-600">元レコードID</span>
+                        <span className="font-mono text-xs">{attendance.source_id}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">編集履歴</span>
+                      <span className="text-sm text-blue-600 font-medium">あり</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* 勤務時間 */}
           <Card>
@@ -254,7 +301,7 @@ export default function AttendancePreviewDialog({
           </Card>
 
           {/* 勤務セッション */}
-          {attendance.clock_records && attendance.clock_records.length > 0 && (
+          {attendance.clock_records && attendance.clock_records.length > 1 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

@@ -241,6 +241,39 @@
   scrollbar-color: rgba(125, 86, 169, 0.8) rgba(0, 0, 0, 0.05);
 }
 
+/* テーブル用スクロールバー */
+.table-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  margin: 2px;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(125, 86, 169, 0.6) 0%, rgba(107, 70, 193, 0.6) 100%);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, rgba(139, 91, 185, 0.8) 0%, rgba(124, 58, 237, 0.8) 100%);
+  transform: scale(1.05);
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(135deg, rgba(155, 107, 201, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%);
+}
+
+.table-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 86, 169, 0.6) rgba(0, 0, 0, 0.05);
+}
+
 /* カード要素の強化 */
 .enhanced-card {
   background: rgba(255, 255, 255, 0.9);
