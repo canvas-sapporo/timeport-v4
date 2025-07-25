@@ -46,7 +46,7 @@ export default function AdminUsersPage() {
       });
 
       if (usersResult.success) {
-        setUsers(usersResult.data.users);
+        setUsers(usersResult.data.users as unknown as (UserProfile & { groups: Group[] })[]);
         console.log('ユーザー一覧更新:', usersResult.data.users);
       } else {
         console.error('ユーザー取得失敗:', usersResult.error);

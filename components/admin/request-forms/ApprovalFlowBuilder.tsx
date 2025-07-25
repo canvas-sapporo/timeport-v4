@@ -56,7 +56,7 @@ export default function ApprovalFlowBuilder({
       try {
         const result = await getApprovers();
         if (result.success && result.data) {
-          setApprovers(result.data);
+          setApprovers(result.data as Approver[]);
         }
       } catch (error) {
         console.error('承認者取得エラー:', error);

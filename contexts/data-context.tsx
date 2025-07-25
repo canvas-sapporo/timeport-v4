@@ -51,9 +51,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setAttendanceRecords(allRecords);
   }, []);
 
-  // 申請フォームを取得
+  // 申請フォームを取得（管理者ページでのみ実行）
   useEffect(() => {
     const fetchRequestForms = async () => {
+      // 現在のパスを確認
+      const pathname = window.location.pathname;
+
+      // 管理者ページでのみ実行
+      if (!pathname.startsWith('/admin') && !pathname.startsWith('/system-admin')) {
+        return;
+      }
+
       try {
         const result = await getRequestForms();
         if (result.success && result.data) {

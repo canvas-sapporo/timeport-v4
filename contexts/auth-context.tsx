@@ -63,6 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (event === 'SIGNED_IN' && session?.user) {
         // ユーザーがサインインした場合、プロフィール情報を取得
+        setIsLoading(true); // ローディング状態を開始
         try {
           console.log('プロフィール取得開始, user_id:', session.user.id);
 
@@ -326,9 +327,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // 初期化完了をマーク
       if (!isInitialized) {
         setIsInitialized(true);
+        setIsLoading(false);
+        console.log('AuthContext: 初期化完了によるローディング終了');
       }
-      setIsLoading(false);
-      console.log('AuthContext: 認証状態変更によるローディング終了');
     });
 
     // 初期化が完了していない場合は、一定時間後にローディングを終了
@@ -368,19 +369,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoggingOut(true);
 
     try {
-      // ユーザー状態を即座にクリア（UIを即座に更新）
+      // まずSupabaseでサインアウト
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+
+      if (error) {
+        console.error('Supabase signOut error:', error);
+      } else {
+        console.log('Supabase signOut 完了');
+      }
+
+      // 認証状態をクリア
       setUser(null);
       // localStorageから直接削除
       if (typeof window !== 'undefined') {
         localStorage.removeItem('auth-user');
       }
 
-      // クライアントサイドでのみlocalStorageを操作
+      // ブラウザストレージのクリア処理（最小限に制限）
       if (typeof window !== 'undefined') {
         // アプリケーション固有のユーザー情報を削除
         localStorage.removeItem('auth-user');
 
-        // Supabase関連のすべてのトークンを削除
+        // Supabase関連のトークンのみ削除（IndexedDBは保持）
         Object.keys(localStorage).forEach((key) => {
           if (key.startsWith('sb-')) {
             console.log('Supabaseトークンを削除:', key);
@@ -390,89 +400,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // セッションストレージもクリア
         sessionStorage.clear();
-
-        // ブラウザのキャッシュをクリアするためのヘッダーを設定
-        // これは次のページロード時にキャッシュを無効化する
-        if ('caches' in window) {
-          try {
-            const cacheNames = await caches.keys();
-            await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
-            console.log('ブラウザキャッシュをクリアしました');
-          } catch (cacheError) {
-            console.log('キャッシュクリアエラー（無視）:', cacheError);
-          }
-        }
-
-        // IndexedDBもクリア（もし存在する場合）
-        if ('indexedDB' in window) {
-          try {
-            const databases = await indexedDB.databases();
-            await Promise.all(
-              databases.map((db) => {
-                if (db.name && typeof db.name === 'string') {
-                  return new Promise((resolve) => {
-                    const request = indexedDB.deleteDatabase(db.name as string);
-                    request.onsuccess = () => resolve(undefined);
-                    request.onerror = () => resolve(undefined);
-                  });
-                }
-                return Promise.resolve();
-              })
-            );
-            console.log('IndexedDBをクリアしました');
-          } catch (indexedDBError) {
-            console.log('IndexedDBクリアエラー（無視）:', indexedDBError);
-          }
-        }
       }
 
-      // Supabaseでサインアウト（グローバルスコープで実行）
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
-
-      if (error) {
-        console.error('Supabase signOut error:', error);
-      } else {
-        console.log('Supabase signOut 完了');
-      }
-
-      // 追加のセッションクリア処理
-      try {
-        // 現在のセッションを取得して無効化
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (session) {
-          console.log('現在のセッションを無効化中...');
-          await supabase.auth.signOut({ scope: 'local' });
-        }
-      } catch (sessionError) {
-        console.log('セッションクリアエラー（無視）:', sessionError);
-      }
-
-      // 即座にログインページにリダイレクト（キャッシュを無効化）
-      console.log('ログインページにリダイレクト（キャッシュ無効化）');
+      // ログインページにリダイレクト
+      console.log('ログインページにリダイレクト');
       router.push('/login');
-
-      // フォールバック: 1秒後に強制的にリダイレクト（キャッシュを無効化）
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          console.log('フォールバックリダイレクト実行（キャッシュ無効化）');
-          // キャッシュを無効化してリダイレクト
-          window.location.href = '/login?cache-bust=' + Date.now();
-        }
-      }, 1000);
     } catch (error) {
       console.error('Logout error:', error);
       // エラーが発生した場合も確実にリダイレクト
       router.push('/login');
-
-      // フォールバック: エラー時も強制的にリダイレクト
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          console.log('エラー時のフォールバックリダイレクト実行');
-          window.location.href = '/login?cache-bust=' + Date.now();
-        }
-      }, 500);
     } finally {
       setIsLoggingOut(false);
     }

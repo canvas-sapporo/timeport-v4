@@ -49,7 +49,7 @@ export const LoginForm = () => {
         // アプリケーション固有のユーザー情報を削除
         localStorage.removeItem('auth-user');
 
-        // Supabase関連のトークンを削除
+        // Supabase関連のトークンのみ削除（IndexedDBは保持）
         Object.keys(localStorage).forEach((key) => {
           if (key.startsWith('sb-')) {
             console.log('Supabaseトークンを削除:', key);
@@ -59,28 +59,6 @@ export const LoginForm = () => {
 
         // セッションストレージもクリア
         sessionStorage.clear();
-
-        // IndexedDBもクリア（もし存在する場合）
-        if ('indexedDB' in window) {
-          try {
-            const databases = await indexedDB.databases();
-            await Promise.all(
-              databases.map((db) => {
-                if (db.name && typeof db.name === 'string') {
-                  return new Promise((resolve) => {
-                    const request = indexedDB.deleteDatabase(db.name as string);
-                    request.onsuccess = () => resolve(undefined);
-                    request.onerror = () => resolve(undefined);
-                  });
-                }
-                return Promise.resolve();
-              })
-            );
-            console.log('ログインページ: IndexedDBをクリアしました');
-          } catch (indexedDBError) {
-            console.log('ログインページ: IndexedDBクリアエラー（無視）:', indexedDBError);
-          }
-        }
       }
     };
 
@@ -89,14 +67,18 @@ export const LoginForm = () => {
 
   // ユーザーが認証されたら自動的にリダイレクト
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user && !authLoading && !isLoading) {
       console.log('ユーザー認証完了、ホームページにリダイレクト:', user.email);
       router.push('/');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, isLoading, router]);
 
   const handleSubmit = async (formData: FormData) => {
     console.log('Client handleSubmit開始');
+    if (isLoading || authLoading) {
+      console.log('既にログイン処理中です');
+      return;
+    }
     setIsLoading(true);
     setError('');
 

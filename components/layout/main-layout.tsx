@@ -26,30 +26,23 @@ export default function MainLayout({ children }: MainLayoutProps) {
     }
   }, [user, isLoading, pathname, router]);
 
-  // ログインページの場合はレイアウトを適用しない
-  if (pathname === '/login') {
+  // ログインページ、feature-disabledページ、エラーページ、404ページの場合はレイアウトを適用しない
+  if (
+    pathname === '/login' ||
+    pathname === '/member/feature-disabled' ||
+    pathname === '/error' ||
+    pathname === '/not-found'
+  ) {
     return <>{children}</>;
   }
 
-  // ローディング中はローディング画面を表示
-  if (isLoading) {
+  // ローディング中またはログアウト中はローディング画面を表示
+  if (isLoading || isLoggingOut) {
     return (
       <div className="min-h-screen flex items-center justify-center timeport-main-background">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600">読み込み中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ログアウト中はローディング画面を表示
-  if (isLoggingOut) {
-    return (
-      <div className="min-h-screen flex items-center justify-center timeport-main-background">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600">ログアウト中...</p>
+          <p className="text-gray-600">{isLoggingOut ? 'ログアウト中...' : '読み込み中...'}</p>
         </div>
       </div>
     );

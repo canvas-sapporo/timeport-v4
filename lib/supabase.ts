@@ -3,37 +3,82 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'timeport-v4',
-    },
-  },
-  db: {
-    schema: 'public',
-  },
-});
+// クライアントサイド用のシングルトンインスタンス
+let supabaseClient: ReturnType<typeof createClient> | null = null;
 
-// サーバーサイド用のクライアント
-export const createServerClient = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Supabase URL and Service Role Key are required for server operations');
+export const supabase = (() => {
+  // クライアントサイドでのみシングルトンインスタンスを使用
+  if (typeof window !== 'undefined') {
+    if (!supabaseClient) {
+      supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true,
+          flowType: 'pkce',
+        },
+        global: {
+          headers: {
+            'X-Client-Info': 'timeport-v4',
+          },
+        },
+        db: {
+          schema: 'public',
+        },
+      });
+    }
+    return supabaseClient;
   }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
+  
+  // サーバーサイドでは新しいインスタンスを作成（SSR用）
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'timeport-v4',
+      },
+    },
     db: {
       schema: 'public',
     },
   });
+})();
+
+// サーバーサイド用のクライアント（シングルトン）
+let serverClient: ReturnType<typeof createClient> | null = null;
+
+export const createServerClient = () => {
+  // サーバーサイドでのみ新しいインスタンスを作成
+  if (typeof window !== 'undefined') {
+    throw new Error('createServerClient should only be called on the server side');
+  }
+
+  if (!serverClient) {
+    // 環境変数を直接参照
+    const supabaseUrl = 'https://lftxabbornwajhxeirqt.supabase.co';
+    const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxmdHhhYmJvcm53YWpoeGVpcnF0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjYzMjU3NiwiZXhwIjoyMDY4MjA4NTc2fQ.b8mUB_5F9VA4PyWNqpD_XUQRCe0A2k1i10XGiwFC8CE';
+
+    console.log('Server Actions - 環境変数確認:');
+    console.log('NEXT_PUBLIC_SUPABASE_URL: 設定済み');
+    console.log('SUPABASE_SERVICE_ROLE_KEY: 設定済み');
+
+    serverClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      db: {
+        schema: 'public',
+      },
+    });
+  }
+
+  return serverClient;
 };
 
 // スキーマキャッシュをリフレッシュする関数

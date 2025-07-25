@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Pencil,
   Trash2,
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectTrigger,
@@ -24,6 +25,8 @@ import {
 } from '@/components/ui/select';
 import type { Company } from '@/types/company';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { getAllCompanyFeatures, toggleFeature } from '@/lib/actions/system-admin/features';
+import { useToast } from '@/hooks/use-toast';
 
 import CompanyCreateDialog from './CompanyCreateDialog';
 import CompanyEditDialog from './CompanyEditDialog';
@@ -40,6 +43,11 @@ export default function CompanyListTable({
 }) {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [companyFeatures, setCompanyFeatures] = useState<
+    Record<string, { chat: boolean; report: boolean; schedule: boolean }>
+  >({});
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
 
   // ダイアログの状態管理
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -47,6 +55,95 @@ export default function CompanyListTable({
   const [editTarget, setEditTarget] = useState<Company | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
+
+  // 企業機能データを取得
+  useEffect(() => {
+    const fetchCompanyFeatures = async () => {
+      try {
+        // サーバーアクションとして呼び出し
+        const result = await getAllCompanyFeatures();
+        if (result.success) {
+          const featuresMap: Record<string, { chat: boolean; report: boolean; schedule: boolean }> =
+            {};
+          result.data.forEach((company) => {
+            featuresMap[company.company_id] = company.features;
+          });
+          setCompanyFeatures(featuresMap);
+        } else {
+          console.error('企業機能取得エラー:', result.error);
+          toast({
+            title: 'エラー',
+            description: '企業機能の取得に失敗しました',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        console.error('企業機能取得エラー:', error);
+        toast({
+          title: 'エラー',
+          description: '企業機能の取得に失敗しました',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    fetchCompanyFeatures();
+  }, [toast]);
+
+  // 機能切り替えハンドラー
+  const handleFeatureToggle = async (companyId: string, featureCode: string, enabled: boolean) => {
+    const loadingKey = `${companyId}-${featureCode}`;
+
+    // 少し遅延してからローディング状態を開始（一瞬の禁止マーク表示を防ぐ）
+    const loadingTimeout = setTimeout(() => {
+      setLoadingStates((prev) => ({ ...prev, [loadingKey]: true }));
+    }, 100);
+
+    try {
+      console.log('機能切り替え開始:', { companyId, featureCode, enabled });
+
+      const result = await toggleFeature({
+        company_id: companyId,
+        feature_code: featureCode,
+        is_active: enabled,
+      });
+
+      if (result.success) {
+        // ローカル状態を更新
+        setCompanyFeatures((prev) => ({
+          ...prev,
+          [companyId]: {
+            ...prev[companyId],
+            [featureCode]: enabled,
+          },
+        }));
+
+        toast({
+          title: '成功',
+          description: `${featureCode === 'chat' ? 'チャット' : featureCode === 'report' ? 'レポート' : 'スケジュール'}機能を${enabled ? '有効' : '無効'}にしました`,
+        });
+
+        console.log('機能切り替え成功:', { companyId, featureCode, enabled });
+      } else {
+        console.error('機能切り替えエラー:', result.error);
+        toast({
+          title: 'エラー',
+          description: '機能の切り替えに失敗しました',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('機能切り替えエラー:', error);
+      toast({
+        title: 'エラー',
+        description: '機能の切り替えに失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      clearTimeout(loadingTimeout);
+      setLoadingStates((prev) => ({ ...prev, [loadingKey]: false }));
+    }
+  };
 
   // ステータスでフィルタリング
   const filteredCompanies = useMemo(() => {
@@ -167,7 +264,7 @@ export default function CompanyListTable({
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="企業名、コード、住所、電話番号で検索"
+                  placeholder="企業名、コードで検索"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 w-full"
@@ -200,61 +297,123 @@ export default function CompanyListTable({
               <tr className="border-b">
                 <th className="px-4 py-2 text-left font-medium">企業名</th>
                 <th className="px-4 py-2 text-left font-medium">企業コード</th>
-                <th className="px-4 py-2 text-left font-medium">住所</th>
-                <th className="px-4 py-2 text-left font-medium">電話番号</th>
                 <th className="px-4 py-2 text-center font-medium">ステータス</th>
+                <th className="px-4 py-2 text-center font-medium">機能</th>
                 <th className="px-4 py-2 text-center font-medium">操作</th>
               </tr>
             </thead>
             <tbody>
               {filteredCompanies.length > 0 ? (
-                filteredCompanies.map((company) => (
-                  <tr key={company.id} className="border-b hover:bg-muted/40">
-                    <td className="px-4 py-2 whitespace-nowrap">{company.name}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{company.code}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{company.address || '-'} </td>
-                    <td className="px-4 py-2 whitespace-nowrap">{company.phone || '-'}</td>
-                    <td className="px-4 py-2 text-center">
-                      {company.is_active ? (
-                        <Badge variant="default">有効</Badge>
-                      ) : (
-                        <Badge variant="secondary">無効</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="mr-2"
-                        onClick={() => handleEditClick(company)}
-                      >
-                        <Pencil size={16} />
-                      </Button>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteClick(company)}
-                                disabled={company.is_active}
-                              >
-                                <Trash2 size={16} className="text-destructive" />
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          {company.is_active && (
-                            <TooltipContent>無効化しないと削除できません</TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
-                    </td>
-                  </tr>
-                ))
+                filteredCompanies.map((company) => {
+                  const features = companyFeatures[company.id] || {
+                    chat: false,
+                    report: false,
+                    schedule: false,
+                  };
+
+                  return (
+                    <tr key={company.id} className="border-b hover:bg-muted/40">
+                      <td className="px-4 py-2 whitespace-nowrap">{company.name}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{company.code}</td>
+                      <td className="px-4 py-2 text-center">
+                        {company.is_active ? (
+                          <Badge variant="default">有効</Badge>
+                        ) : (
+                          <Badge variant="secondary">無効</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <div className="flex items-center justify-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">スケジュール</span>
+                            <div className="relative">
+                              <Switch
+                                checked={features.schedule}
+                                onCheckedChange={(checked) =>
+                                  handleFeatureToggle(company.id, 'schedule', checked)
+                                }
+                                disabled={loadingStates[`${company.id}-schedule`]}
+                              />
+                              {loadingStates[`${company.id}-schedule`] && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                                  <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">レポート</span>
+                            <div className="relative">
+                              <Switch
+                                checked={features.report}
+                                onCheckedChange={(checked) =>
+                                  handleFeatureToggle(company.id, 'report', checked)
+                                }
+                                disabled={loadingStates[`${company.id}-report`]}
+                              />
+                              {loadingStates[`${company.id}-report`] && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                                  <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">チャット</span>
+                            <div className="relative">
+                              <Switch
+                                checked={features.chat}
+                                onCheckedChange={(checked) =>
+                                  handleFeatureToggle(company.id, 'chat', checked)
+                                }
+                                disabled={loadingStates[`${company.id}-chat`]}
+                              />
+                              {loadingStates[`${company.id}-chat`] && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                                  <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="mr-2"
+                          onClick={() => handleEditClick(company)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteClick(company)}
+                                  disabled={company.is_active}
+                                >
+                                  <Trash2 size={16} className="text-destructive" />
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            {company.is_active && (
+                              <TooltipContent>無効化しないと削除できません</TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-6 text-muted-foreground">
                     企業データがありません
                   </td>
                 </tr>

@@ -81,13 +81,7 @@ export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) =
 
     const supabaseAdmin = createServerClient();
 
-    // まず、企業内の全ユーザーを取得（グループ関連なし）
-    const query = supabaseAdmin.from('user_profiles').select('*').is('deleted_at', null);
-
-    // 企業内のユーザーをフィルタリングするために、user_groupsを通じてcompany_idを確認
-    // または、直接company_idでフィルタリング（もしuser_profilesにcompany_idがある場合）
-
-    // 一時的に全てのユーザーを取得してデバッグ
+    // 一時的に全てのユーザーを取得
     const { data: allUsers, error: allUsersError } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
@@ -98,67 +92,39 @@ export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) =
       throw AppError.fromSupabaseError(allUsersError, '全ユーザー取得');
     }
 
-    console.log('全ユーザー:', allUsers);
-
-    // 企業内のユーザーを特定するために、user_groupsを通じてcompany_idを確認
-    const { data: userGroupsData, error: userGroupsError } = await supabaseAdmin
-      .from('user_groups')
-      .select(
-        `
-        user_id,
-        groups!inner(
-          id,
-          name,
-          code,
-          company_id
-        )
-      `
-      )
-      .eq('groups.company_id', companyId);
-
-    if (userGroupsError) {
-      console.error('ユーザーグループ取得エラー:', userGroupsError);
-      throw AppError.fromSupabaseError(userGroupsError, 'ユーザーグループ取得');
-    }
-
-    console.log('企業内ユーザーグループ:', userGroupsData);
-
-    // 企業内のユーザーIDを抽出
-    const companyUserIds = userGroupsData?.map((ug) => ug.user_id) || [];
-    console.log('企業内ユーザーID:', companyUserIds);
-
-    // 企業内のユーザーのみをフィルタリング
-    const companyUsers = allUsers?.filter((user) => companyUserIds.includes(user.id)) || [];
-    console.log('企業内ユーザー:', companyUsers);
-
     // 各ユーザーのグループ情報を取得
     const usersWithGroups = await Promise.all(
-      companyUsers.map(async (user) => {
+      (allUsers || []).map(async (user: any) => {
         const { data: userGroups } = await supabaseAdmin
           .from('user_groups')
-          .select(
-            `
+          .select(`
             group_id,
             groups(
               id,
               name,
-              code
+              code,
+              company_id
             )
-          `
-          )
-          .eq('user_id', user.id);
+          `)
+          .eq('user_id', user.id)
+          .is('deleted_at', null);
 
         return {
           ...user,
-          groups: userGroups?.map((ug) => ug.groups) || [],
+          groups: userGroups?.map((ug: any) => ug.groups).filter(Boolean) || [],
         };
       })
     );
 
-    console.log('グループ情報付きユーザー:', usersWithGroups);
+        // 企業内のユーザーのみをフィルタリング
+    const companyUsers = usersWithGroups.filter(user =>
+      user.groups.some((group: any) => group.company_id === companyId)
+    );
+
+    console.log('企業内ユーザー:', companyUsers);
 
     // 検索条件を適用
-    let filteredUsers = usersWithGroups;
+    let filteredUsers = companyUsers;
 
     if (params.search) {
       filteredUsers = filteredUsers.filter((user) => {
@@ -249,7 +215,7 @@ export const getUser = async (userId: UUID) => {
     // データを整形
     const user = {
       ...data,
-      groups: data.user_groups?.map((ug: any) => ug.groups) || [],
+      groups: (data.user_groups as any)?.map((ug: any) => ug.groups) || [],
     };
 
     console.log('ユーザー詳細取得完了:', user);

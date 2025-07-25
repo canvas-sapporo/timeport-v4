@@ -18,15 +18,21 @@ import {
   ChevronRight,
   ChevronLeft,
   User,
+  MessageSquare,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
+import { useCompanyFeatures } from '@/hooks/use-company-features';
 
-const userMenuItems = [
+// メニュー項目の定義（機能チェックなし）
+const baseUserMenuItems = [
   { href: '/member', icon: Home, label: 'ダッシュボード' },
   { href: '/member/attendance', icon: Clock, label: '勤怠' },
   { href: '/member/requests', icon: FileText, label: '申請' },
+  { href: '/member/schedule', icon: Calendar, label: 'スケジュール', feature: 'schedule' as const },
+  { href: '/member/report', icon: BarChart3, label: 'レポート', feature: 'report' as const },
+  { href: '/member/chat', icon: MessageSquare, label: 'チャット', feature: 'chat' as const },
   { href: '/member/profile', icon: Users, label: 'プロフィール' },
 ];
 
@@ -50,18 +56,47 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const { user, logout, isLoggingOut } = useAuth();
+  const { features, isLoading: isLoadingFeatures, error } = useCompanyFeatures(user?.company_id);
+
+  // デバッグログ
+  console.log('Sidebar 機能状態:', {
+    userRole: user?.role,
+    companyId: user?.company_id,
+    features,
+    isLoadingFeatures,
+    error,
+  });
+
+  const isFeatureEnabled = (feature: 'chat' | 'report' | 'schedule') => {
+    if (user?.role === 'system-admin') return true;
+    // ローディング中は一時的に全ての機能を表示（UX向上のため）
+    if (isLoadingFeatures) return true;
+    // デフォルト値を使用して、未定義の場合も適切に処理
+    return features[feature] ?? false;
+  };
+  const isLoading = false;
 
   if (!user) return null;
 
   const getMenuItems = () => {
+    // メンバー用メニュー項目を機能チェックでフィルタリング
+    const filteredUserMenuItems = baseUserMenuItems.filter((item) => {
+      // 機能チェックが必要な項目の場合
+      if (item.feature) {
+        return isFeatureEnabled(item.feature);
+      }
+      // 機能チェックが不要な項目は常に表示
+      return true;
+    });
+
     // admin権限のユーザーがmemberの画面にアクセスしている場合、member用のメニューを表示
     if (user.role === 'admin' && pathname.startsWith('/member')) {
-      return userMenuItems;
+      return filteredUserMenuItems;
     }
 
     // system-admin権限のユーザーがmemberの画面にアクセスしている場合、member用のメニューを表示
     if (user.role === 'system-admin' && pathname.startsWith('/member')) {
-      return userMenuItems;
+      return filteredUserMenuItems;
     }
 
     switch (user.role) {
@@ -71,7 +106,7 @@ export default function Sidebar() {
         return adminMenuItems;
       case 'member':
       default:
-        return userMenuItems;
+        return filteredUserMenuItems;
     }
   };
 

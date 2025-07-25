@@ -6,6 +6,9 @@ import { Request, RequestForm } from '@/types/request';
 import { UserProfile } from '@/types/auth';
 import { Notification } from '@/types/system';
 import { Group } from '@/types/groups';
+import { Chat, ChatMessage, ChatUser } from '@/types/chat';
+import { Schedule, Todo, CreateScheduleInput, CreateTodoInput } from '@/types/schedule';
+import { Report, ReportTemplate } from '@/types/report';
 
 // ===== マスターデータ定義 =====
 
@@ -888,3 +891,661 @@ export const notifications = mockNotifications;
 // 旧名称でのエクスポート（段階的移行用）
 export const workplaces = mockGroups.filter((g) => g.id.includes('work'));
 export const departments = mockGroups.filter((g) => g.id.includes('dept'));
+
+
+// ================================
+// スケジュールモックデータ
+// ================================
+
+export const mockSchedules: Schedule[] = [
+  {
+    id: 'schedule1',
+    user_id: 'user3',
+    title: 'チーム会議',
+    description: '週次進捗確認',
+    start_datetime: '2025-01-15T10:00:00Z',
+    end_datetime: '2025-01-15T11:00:00Z',
+    location: '会議室A',
+    url: 'https://zoom.us/j/123456789',
+    is_all_day: false,
+    recurrence_type: 'weekly',
+    recurrence_interval: 1,
+    shared_with_groups: ['group7'],
+    is_private: false,
+    color: '#3B82F6',
+    created_at: '2024-01-20T00:00:00Z',
+    updated_at: '2024-01-20T00:00:00Z'
+  },
+  {
+    id: 'schedule2',
+    user_id: 'user3',
+    title: 'プロジェクト締切',
+    description: 'フロントエンド開発完了',
+    start_datetime: '2025-01-16T00:00:00Z',
+    end_datetime: '2025-01-16T23:59:59Z',
+    is_all_day: true,
+    recurrence_type: 'none',
+    recurrence_interval: 1,
+    shared_with_groups: [],
+    is_private: false,
+    color: '#EF4444',
+    created_at: '2024-01-20T00:00:00Z',
+    updated_at: '2024-01-20T00:00:00Z'
+  },
+  {
+    id: 'schedule3',
+    user_id: 'user3',
+    title: 'クライアント打ち合わせ',
+    description: '新機能の要件確認',
+    start_datetime: '2025-01-17T14:00:00Z',
+    end_datetime: '2025-01-17T15:30:00Z',
+    location: 'オンライン',
+    url: 'https://meet.google.com/abc-defg-hij',
+    is_all_day: false,
+    recurrence_type: 'none',
+    recurrence_interval: 1,
+    shared_with_groups: ['group7'],
+    is_private: false,
+    color: '#10B981',
+    created_at: '2024-01-20T00:00:00Z',
+    updated_at: '2024-01-20T00:00:00Z'
+  },
+  {
+    id: 'schedule4',
+    user_id: 'user3',
+    title: '社内研修',
+    description: 'React 19の新機能について',
+    start_datetime: '2025-01-18T13:00:00Z',
+    end_datetime: '2025-01-18T17:00:00Z',
+    location: '大会議室',
+    is_all_day: false,
+    recurrence_type: 'none',
+    recurrence_interval: 1,
+    shared_with_groups: ['group3'],
+    is_private: false,
+    color: '#8B5CF6',
+    created_at: '2024-01-20T00:00:00Z',
+    updated_at: '2024-01-20T00:00:00Z'
+  }
+];
+
+// ================================
+// Todoモックデータ
+// ================================
+
+export const mockTodos: Todo[] = [
+  {
+    id: 'todo1',
+    user_id: 'user3',
+    title: 'ユーザー画面のデザイン修正',
+    description: 'レスポンシブ対応とアクセシビリティ改善',
+    due_date: '2025-08-15',
+    due_time: '17:00',
+    priority: 'high',
+    status: 'in_progress',
+    category: 'デザイン',
+    tags: ['UI/UX', 'レスポンシブ'],
+    estimated_hours: 4.0,
+    actual_hours: 2.5,
+    completion_rate: 60,
+    shared_with_groups: ['group7'],
+    is_private: false,
+    created_at: '2024-01-20T00:00:00Z',
+    updated_at: '2024-01-21T00:00:00Z'
+  },
+  {
+    id: 'todo2',
+    user_id: 'user3',
+    title: 'API仕様書の確認',
+    description: 'バックエンドチームとの仕様確認',
+    due_date: '2025-07-16',
+    priority: 'medium',
+    status: 'pending',
+    category: '仕様確認',
+    tags: ['API', 'ドキュメント'],
+    estimated_hours: 1.5,
+    completion_rate: 0,
+    shared_with_groups: [],
+    is_private: false,
+    created_at: '2024-01-20T00:00:00Z',
+    updated_at: '2024-01-20T00:00:00Z'
+  },
+  {
+    id: 'todo3',
+    user_id: 'user3',
+    title: 'コードレビュー',
+    description: '新機能のコードレビュー実施',
+    due_date: '2025-06-14',
+    priority: 'medium',
+    status: 'completed',
+    category: 'レビュー',
+    tags: ['コードレビュー'],
+    estimated_hours: 2.0,
+    actual_hours: 1.8,
+    completion_rate: 100,
+    shared_with_groups: [],
+    is_private: false,
+    completed_at: '2024-01-21T16:30:00Z',
+    created_at: '2024-01-19T00:00:00Z',
+    updated_at: '2024-01-21T16:30:00Z'
+  },
+  {
+    id: 'todo4',
+    user_id: 'user3',
+    title: 'データベース設計書の作成',
+    description: '新機能のテーブル設計とER図作成',
+    due_date: '2025-07-17',
+    due_time: '18:00',
+    priority: 'high',
+    status: 'pending',
+    category: '設計',
+    tags: ['データベース', '設計書'],
+    estimated_hours: 3.0,
+    completion_rate: 0,
+    shared_with_groups: ['group7'],
+    is_private: false,
+    created_at: '2024-01-20T00:00:00Z',
+    updated_at: '2024-01-20T00:00:00Z'
+  },
+  {
+    id: 'todo5',
+    user_id: 'user3',
+    title: 'テストケース作成',
+    description: 'ユニットテストとE2Eテストの作成',
+    due_date: '2025-07-28',
+    due_time: '16:00',
+    priority: 'medium',
+    status: 'in_progress',
+    category: 'テスト',
+    tags: ['テスト', 'Jest', 'Playwright'],
+    estimated_hours: 5.0,
+    actual_hours: 2.0,
+    completion_rate: 40,
+    shared_with_groups: [],
+    is_private: false,
+    created_at: '2024-01-20T00:00:00Z',
+    updated_at: '2024-01-21T00:00:00Z'
+  },
+  {
+    id: 'todo6',
+    user_id: 'user3',
+    title: 'プレゼン資料作成',
+    description: '来週の成果発表用資料作成',
+    due_date: '2025-08-19',
+    priority: 'low',
+    status: 'pending',
+    category: '資料作成',
+    tags: ['プレゼン', 'PowerPoint'],
+    estimated_hours: 2.0,
+    completion_rate: 0,
+    shared_with_groups: [],
+    is_private: true,
+    created_at: '2024-01-20T00:00:00Z',
+    updated_at: '2024-01-20T00:00:00Z'
+  }
+];
+
+// ================================
+// レポートテンプレートモックデータ
+// ================================
+
+export const mockReportTemplates: ReportTemplate[] = [
+  {
+    id: 'template1',
+    company_id: 'company1',
+    name: '日報テンプレート',
+    description: '毎日の業務報告用',
+    template_type: 'daily',
+    form_fields: [
+      {
+        id: 'today_tasks',
+        name: 'today_tasks',
+        type: 'textarea',
+        label: '今日の作業内容',
+        placeholder: '本日実施した作業を記入してください',
+        required: true,
+        validation: { minLength: 10, maxLength: 1000 },
+        order: 1
+      },
+      {
+        id: 'tomorrow_tasks',
+        name: 'tomorrow_tasks',
+        type: 'textarea',
+        label: '明日の予定',
+        placeholder: '明日の作業予定を記入してください',
+        required: true,
+        validation: { minLength: 5, maxLength: 500 },
+        order: 2
+      },
+      {
+        id: 'issues',
+        name: 'issues',
+        type: 'textarea',
+        label: '課題・問題点',
+        placeholder: '課題や問題点があれば記入してください',
+        required: false,
+        validation: { maxLength: 500 },
+        order: 3
+      },
+      {
+        id: 'work_hours',
+        name: 'work_hours',
+        type: 'number',
+        label: '作業時間',
+        placeholder: '8.0',
+        required: true,
+        validation: { min: 0, max: 24 },
+        order: 4
+      }
+    ],
+    is_active: true,
+    display_order: 1,
+    created_by: 'user2',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: 'template2',
+    company_id: 'company1',
+    name: '週報テンプレート',
+    description: '週次の業務報告用',
+    template_type: 'weekly',
+    form_fields: [
+      {
+        id: 'week_summary',
+        name: 'week_summary',
+        type: 'textarea',
+        label: '今週のサマリー',
+        placeholder: '今週の主な成果を記入してください',
+        required: true,
+        validation: { minLength: 20, maxLength: 1000 },
+        order: 1
+      },
+      {
+        id: 'achievements',
+        name: 'achievements',
+        type: 'textarea',
+        label: '達成事項',
+        placeholder: '完了したタスクや成果を記入してください',
+        required: true,
+        validation: { minLength: 10, maxLength: 500 },
+        order: 2
+      },
+      {
+        id: 'next_week_goals',
+        name: 'next_week_goals',
+        type: 'textarea',
+        label: '来週の目標',
+        placeholder: '来週の目標や計画を記入してください',
+        required: true,
+        validation: { minLength: 10, maxLength: 500 },
+        order: 3
+      }
+    ],
+    is_active: true,
+    display_order: 2,
+    created_by: 'user2',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  }
+];
+
+// ================================
+// レポートモックデータ
+// ================================
+
+export const mockReports: Report[] = [
+  {
+    id: 'report1',
+    template_id: 'template1',
+    user_id: 'user3',
+    title: '2024年1月20日 日報',
+    report_date: '2024-01-20',
+    form_data: {
+      today_tasks: 'ユーザー画面のレスポンシブ対応を実施。スマートフォン表示の調整を完了。',
+      tomorrow_tasks: 'API仕様書の確認とバックエンドチームとの打ち合わせ。',
+      issues: '特になし',
+      work_hours: 8.0
+    },
+    status: 'submitted',
+    submitted_at: '2024-01-20T18:00:00Z',
+    is_read: false,
+    created_at: '2024-01-20T17:30:00Z',
+    updated_at: '2024-01-20T18:00:00Z'
+  },
+  {
+    id: 'report2',
+    template_id: 'template1',
+    user_id: 'user3',
+    title: '2024年1月19日 日報',
+    report_date: '2024-01-19',
+    form_data: {
+      today_tasks: 'コードレビューの実施。新機能のテスト実行。',
+      tomorrow_tasks: 'ユーザー画面のデザイン修正作業。',
+      issues: 'テスト環境でのパフォーマンス問題を確認',
+      work_hours: 7.5
+    },
+    status: 'reviewed',
+    submitted_at: '2024-01-19T18:00:00Z',
+    reviewed_by: 'user2',
+    reviewed_at: '2024-01-20T09:00:00Z',
+    reviewer_comment: '良い進捗です。パフォーマンス問題は来週対応しましょう。',
+    is_read: true,
+    created_at: '2024-01-19T17:30:00Z',
+    updated_at: '2024-01-20T09:00:00Z'
+  }
+];
+
+// ================================
+// チャットモックデータ
+// ================================
+
+export const mockChats: Chat[] = [
+  {
+    id: 'chat1',
+    name: 'フロントエンドチーム',
+    description: 'フロントエンド開発チームのグループチャット',
+    chat_type: 'group',
+    created_by: 'user2',
+    is_active: true,
+    last_message_at: '2024-01-21T15:30:00Z',
+    created_at: '2024-01-15T00:00:00Z',
+    updated_at: '2024-01-21T15:30:00Z'
+  },
+  {
+    id: 'chat2',
+    chat_type: 'direct',
+    created_by: 'user3',
+    is_active: true,
+    last_message_at: '2024-01-21T14:20:00Z',
+    created_at: '2024-01-18T00:00:00Z',
+    updated_at: '2024-01-21T14:20:00Z'
+  }
+];
+
+export const mockChatUsers: ChatUser[] = [
+  {
+    id: 'chatuser1',
+    chat_id: 'chat1',
+    user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
+    joined_at: '2024-01-15T00:00:00Z',
+    last_read_at: '2024-01-21T15:30:00Z',
+    is_admin: false,
+    is_muted: false,
+    created_at: '2024-01-15T00:00:00Z',
+    updated_at: '2024-01-21T15:30:00Z'
+  },
+  {
+    id: 'chatuser2',
+    chat_id: 'chat1',
+    user_id: 'user4',
+    joined_at: '2024-01-15T00:00:00Z',
+    last_read_at: '2024-01-21T15:25:00Z',
+    is_admin: true,
+    is_muted: false,
+    created_at: '2024-01-15T00:00:00Z',
+    updated_at: '2024-01-21T15:25:00Z'
+  },
+  {
+    id: 'chatuser3',
+    chat_id: 'chat2',
+    user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
+    joined_at: '2024-01-18T00:00:00Z',
+    last_read_at: '2024-01-21T14:20:00Z',
+    is_admin: false,
+    is_muted: false,
+    created_at: '2024-01-18T00:00:00Z',
+    updated_at: '2024-01-21T14:20:00Z'
+  },
+  {
+    id: 'chatuser4',
+    chat_id: 'chat2',
+    user_id: 'user2',
+    joined_at: '2024-01-18T00:00:00Z',
+    last_read_at: '2024-01-21T14:10:00Z',
+    is_admin: false,
+    is_muted: false,
+    created_at: '2024-01-18T00:00:00Z',
+    updated_at: '2024-01-21T14:10:00Z'
+  }
+];
+
+export const mockChatMessages: ChatMessage[] = [
+  {
+    id: 'message1',
+    chat_id: 'chat1',
+    user_id: 'user4',
+    message_type: 'text',
+    content: 'お疲れ様です！今日の進捗はいかがですか？',
+    emoji_reactions: {},
+    is_edited: false,
+    created_at: '2024-01-21T15:30:00Z',
+    updated_at: '2024-01-21T15:30:00Z'
+  },
+  {
+    id: 'message2',
+    chat_id: 'chat1',
+    user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
+    message_type: 'text',
+    content: 'お疲れ様です！レスポンシブ対応が完了しました👍',
+    emoji_reactions: { '👍': ['user4'], '🎉': ['user4'] },
+    is_edited: false,
+    created_at: '2024-01-21T15:25:00Z',
+    updated_at: '2024-01-21T15:25:00Z'
+  },
+  {
+    id: 'message3',
+    chat_id: 'chat1',
+    user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
+    message_type: 'text',
+    content: 'ありがとうございます！次はバックエンドのAPI連携を進めます',
+    emoji_reactions: {},
+    is_edited: false,
+    created_at: '2024-01-21T15:20:00Z',
+    updated_at: '2024-01-21T15:20:00Z'
+  },
+  {
+    id: 'message4',
+    chat_id: 'chat1',
+    user_id: 'user4',
+    message_type: 'text',
+    content: '素晴らしいですね！進捗を共有していただきありがとうございます',
+    emoji_reactions: { '👍': ['user3'] },
+    is_edited: false,
+    created_at: '2024-01-21T15:15:00Z',
+    updated_at: '2024-01-21T15:15:00Z'
+  },
+  {
+    id: 'message5',
+    chat_id: 'chat1',
+    user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
+    message_type: 'text',
+    content: '明日のデモの準備も進めています',
+    emoji_reactions: {},
+    is_edited: false,
+    created_at: '2024-01-21T15:10:00Z',
+    updated_at: '2024-01-21T15:10:00Z'
+  },
+  {
+    id: 'message6',
+    chat_id: 'chat2',
+    user_id: 'user2',
+    message_type: 'text',
+    content: '明日の会議の件でご相談があります',
+    emoji_reactions: {},
+    is_edited: false,
+    created_at: '2024-01-21T14:20:00Z',
+    updated_at: '2024-01-21T14:20:00Z'
+  },
+  {
+    id: 'message7',
+    chat_id: 'chat2',
+    user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
+    message_type: 'text',
+    content: 'はい、どのような件でしょうか？',
+    emoji_reactions: {},
+    is_edited: false,
+    created_at: '2024-01-21T14:15:00Z',
+    updated_at: '2024-01-21T14:15:00Z'
+  },
+  {
+    id: 'message8',
+    chat_id: 'chat2',
+    user_id: 'user2',
+    message_type: 'text',
+    content: '新しいプロジェクトの立ち上げについてです',
+    emoji_reactions: {},
+    is_edited: false,
+    created_at: '2024-01-21T14:10:00Z',
+    updated_at: '2024-01-21T14:10:00Z'
+  },
+  {
+    id: 'message9',
+    chat_id: 'chat2',
+    user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
+    message_type: 'text',
+    content: '承知いたしました。詳細を教えていただけますか？',
+    emoji_reactions: {},
+    is_edited: false,
+    created_at: '2024-01-21T14:05:00Z',
+    updated_at: '2024-01-21T14:05:00Z'
+  },
+  {
+    id: 'message10',
+    chat_id: 'chat2',
+    user_id: 'user2',
+    message_type: 'text',
+    content: '明日の会議で詳しく説明させていただきます',
+    emoji_reactions: { '👍': ['user3'] },
+    is_edited: false,
+    created_at: '2024-01-21T14:00:00Z',
+    updated_at: '2024-01-21T14:00:00Z'
+  }
+];
+
+// ================================
+// API関数
+// ================================
+
+export const getSchedules = async (userId: string) => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return mockSchedules.filter(s => s.user_id === userId);
+};
+
+export const getTodos = async (userId: string) => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return mockTodos.filter(t => t.user_id === userId);
+};
+
+export const getReports = async (userId: string) => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return mockReports.filter(r => r.user_id === userId);
+};
+
+export const getReportTemplates = async () => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return mockReportTemplates.filter(t => t.is_active);
+};
+
+export const getChats = async (userId: string) => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const userChats = mockChatUsers.filter(cu => cu.user_id === userId);
+  return mockChats.filter(c => userChats.some(uc => uc.chat_id === c.id));
+};
+
+export const getChatMessages = async (chatId: string) => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return mockChatMessages.filter(m => m.chat_id === chatId);
+};
+
+export const getChatUsers = async () => {
+  await new Promise(resolve => setTimeout(resolve, 200));
+  return mockChatUsers;
+};
+
+export const createSchedule = async (data: CreateScheduleInput) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const newSchedule: Schedule = {
+    id: `schedule_${Date.now()}`,
+    user_id: 'user3', // Current user
+    ...data,
+    is_all_day: data.is_all_day || false,
+    recurrence_type: data.recurrence_type || 'none',
+    recurrence_interval: data.recurrence_interval || 1,
+    shared_with_groups: data.shared_with_groups || [],
+    is_private: data.is_private || false,
+    color: data.color || '#3B82F6',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  mockSchedules.push(newSchedule);
+  return { success: true, data: newSchedule };
+};
+
+export const createTodo = async (data: CreateTodoInput) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const newTodo: Todo = {
+    id: `todo_${Date.now()}`,
+    user_id: 'user3', // Current user
+    ...data,
+    priority: data.priority || 'medium',
+    status: 'pending',
+    tags: data.tags || [],
+    completion_rate: 0,
+    shared_with_groups: data.shared_with_groups || [],
+    is_private: data.is_private || false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  mockTodos.push(newTodo);
+  return { success: true, data: newTodo };
+};
+
+export const createReport = async (templateId: string, data: Record<string, unknown>) => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const template = mockReportTemplates.find(t => t.id === templateId);
+  if (!template) throw new Error('Template not found');
+
+  const newReport: Report = {
+    id: `report_${Date.now()}`,
+    template_id: templateId,
+    user_id: 'user3', // Current user
+    title: `${template.name} - ${new Date().toLocaleDateString('ja-JP')}`,
+    report_date: new Date().toISOString().split('T')[0],
+    form_data: data,
+    status: 'draft',
+    is_read: false,
+    submitted_at: undefined,
+    reviewed_by: undefined,
+    reviewed_at: undefined,
+    reviewer_comment: undefined,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  mockReports.push(newReport);
+  return { success: true, data: newReport };
+};
+
+export const sendMessage = async (chatId: string, content: string, userId?: string) => {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const newMessage: ChatMessage = {
+    id: `message_${Date.now()}`,
+    chat_id: chatId,
+    user_id: userId || '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076', // Current user
+    message_type: 'text',
+    content,
+    emoji_reactions: {},
+    is_edited: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  mockChatMessages.push(newMessage);
+
+  // Update chat last message time
+  const chatIndex = mockChats.findIndex(c => c.id === chatId);
+  if (chatIndex >= 0) {
+    mockChats[chatIndex].last_message_at = newMessage.created_at;
+  }
+
+  return { success: true, data: newMessage };
+};

@@ -25,7 +25,7 @@ export async function getSetting(
     .is('deleted_at', null)
     .single();
 
-  if (setting) return setting;
+  if (setting) return setting as unknown as Setting;
 
   // 2. ロール別デフォルト設定を検索
   ({ data: setting, error } = await supabase
@@ -39,7 +39,7 @@ export async function getSetting(
     .is('deleted_at', null)
     .single());
 
-  if (setting) return setting;
+  if (setting) return setting as unknown as Setting;
 
   // 3. システムデフォルト設定を検索
   ({ data: setting, error } = await supabase
@@ -53,7 +53,7 @@ export async function getSetting(
     .is('deleted_at', null)
     .single());
 
-  return setting;
+  return setting as unknown as Setting | null;
 }
 
 // 個人設定を保存する
@@ -85,7 +85,7 @@ export async function savePersonalSetting(
     return {
       success: true,
       message: '設定を保存しました',
-      data,
+      data: data as unknown as Setting,
     };
   } catch (error) {
     console.error('設定保存エラー:', error);

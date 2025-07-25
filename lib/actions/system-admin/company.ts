@@ -4,6 +4,7 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { createCompanyFeatures } from './features';
 
 import type {
   CreateCompanyInput,
@@ -317,6 +318,14 @@ export const createCompany = async (
       await supabaseAdmin.from('groups').delete().eq('id', group.id);
       await supabaseAdmin.from('companies').delete().eq('id', company.id);
       throw AppError.fromSupabaseError(userGroupError, 'ユーザーグループ作成');
+    }
+
+    // 6. 企業機能を作成（デフォルトで全て無効）
+    try {
+      await createCompanyFeatures(company.id);
+    } catch (error) {
+      console.error('企業機能作成エラー:', error);
+      // 機能作成に失敗しても企業作成は成功とする（後で手動で追加可能）
     }
 
     revalidatePath('/system-admin/company');

@@ -25,12 +25,10 @@ export interface Feature extends BaseEntity {
   feature_name: string;
   /** 説明 */
   description?: string;
-  /** 対象タイプ */
-  target_type: FeatureTargetType;
-  /** 対象ID */
-  target_id: UUID;
+  /** 企業ID */
+  company_id: UUID;
   /** 有効フラグ */
-  is_enabled: boolean;
+  is_active: boolean;
   /** 設定情報 */
   settings: FeatureSettings;
 }
@@ -58,7 +56,7 @@ export interface FeatureSettings {
     custom_css?: string;
   };
   /** 業務ロジック設定 */
-  business_rules?: Record<string, any>;
+  business_rules?: Record<string, unknown>;
 }
 
 /**
@@ -71,12 +69,10 @@ export interface CreateFeatureInput {
   feature_name: string;
   /** 説明 */
   description?: string;
-  /** 対象タイプ */
-  target_type: FeatureTargetType;
-  /** 対象ID */
-  target_id: UUID;
+  /** 企業ID */
+  company_id: UUID;
   /** 有効フラグ */
-  is_enabled?: boolean;
+  is_active?: boolean;
   /** 設定情報 */
   settings?: FeatureSettings;
 }
@@ -90,7 +86,7 @@ export interface UpdateFeatureInput {
   /** 説明 */
   description?: string;
   /** 有効フラグ */
-  is_enabled?: boolean;
+  is_active?: boolean;
   /** 設定情報 */
   settings?: FeatureSettings;
 }
@@ -307,9 +303,9 @@ export interface NotificationSettings {
 }
 
 /**
- * 機能設定
+ * 機能設定（企業別）
  */
-export interface FeatureSettings {
+export interface CompanyFeatureSettings {
   /** 勤怠管理機能 */
   attendance: boolean;
   /** 申請機能 */
