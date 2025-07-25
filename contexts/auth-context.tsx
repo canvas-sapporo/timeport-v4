@@ -374,7 +374,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isInitialized, user]);
+  }, [isInitialized, user, isLoading, isTabActive]);
 
   const login = (userData: AuthUser) => {
     setUser(userData);
