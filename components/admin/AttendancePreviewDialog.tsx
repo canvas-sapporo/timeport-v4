@@ -14,33 +14,39 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { getAttendanceDetail } from '@/lib/actions/attendance';
+import { getAttendanceDetail, getAttendanceStatuses } from '@/lib/actions/attendance';
 import { formatDate, formatTime } from '@/lib/utils';
-import type { Attendance } from '@/types/attendance';
+import type { Attendance, AttendanceStatusEntity } from '@/types/attendance';
 
 interface AttendancePreviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   attendanceId: string | null;
+  companyId?: string;
 }
 
 export default function AttendancePreviewDialog({
   open,
   onOpenChange,
   attendanceId,
+  companyId,
 }: AttendancePreviewDialogProps) {
   const [attendance, setAttendance] = useState<Attendance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusEntity[]>([]);
 
   useEffect(() => {
     if (open && attendanceId) {
       fetchAttendanceDetail();
+      if (companyId) {
+        fetchAttendanceStatuses();
+      }
     } else {
       setAttendance(null);
       setError(null);
     }
-  }, [open, attendanceId]);
+  }, [open, attendanceId, companyId]);
 
   const fetchAttendanceDetail = async () => {
     if (!attendanceId) return;
@@ -68,6 +74,19 @@ export default function AttendancePreviewDialog({
     }
   };
 
+  const fetchAttendanceStatuses = async () => {
+    if (!companyId) return;
+
+    try {
+      const result = await getAttendanceStatuses(companyId);
+      if (result.success && result.statuses) {
+        setAttendanceStatuses(result.statuses);
+      }
+    } catch (err) {
+      console.error('勤怠ステータス取得エラー:', err);
+    }
+  };
+
   // 勤怠ステータスを動的に計算する関数
   const getAttendanceStatus = (
     record?: Attendance
@@ -84,6 +103,24 @@ export default function AttendancePreviewDialog({
   };
 
   const getStatusBadge = (status: string) => {
+    // データベースから取得したステータス設定を使用
+    const statusConfig = attendanceStatuses.find((s) => s.name === status);
+
+    if (statusConfig) {
+      return (
+        <Badge
+          variant={statusConfig.color as 'default' | 'destructive' | 'secondary' | 'outline'}
+          style={{
+            color: statusConfig.font_color,
+            backgroundColor: statusConfig.background_color,
+          }}
+        >
+          {statusConfig.display_name}
+        </Badge>
+      );
+    }
+
+    // フォールバック: デフォルトの表示
     switch (status) {
       case 'normal':
         return <Badge variant="default">正常</Badge>;
@@ -96,6 +133,28 @@ export default function AttendancePreviewDialog({
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  // 総休憩時間を計算する関数
+  const calculateTotalBreakMinutes = (): number => {
+    if (!attendance?.clock_records) return 0;
+
+    let totalBreakMinutes = 0;
+
+    attendance.clock_records.forEach((session) => {
+      if (session.breaks) {
+        session.breaks.forEach((breakRecord) => {
+          if (breakRecord.break_start && breakRecord.break_end) {
+            const startTime = new Date(breakRecord.break_start).getTime();
+            const endTime = new Date(breakRecord.break_end).getTime();
+            const breakMinutes = Math.floor((endTime - startTime) / (1000 * 60));
+            totalBreakMinutes += breakMinutes;
+          }
+        });
+      }
+    });
+
+    return totalBreakMinutes;
   };
 
   const getApprovalStatusBadge = (approvedBy?: string) => {
@@ -297,6 +356,17 @@ export default function AttendancePreviewDialog({
                   </span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">休憩時間</span>
+                  <span className="text-sm">
+                    {(() => {
+                      const totalBreakMinutes = calculateTotalBreakMinutes();
+                      return totalBreakMinutes > 0
+                        ? `${Math.floor(totalBreakMinutes / 60)}h${totalBreakMinutes % 60}m`
+                        : '--:--';
+                    })()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-600">遅刻時間</span>
                   <span className="text-sm">
                     {attendance.late_minutes !== undefined
@@ -341,20 +411,38 @@ export default function AttendancePreviewDialog({
                         <div className="mt-3">
                           <h5 className="text-sm font-medium text-gray-600 mb-2">休憩記録</h5>
                           <div className="space-y-2">
-                            {session.breaks.map((breakRecord, breakIndex) => (
-                              <div
-                                key={breakIndex}
-                                className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded"
-                              >
-                                <span>休憩 {breakIndex + 1}</span>
-                                <span>
-                                  {formatTime(breakRecord.break_start)} -{' '}
-                                  {breakRecord.break_end
-                                    ? formatTime(breakRecord.break_end)
-                                    : '終了未定'}
-                                </span>
-                              </div>
-                            ))}
+                            {session.breaks.map((breakRecord, breakIndex) => {
+                              const breakMinutes =
+                                breakRecord.break_start && breakRecord.break_end
+                                  ? Math.floor(
+                                      (new Date(breakRecord.break_end).getTime() -
+                                        new Date(breakRecord.break_start).getTime()) /
+                                        (1000 * 60)
+                                    )
+                                  : 0;
+
+                              return (
+                                <div
+                                  key={breakIndex}
+                                  className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded"
+                                >
+                                  <span>休憩 {breakIndex + 1}</span>
+                                  <div className="flex items-center space-x-2">
+                                    <span>
+                                      {formatTime(breakRecord.break_start)} -{' '}
+                                      {breakRecord.break_end
+                                        ? formatTime(breakRecord.break_end)
+                                        : '終了未定'}
+                                    </span>
+                                    {breakMinutes > 0 && (
+                                      <span className="text-xs text-gray-500">
+                                        ({breakMinutes}分)
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

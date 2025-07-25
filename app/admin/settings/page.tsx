@@ -111,6 +111,8 @@ export default function AdminSettingsPage() {
     overtimeThreshold: 480,
     autoClockOut: false,
     requireApproval: true,
+    debugMode: false,
+    maintenanceMode: false,
     features: {
       attendance: true,
       requests: true,
@@ -127,6 +129,8 @@ export default function AdminSettingsPage() {
     overtimeAlert: true,
     applicationAlert: true,
     systemMaintenance: true,
+    securityAlert: false,
+    backupNotification: false,
   });
 
   // 雇用形態データ取得
@@ -222,7 +226,7 @@ export default function AdminSettingsPage() {
     { id: 'system', label: 'システム', icon: Settings },
     { id: 'notifications', label: '通知', icon: Bell },
     { id: 'features', label: '機能設定', icon: FormInput },
-
+    { id: 'attendance', label: '勤怠管理', icon: Clock },
     { id: 'employment-types', label: '雇用形態', icon: Users },
     { id: 'work-types', label: '勤務形態', icon: Briefcase },
   ];
@@ -436,26 +440,26 @@ export default function AdminSettingsPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>自動退勤</Label>
-                    <p className="text-sm text-gray-500">勤務終了時刻に自動で退勤処理</p>
+                    <Label>デバッグモード</Label>
+                    <p className="text-sm text-gray-500">開発・デバッグ用の詳細ログ出力</p>
                   </div>
                   <Switch
-                    checked={systemSettings.autoClockOut}
+                    checked={systemSettings.debugMode || false}
                     onCheckedChange={(checked) =>
-                      setSystemSettings((prev) => ({ ...prev, autoClockOut: checked }))
+                      setSystemSettings((prev) => ({ ...prev, debugMode: checked }))
                     }
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>承認必須</Label>
-                    <p className="text-sm text-gray-500">勤怠記録の承認を必須にする</p>
+                    <Label>メンテナンスモード</Label>
+                    <p className="text-sm text-gray-500">システムメンテナンス時の一時停止</p>
                   </div>
                   <Switch
-                    checked={systemSettings.requireApproval}
+                    checked={systemSettings.maintenanceMode || false}
                     onCheckedChange={(checked) =>
-                      setSystemSettings((prev) => ({ ...prev, requireApproval: checked }))
+                      setSystemSettings((prev) => ({ ...prev, maintenanceMode: checked }))
                     }
                   />
                 </div>
@@ -499,26 +503,26 @@ export default function AdminSettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>遅刻アラート</Label>
-                  <p className="text-sm text-gray-500">遅刻時の通知</p>
+                  <Label>セキュリティアラート</Label>
+                  <p className="text-sm text-gray-500">セキュリティ関連の通知</p>
                 </div>
                 <Switch
-                  checked={notificationSettings.lateArrivalAlert}
+                  checked={notificationSettings.securityAlert || false}
                   onCheckedChange={(checked) =>
-                    setNotificationSettings((prev) => ({ ...prev, lateArrivalAlert: checked }))
+                    setNotificationSettings((prev) => ({ ...prev, securityAlert: checked }))
                   }
                 />
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>残業アラート</Label>
-                  <p className="text-sm text-gray-500">残業時間の通知</p>
+                  <Label>バックアップ通知</Label>
+                  <p className="text-sm text-gray-500">データバックアップの通知</p>
                 </div>
                 <Switch
-                  checked={notificationSettings.overtimeAlert}
+                  checked={notificationSettings.backupNotification || false}
                   onCheckedChange={(checked) =>
-                    setNotificationSettings((prev) => ({ ...prev, overtimeAlert: checked }))
+                    setNotificationSettings((prev) => ({ ...prev, backupNotification: checked }))
                   }
                 />
               </div>
@@ -663,6 +667,145 @@ export default function AdminSettingsPage() {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* 勤怠管理設定 */}
+        {activeTab === 'attendance' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Clock className="w-5 h-5" />
+                  <span>勤怠管理設定</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* ステータス管理セクション */}
+                <div className="border rounded-lg p-6 bg-gray-50">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">ステータス管理</h3>
+                      <p className="text-sm text-gray-600">
+                        勤怠ステータスの種類を管理できます。正常、遅刻、早退、欠勤などのステータスをカスタマイズできます。
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => router.push('/admin/attendance-statuses')}
+                      variant="timeport-primary"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      ステータス管理
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <span className="font-medium">正常</span>
+                      </div>
+                      <p className="text-sm text-gray-600">通常の勤務状態</p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <span className="font-medium">遅刻</span>
+                      </div>
+                      <p className="text-sm text-gray-600">遅刻した勤務状態</p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                        <span className="font-medium">早退</span>
+                      </div>
+                      <p className="text-sm text-gray-600">早退した勤務状態</p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                        <span className="font-medium">欠勤</span>
+                      </div>
+                      <p className="text-sm text-gray-600">欠勤状態</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 勤怠設定セクション */}
+                <div className="border rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">勤怠設定</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>自動退勤</Label>
+                        <p className="text-sm text-gray-500">勤務終了時刻に自動で退勤処理</p>
+                      </div>
+                      <Switch
+                        checked={systemSettings.autoClockOut}
+                        onCheckedChange={(checked) =>
+                          setSystemSettings((prev) => ({ ...prev, autoClockOut: checked }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>承認必須</Label>
+                        <p className="text-sm text-gray-500">勤怠記録の承認を必須にする</p>
+                      </div>
+                      <Switch
+                        checked={systemSettings.requireApproval}
+                        onCheckedChange={(checked) =>
+                          setSystemSettings((prev) => ({ ...prev, requireApproval: checked }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>遅刻アラート</Label>
+                        <p className="text-sm text-gray-500">遅刻時の通知</p>
+                      </div>
+                      <Switch
+                        checked={notificationSettings.lateArrivalAlert}
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings((prev) => ({
+                            ...prev,
+                            lateArrivalAlert: checked,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>残業アラート</Label>
+                        <p className="text-sm text-gray-500">残業時間の通知</p>
+                      </div>
+                      <Switch
+                        checked={notificationSettings.overtimeAlert}
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings((prev) => ({ ...prev, overtimeAlert: checked }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => handleSaveSettings('attendance')}
+                    disabled={isLoading}
+                    className="w-full mt-6"
+                    variant="timeport-primary"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    保存
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* 雇用形態設定 */}

@@ -20,7 +20,13 @@ import {
 
 import { useAuth } from '@/contexts/auth-context';
 import { formatDate, formatTime } from '@/lib/utils';
-import { getAllAttendance, getCompanyUsers, getCompanyGroups } from '@/lib/actions/attendance';
+import {
+  getAllAttendance,
+  getCompanyUsers,
+  getCompanyGroups,
+  getAttendanceStatuses,
+  getDynamicAttendanceStatus,
+} from '@/lib/actions/attendance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,7 +56,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import type { Attendance, AttendanceStatus, AttendanceFilters } from '@/types/attendance';
+import type {
+  Attendance,
+  AttendanceStatus,
+  AttendanceFilters,
+  AttendanceStatusEntity,
+} from '@/types/attendance';
 import AdminAttendanceFilters from '@/components/admin/AttendanceFilters';
 import AdminCsvExportDialog from '@/components/admin/CsvExportDialog';
 import AttendancePreviewDialog from '@/components/admin/AttendancePreviewDialog';
@@ -95,6 +106,10 @@ export default function AdminAttendancePage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
 
+  // ステータスデータ
+  const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusEntity[]>([]);
+  const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
+
   // 表示項目の設定
   const [visibleColumns, setVisibleColumns] = useState({
     employee: true,
@@ -138,8 +153,8 @@ export default function AdminAttendancePage() {
 
       // ステータスフィルター
       if (filters.status.length > 0) {
-        const recordStatus = getAttendanceStatus(record);
-        if (!filters.status.includes(recordStatus)) {
+        const recordStatus = record.dynamicStatus || getAttendanceStatus(record);
+        if (!filters.status.includes(recordStatus as AttendanceStatus)) {
           return false;
         }
       }
@@ -201,7 +216,26 @@ export default function AdminAttendancePage() {
       }
     };
 
+    const fetchAttendanceStatuses = async () => {
+      if (!user?.company_id) return;
+
+      setIsLoadingStatuses(true);
+      try {
+        const result = await getAttendanceStatuses(user.company_id);
+        if (result.success && result.statuses) {
+          setAttendanceStatuses(result.statuses);
+        } else {
+          console.error('ステータス取得失敗:', result.error);
+        }
+      } catch (error) {
+        console.error('ステータスデータ取得エラー:', error);
+      } finally {
+        setIsLoadingStatuses(false);
+      }
+    };
+
     fetchUsersAndGroups();
+    fetchAttendanceStatuses();
   }, [user]);
 
   // 勤怠データ取得関数
@@ -248,10 +282,31 @@ export default function AdminAttendancePage() {
       console.log('取得された勤怠データ:', records);
       console.log('取得された勤怠データ件数:', records?.length || 0);
 
+      // 動的ステータスを計算してレコードに追加
+      const recordsWithDynamicStatus = await Promise.all(
+        records.map(async (record) => {
+          let dynamicStatus = getAttendanceStatus(record);
+
+          // 動的ステータス判定を使用
+          if (attendanceStatuses.length > 0) {
+            try {
+              dynamicStatus = await getDynamicAttendanceStatus(record, attendanceStatuses);
+            } catch (error) {
+              console.error('動的ステータス判定エラー:', error);
+            }
+          }
+
+          return {
+            ...record,
+            dynamicStatus,
+          };
+        })
+      );
+
       // デバッグ用：clock_recordsを含むデータを詳細ログ
-      if (records.length > 0) {
+      if (recordsWithDynamicStatus.length > 0) {
         console.log('clock_recordsを含むデータ詳細:');
-        records.forEach((record, index) => {
+        recordsWithDynamicStatus.forEach((record, index) => {
           if (record.clock_records && record.clock_records.length > 0) {
             console.log(`レコード${index + 1} (clock_recordsあり):`, {
               id: record.id,
@@ -260,12 +315,13 @@ export default function AdminAttendancePage() {
               clock_records: record.clock_records,
               clock_in_time: record.clock_in_time,
               clock_out_time: record.clock_out_time,
+              dynamicStatus: record.dynamicStatus,
             });
           }
         });
       }
 
-      setAttendanceRecords(records);
+      setAttendanceRecords(recordsWithDynamicStatus);
     } catch (error) {
       console.error('勤怠データ取得エラー:', error);
     } finally {
@@ -305,9 +361,10 @@ export default function AdminAttendancePage() {
     return 'text-gray-600'; // 平日はグレー
   };
 
-  const getAttendanceStatus = (record?: Attendance): AttendanceStatus => {
+  const getAttendanceStatus = (record?: Attendance): AttendanceStatus | string => {
     if (!record) return 'absent';
 
+    // フォールバック: 従来のロジック
     const clockRecords = record.clock_records || [];
     const hasAnySession = clockRecords.length > 0;
     const hasCompletedSession = clockRecords.some((session) => session.in_time && session.out_time);
@@ -317,12 +374,31 @@ export default function AdminAttendancePage() {
     return 'normal';
   };
 
-  const getStatusBadge = (status: AttendanceStatus, date?: string) => {
+  const getStatusBadge = (status: AttendanceStatus | string, date?: string) => {
     // 土日で欠勤の場合は「休日」として表示
     if (date && isWeekend(date) && status === 'absent') {
       return <Badge variant="outline">休日</Badge>;
     }
 
+    // 動的ステータス判定を使用
+    if (attendanceStatuses.length > 0) {
+      const statusConfig = attendanceStatuses.find((s) => s.name === status);
+      if (statusConfig) {
+        return (
+          <Badge
+            variant={statusConfig.color as 'default' | 'destructive' | 'secondary' | 'outline'}
+            style={{
+              color: statusConfig.font_color,
+              backgroundColor: statusConfig.background_color,
+            }}
+          >
+            {statusConfig.display_name}
+          </Badge>
+        );
+      }
+    }
+
+    // フォールバック: 従来のロジック
     switch (status) {
       case 'normal':
         return <Badge variant="default">正常</Badge>;
@@ -584,7 +660,9 @@ export default function AdminAttendancePage() {
   // 出勤率を計算（同じ日付の複数回出勤は1日としてカウント）
   const uniqueTotalDays = new Set(filteredRecords.map((r) => r.work_date));
   const uniqueAbsentDays = new Set(
-    filteredRecords.filter((r) => getAttendanceStatus(r) === 'absent').map((r) => r.work_date)
+    filteredRecords
+      .filter((r) => (r.dynamicStatus || getAttendanceStatus(r)) === 'absent')
+      .map((r) => r.work_date)
   );
   const attendanceRate =
     uniqueTotalDays.size > 0
@@ -985,7 +1063,10 @@ export default function AdminAttendancePage() {
                             {record.id.startsWith('absent-') ? (
                               <span className="text-gray-400">-</span>
                             ) : (
-                              getStatusBadge(getAttendanceStatus(record), record.work_date)
+                              getStatusBadge(
+                                record.dynamicStatus || getAttendanceStatus(record),
+                                record.work_date
+                              )
                             )}
                             {/* 編集済みバッジ */}
                             {record.source_id && (
@@ -1268,6 +1349,7 @@ export default function AdminAttendancePage() {
         open={previewDialogOpen}
         onOpenChange={setPreviewDialogOpen}
         attendanceId={selectedAttendanceId}
+        companyId={user?.company_id}
       />
 
       {/* 編集ダイアログ */}

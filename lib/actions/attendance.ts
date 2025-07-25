@@ -12,6 +12,8 @@ import type {
   ClockBreakRecord,
   ClockType,
   ClockRecord,
+  AttendanceStatusEntity,
+  StatusLogic,
 } from '@/types/attendance';
 import {
   AppError,
@@ -1949,5 +1951,264 @@ export const getLatestAttendance = async (
   } catch (error) {
     console.error('getLatestAttendance エラー:', error);
     return null;
+  }
+};
+
+/**
+ * 会社の勤怠ステータス一覧を取得
+ */
+export const getAttendanceStatuses = async (
+  companyId: string
+): Promise<{ success: boolean; statuses?: AttendanceStatusEntity[]; error?: string }> => {
+  try {
+    console.log('getAttendanceStatuses 開始:', { companyId });
+
+    const { data: statuses, error } = await supabaseAdmin
+      .from('attendance_statuses')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('勤怠ステータス取得エラー:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    console.log('getAttendanceStatuses 取得成功:', statuses?.length || 0, '件');
+    return {
+      success: true,
+      statuses: statuses || [],
+    };
+  } catch (error) {
+    console.error('getAttendanceStatuses エラー:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+/**
+ * ステータス判定ロジックを実行する関数
+ */
+export const evaluateStatusLogic = async (
+  logic: string,
+  attendance: Attendance
+): Promise<boolean> => {
+  try {
+    const statusLogic: StatusLogic = JSON.parse(logic);
+    
+    // 条件を評価
+    return statusLogic.conditions.every(condition => {
+      const fieldValue = getFieldValue(attendance, condition.field);
+      
+      switch (condition.operator) {
+        case 'has_sessions':
+          return condition.value === (fieldValue && fieldValue.length > 0);
+        case 'has_completed_sessions':
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return condition.value === (fieldValue && fieldValue.some((session: any) => session.in_time && session.out_time));
+        case 'empty':
+          return condition.value === (!fieldValue || fieldValue.length === 0);
+        case 'greater_than':
+          return fieldValue > condition.value;
+        case 'less_than':
+          return fieldValue < condition.value;
+        case 'equals':
+          return fieldValue === condition.value;
+        case 'not_equals':
+          return fieldValue !== condition.value;
+        default:
+          return false;
+      }
+    });
+  } catch (error) {
+    console.error('ステータス判定ロジック実行エラー:', error);
+    return false;
+  }
+};
+
+/**
+ * オブジェクトからフィールド値を取得する関数
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getFieldValue = (obj: any, field: string): any => {
+  const fields = field.split('.');
+  let value = obj;
+  
+  for (const f of fields) {
+    if (value && typeof value === 'object' && f in value) {
+      value = value[f];
+    } else {
+      return undefined;
+    }
+  }
+  
+  return value;
+};
+
+/**
+ * 勤怠記録のステータスを動的に判定する関数
+ */
+export const getDynamicAttendanceStatus = async (
+  attendance: Attendance,
+  statuses: AttendanceStatusEntity[]
+): Promise<string> => {
+  // ロジックを持つステータスを優先的に評価
+  const statusesWithLogic = statuses.filter(s => s.logic && s.is_active);
+  
+  for (const status of statusesWithLogic) {
+    if (await evaluateStatusLogic(status.logic!, attendance)) {
+      return status.name;
+    }
+  }
+  
+  // デフォルトの判定ロジック
+  const clockRecords = attendance.clock_records || [];
+  const hasAnySession = clockRecords.length > 0;
+  const hasCompletedSession = clockRecords.some((session) => session.in_time && session.out_time);
+
+  if (!hasAnySession) return 'absent';
+  if (!hasCompletedSession) return 'normal';
+  return 'normal';
+};
+
+/**
+ * 勤怠ステータスを作成
+ */
+export const createAttendanceStatus = async (
+  companyId: string,
+  statusData: {
+    name: string;
+    display_name: string;
+    color: string;
+    font_color: string;
+    background_color: string;
+    sort_order: number;
+    logic?: string;
+    description?: string;
+  }
+): Promise<{ success: boolean; status?: AttendanceStatusEntity; error?: string }> => {
+  try {
+    console.log('createAttendanceStatus 開始:', { companyId, statusData });
+
+    const { data: status, error } = await supabaseAdmin
+      .from('attendance_statuses')
+      .insert({
+        company_id: companyId,
+        ...statusData,
+        is_active: true,
+        is_required: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('勤怠ステータス作成エラー:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    console.log('createAttendanceStatus 成功:', status);
+    return {
+      success: true,
+      status,
+    };
+  } catch (error) {
+    console.error('createAttendanceStatus エラー:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+/**
+ * 勤怠ステータスを更新
+ */
+export const updateAttendanceStatus = async (
+  statusId: string,
+  updateData: {
+    display_name?: string;
+    color?: string;
+    font_color?: string;
+    background_color?: string;
+    sort_order?: number;
+    is_active?: boolean;
+    logic?: string;
+    description?: string;
+  }
+): Promise<{ success: boolean; status?: AttendanceStatusEntity; error?: string }> => {
+  try {
+    console.log('updateAttendanceStatus 開始:', { statusId, updateData });
+
+    const { data: status, error } = await supabaseAdmin
+      .from('attendance_statuses')
+      .update(updateData)
+      .eq('id', statusId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('勤怠ステータス更新エラー:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    console.log('updateAttendanceStatus 成功:', status);
+    return {
+      success: true,
+      status,
+    };
+  } catch (error) {
+    console.error('updateAttendanceStatus エラー:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+/**
+ * 勤怠ステータスを削除（論理削除）
+ */
+export const deleteAttendanceStatus = async (
+  statusId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    console.log('deleteAttendanceStatus 開始:', { statusId });
+
+    const { error } = await supabaseAdmin
+      .from('attendance_statuses')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', statusId);
+
+    if (error) {
+      console.error('勤怠ステータス削除エラー:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    console.log('deleteAttendanceStatus 成功');
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error('deleteAttendanceStatus エラー:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
 };

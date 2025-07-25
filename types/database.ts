@@ -135,6 +135,20 @@ export interface Attendance extends BaseEntity {
   approved_at?: Timestamp;
 }
 
+export interface AttendanceStatus extends BaseEntity {
+  company_id: UUID;
+  name: string;
+  display_name: string;
+  color: string;
+  font_color: string;
+  background_color: string;
+  sort_order: number;
+  is_active: boolean;
+  is_required: boolean;
+  logic?: string;
+  description?: string;
+}
+
 // ================================
 // 申請・承認関連型
 // ================================

@@ -19,6 +19,58 @@ import type { BaseEntity, UUID, DateString, TimeString, Timestamp } from './comm
  */
 export type AttendanceStatus = 'normal' | 'late' | 'early_leave' | 'absent';
 
+/**
+ * 勤怠ステータスエンティティ
+ */
+export interface AttendanceStatusEntity extends BaseEntity {
+  /** 会社ID */
+  company_id: UUID;
+  /** システム内部名 */
+  name: string;
+  /** 表示名 */
+  display_name: string;
+  /** バッジの色 */
+  color: string;
+  /** フォント色 */
+  font_color: string;
+  /** 背景色 */
+  background_color: string;
+  /** 表示順序 */
+  sort_order: number;
+  /** 有効/無効フラグ */
+  is_active: boolean;
+  /** 必須フラグ（削除不可） */
+  is_required: boolean;
+  /** ステータス判定ロジック */
+  logic?: string;
+  /** 説明 */
+  description?: string;
+}
+
+/**
+ * ステータス判定ロジックの型定義
+ */
+export interface StatusLogic {
+  /** ロジックタイプ */
+  type: 'function' | 'condition';
+  /** 関数名または条件名 */
+  name: string;
+  /** 条件配列 */
+  conditions: StatusCondition[];
+}
+
+/**
+ * ステータス判定条件の型定義
+ */
+export interface StatusCondition {
+  /** フィールド名 */
+  field: string;
+  /** 演算子 */
+  operator: 'has_sessions' | 'has_completed_sessions' | 'empty' | 'greater_than' | 'less_than' | 'equals' | 'not_equals';
+  /** 比較値 */
+  value: unknown;
+}
+
 // ================================
 // 休憩記録型
 // ================================
@@ -113,6 +165,8 @@ export interface Attendance extends BaseEntity {
   edited_by?: UUID;
   /** 編集履歴の有無 */
   has_edit_history?: boolean;
+  /** 動的ステータス（計算フィールド） */
+  dynamicStatus?: string;
 }
 
 /**
