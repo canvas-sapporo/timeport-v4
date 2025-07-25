@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { createServerClient } from '@/lib/supabase';
 
 /**
@@ -67,7 +68,7 @@ export const checkFeatureAccess = async (
     console.error('機能制御チェックエラー:', error);
     return { allowed: false, redirectUrl: '/error' };
   }
-}
+};
 
 /**
  * 機能制御ミドルウェア（Next.js Middleware用）
@@ -82,7 +83,7 @@ export const withFeatureCheck = (featureCode: string) => {
 
     return NextResponse.next();
   };
-}
+};
 
 /**
  * 複数機能の制御チェック
@@ -139,7 +140,7 @@ export const checkMultipleFeatures = async (
     }
 
     const disabledFeatures: string[] = [];
-    const featureMap = new Map(features?.map(f => [f.feature_code, f.is_active]) || []);
+    const featureMap = new Map(features?.map((f) => [f.feature_code, f.is_active]) || []);
 
     // 各機能の有効性をチェック
     for (const code of featureCodes) {
@@ -150,10 +151,10 @@ export const checkMultipleFeatures = async (
     }
 
     if (disabledFeatures.length > 0) {
-      return { 
-        allowed: false, 
+      return {
+        allowed: false,
         redirectUrl: '/feature-disabled',
-        disabledFeatures 
+        disabledFeatures,
       };
     }
 
@@ -162,4 +163,4 @@ export const checkMultipleFeatures = async (
     console.error('複数機能制御チェックエラー:', error);
     return { allowed: false, redirectUrl: '/error' };
   }
-} 
+};

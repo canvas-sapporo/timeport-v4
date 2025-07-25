@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Trash2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -29,9 +33,6 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { deleteWorkType, getWorkTypes } from '@/lib/actions/admin/work-types';
 import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import type { WorkType } from '@/types/employment_type';
 
 const deleteWorkTypeSchema = z.object({

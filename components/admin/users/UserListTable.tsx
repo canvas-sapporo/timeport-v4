@@ -22,12 +22,13 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import UserCreateDialog from './UserCreateDialog';
-import UserEditDialog from './UserEditDialog';
-import UserDeleteDialog from './UserDeleteDialog';
 import type { UserProfile } from '@/types/user_profiles';
 import type { Group } from '@/types/groups';
 import type { UUID } from '@/types/common';
+
+import UserCreateDialog from './UserCreateDialog';
+import UserEditDialog from './UserEditDialog';
+import UserDeleteDialog from './UserDeleteDialog';
 
 interface UserListTableProps {
   users: (UserProfile & { groups: Group[] })[];

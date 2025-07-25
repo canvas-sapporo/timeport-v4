@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { AlertTriangle, Trash2, X, User, Calendar, Clock } from 'lucide-react';
+
 import {
   Dialog,
   DialogContent,
@@ -10,7 +12,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Trash2, X, User, Calendar, Clock } from 'lucide-react';
 import { getAttendanceDetail, deleteAttendance } from '@/lib/actions/attendance';
 import { formatDate, formatTime } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';

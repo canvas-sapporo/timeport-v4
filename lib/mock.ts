@@ -374,7 +374,7 @@ export const generateAttendanceRecords = (userId: string): Attendance[] => {
   return records;
 };
 
-let mockAttendanceRecords = mockUsers.flatMap((user) => generateAttendanceRecords(user.id));
+const mockAttendanceRecords = mockUsers.flatMap((user) => generateAttendanceRecords(user.id));
 
 const mockRequests: Request[] = [
   {
@@ -892,7 +892,6 @@ export const notifications = mockNotifications;
 export const workplaces = mockGroups.filter((g) => g.id.includes('work'));
 export const departments = mockGroups.filter((g) => g.id.includes('dept'));
 
-
 // ================================
 // スケジュールモックデータ
 // ================================
@@ -914,7 +913,7 @@ export const mockSchedules: Schedule[] = [
     is_private: false,
     color: '#3B82F6',
     created_at: '2024-01-20T00:00:00Z',
-    updated_at: '2024-01-20T00:00:00Z'
+    updated_at: '2024-01-20T00:00:00Z',
   },
   {
     id: 'schedule2',
@@ -930,7 +929,7 @@ export const mockSchedules: Schedule[] = [
     is_private: false,
     color: '#EF4444',
     created_at: '2024-01-20T00:00:00Z',
-    updated_at: '2024-01-20T00:00:00Z'
+    updated_at: '2024-01-20T00:00:00Z',
   },
   {
     id: 'schedule3',
@@ -948,7 +947,7 @@ export const mockSchedules: Schedule[] = [
     is_private: false,
     color: '#10B981',
     created_at: '2024-01-20T00:00:00Z',
-    updated_at: '2024-01-20T00:00:00Z'
+    updated_at: '2024-01-20T00:00:00Z',
   },
   {
     id: 'schedule4',
@@ -965,8 +964,8 @@ export const mockSchedules: Schedule[] = [
     is_private: false,
     color: '#8B5CF6',
     created_at: '2024-01-20T00:00:00Z',
-    updated_at: '2024-01-20T00:00:00Z'
-  }
+    updated_at: '2024-01-20T00:00:00Z',
+  },
 ];
 
 // ================================
@@ -991,7 +990,7 @@ export const mockTodos: Todo[] = [
     shared_with_groups: ['group7'],
     is_private: false,
     created_at: '2024-01-20T00:00:00Z',
-    updated_at: '2024-01-21T00:00:00Z'
+    updated_at: '2024-01-21T00:00:00Z',
   },
   {
     id: 'todo2',
@@ -1008,7 +1007,7 @@ export const mockTodos: Todo[] = [
     shared_with_groups: [],
     is_private: false,
     created_at: '2024-01-20T00:00:00Z',
-    updated_at: '2024-01-20T00:00:00Z'
+    updated_at: '2024-01-20T00:00:00Z',
   },
   {
     id: 'todo3',
@@ -1027,7 +1026,7 @@ export const mockTodos: Todo[] = [
     is_private: false,
     completed_at: '2024-01-21T16:30:00Z',
     created_at: '2024-01-19T00:00:00Z',
-    updated_at: '2024-01-21T16:30:00Z'
+    updated_at: '2024-01-21T16:30:00Z',
   },
   {
     id: 'todo4',
@@ -1045,7 +1044,7 @@ export const mockTodos: Todo[] = [
     shared_with_groups: ['group7'],
     is_private: false,
     created_at: '2024-01-20T00:00:00Z',
-    updated_at: '2024-01-20T00:00:00Z'
+    updated_at: '2024-01-20T00:00:00Z',
   },
   {
     id: 'todo5',
@@ -1064,7 +1063,7 @@ export const mockTodos: Todo[] = [
     shared_with_groups: [],
     is_private: false,
     created_at: '2024-01-20T00:00:00Z',
-    updated_at: '2024-01-21T00:00:00Z'
+    updated_at: '2024-01-21T00:00:00Z',
   },
   {
     id: 'todo6',
@@ -1081,8 +1080,8 @@ export const mockTodos: Todo[] = [
     shared_with_groups: [],
     is_private: true,
     created_at: '2024-01-20T00:00:00Z',
-    updated_at: '2024-01-20T00:00:00Z'
-  }
+    updated_at: '2024-01-20T00:00:00Z',
+  },
 ];
 
 // ================================
@@ -1105,7 +1104,7 @@ export const mockReportTemplates: ReportTemplate[] = [
         placeholder: '本日実施した作業を記入してください',
         required: true,
         validation: { minLength: 10, maxLength: 1000 },
-        order: 1
+        order: 1,
       },
       {
         id: 'tomorrow_tasks',
@@ -1115,7 +1114,7 @@ export const mockReportTemplates: ReportTemplate[] = [
         placeholder: '明日の作業予定を記入してください',
         required: true,
         validation: { minLength: 5, maxLength: 500 },
-        order: 2
+        order: 2,
       },
       {
         id: 'issues',
@@ -1125,7 +1124,7 @@ export const mockReportTemplates: ReportTemplate[] = [
         placeholder: '課題や問題点があれば記入してください',
         required: false,
         validation: { maxLength: 500 },
-        order: 3
+        order: 3,
       },
       {
         id: 'work_hours',
@@ -1135,14 +1134,14 @@ export const mockReportTemplates: ReportTemplate[] = [
         placeholder: '8.0',
         required: true,
         validation: { min: 0, max: 24 },
-        order: 4
-      }
+        order: 4,
+      },
     ],
     is_active: true,
     display_order: 1,
     created_by: 'user2',
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    updated_at: '2024-01-01T00:00:00Z',
   },
   {
     id: 'template2',
@@ -1159,7 +1158,7 @@ export const mockReportTemplates: ReportTemplate[] = [
         placeholder: '今週の主な成果を記入してください',
         required: true,
         validation: { minLength: 20, maxLength: 1000 },
-        order: 1
+        order: 1,
       },
       {
         id: 'achievements',
@@ -1169,7 +1168,7 @@ export const mockReportTemplates: ReportTemplate[] = [
         placeholder: '完了したタスクや成果を記入してください',
         required: true,
         validation: { minLength: 10, maxLength: 500 },
-        order: 2
+        order: 2,
       },
       {
         id: 'next_week_goals',
@@ -1179,15 +1178,15 @@ export const mockReportTemplates: ReportTemplate[] = [
         placeholder: '来週の目標や計画を記入してください',
         required: true,
         validation: { minLength: 10, maxLength: 500 },
-        order: 3
-      }
+        order: 3,
+      },
     ],
     is_active: true,
     display_order: 2,
     created_by: 'user2',
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
-  }
+    updated_at: '2024-01-01T00:00:00Z',
+  },
 ];
 
 // ================================
@@ -1205,13 +1204,13 @@ export const mockReports: Report[] = [
       today_tasks: 'ユーザー画面のレスポンシブ対応を実施。スマートフォン表示の調整を完了。',
       tomorrow_tasks: 'API仕様書の確認とバックエンドチームとの打ち合わせ。',
       issues: '特になし',
-      work_hours: 8.0
+      work_hours: 8.0,
     },
     status: 'submitted',
     submitted_at: '2024-01-20T18:00:00Z',
     is_read: false,
     created_at: '2024-01-20T17:30:00Z',
-    updated_at: '2024-01-20T18:00:00Z'
+    updated_at: '2024-01-20T18:00:00Z',
   },
   {
     id: 'report2',
@@ -1223,7 +1222,7 @@ export const mockReports: Report[] = [
       today_tasks: 'コードレビューの実施。新機能のテスト実行。',
       tomorrow_tasks: 'ユーザー画面のデザイン修正作業。',
       issues: 'テスト環境でのパフォーマンス問題を確認',
-      work_hours: 7.5
+      work_hours: 7.5,
     },
     status: 'reviewed',
     submitted_at: '2024-01-19T18:00:00Z',
@@ -1232,8 +1231,8 @@ export const mockReports: Report[] = [
     reviewer_comment: '良い進捗です。パフォーマンス問題は来週対応しましょう。',
     is_read: true,
     created_at: '2024-01-19T17:30:00Z',
-    updated_at: '2024-01-20T09:00:00Z'
-  }
+    updated_at: '2024-01-20T09:00:00Z',
+  },
 ];
 
 // ================================
@@ -1250,7 +1249,7 @@ export const mockChats: Chat[] = [
     is_active: true,
     last_message_at: '2024-01-21T15:30:00Z',
     created_at: '2024-01-15T00:00:00Z',
-    updated_at: '2024-01-21T15:30:00Z'
+    updated_at: '2024-01-21T15:30:00Z',
   },
   {
     id: 'chat2',
@@ -1259,8 +1258,8 @@ export const mockChats: Chat[] = [
     is_active: true,
     last_message_at: '2024-01-21T14:20:00Z',
     created_at: '2024-01-18T00:00:00Z',
-    updated_at: '2024-01-21T14:20:00Z'
-  }
+    updated_at: '2024-01-21T14:20:00Z',
+  },
 ];
 
 export const mockChatUsers: ChatUser[] = [
@@ -1273,7 +1272,7 @@ export const mockChatUsers: ChatUser[] = [
     is_admin: false,
     is_muted: false,
     created_at: '2024-01-15T00:00:00Z',
-    updated_at: '2024-01-21T15:30:00Z'
+    updated_at: '2024-01-21T15:30:00Z',
   },
   {
     id: 'chatuser2',
@@ -1284,7 +1283,7 @@ export const mockChatUsers: ChatUser[] = [
     is_admin: true,
     is_muted: false,
     created_at: '2024-01-15T00:00:00Z',
-    updated_at: '2024-01-21T15:25:00Z'
+    updated_at: '2024-01-21T15:25:00Z',
   },
   {
     id: 'chatuser3',
@@ -1295,7 +1294,7 @@ export const mockChatUsers: ChatUser[] = [
     is_admin: false,
     is_muted: false,
     created_at: '2024-01-18T00:00:00Z',
-    updated_at: '2024-01-21T14:20:00Z'
+    updated_at: '2024-01-21T14:20:00Z',
   },
   {
     id: 'chatuser4',
@@ -1306,8 +1305,8 @@ export const mockChatUsers: ChatUser[] = [
     is_admin: false,
     is_muted: false,
     created_at: '2024-01-18T00:00:00Z',
-    updated_at: '2024-01-21T14:10:00Z'
-  }
+    updated_at: '2024-01-21T14:10:00Z',
+  },
 ];
 
 export const mockChatMessages: ChatMessage[] = [
@@ -1320,7 +1319,7 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: {},
     is_edited: false,
     created_at: '2024-01-21T15:30:00Z',
-    updated_at: '2024-01-21T15:30:00Z'
+    updated_at: '2024-01-21T15:30:00Z',
   },
   {
     id: 'message2',
@@ -1331,7 +1330,7 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: { '👍': ['user4'], '🎉': ['user4'] },
     is_edited: false,
     created_at: '2024-01-21T15:25:00Z',
-    updated_at: '2024-01-21T15:25:00Z'
+    updated_at: '2024-01-21T15:25:00Z',
   },
   {
     id: 'message3',
@@ -1342,7 +1341,7 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: {},
     is_edited: false,
     created_at: '2024-01-21T15:20:00Z',
-    updated_at: '2024-01-21T15:20:00Z'
+    updated_at: '2024-01-21T15:20:00Z',
   },
   {
     id: 'message4',
@@ -1353,7 +1352,7 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: { '👍': ['user3'] },
     is_edited: false,
     created_at: '2024-01-21T15:15:00Z',
-    updated_at: '2024-01-21T15:15:00Z'
+    updated_at: '2024-01-21T15:15:00Z',
   },
   {
     id: 'message5',
@@ -1364,7 +1363,7 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: {},
     is_edited: false,
     created_at: '2024-01-21T15:10:00Z',
-    updated_at: '2024-01-21T15:10:00Z'
+    updated_at: '2024-01-21T15:10:00Z',
   },
   {
     id: 'message6',
@@ -1375,7 +1374,7 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: {},
     is_edited: false,
     created_at: '2024-01-21T14:20:00Z',
-    updated_at: '2024-01-21T14:20:00Z'
+    updated_at: '2024-01-21T14:20:00Z',
   },
   {
     id: 'message7',
@@ -1386,7 +1385,7 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: {},
     is_edited: false,
     created_at: '2024-01-21T14:15:00Z',
-    updated_at: '2024-01-21T14:15:00Z'
+    updated_at: '2024-01-21T14:15:00Z',
   },
   {
     id: 'message8',
@@ -1397,7 +1396,7 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: {},
     is_edited: false,
     created_at: '2024-01-21T14:10:00Z',
-    updated_at: '2024-01-21T14:10:00Z'
+    updated_at: '2024-01-21T14:10:00Z',
   },
   {
     id: 'message9',
@@ -1408,7 +1407,7 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: {},
     is_edited: false,
     created_at: '2024-01-21T14:05:00Z',
-    updated_at: '2024-01-21T14:05:00Z'
+    updated_at: '2024-01-21T14:05:00Z',
   },
   {
     id: 'message10',
@@ -1419,8 +1418,8 @@ export const mockChatMessages: ChatMessage[] = [
     emoji_reactions: { '👍': ['user3'] },
     is_edited: false,
     created_at: '2024-01-21T14:00:00Z',
-    updated_at: '2024-01-21T14:00:00Z'
-  }
+    updated_at: '2024-01-21T14:00:00Z',
+  },
 ];
 
 // ================================
@@ -1428,43 +1427,43 @@ export const mockChatMessages: ChatMessage[] = [
 // ================================
 
 export const getSchedules = async (userId: string) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return mockSchedules.filter(s => s.user_id === userId);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return mockSchedules.filter((s) => s.user_id === userId);
 };
 
 export const getTodos = async (userId: string) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return mockTodos.filter(t => t.user_id === userId);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return mockTodos.filter((t) => t.user_id === userId);
 };
 
 export const getReports = async (userId: string) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return mockReports.filter(r => r.user_id === userId);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return mockReports.filter((r) => r.user_id === userId);
 };
 
 export const getReportTemplates = async () => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return mockReportTemplates.filter(t => t.is_active);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return mockReportTemplates.filter((t) => t.is_active);
 };
 
 export const getChats = async (userId: string) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const userChats = mockChatUsers.filter(cu => cu.user_id === userId);
-  return mockChats.filter(c => userChats.some(uc => uc.chat_id === c.id));
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const userChats = mockChatUsers.filter((cu) => cu.user_id === userId);
+  return mockChats.filter((c) => userChats.some((uc) => uc.chat_id === c.id));
 };
 
 export const getChatMessages = async (chatId: string) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return mockChatMessages.filter(m => m.chat_id === chatId);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return mockChatMessages.filter((m) => m.chat_id === chatId);
 };
 
 export const getChatUsers = async () => {
-  await new Promise(resolve => setTimeout(resolve, 200));
+  await new Promise((resolve) => setTimeout(resolve, 200));
   return mockChatUsers;
 };
 
 export const createSchedule = async (data: CreateScheduleInput) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 500));
   const newSchedule: Schedule = {
     id: `schedule_${Date.now()}`,
     user_id: 'user3', // Current user
@@ -1476,14 +1475,14 @@ export const createSchedule = async (data: CreateScheduleInput) => {
     is_private: data.is_private || false,
     color: data.color || '#3B82F6',
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
   };
   mockSchedules.push(newSchedule);
   return { success: true, data: newSchedule };
 };
 
 export const createTodo = async (data: CreateTodoInput) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 500));
   const newTodo: Todo = {
     id: `todo_${Date.now()}`,
     user_id: 'user3', // Current user
@@ -1495,15 +1494,15 @@ export const createTodo = async (data: CreateTodoInput) => {
     shared_with_groups: data.shared_with_groups || [],
     is_private: data.is_private || false,
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
   };
   mockTodos.push(newTodo);
   return { success: true, data: newTodo };
 };
 
 export const createReport = async (templateId: string, data: Record<string, unknown>) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const template = mockReportTemplates.find(t => t.id === templateId);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const template = mockReportTemplates.find((t) => t.id === templateId);
   if (!template) throw new Error('Template not found');
 
   const newReport: Report = {
@@ -1520,14 +1519,14 @@ export const createReport = async (templateId: string, data: Record<string, unkn
     reviewed_at: undefined,
     reviewer_comment: undefined,
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
   };
   mockReports.push(newReport);
   return { success: true, data: newReport };
 };
 
 export const sendMessage = async (chatId: string, content: string, userId?: string) => {
-  await new Promise(resolve => setTimeout(resolve, 300));
+  await new Promise((resolve) => setTimeout(resolve, 300));
   const newMessage: ChatMessage = {
     id: `message_${Date.now()}`,
     chat_id: chatId,
@@ -1537,12 +1536,12 @@ export const sendMessage = async (chatId: string, content: string, userId?: stri
     emoji_reactions: {},
     is_edited: false,
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
   };
   mockChatMessages.push(newMessage);
 
   // Update chat last message time
-  const chatIndex = mockChats.findIndex(c => c.id === chatId);
+  const chatIndex = mockChats.findIndex((c) => c.id === chatId);
   if (chatIndex >= 0) {
     mockChats[chatIndex].last_message_at = newMessage.created_at;
   }

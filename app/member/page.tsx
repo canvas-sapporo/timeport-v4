@@ -25,8 +25,7 @@ import {
   getUserWorkType,
 } from '@/lib/actions/attendance';
 import type { Attendance, ClockBreakRecord, ClockRecord } from '@/types/attendance';
-import { refreshSchemaCache } from '@/lib/supabase';
-import { supabase } from '@/lib/supabase';
+import { refreshSchemaCache, supabase } from '@/lib/supabase';
 
 export default function MemberDashboard() {
   const { user } = useAuth();

@@ -1,11 +1,12 @@
 'use client';
 
 import { AlertTriangle, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { useEffect } from 'react';
 
 export default function FeatureDisabledPage() {
   const { user, isLoading } = useAuth();

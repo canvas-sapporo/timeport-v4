@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { createServerClient } from '@/lib/supabase';
 import { getSetting } from '@/lib/actions/settings';
 import type { CsvExportSetting } from '@/types/settings';
@@ -134,7 +135,11 @@ export async function POST(request: NextRequest) {
 
     // ファイル名を生成
     const timestamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 14);
-    const userProfile = attendances[0]?.user_profiles as unknown as { code?: string; family_name?: string; first_name?: string } | null;
+    const userProfile = attendances[0]?.user_profiles as unknown as {
+      code?: string;
+      family_name?: string;
+      first_name?: string;
+    } | null;
     const fileName = `${timestamp}_${userProfile?.code || 'unknown'}_${userProfile?.family_name || ''}${userProfile?.first_name || ''}_${csvSetting.period.start_date || 'all'}-${csvSetting.period.end_date || 'all'}.csv`;
 
     // レスポンスヘッダーを設定

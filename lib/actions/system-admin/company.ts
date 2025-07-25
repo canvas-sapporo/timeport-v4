@@ -4,7 +4,6 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
-import { createCompanyFeatures } from './features';
 
 import type {
   CreateCompanyInput,
@@ -29,6 +28,8 @@ import {
   validatePassword,
 } from '@/lib/utils/error-handling';
 import type { ValidationError } from '@/types/common';
+
+import { createCompanyFeatures } from './features';
 
 // 環境変数の確認
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

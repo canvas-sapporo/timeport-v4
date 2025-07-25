@@ -124,7 +124,7 @@ export async function saveRoleDefaultSetting(
     return {
       success: true,
       message: 'デフォルト設定を保存しました',
-      data,
+      data: data as unknown as Setting,
     };
   } catch (error) {
     console.error('デフォルト設定保存エラー:', error);
@@ -179,7 +179,7 @@ export async function getUserSettings(userId: string, settingType?: string): Pro
     return [];
   }
 
-  return data || [];
+  return (data || []) as unknown as Setting[];
 }
 
 // ロール別デフォルト設定一覧を取得する
@@ -208,5 +208,5 @@ export async function getRoleDefaultSettings(
     return [];
   }
 
-  return data || [];
+  return (data || []) as unknown as Setting[];
 }

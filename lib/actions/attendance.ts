@@ -794,7 +794,7 @@ export const getMemberAttendance = async (userId: string): Promise<Attendance[]>
       if (dateComparison !== 0) {
         return dateComparison;
       }
-      
+
       // 同じ日付の場合、出勤時刻で比較（昇順）
       const aClockIn = a.clock_in_time || '';
       const bClockIn = b.clock_in_time || '';
@@ -980,7 +980,7 @@ export const getUserAttendance = async (
       if (dateComparison !== 0) {
         return dateComparison;
       }
-      
+
       // 同じ日付の場合、出勤時刻で比較（昇順）
       const aClockIn = a.clock_in_time || '';
       const bClockIn = b.clock_in_time || '';
@@ -1180,12 +1180,10 @@ export const getAllAttendance = async (
 
     // 編集履歴の存在をチェック
     const recordsWithEditHistory = originalRecords.map((record) => {
-      const hasEditHistory = filteredData.some((editRecord) => 
-        editRecord.source_id === record.id
-      );
+      const hasEditHistory = filteredData.some((editRecord) => editRecord.source_id === record.id);
       return {
         ...record,
-        has_edit_history: hasEditHistory
+        has_edit_history: hasEditHistory,
       };
     });
 
@@ -1203,7 +1201,8 @@ export const getAllAttendance = async (
         // 旧カラムを最新セッションで同期（互換性のため）
         attendance.clock_in_time = latestSession.in_time;
         // out_timeが空文字列の場合はundefinedにしない
-        attendance.clock_out_time = latestSession.out_time === '' ? undefined : latestSession.out_time;
+        attendance.clock_out_time =
+          latestSession.out_time === '' ? undefined : latestSession.out_time;
       }
 
       // clock_recordsから総勤務時間を計算
@@ -1277,7 +1276,7 @@ export const getAllAttendance = async (
     });
 
     console.log('getAllAttendance 加工後データ:', processedData.length, '件');
-    
+
     // デバッグ用：最初の数件のデータを詳細ログ
     if (processedData.length > 0) {
       console.log('最初の3件のデータ詳細:');
@@ -1290,7 +1289,7 @@ export const getAllAttendance = async (
           clock_in_time: record.clock_in_time,
           clock_out_time: record.clock_out_time,
           actual_work_minutes: record.actual_work_minutes,
-          user_name: record.user_name
+          user_name: record.user_name,
         });
       });
     }
@@ -1304,7 +1303,7 @@ export const getAllAttendance = async (
       if (dateComparison !== 0) {
         return dateComparison;
       }
-      
+
       // 同じ日付の場合、出勤時刻で比較（昇順）
       const aClockIn = a.clock_in_time || '';
       const bClockIn = b.clock_in_time || '';
@@ -1679,7 +1678,8 @@ export const getAttendanceDetail = async (
       const latestSession = attendance.clock_records[attendance.clock_records.length - 1];
       attendance.clock_in_time = latestSession.in_time;
       // out_timeが空文字列の場合はundefinedにしない
-      attendance.clock_out_time = latestSession.out_time === '' ? undefined : latestSession.out_time;
+      attendance.clock_out_time =
+        latestSession.out_time === '' ? undefined : latestSession.out_time;
     }
 
     // 計算フィールドを追加
@@ -1783,7 +1783,7 @@ export const editAttendanceTime = async (
     if (clockRecords.length > 0) {
       const latestSession = clockRecords[clockRecords.length - 1];
       if (latestSession.in_time && latestSession.out_time) {
-        const { actualWorkMinutes: calculatedWork, overtimeMinutes: calculatedOvertime } = 
+        const { actualWorkMinutes: calculatedWork, overtimeMinutes: calculatedOvertime } =
           await calculateWorkTime(
             latestSession.in_time,
             latestSession.out_time,
@@ -1847,14 +1847,16 @@ export const editAttendanceTime = async (
 /**
  * clock_recordsのバリデーション
  */
-const validateClockRecords = (clockRecords: ClockRecord[]): { isValid: boolean; error?: string } => {
+const validateClockRecords = (
+  clockRecords: ClockRecord[]
+): { isValid: boolean; error?: string } => {
   if (!clockRecords || clockRecords.length === 0) {
     return { isValid: false, error: '勤務記録が入力されていません' };
   }
 
   for (let i = 0; i < clockRecords.length; i++) {
     const session = clockRecords[i];
-    
+
     // 出勤時刻のチェック
     if (!session.in_time) {
       return { isValid: false, error: `${i + 1}番目のセッションに出勤時刻が設定されていません` };
@@ -1867,14 +1869,20 @@ const validateClockRecords = (clockRecords: ClockRecord[]): { isValid: boolean; 
 
     // 出勤時刻と退勤時刻の整合性チェック
     if (session.out_time && new Date(session.in_time) >= new Date(session.out_time)) {
-      return { isValid: false, error: `${i + 1}番目のセッションで退勤時刻が出勤時刻より前になっています` };
+      return {
+        isValid: false,
+        error: `${i + 1}番目のセッションで退勤時刻が出勤時刻より前になっています`,
+      };
     }
 
     // セッション間の整合性チェック
     if (i > 0) {
       const prevSession = clockRecords[i - 1];
       if (prevSession.out_time && new Date(session.in_time) <= new Date(prevSession.out_time)) {
-        return { isValid: false, error: `${i + 1}番目のセッションの出勤時刻が前のセッションの退勤時刻より前になっています` };
+        return {
+          isValid: false,
+          error: `${i + 1}番目のセッションの出勤時刻が前のセッションの退勤時刻より前になっています`,
+        };
       }
     }
 
@@ -1882,19 +1890,30 @@ const validateClockRecords = (clockRecords: ClockRecord[]): { isValid: boolean; 
     if (session.breaks && session.breaks.length > 0) {
       for (let j = 0; j < session.breaks.length; j++) {
         const breakRecord = session.breaks[j];
-        
+
         if (!breakRecord.break_start || !breakRecord.break_end) {
-          return { isValid: false, error: `${i + 1}番目のセッションの${j + 1}番目の休憩に開始時刻または終了時刻が設定されていません` };
+          return {
+            isValid: false,
+            error: `${i + 1}番目のセッションの${j + 1}番目の休憩に開始時刻または終了時刻が設定されていません`,
+          };
         }
 
         if (new Date(breakRecord.break_start) >= new Date(breakRecord.break_end)) {
-          return { isValid: false, error: `${i + 1}番目のセッションの${j + 1}番目の休憩で終了時刻が開始時刻より前になっています` };
+          return {
+            isValid: false,
+            error: `${i + 1}番目のセッションの${j + 1}番目の休憩で終了時刻が開始時刻より前になっています`,
+          };
         }
 
         // 休憩時間が勤務時間内かチェック
-        if (new Date(breakRecord.break_start) < new Date(session.in_time) || 
-            (session.out_time && new Date(breakRecord.break_end) > new Date(session.out_time))) {
-          return { isValid: false, error: `${i + 1}番目のセッションの${j + 1}番目の休憩が勤務時間外になっています` };
+        if (
+          new Date(breakRecord.break_start) < new Date(session.in_time) ||
+          (session.out_time && new Date(breakRecord.break_end) > new Date(session.out_time))
+        ) {
+          return {
+            isValid: false,
+            error: `${i + 1}番目のセッションの${j + 1}番目の休憩が勤務時間外になっています`,
+          };
         }
       }
     }

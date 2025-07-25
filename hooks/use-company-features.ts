@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 import { supabase } from '@/lib/supabase';
 
 // 機能のデフォルト値（ローディング中やエラー時のフォールバック）
@@ -41,7 +42,7 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     const fetchFeatures = async () => {
       try {
         console.log('機能取得開始:', companyId);
-        
+
         // タイムアウトを設定（5秒）
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('機能取得タイムアウト')), 5000);
@@ -52,7 +53,7 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
           .select('feature_code, is_active')
           .eq('company_id', companyId);
 
-        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+        const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as any;
 
         if (error) {
           console.error('機能取得エラー:', error);
@@ -70,10 +71,10 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
               map[f.feature_code as keyof typeof DEFAULT_FEATURES] = f.is_active;
             }
           });
-          
+
           console.log('機能取得成功:', companyId, map);
           setFeatures(map);
-          
+
           // キャッシュに保存
           featureCache.set(companyId, {
             features: map,
@@ -93,4 +94,4 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
   }, [companyId]);
 
   return { features, isLoading, error };
-}; 
+};

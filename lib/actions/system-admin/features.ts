@@ -1,9 +1,7 @@
 'use server';
 
-import { createServerClient } from '@/lib/supabase';
-import { supabase } from '@/lib/supabase';
-import { AppError } from '@/lib/utils/error-handling';
-import { withErrorHandling } from '@/lib/utils/error-handling';
+import { createServerClient, supabase } from '@/lib/supabase';
+import { AppError, withErrorHandling } from '@/lib/utils/error-handling';
 
 // ================================
 // 型定義
@@ -40,11 +38,13 @@ export const getCompanyFeatures = async (
 
     const { data: features, error } = await supabase
       .from('features')
-      .select(`
+      .select(
+        `
         feature_code,
         is_active,
         companies!inner(id, name)
-      `)
+      `
+      )
       .eq('company_id', companyId)
       .in('feature_code', ['chat', 'report', 'schedule'])
       .is('deleted_at', null);
@@ -55,7 +55,7 @@ export const getCompanyFeatures = async (
 
     const companyFeatures: CompanyFeatures = {
       company_id: companyId,
-      company_name: features?.[0]?.companies?.name || '',
+      company_name: '', // 企業名は別途取得する必要がある
       features: {
         chat: false,
         report: false,
@@ -63,21 +63,19 @@ export const getCompanyFeatures = async (
       },
     };
 
-    features?.forEach((feature) => {
+    features?.forEach((feature: any) => {
       if (feature.feature_code === 'chat') {
-        companyFeatures.features.chat = feature.is_active;
+        companyFeatures.features.chat = feature.is_active as boolean;
       } else if (feature.feature_code === 'report') {
-        companyFeatures.features.report = feature.is_active;
+        companyFeatures.features.report = feature.is_active as boolean;
       } else if (feature.feature_code === 'schedule') {
-        companyFeatures.features.schedule = feature.is_active;
+        companyFeatures.features.schedule = feature.is_active as boolean;
       }
     });
 
     return companyFeatures;
   });
 };
-
-
 
 /**
  * 全企業の機能を取得（Server Action）
@@ -112,7 +110,7 @@ export const getAllCompanyFeatures = async (): Promise<
     // 企業ごとに機能をグループ化
     const companyFeaturesMap = new Map<string, CompanyFeatures>();
 
-    companies?.forEach((company) => {
+    companies?.forEach((company: any) => {
       companyFeaturesMap.set(company.id, {
         company_id: company.id,
         company_name: company.name,
@@ -124,15 +122,15 @@ export const getAllCompanyFeatures = async (): Promise<
       });
     });
 
-    features?.forEach((feature) => {
+    features?.forEach((feature: any) => {
       const companyFeatures = companyFeaturesMap.get(feature.company_id);
       if (companyFeatures) {
         if (feature.feature_code === 'chat') {
-          companyFeatures.features.chat = feature.is_active;
+          companyFeatures.features.chat = feature.is_active as boolean;
         } else if (feature.feature_code === 'report') {
-          companyFeatures.features.report = feature.is_active;
+          companyFeatures.features.report = feature.is_active as boolean;
         } else if (feature.feature_code === 'schedule') {
-          companyFeatures.features.schedule = feature.is_active;
+          companyFeatures.features.schedule = feature.is_active as boolean;
         }
       }
     });
@@ -170,8 +168,6 @@ export const toggleFeature = async (
     return feature;
   });
 };
-
-
 
 /**
  * 企業の機能を一括更新
@@ -287,7 +283,7 @@ export const isFeatureEnabled = async (
       throw AppError.fromSupabaseError(error, '機能有効性チェック');
     }
 
-    return feature?.is_active || false;
+    return (feature?.is_active as boolean) || false;
   });
 };
 
@@ -297,11 +293,12 @@ export const isFeatureEnabled = async (
 export const getCompanyFeatureStatus = async (
   companyId: string
 ): Promise<
-  { success: true; data: { chat: boolean; report: boolean; schedule: boolean } } | { success: false; error: AppError }
+  | { success: true; data: { chat: boolean; report: boolean; schedule: boolean } }
+  | { success: false; error: AppError }
 > => {
   return withErrorHandling(async () => {
     console.log('getCompanyFeatureStatus 開始: companyId =', companyId);
-    
+
     try {
       const supabase = createServerClient();
       console.log('createServerClient 成功');
@@ -326,13 +323,13 @@ export const getCompanyFeatureStatus = async (
         schedule: false,
       };
 
-      features?.forEach((feature) => {
+      features?.forEach((feature: any) => {
         if (feature.feature_code === 'chat') {
-          status.chat = feature.is_active;
+          status.chat = feature.is_active as boolean;
         } else if (feature.feature_code === 'report') {
-          status.report = feature.is_active;
+          status.report = feature.is_active as boolean;
         } else if (feature.feature_code === 'schedule') {
-          status.schedule = feature.is_active;
+          status.schedule = feature.is_active as boolean;
         }
       });
 
@@ -343,4 +340,4 @@ export const getCompanyFeatureStatus = async (
       throw error;
     }
   });
-}; 
+};

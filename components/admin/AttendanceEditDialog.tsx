@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Clock, User, Calendar, FileText, AlertCircle, CheckCircle, Save, X } from 'lucide-react';
+
 import {
   Dialog,
   DialogContent,
@@ -21,7 +23,6 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Calendar, FileText, AlertCircle, CheckCircle, Save, X } from 'lucide-react';
 import { getAttendanceDetail, updateAttendance, getWorkTypes } from '@/lib/actions/attendance';
 import { formatDate, formatTime } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';

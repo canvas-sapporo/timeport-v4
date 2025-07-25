@@ -22,14 +22,12 @@ export const supabase = (() => {
             'X-Client-Info': 'timeport-v4',
           },
         },
-        db: {
-          schema: 'public',
-        },
+        db: {},
       });
     }
     return supabaseClient;
   }
-  
+
   // サーバーサイドでは新しいインスタンスを作成（SSR用）
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -60,7 +58,8 @@ export const createServerClient = () => {
   if (!serverClient) {
     // 環境変数を直接参照
     const supabaseUrl = 'https://lftxabbornwajhxeirqt.supabase.co';
-    const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxmdHhhYmJvcm53YWpoeGVpcnF0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjYzMjU3NiwiZXhwIjoyMDY4MjA4NTc2fQ.b8mUB_5F9VA4PyWNqpD_XUQRCe0A2k1i10XGiwFC8CE';
+    const serviceRoleKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxmdHhhYmJvcm53YWpoeGVpcnF0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjYzMjU3NiwiZXhwIjoyMDY4MjA4NTc2fQ.b8mUB_5F9VA4PyWNqpD_XUQRCe0A2k1i10XGiwFC8CE';
 
     console.log('Server Actions - 環境変数確認:');
     console.log('NEXT_PUBLIC_SUPABASE_URL: 設定済み');
@@ -72,9 +71,7 @@ export const createServerClient = () => {
         persistSession: false,
         detectSessionInUrl: false,
       },
-      db: {
-        schema: 'public',
-      },
+      db: {},
     });
   }
 

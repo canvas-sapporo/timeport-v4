@@ -1,9 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { createServerClient } from '@/lib/supabase';
-import { withErrorHandling } from '@/lib/utils/error-handling';
-import { AppError } from '@/lib/utils/error-handling';
+import { withErrorHandling, AppError } from '@/lib/utils/error-handling';
 import type {
   CreateUserProfileInput,
   UpdateUserProfileInput,
@@ -97,7 +97,8 @@ export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) =
       (allUsers || []).map(async (user: any) => {
         const { data: userGroups } = await supabaseAdmin
           .from('user_groups')
-          .select(`
+          .select(
+            `
             group_id,
             groups(
               id,
@@ -105,7 +106,8 @@ export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) =
               code,
               company_id
             )
-          `)
+          `
+          )
           .eq('user_id', user.id)
           .is('deleted_at', null);
 
@@ -116,8 +118,8 @@ export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) =
       })
     );
 
-        // 企業内のユーザーのみをフィルタリング
-    const companyUsers = usersWithGroups.filter(user =>
+    // 企業内のユーザーのみをフィルタリング
+    const companyUsers = usersWithGroups.filter((user) =>
       user.groups.some((group: any) => group.company_id === companyId)
     );
 

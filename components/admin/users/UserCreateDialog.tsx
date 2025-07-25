@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -33,7 +33,6 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createUser } from '@/lib/actions/admin/users';
 import { getEmploymentTypes } from '@/lib/actions/admin/employment-types';

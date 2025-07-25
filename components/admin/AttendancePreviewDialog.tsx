@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Clock, User, Calendar, FileText, AlertCircle, CheckCircle, History } from 'lucide-react';
+
 import {
   Dialog,
   DialogContent,
@@ -12,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, User, Calendar, FileText, AlertCircle, CheckCircle, History } from 'lucide-react';
 import { getAttendanceDetail } from '@/lib/actions/attendance';
 import { formatDate, formatTime } from '@/lib/utils';
 import type { Attendance } from '@/types/attendance';
