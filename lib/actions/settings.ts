@@ -7,16 +7,16 @@ import type {
 } from '@/types/settings';
 
 // 設定を取得する（優先順位: 個人設定 > ロール別デフォルト > システムデフォルト）
-export async function getSetting(
+export const getSetting = async (
   userId: string,
   role: string,
   settingType: string,
   settingKey: string
-): Promise<Setting | null> {
+): Promise<Setting | null> => {
   const supabase = createServerClient();
 
   // 1. 個人設定を検索
-  let { data: setting, error } = await supabase
+  let { data: setting } = await supabase
     .from('settings')
     .select('*')
     .eq('user_id', userId)
@@ -28,7 +28,7 @@ export async function getSetting(
   if (setting) return setting as unknown as Setting;
 
   // 2. ロール別デフォルト設定を検索
-  ({ data: setting, error } = await supabase
+  ({ data: setting } = await supabase
     .from('settings')
     .select('*')
     .eq('role', role)
@@ -42,7 +42,7 @@ export async function getSetting(
   if (setting) return setting as unknown as Setting;
 
   // 3. システムデフォルト設定を検索
-  ({ data: setting, error } = await supabase
+  ({ data: setting } = await supabase
     .from('settings')
     .select('*')
     .eq('role', 'system-admin')
@@ -54,16 +54,16 @@ export async function getSetting(
     .single());
 
   return setting as unknown as Setting | null;
-}
+};
 
 // 個人設定を保存する
-export async function savePersonalSetting(
+export const savePersonalSetting = async (
   userId: string,
   role: string,
   settingType: string,
   settingKey: string,
   settingValue: CsvExportSetting | AttendanceSetting | NotificationSetting
-): Promise<{ success: boolean; message: string; data?: Setting }> {
+): Promise<{ success: boolean; message: string; data?: Setting }> => {
   const supabase = createServerClient();
 
   try {
@@ -94,15 +94,15 @@ export async function savePersonalSetting(
       message: '設定の保存に失敗しました',
     };
   }
-}
+};
 
 // ロール別デフォルト設定を保存する（管理者のみ）
-export async function saveRoleDefaultSetting(
+export const saveRoleDefaultSetting = async (
   role: string,
   settingType: string,
   settingKey: string,
   settingValue: CsvExportSetting | AttendanceSetting | NotificationSetting
-): Promise<{ success: boolean; message: string; data?: Setting }> {
+): Promise<{ success: boolean; message: string; data?: Setting }> => {
   const supabase = createServerClient();
 
   try {
@@ -133,12 +133,12 @@ export async function saveRoleDefaultSetting(
       message: 'デフォルト設定の保存に失敗しました',
     };
   }
-}
+};
 
 // 設定を削除する（ソフトデリート）
-export async function deleteSetting(
+export const deleteSetting = async (
   settingId: string
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string }> => {
   const supabase = createServerClient();
 
   try {
@@ -160,10 +160,10 @@ export async function deleteSetting(
       message: '設定の削除に失敗しました',
     };
   }
-}
+};
 
 // ユーザーの設定一覧を取得する
-export async function getUserSettings(userId: string, settingType?: string): Promise<Setting[]> {
+export const getUserSettings = async (userId: string, settingType?: string): Promise<Setting[]> => {
   const supabase = createServerClient();
 
   let query = supabase.from('settings').select('*').eq('user_id', userId).is('deleted_at', null);
@@ -180,13 +180,13 @@ export async function getUserSettings(userId: string, settingType?: string): Pro
   }
 
   return (data || []) as unknown as Setting[];
-}
+};
 
 // ロール別デフォルト設定一覧を取得する
-export async function getRoleDefaultSettings(
+export const getRoleDefaultSettings = async (
   role: string,
   settingType?: string
-): Promise<Setting[]> {
+): Promise<Setting[]> => {
   const supabase = createServerClient();
 
   let query = supabase
@@ -209,4 +209,4 @@ export async function getRoleDefaultSettings(
   }
 
   return (data || []) as unknown as Setting[];
-}
+};
