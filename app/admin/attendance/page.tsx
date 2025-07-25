@@ -543,7 +543,22 @@ export default function AdminAttendancePage() {
     const userComparison = (a.user_name || '').localeCompare(b.user_name || '');
     if (userComparison !== 0) return userComparison;
 
-    // 3. 作成日時順（新しい順）
+    // 3. 出勤時刻順（早い順）
+    const aClockRecords = a.clock_records || [];
+    const bClockRecords = b.clock_records || [];
+    const aFirstInTime = aClockRecords[0]?.in_time;
+    const bFirstInTime = bClockRecords[0]?.in_time;
+
+    if (aFirstInTime && bFirstInTime) {
+      const timeComparison = new Date(aFirstInTime).getTime() - new Date(bFirstInTime).getTime();
+      if (timeComparison !== 0) return timeComparison;
+    } else if (aFirstInTime && !bFirstInTime) {
+      return -1; // aが先（出勤時刻がある方が先）
+    } else if (!aFirstInTime && bFirstInTime) {
+      return 1; // bが先（出勤時刻がある方が先）
+    }
+
+    // 4. 作成日時順（新しい順）
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 

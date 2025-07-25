@@ -23,6 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isTabActive, setIsTabActive] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -30,6 +31,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window === 'undefined') return;
 
     console.log('AuthContext初期化開始');
+
+    // タブの可視性変更を監視
+    const handleVisibilityChange = () => {
+      setIsTabActive(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // 初期状態でローカルストレージからユーザー情報を取得（クライアントサイドでのみ）
     const storedUser = getCurrentUser();
@@ -55,15 +63,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('認証状態変更:', event, session?.user?.email);
 
+      // タブが非アクティブな場合は処理をスキップ
+      if (!isTabActive) {
+        console.log('タブが非アクティブなため、認証状態変更処理をスキップ');
+        return;
+      }
+
       // リフレッシュトークンエラーは正常な動作なので、ログレベルを下げる
       if (event === 'TOKEN_REFRESHED') {
         console.log('トークンリフレッシュ成功');
         return;
       }
 
+      // 既にユーザーが設定されている場合は、不要な再処理を避ける
+      if (user && event === 'SIGNED_IN' && session?.user?.id === user.id) {
+        console.log('既に同じユーザーが設定されているため、処理をスキップ');
+        return;
+      }
+
       if (event === 'SIGNED_IN' && session?.user) {
         // ユーザーがサインインした場合、プロフィール情報を取得
-        setIsLoading(true); // ローディング状態を開始
+        // 既にローディング中の場合は設定しない
+        if (!isLoading) {
+          setIsLoading(true); // ローディング状態を開始
+        }
         try {
           console.log('プロフィール取得開始, user_id:', session.user.id);
 
@@ -343,11 +366,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return () => {
         clearTimeout(timer);
         subscription.unsubscribe();
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
       };
     }
 
-    return () => subscription.unsubscribe();
-  }, [isInitialized]);
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isInitialized, user]);
 
   const login = (userData: AuthUser) => {
     setUser(userData);

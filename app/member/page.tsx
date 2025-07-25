@@ -2,7 +2,17 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, Calendar, FileText, TrendingUp, Plus, LogIn, LogOut, Coffee } from 'lucide-react';
+import {
+  Clock,
+  Calendar,
+  FileText,
+  TrendingUp,
+  Plus,
+  LogIn,
+  LogOut,
+  Coffee,
+  Loader2,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -40,6 +50,9 @@ export default function MemberDashboard() {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [isClient, setIsClient] = useState(false);
   const [csvExportOpen, setCsvExportOpen] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<
+    'clockIn' | 'clockOut' | 'startBreak' | 'endBreak' | null
+  >(null);
 
   // データ取得関数
   const fetchAttendanceData = async (userId: string, forceRefresh = false) => {
@@ -306,6 +319,7 @@ export default function MemberDashboard() {
 
     console.log('ユーザーID:', user.id);
     setIsLoading(true);
+    setLoadingAction('clockIn');
 
     try {
       const timestamp = new Date().toISOString();
@@ -362,6 +376,7 @@ export default function MemberDashboard() {
       });
     } finally {
       setIsLoading(false);
+      setLoadingAction(null);
     }
   };
 
@@ -378,6 +393,7 @@ export default function MemberDashboard() {
 
     console.log('ユーザーID:', user.id);
     setIsLoading(true);
+    setLoadingAction('clockOut');
     try {
       const timestamp = new Date().toISOString();
       console.log('退勤時刻:', timestamp);
@@ -421,6 +437,7 @@ export default function MemberDashboard() {
       });
     } finally {
       setIsLoading(false);
+      setLoadingAction(null);
     }
   };
 
@@ -436,6 +453,7 @@ export default function MemberDashboard() {
     }
     console.log('ユーザーID:', user.id);
     setIsLoading(true);
+    setLoadingAction('startBreak');
     try {
       const timestamp = new Date().toISOString();
       console.log('休憩開始時刻:', timestamp);
@@ -477,6 +495,7 @@ export default function MemberDashboard() {
       });
     } finally {
       setIsLoading(false);
+      setLoadingAction(null);
     }
   };
 
@@ -492,6 +511,7 @@ export default function MemberDashboard() {
     }
     console.log('ユーザーID:', user.id);
     setIsLoading(true);
+    setLoadingAction('endBreak');
     try {
       const timestamp = new Date().toISOString();
       console.log('休憩終了時刻:', timestamp);
@@ -533,6 +553,7 @@ export default function MemberDashboard() {
       });
     } finally {
       setIsLoading(false);
+      setLoadingAction(null);
     }
   };
 
@@ -598,10 +619,21 @@ export default function MemberDashboard() {
                   console.log('handleClockIn関数呼び出し完了');
                 }}
                 disabled={isLoading}
-                className="w-full h-12 bg-green-600 hover:bg-green-700"
+                className={`w-full h-12 bg-green-600 hover:bg-green-700 relative overflow-hidden transition-all duration-200 ${
+                  isLoading && loadingAction === 'clockIn' ? 'animate-pulse shadow-lg' : ''
+                }`}
               >
-                <LogIn className="w-5 h-5 mr-2" />
-                {isLoading ? '処理中...' : '出勤'}
+                {isLoading && loadingAction === 'clockIn' ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    出勤中...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5 mr-2" />
+                    出勤
+                  </>
+                )}
               </Button>
             )}
 
@@ -613,19 +645,41 @@ export default function MemberDashboard() {
                   <Button
                     onClick={handleStartBreak}
                     disabled={isLoading}
-                    className="w-full h-12 bg-orange-200 hover:bg-orange-300 text-orange-800 border-orange-300"
+                    className={`w-full h-12 bg-orange-200 hover:bg-orange-300 text-orange-800 border-orange-300 transition-all duration-200 ${
+                      isLoading && loadingAction === 'startBreak' ? 'animate-pulse shadow-lg' : ''
+                    }`}
                   >
-                    <Coffee className="w-5 h-5 mr-2" />
-                    {isLoading ? '処理中...' : '休憩開始'}
+                    {isLoading && loadingAction === 'startBreak' ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        休憩開始中...
+                      </>
+                    ) : (
+                      <>
+                        <Coffee className="w-5 h-5 mr-2" />
+                        休憩開始
+                      </>
+                    )}
                   </Button>
                 ) : (
                   <Button
                     onClick={handleEndBreak}
                     disabled={isLoading}
-                    className="w-full h-12 bg-orange-200 hover:bg-orange-300 text-orange-800 border-orange-300"
+                    className={`w-full h-12 bg-orange-200 hover:bg-orange-300 text-orange-800 border-orange-300 transition-all duration-200 ${
+                      isLoading && loadingAction === 'endBreak' ? 'animate-pulse shadow-lg' : ''
+                    }`}
                   >
-                    <Coffee className="w-5 h-5 mr-2" />
-                    {isLoading ? '処理中...' : '休憩終了'}
+                    {isLoading && loadingAction === 'endBreak' ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        休憩終了中...
+                      </>
+                    ) : (
+                      <>
+                        <Coffee className="w-5 h-5 mr-2" />
+                        休憩終了
+                      </>
+                    )}
                   </Button>
                 )}
 
@@ -633,10 +687,21 @@ export default function MemberDashboard() {
                 <Button
                   onClick={handleClockOut}
                   disabled={isLoading}
-                  className="w-full h-12 bg-red-600 hover:bg-red-700"
+                  className={`w-full h-12 bg-red-600 hover:bg-red-700 transition-all duration-200 ${
+                    isLoading && loadingAction === 'clockOut' ? 'animate-pulse shadow-lg' : ''
+                  }`}
                 >
-                  <LogOut className="w-5 h-5 mr-2" />
-                  {isLoading ? '処理中...' : '退勤'}
+                  {isLoading && loadingAction === 'clockOut' ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      退勤中...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="w-5 h-5 mr-2" />
+                      退勤
+                    </>
+                  )}
                 </Button>
               </>
             )}
