@@ -157,7 +157,7 @@ export default function AttendanceEditDialog({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'normal':
-        return <Badge variant="default">正常出勤</Badge>;
+        return <Badge variant="default">正常</Badge>;
       case 'late':
         return <Badge variant="destructive">遅刻</Badge>;
       case 'early_leave':

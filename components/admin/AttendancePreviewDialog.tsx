@@ -68,10 +68,25 @@ export default function AttendancePreviewDialog({
     }
   };
 
+  // 勤怠ステータスを動的に計算する関数
+  const getAttendanceStatus = (
+    record?: Attendance
+  ): 'normal' | 'late' | 'early_leave' | 'absent' => {
+    if (!record) return 'absent';
+
+    const clockRecords = record.clock_records || [];
+    const hasAnySession = clockRecords.length > 0;
+    const hasCompletedSession = clockRecords.some((session) => session.in_time && session.out_time);
+
+    if (!hasAnySession) return 'absent';
+    if (!hasCompletedSession) return 'normal'; // 勤務中
+    return 'normal';
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'normal':
-        return <Badge variant="default">正常出勤</Badge>;
+        return <Badge variant="default">正常</Badge>;
       case 'late':
         return <Badge variant="destructive">遅刻</Badge>;
       case 'early_leave':
@@ -181,7 +196,7 @@ export default function AttendancePreviewDialog({
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-600">ステータス</span>
-                  <div>{getStatusBadge(attendance.status)}</div>
+                  <div>{getStatusBadge(getAttendanceStatus(attendance))}</div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-600">承認状態</span>
@@ -373,7 +388,7 @@ export default function AttendancePreviewDialog({
               <CardTitle className="text-sm">システム情報</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">レコードID</span>
                   <span className="font-mono text-xs">{attendance.id}</span>
@@ -386,6 +401,7 @@ export default function AttendancePreviewDialog({
                       : '-'}
                   </span>
                 </div>
+                <div></div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">更新日時</span>
                   <span>
@@ -394,13 +410,15 @@ export default function AttendancePreviewDialog({
                       : '-'}
                   </span>
                 </div>
-                {attendance.approved_at && (
+              </div>
+              {attendance.approved_at && (
+                <div className="mt-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">承認日時</span>
                     <span>{new Date(attendance.approved_at).toLocaleString('ja-JP')}</span>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
