@@ -368,39 +368,7 @@ export default function ClockHistory({
                             })()}
                           </span>
                         </div>
-                        <div>
-                          <span className="text-gray-600">セッション数:</span>
-                          <span className="ml-2">{record.clock_records?.length || 0}回</span>
-                        </div>
                       </div>
-
-                      {record.clock_records && record.clock_records.length > 0 && (
-                        <div className="mt-2 pt-2 border-t">
-                          <div className="text-sm text-gray-600 mb-1">勤務セッション:</div>
-                          <div className="space-y-1">
-                            {record.clock_records.map((session, sessionIndex) => (
-                              <div key={sessionIndex} className="text-xs text-gray-500">
-                                <div className="font-medium">セッション {sessionIndex + 1}:</div>
-                                <div className="ml-2">
-                                  {session.in_time ? formatTime(session.in_time) : '--:--'} -{' '}
-                                  {session.out_time ? formatTime(session.out_time) : '--:--'}
-                                </div>
-                                {session.breaks && session.breaks.length > 0 && (
-                                  <div className="ml-2 text-gray-400">
-                                    休憩:{' '}
-                                    {session.breaks
-                                      .map(
-                                        (br) =>
-                                          `${formatTime(br.break_start)}-${br.break_end ? formatTime(br.break_end) : '進行中'}`
-                                      )
-                                      .join(', ')}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
