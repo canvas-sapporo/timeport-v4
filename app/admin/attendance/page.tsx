@@ -186,8 +186,15 @@ export default function AdminAttendancePage() {
 
   // ユーザーとグループデータ取得
   useEffect(() => {
+    console.log('useEffect 開始:', {
+      user: user ? { id: user.id, company_id: user.company_id } : null,
+    });
+
     const fetchUsersAndGroups = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log('fetchUsersAndGroups: userがnullのためスキップ');
+        return;
+      }
 
       try {
         setIsLoadingUsers(true);
@@ -217,12 +224,18 @@ export default function AdminAttendancePage() {
     };
 
     const fetchAttendanceStatuses = async () => {
-      if (!user?.company_id) return;
+      if (!user?.company_id) {
+        console.log('fetchAttendanceStatuses: userまたはcompany_idがnullのためスキップ');
+        return;
+      }
 
+      console.log('fetchAttendanceStatuses 開始:', { companyId: user.company_id });
       setIsLoadingStatuses(true);
       try {
         const result = await getAttendanceStatuses(user.company_id);
+        console.log('fetchAttendanceStatuses 結果:', result);
         if (result.success && result.statuses) {
+          console.log('attendanceStatuses 設定:', result.statuses.length, '件');
           setAttendanceStatuses(result.statuses);
         } else {
           console.error('ステータス取得失敗:', result.error);
@@ -239,7 +252,7 @@ export default function AdminAttendancePage() {
   }, [user]);
 
   // 勤怠データ取得関数
-  const fetchAttendanceData = async () => {
+  const fetchAttendanceData = async (currentAttendanceStatuses?: AttendanceStatusEntity[]) => {
     if (!user) {
       console.log('ユーザーが存在しません');
       return;
@@ -288,12 +301,24 @@ export default function AdminAttendancePage() {
           let dynamicStatus = getAttendanceStatus(record);
 
           // 動的ステータス判定を使用
-          if (attendanceStatuses.length > 0) {
+          const statusesToUse = currentAttendanceStatuses || attendanceStatuses;
+          console.log('動的ステータス判定開始:', {
+            recordId: record.id,
+            attendanceStatusesLength: statusesToUse.length,
+          });
+
+          if (statusesToUse.length > 0) {
             try {
-              dynamicStatus = await getDynamicAttendanceStatus(record, attendanceStatuses);
+              dynamicStatus = await getDynamicAttendanceStatus(record, statusesToUse);
+              console.log('動的ステータス判定結果:', { recordId: record.id, dynamicStatus });
             } catch (error) {
               console.error('動的ステータス判定エラー:', error);
             }
+          } else {
+            console.log('attendanceStatusesが空のため、デフォルトステータスを使用:', {
+              recordId: record.id,
+              dynamicStatus,
+            });
           }
 
           return {
@@ -331,8 +356,8 @@ export default function AdminAttendancePage() {
 
   // データ取得
   useEffect(() => {
-    fetchAttendanceData();
-  }, [user, selectedMonth]);
+    fetchAttendanceData(attendanceStatuses);
+  }, [user, selectedMonth, attendanceStatuses]);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -537,7 +562,7 @@ export default function AdminAttendancePage() {
 
   const handleOperationSuccess = () => {
     // データを再取得
-    fetchAttendanceData();
+    fetchAttendanceData(attendanceStatuses);
   };
 
   // 月の全日期間を生成
