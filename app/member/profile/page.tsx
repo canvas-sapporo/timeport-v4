@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Building, MapPin, Calendar } from 'lucide-react';
+import { User, Building, Calendar } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';

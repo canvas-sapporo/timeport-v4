@@ -5,10 +5,8 @@ import { useRouter } from 'next/navigation';
 import {
   Calendar,
   Download,
-  Filter,
   Info,
   Clock,
-  User,
   CheckCircle,
   XCircle,
   Settings,
@@ -19,7 +17,6 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
-import { formatDate, formatTime } from '@/lib/utils';
 import {
   getAllAttendance,
   getCompanyUsers,
@@ -31,20 +28,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';

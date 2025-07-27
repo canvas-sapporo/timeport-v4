@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Badge, Settings } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
-import { getAttendanceStatuses, deleteAttendanceStatus } from '@/lib/actions/attendance';
+import { getAttendanceStatuses } from '@/lib/actions/attendance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -38,7 +38,7 @@ export default function AdminAttendanceStatusesPage() {
 
   useEffect(() => {
     if (user?.company_id) {
-      fetchStatuses();
+      fetchStatuses().then(() => {});
     }
   }, [user]);
 
@@ -213,7 +213,7 @@ export default function AdminAttendanceStatusesPage() {
       <AttendanceStatusCreateDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        companyId={user.company_id}
+        companyId={user.company_id || ''}
         onSuccess={handleOperationSuccess}
       />
 

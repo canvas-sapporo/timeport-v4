@@ -29,7 +29,7 @@ import {
 } from '@/lib/utils/error-handling';
 import type { ValidationError } from '@/types/common';
 
-import { createCompanyFeatures } from './features';
+
 
 // 環境変数の確認
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -322,10 +322,39 @@ export const createCompany = async (
     }
 
     // 6. 企業機能を作成（デフォルトで全て無効）
-    try {
-      await createCompanyFeatures(company.id);
-    } catch (error) {
-      console.error('企業機能作成エラー:', error);
+    const defaultFeatures = [
+      {
+        feature_code: 'chat',
+        feature_name: 'チャット機能',
+        description: '社内チャット機能',
+        company_id: company.id,
+        is_active: false,
+        settings: {},
+      },
+      {
+        feature_code: 'report',
+        feature_name: 'レポート機能',
+        description: '勤怠レポート・分析機能',
+        company_id: company.id,
+        is_active: false,
+        settings: {},
+      },
+      {
+        feature_code: 'schedule',
+        feature_name: 'スケジュール機能',
+        description: '勤務スケジュール管理機能',
+        company_id: company.id,
+        is_active: false,
+        settings: {},
+      },
+    ];
+
+    const { error: featuresError } = await supabaseAdmin
+      .from('features')
+      .insert(defaultFeatures);
+
+    if (featuresError) {
+      console.error('企業機能作成エラー:', featuresError);
       // 機能作成に失敗しても企業作成は成功とする（後で手動で追加可能）
     }
 

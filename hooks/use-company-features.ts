@@ -53,7 +53,7 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
           .select('feature_code, is_active')
           .eq('company_id', companyId);
 
-        const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as any;
+        const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as { data: { feature_code: string; is_active: boolean }[] | null; error: { message: string } | null };
 
         if (error) {
           console.error('機能取得エラー:', error);
@@ -66,7 +66,7 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
           });
         } else {
           const map = { ...DEFAULT_FEATURES };
-          data?.forEach((f: any) => {
+          data?.forEach((f: { feature_code: string; is_active: boolean }) => {
             if (f.feature_code in map) {
               map[f.feature_code as keyof typeof DEFAULT_FEATURES] = f.is_active;
             }
@@ -90,7 +90,7 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
       }
     };
 
-    fetchFeatures();
+    fetchFeatures().then(() => {});
   }, [companyId]);
 
   return { features, isLoading, error };

@@ -11,8 +11,6 @@ import {
   Users,
   Settings,
   LogOut,
-  Menu,
-  X,
   BarChart3,
   Building,
   ChevronRight,
@@ -74,7 +72,6 @@ export default function Sidebar() {
     // デフォルト値を使用して、未定義の場合も適切に処理
     return features[feature] ?? false;
   };
-  const isLoading = false;
 
   if (!user) return null;
 
