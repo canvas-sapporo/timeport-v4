@@ -182,7 +182,7 @@ export default function RequestTypeDetailPage() {
               <div className="text-gray-900">{formatDate(requestType.created_at)}</div>
             </div>
             <div>
-              <div className="text-sm font-medium text-gray-600">更新日</div>
+              <div className="text-sm font-medium text-gray-600">編集日</div>
               <div className="text-gray-900">{formatDate(requestType.updated_at)}</div>
             </div>
           </div>

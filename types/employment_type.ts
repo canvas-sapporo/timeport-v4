@@ -118,7 +118,7 @@ export interface UpdateEmploymentTypeResult {
   name: string;
   /** 説明 */
   description: string;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: string;
 }
 
@@ -245,6 +245,8 @@ export interface WorkType extends BaseEntity {
   core_end_time?: TimeString;
   /** 残業開始閾値（分） */
   overtime_threshold_minutes: number;
+  /** 遅刻許容時間（分） */
+  late_threshold_minutes: number;
   /** 説明 */
   description?: string;
   /** 設定情報 */
@@ -359,6 +361,8 @@ export interface CreateWorkTypeFormData {
   core_end_time?: string;
   /** 残業開始閾値（分） */
   overtime_threshold_minutes: number;
+  /** 遅刻許容時間（分） */
+  late_threshold_minutes: number;
   /** 説明 */
   description: string;
 }
@@ -389,6 +393,8 @@ export interface EditWorkTypeFormData {
   core_end_time?: string;
   /** 残業開始閾値（分） */
   overtime_threshold_minutes: number;
+  /** 遅刻許容時間（分） */
+  late_threshold_minutes: number;
   /** 説明 */
   description: string;
 }
@@ -433,7 +439,7 @@ export interface UpdateWorkTypeResult {
   break_duration_minutes: number;
   /** フレックス勤務フラグ */
   is_flexible: boolean;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: string;
 }
 

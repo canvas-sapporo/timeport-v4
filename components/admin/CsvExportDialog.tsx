@@ -60,7 +60,7 @@ const AVAILABLE_COLUMNS = [
   { key: 'status', label: 'ステータス' },
   { key: 'approval_status', label: '承認状態' },
   { key: 'approver', label: '承認者' },
-  { key: 'updated_at', label: '更新日時' },
+  { key: 'updated_at', label: '編集日時' },
   { key: 'notes', label: '備考' },
 ];
 
@@ -969,7 +969,7 @@ const generateSimpleCsvData = (records: Attendance[], setting: CsvExportSetting)
       status: 'ステータス',
       approval_status: '承認状態',
       approver: '承認者',
-      updated_at: '更新日時',
+      updated_at: '編集日時',
       notes: '備考',
     };
     return headerMap[column] || column;

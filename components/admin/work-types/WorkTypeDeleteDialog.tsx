@@ -35,6 +35,12 @@ import { deleteWorkType, getWorkTypes } from '@/lib/actions/admin/work-types';
 import { useToast } from '@/hooks/use-toast';
 import type { WorkType } from '@/types/employment_type';
 
+// 時刻フォーマット関数を追加
+const formatTime = (time: string) => {
+  if (!time) return '--:--';
+  return time.substring(0, 5); // HH:MM形式で表示
+};
+
 const deleteWorkTypeSchema = z.object({
   replacement_work_type_id: z.string().min(1, '代替勤務形態を選択してください'),
 });
@@ -166,8 +172,8 @@ export default function WorkTypeDeleteDialog({
                 <span className="font-medium">コード:</span> {workType.code || '-'}
               </div>
               <div>
-                <span className="font-medium">勤務時間:</span> {workType.work_start_time} -{' '}
-                {workType.work_end_time}
+                <span className="font-medium">勤務時間:</span>{' '}
+                {formatTime(workType.work_start_time)} - {formatTime(workType.work_end_time)}
               </div>
               <div>
                 <span className="font-medium">タイプ:</span>{' '}

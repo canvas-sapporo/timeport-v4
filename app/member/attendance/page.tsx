@@ -39,6 +39,7 @@ import {
 import type { Attendance, AttendanceStatus, AttendanceFilters } from '@/types/attendance';
 import AdminCsvExportDialog from '@/components/admin/CsvExportDialog';
 import AttendanceFiltersComponent from '@/components/member/AttendanceFilters';
+import WorkTypeDetailDialog from '@/components/admin/WorkTypeDetailDialog';
 
 // カレンダー用の日付データ型
 interface CalendarDay {
@@ -60,6 +61,10 @@ export default function MemberAttendancePage() {
   const [isBreakDetailsDialogOpen, setIsBreakDetailsDialogOpen] = useState(false);
   const [isColumnSettingsDialogOpen, setIsColumnSettingsDialogOpen] = useState(false);
   const [csvExportOpen, setCsvExportOpen] = useState(false);
+
+  // 勤務形態詳細ダイアログの状態
+  const [workTypeDetailDialogOpen, setWorkTypeDetailDialogOpen] = useState(false);
+  const [selectedWorkTypeId, setSelectedWorkTypeId] = useState<string | null>(null);
 
   // フィルター状態
   const [filters, setFilters] = useState<AttendanceFilters>({
@@ -475,16 +480,14 @@ export default function MemberAttendancePage() {
                   {visibleColumns.workTime && <TableHead className="w-[90px]">勤務時間</TableHead>}
                   {visibleColumns.overtime && <TableHead className="w-[80px]">残業</TableHead>}
                   {visibleColumns.break && <TableHead className="w-[80px]">休憩</TableHead>}
-                  {visibleColumns.workType && (
-                    <TableHead className="w-[100px]">勤務タイプ</TableHead>
-                  )}
+                  {visibleColumns.workType && <TableHead className="w-[100px]">勤務形態</TableHead>}
                   {visibleColumns.late && <TableHead className="w-[80px]">遅刻</TableHead>}
                   {visibleColumns.earlyLeave && <TableHead className="w-[80px]">早退</TableHead>}
                   {visibleColumns.status && <TableHead className="w-[100px]">ステータス</TableHead>}
                   {visibleColumns.approval && <TableHead className="w-[80px]">承認</TableHead>}
                   {visibleColumns.approver && <TableHead className="w-[100px]">承認者</TableHead>}
                   {visibleColumns.updatedAt && (
-                    <TableHead className="w-[120px]">更新日時</TableHead>
+                    <TableHead className="w-[120px]">編集日時</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -560,7 +563,24 @@ export default function MemberAttendancePage() {
                         )}
                         {visibleColumns.workType && (
                           <TableCell className="text-sm whitespace-nowrap">
-                            {record.work_type_name || '-'}
+                            <div className="flex items-center space-x-1">
+                              <span>{record.work_type_name || '-'}</span>
+                              {record.work_type_id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedWorkTypeId(record.work_type_id!);
+                                    setWorkTypeDetailDialogOpen(true);
+                                  }}
+                                  className="p-1 h-auto text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                  title="勤務形態詳細"
+                                >
+                                  <Info className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         )}
                         {visibleColumns.late && (
@@ -693,13 +713,13 @@ export default function MemberAttendancePage() {
                 { key: 'workTime', label: '勤務時間' },
                 { key: 'overtime', label: '残業時間' },
                 { key: 'break', label: '休憩時間' },
-                { key: 'workType', label: '勤務タイプ' },
+                { key: 'workType', label: '勤務形態' },
                 { key: 'late', label: '遅刻' },
                 { key: 'earlyLeave', label: '早退' },
                 { key: 'status', label: 'ステータス' },
                 { key: 'approval', label: '承認状態' },
                 { key: 'approver', label: '承認者' },
-                { key: 'updatedAt', label: '更新日時' },
+                { key: 'updatedAt', label: '編集日時' },
               ].map(({ key, label }) => (
                 <div key={key} className="flex items-center space-x-2">
                   <input
@@ -732,6 +752,13 @@ export default function MemberAttendancePage() {
         attendanceRecords={attendanceRecords}
         users={[]}
         groups={[]}
+      />
+
+      {/* 勤務形態詳細ダイアログ */}
+      <WorkTypeDetailDialog
+        open={workTypeDetailDialogOpen}
+        onOpenChange={setWorkTypeDetailDialogOpen}
+        workTypeId={selectedWorkTypeId}
       />
     </div>
   );

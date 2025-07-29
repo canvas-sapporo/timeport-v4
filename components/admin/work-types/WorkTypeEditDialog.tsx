@@ -48,6 +48,7 @@ const editWorkTypeSchema = z
     core_start_time: z.string().optional(),
     core_end_time: z.string().optional(),
     overtime_threshold_minutes: z.number().min(0, '残業開始閾値は0分以上で入力してください'),
+    late_threshold_minutes: z.number().min(0, '遅刻許容時間は0分以上で入力してください'),
     description: z.string().max(1000, '説明は1000文字以内で入力してください'),
   })
   .refine(
@@ -135,6 +136,7 @@ export default function WorkTypeEditDialog({
       core_start_time: '',
       core_end_time: '',
       overtime_threshold_minutes: 480,
+      late_threshold_minutes: 15,
       description: '',
     },
   });
@@ -157,6 +159,7 @@ export default function WorkTypeEditDialog({
         core_start_time: workType.core_start_time || '',
         core_end_time: workType.core_end_time || '',
         overtime_threshold_minutes: workType.overtime_threshold_minutes,
+        late_threshold_minutes: workType.late_threshold_minutes || 15,
         description: workType.description || '',
       });
     }
@@ -476,6 +479,26 @@ export default function WorkTypeEditDialog({
                       />
                     </FormControl>
                     <FormDescription>この時間を超えると残業として扱われます</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="late_threshold_minutes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>遅刻許容時間（分）</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormDescription>この時間を超えると遅刻として扱われます</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

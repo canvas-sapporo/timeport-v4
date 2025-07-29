@@ -44,7 +44,7 @@ export interface UserDetailView {
   company_name?: string;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: Timestamp;
 }
 
@@ -94,7 +94,7 @@ export interface AttendanceDetailView {
   work_end_time?: TimeString;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: Timestamp;
 }
 
@@ -148,7 +148,7 @@ export interface RequestDetailView {
   rejection_reason?: string;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: Timestamp;
 }
 
@@ -186,7 +186,7 @@ export interface GroupHierarchyView {
   child_group_count: number;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: Timestamp;
 }
 
@@ -370,7 +370,7 @@ export interface ActiveUserView {
   employment_type_name?: string;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: Timestamp;
 }
 
@@ -418,7 +418,7 @@ export interface ActiveAttendanceView {
   work_type_name?: string;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: Timestamp;
 }
 
@@ -464,6 +464,6 @@ export interface ActiveRequestView {
   submission_comment?: string;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: Timestamp;
 }

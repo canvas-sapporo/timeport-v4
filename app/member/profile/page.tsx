@@ -206,7 +206,7 @@ export default function MemberProfilePage() {
               </div>
 
               <div>
-                <Label>更新日</Label>
+                <Label>編集日</Label>
                 <div className="mt-1 text-sm text-gray-900">
                   {companyInfo?.updated_at
                     ? new Date(companyInfo.updated_at).toLocaleDateString('ja-JP')
@@ -328,7 +328,7 @@ export default function MemberProfilePage() {
             </div>
 
             <div>
-              <Label>更新日</Label>
+              <Label>編集日</Label>
               <div className="mt-1 text-sm text-gray-900">
                 {userProfile?.updated_at
                   ? new Date(userProfile.updated_at).toLocaleDateString('ja-JP')
@@ -399,7 +399,7 @@ export default function MemberProfilePage() {
                     </div>
 
                     <div>
-                      <Label>更新日</Label>
+                      <Label>編集日</Label>
                       <div className="mt-1 text-sm text-gray-900">
                         {group.updated_at
                           ? new Date(group.updated_at).toLocaleDateString('ja-JP')

@@ -100,7 +100,7 @@ export default function RequestFormPreviewDialog({
                     </p>
                   </div>
                   <div>
-                    <label className="font-medium text-gray-600">更新日</label>
+                    <label className="font-medium text-gray-600">編集日</label>
                     <p className="mt-1">
                       {requestForm.updated_at
                         ? new Date(requestForm.updated_at).toLocaleDateString('ja-JP')

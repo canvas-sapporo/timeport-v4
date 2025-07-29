@@ -24,6 +24,7 @@ import {
   getCompanyGroups,
   getAttendanceStatuses,
   getDynamicAttendanceStatus,
+  getWorkTypes,
 } from '@/lib/actions/attendance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ import AttendancePreviewDialog from '@/components/admin/AttendancePreviewDialog'
 import AttendanceEditDialog from '@/components/admin/AttendanceEditDialog';
 import AttendanceDeleteDialog from '@/components/admin/AttendanceDeleteDialog';
 import { AttendanceTimeEditDialog } from '@/components/admin/AttendanceTimeEditDialog';
+import WorkTypeDetailDialog from '@/components/admin/WorkTypeDetailDialog';
 
 export default function AdminAttendancePage() {
   const { user } = useAuth();
@@ -79,6 +81,10 @@ export default function AdminAttendancePage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAttendanceId, setSelectedAttendanceId] = useState<string | null>(null);
 
+  // 勤務形態詳細ダイアログの状態
+  const [workTypeDetailDialogOpen, setWorkTypeDetailDialogOpen] = useState(false);
+  const [selectedWorkTypeId, setSelectedWorkTypeId] = useState<string | null>(null);
+
   // フィルター状態
   const [filters, setFilters] = useState<AttendanceFilters>(() => {
     if (typeof window !== 'undefined') {
@@ -105,8 +111,10 @@ export default function AdminAttendancePage() {
   // ユーザーとグループデータ
   const [users, setUsers] = useState<{ id: string; name: string; code?: string }[]>([]);
   const [groups, setGroups] = useState<{ id: string; name: string; code?: string }[]>([]);
+  const [workTypes, setWorkTypes] = useState<{ id: string; name: string }[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [isLoadingWorkTypes, setIsLoadingWorkTypes] = useState(false);
 
   // ステータスデータ
   const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusEntity[]>([]);
@@ -181,7 +189,7 @@ export default function AdminAttendancePage() {
         }
       }
 
-      // 勤務タイプフィルター
+      // 勤務形態フィルター
       if (filters.workTypeId && record.work_type_id !== filters.workTypeId) {
         return false;
       }
@@ -297,8 +305,23 @@ export default function AdminAttendancePage() {
       }
     };
 
+    const fetchWorkTypes = async () => {
+      if (!user?.company_id) return;
+
+      setIsLoadingWorkTypes(true);
+      try {
+        const types = await getWorkTypes();
+        setWorkTypes(types);
+      } catch (error) {
+        console.error('勤務形態取得エラー:', error);
+      } finally {
+        setIsLoadingWorkTypes(false);
+      }
+    };
+
     fetchUsersAndGroups();
     fetchAttendanceStatuses();
+    fetchWorkTypes();
   }, [user]);
 
   // 勤怠データ取得関数
@@ -409,6 +432,17 @@ export default function AdminAttendancePage() {
     fetchAttendanceData(attendanceStatuses);
   }, [user, selectedMonth, attendanceStatuses]);
 
+  // ページフォーカス時にデータを再取得（キャッシュ対策）
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('ページフォーカス検出、データを再取得');
+      fetchAttendanceData(attendanceStatuses);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [attendanceStatuses]);
+
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       router.push('/login');
@@ -446,6 +480,19 @@ export default function AdminAttendancePage() {
 
     if (!hasAnySession) return 'absent';
     if (!hasCompletedSession) return 'normal'; // 勤務中
+
+    // 複合ステータス判定
+    const hasLate = record.late_minutes && record.late_minutes > 0;
+    const hasEarlyLeave = record.early_leave_minutes && record.early_leave_minutes > 0;
+
+    if (hasLate && hasEarlyLeave) {
+      return 'late_early_leave'; // 遅刻・早退
+    } else if (hasLate) {
+      return 'late'; // 遅刻のみ
+    } else if (hasEarlyLeave) {
+      return 'early_leave'; // 早退のみ
+    }
+
     return 'normal';
   };
 
@@ -465,6 +512,9 @@ export default function AdminAttendancePage() {
             style={{
               color: statusConfig.font_color,
               backgroundColor: statusConfig.background_color,
+              ...(statusConfig.color === 'outline' && {
+                borderColor: statusConfig.font_color,
+              }),
             }}
           >
             {statusConfig.display_name}
@@ -481,6 +531,8 @@ export default function AdminAttendancePage() {
         return <Badge variant="destructive">遅刻</Badge>;
       case 'early_leave':
         return <Badge variant="secondary">早退</Badge>;
+      case 'late_early_leave':
+        return <Badge variant="destructive">遅刻・早退</Badge>;
       case 'absent':
         return <Badge variant="outline">欠勤</Badge>;
       default:
@@ -628,8 +680,11 @@ export default function AdminAttendancePage() {
   };
 
   const handleOperationSuccess = () => {
-    // データを再取得
-    fetchAttendanceData(attendanceStatuses);
+    // データを再取得（少し遅延を入れて確実に更新されるようにする）
+    setTimeout(() => {
+      console.log('編集操作成功、データを再取得');
+      fetchAttendanceData(attendanceStatuses);
+    }, 500);
   };
 
   // 月の全日期間を生成
@@ -905,6 +960,7 @@ export default function AdminAttendancePage() {
             onMonthChange={setSelectedMonth}
             users={users}
             groups={groups}
+            workTypes={workTypes}
             isLoading={isLoadingUsers || isLoadingGroups}
             onResetFilters={handleResetFilters}
           />
@@ -950,7 +1006,7 @@ export default function AdminAttendancePage() {
                   )}
                   {visibleColumns.workType && (
                     <th className="w-[100px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      勤務タイプ
+                      勤務形態
                     </th>
                   )}
                   {visibleColumns.late && (
@@ -980,7 +1036,7 @@ export default function AdminAttendancePage() {
                   )}
                   {visibleColumns.updatedAt && (
                     <th className="w-[120px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      更新日時
+                      編集日時
                     </th>
                   )}
                   {visibleColumns.notes && (
@@ -1125,7 +1181,24 @@ export default function AdminAttendancePage() {
                       )}
                       {visibleColumns.workType && (
                         <TableCell className="text-sm whitespace-nowrap">
-                          {record.work_type_name || '-'}
+                          <div className="flex items-center space-x-1">
+                            <span>{record.work_type_name || '-'}</span>
+                            {record.work_type_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedWorkTypeId(record.work_type_id!);
+                                  setWorkTypeDetailDialogOpen(true);
+                                }}
+                                className="p-1 h-auto text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                title="勤務形態詳細"
+                              >
+                                <Info className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       )}
                       {visibleColumns.late && (
@@ -1166,13 +1239,7 @@ export default function AdminAttendancePage() {
                               )
                             )}
                             {/* 編集済みバッジ */}
-                            {record.source_id && (
-                              <Badge variant="secondary" className="text-xs px-1 py-0">
-                                編集済み
-                              </Badge>
-                            )}
-                            {/* 編集済みバッジ */}
-                            {record.has_edit_history && (
+                            {(record.source_id || record.has_edit_history) && (
                               <Badge variant="secondary" className="text-xs px-1 py-0">
                                 編集済み
                               </Badge>
@@ -1397,13 +1464,13 @@ export default function AdminAttendancePage() {
                 { key: 'workTime', label: '勤務時間' },
                 { key: 'overtime', label: '残業時間' },
                 { key: 'break', label: '休憩時間' },
-                { key: 'workType', label: '勤務タイプ' },
+                { key: 'workType', label: '勤務形態' },
                 { key: 'late', label: '遅刻' },
                 { key: 'earlyLeave', label: '早退' },
                 { key: 'status', label: 'ステータス' },
                 { key: 'approval', label: '承認状態' },
                 { key: 'approver', label: '承認者' },
-                { key: 'updatedAt', label: '更新日時' },
+                { key: 'updatedAt', label: '編集日時' },
                 { key: 'notes', label: '備考' },
               ].map(({ key, label }) => (
                 <div key={key} className="flex items-center space-x-2">
@@ -1471,6 +1538,13 @@ export default function AdminAttendancePage() {
         onOpenChange={setDeleteDialogOpen}
         attendanceId={selectedAttendanceId}
         onSuccess={handleOperationSuccess}
+      />
+
+      {/* 勤務形態詳細ダイアログ */}
+      <WorkTypeDetailDialog
+        open={workTypeDetailDialogOpen}
+        onOpenChange={setWorkTypeDetailDialogOpen}
+        workTypeId={selectedWorkTypeId}
       />
     </div>
   );

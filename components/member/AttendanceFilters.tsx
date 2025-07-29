@@ -298,7 +298,7 @@ export default function AttendanceFilters({
             {/* 勤務タイプフィルター */}
             <div>
               <Label htmlFor="work-type-filter" className="text-sm font-medium text-gray-700">
-                勤務タイプ
+                勤務形態
               </Label>
               <Select value={filters.workTypeId || 'all'} onValueChange={handleWorkTypeChange}>
                 <SelectTrigger className="mt-1">

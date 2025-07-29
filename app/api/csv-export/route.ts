@@ -177,7 +177,7 @@ function generateCsvData(attendances: any[], setting: CsvExportSetting): string 
       status: 'ステータス',
       approval_status: '承認状態',
       approver: '承認者',
-      updated_at: '更新日時',
+      updated_at: '編集日時',
       notes: '備考',
     };
     return headerMap[column] || column;

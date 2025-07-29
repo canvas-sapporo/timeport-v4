@@ -424,7 +424,7 @@ export interface FormTemplate {
   usage_count: number;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: Timestamp;
 }
 

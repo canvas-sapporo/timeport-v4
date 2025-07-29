@@ -441,7 +441,7 @@ export default function CompanyListTable({
                     onClick={() => handleSort('updated_at')}
                     className="flex items-center gap-1 hover:text-primary transition-colors mx-auto"
                   >
-                    更新日時
+                    編集日時
                     {getSortIcon('updated_at')}
                   </button>
                 </th>

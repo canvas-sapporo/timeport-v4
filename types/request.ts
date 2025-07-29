@@ -43,7 +43,7 @@ export interface RequestComment {
   parent_id?: string;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at?: Timestamp;
   /** 添付ファイル */
   attachments?: Array<{

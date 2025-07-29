@@ -48,6 +48,12 @@ import { getEmploymentTypes, getEmploymentTypeStats } from '@/lib/actions/admin/
 import { getWorkTypes, getWorkTypeStats } from '@/lib/actions/admin/work-types';
 import type { EmploymentType, WorkType } from '@/types/employment_type';
 
+// 時刻フォーマット関数を追加
+const formatTime = (time: string) => {
+  if (!time) return '--:--';
+  return time.substring(0, 5); // HH:MM形式で表示
+};
+
 // 雇用形態管理用ダイアログコンポーネントをインポート
 import EmploymentTypeCreateDialog from '@/components/admin/employment-types/EmploymentTypeCreateDialog';
 import EmploymentTypeEditDialog from '@/components/admin/employment-types/EmploymentTypeEditDialog';
@@ -862,7 +868,7 @@ export default function AdminSettingsPage() {
                         <TableHead>説明</TableHead>
                         <TableHead>表示順序</TableHead>
                         <TableHead>ステータス</TableHead>
-                        <TableHead>更新日</TableHead>
+                        <TableHead>編集日</TableHead>
                         <TableHead>操作</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -970,7 +976,7 @@ export default function AdminSettingsPage() {
                         <TableHead>休憩時間</TableHead>
                         <TableHead>フレックス</TableHead>
                         <TableHead>ステータス</TableHead>
-                        <TableHead>更新日</TableHead>
+                        <TableHead>編集日</TableHead>
                         <TableHead>操作</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -982,7 +988,7 @@ export default function AdminSettingsPage() {
                             <Badge variant="outline">{type.code}</Badge>
                           </TableCell>
                           <TableCell>
-                            {type.work_start_time} - {type.work_end_time}
+                            {formatTime(type.work_start_time)} - {formatTime(type.work_end_time)}
                           </TableCell>
                           <TableCell>{type.break_duration_minutes}分</TableCell>
                           <TableCell>

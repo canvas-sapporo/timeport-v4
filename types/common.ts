@@ -40,7 +40,7 @@ export interface BaseEntity {
   id: UUID;
   /** 作成日時 */
   created_at: Timestamp;
-  /** 更新日時 */
+  /** 編集日時 */
   updated_at: Timestamp;
   /** 削除日時（ソフトデリート） */
   deleted_at?: Timestamp;

@@ -381,7 +381,7 @@ export default function AdminRequestsPage() {
                       <TableHead>説明</TableHead>
                       <TableHead>項目数</TableHead>
                       <TableHead>ステータス</TableHead>
-                      <TableHead>更新日</TableHead>
+                      <TableHead>編集日</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
                   </TableHeader>

@@ -77,6 +77,14 @@ const validateCreateWorkTypeForm = (form: CreateWorkTypeFormData): WorkTypeValid
     });
   }
 
+  if (form.late_threshold_minutes < 0) {
+    errors.push({
+      field: 'late_threshold_minutes',
+      message: '遅刻許容時間は0分以上で入力してください',
+      code: 'INVALID_VALUE',
+    });
+  }
+
   // フレックス勤務の場合の追加バリデーション
   if (form.is_flexible) {
     if (!form.flex_start_time || !form.flex_end_time) {
@@ -135,6 +143,14 @@ const validateEditWorkTypeForm = (form: EditWorkTypeFormData): WorkTypeValidatio
     errors.push({
       field: 'overtime_threshold_minutes',
       message: '残業開始閾値は0分以上で入力してください',
+      code: 'INVALID_VALUE',
+    });
+  }
+
+  if (form.late_threshold_minutes < 0) {
+    errors.push({
+      field: 'late_threshold_minutes',
+      message: '遅刻許容時間は0分以上で入力してください',
       code: 'INVALID_VALUE',
     });
   }

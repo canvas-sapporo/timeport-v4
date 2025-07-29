@@ -26,6 +26,7 @@ interface AdminAttendanceFiltersProps {
   onMonthChange: (month: string) => void;
   users: { id: string; name: string; code?: string }[];
   groups: { id: string; name: string; code?: string }[];
+  workTypes: { id: string; name: string }[];
   isLoading?: boolean;
   onResetFilters?: () => void;
 }
@@ -37,6 +38,7 @@ export default function AdminAttendanceFilters({
   onMonthChange,
   users,
   groups,
+  workTypes,
   isLoading = false,
   onResetFilters,
 }: AdminAttendanceFiltersProps) {
@@ -311,6 +313,26 @@ export default function AdminAttendanceFilters({
                   <SelectItem value="all">すべて</SelectItem>
                   <SelectItem value="true">残業あり</SelectItem>
                   <SelectItem value="false">残業なし</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 勤務形態フィルター */}
+            <div>
+              <Label htmlFor="work-type-filter" className="text-sm font-medium text-gray-700">
+                勤務形態
+              </Label>
+              <Select value={filters.workTypeId || 'all'} onValueChange={handleWorkTypeChange}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="すべて" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">すべて</SelectItem>
+                  {workTypes.map((workType) => (
+                    <SelectItem key={workType.id} value={workType.id}>
+                      {workType.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
