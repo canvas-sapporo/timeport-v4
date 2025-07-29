@@ -1,5 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { RealtimeEvent, RealtimeMessageEvent, RealtimeReadEvent, RealtimeReactionEvent } from '@/types/chat';
+
+import {
+  RealtimeEvent,
+  RealtimeMessageEvent,
+  RealtimeReadEvent,
+  RealtimeReactionEvent,
+} from '@/types/chat';
 
 // Supabase Realtime ペイロード型
 interface RealtimePayload {
@@ -69,7 +75,7 @@ class ChatRealtimeManager {
 
     try {
       console.log('Attempting to connect to realtime...');
-      
+
       // チャットメッセージの変更を監視
       this.channel = supabase
         .channel('chat_messages')
@@ -115,7 +121,7 @@ class ChatRealtimeManager {
         console.log('Realtime connection disconnected');
         this.isConnected = false;
       });
-      
+
       this.channel.on('system', { event: 'reconnect' }, () => {
         console.log('Realtime connection reconnected');
         this.isConnected = true;
@@ -127,10 +133,9 @@ class ChatRealtimeManager {
 
       const status = await this.channel.subscribe();
       console.log('Channel subscription status:', status);
-      
+
       this.isConnected = true;
       console.log('Chat realtime connection established successfully');
-      
     } catch (error) {
       console.error('Failed to establish realtime connection:', error);
       this.isConnected = false;
@@ -160,7 +165,7 @@ class ChatRealtimeManager {
    */
   private handleMessageChange(payload: unknown) {
     console.log('Realtime message change received:', payload);
-    
+
     const { eventType, new: newRecord, old: oldRecord } = payload as RealtimePayload;
     const chatId = (newRecord?.chat_id || oldRecord?.chat_id) as string;
 
@@ -176,7 +181,7 @@ class ChatRealtimeManager {
 
     const handlers = this.messageHandlers.get(chatId as string);
     console.log('Handlers for chat ID:', chatId, handlers?.length || 0);
-    
+
     if (!handlers) {
       console.log('No handlers found for chat ID:', chatId);
       return;
@@ -189,7 +194,7 @@ class ChatRealtimeManager {
     };
 
     console.log('Dispatching event to handlers:', event);
-    handlers.forEach(handler => handler(event));
+    handlers.forEach((handler) => handler(event));
   }
 
   /**
@@ -211,7 +216,7 @@ class ChatRealtimeManager {
       last_read_at: newRecord?.last_read_at,
     };
 
-    handlers.forEach(handler => handler(event));
+    handlers.forEach((handler) => handler(event));
   }
 
   /**
@@ -232,13 +237,15 @@ class ChatRealtimeManager {
       reaction: newRecord || oldRecord,
     };
 
-    handlers.forEach(handler => handler(event));
+    handlers.forEach((handler) => handler(event));
   }
 
   /**
    * イベントタイプをマッピング
    */
-  private mapEventType(eventType: string): 'message_created' | 'message_updated' | 'message_deleted' {
+  private mapEventType(
+    eventType: string
+  ): 'message_created' | 'message_updated' | 'message_deleted' {
     switch (eventType) {
       case 'INSERT':
         return 'message_created';
@@ -345,9 +352,11 @@ export function useChatRealtime(chatId: string) {
     // クリーンアップ関数
     return () => {
       // 接続を切断（他のチャットが使用中でない場合）
-      if (messageHandlers.current.length === 0 && 
-          readHandlers.current.length === 0 && 
-          reactionHandlers.current.size === 0) {
+      if (
+        messageHandlers.current.length === 0 &&
+        readHandlers.current.length === 0 &&
+        reactionHandlers.current.size === 0
+      ) {
         chatRealtimeManager.disconnect();
       }
     };
@@ -411,4 +420,4 @@ export async function connectRealtime(): Promise<void> {
  */
 export async function disconnectRealtime(): Promise<void> {
   await chatRealtimeManager.disconnect();
-} 
+}

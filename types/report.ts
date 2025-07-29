@@ -20,21 +20,21 @@ export interface ReportStatus extends BaseEntity {
 // レポートテンプレート
 // ================================
 
-export type ReportFieldType = 
-  | 'text'           // テキスト
-  | 'textarea'       // テキストエリア  
-  | 'number'         // 数値
-  | 'date'           // 日付
-  | 'time'           // 時刻
-  | 'datetime'       // 日時
-  | 'email'          // メール
-  | 'phone'          // 電話番号
-  | 'url'            // URL
-  | 'select'         // セレクト
-  | 'radio'          // ラジオ
-  | 'checkbox'       // チェックボックス
-  | 'file'           // ファイル
-  | 'hidden';        // 隠しフィールド
+export type ReportFieldType =
+  | 'text' // テキスト
+  | 'textarea' // テキストエリア
+  | 'number' // 数値
+  | 'date' // 日付
+  | 'time' // 時刻
+  | 'datetime' // 日時
+  | 'email' // メール
+  | 'phone' // 電話番号
+  | 'url' // URL
+  | 'select' // セレクト
+  | 'radio' // ラジオ
+  | 'checkbox' // チェックボックス
+  | 'file' // ファイル
+  | 'hidden'; // 隠しフィールド
 
 export interface ReportFieldOption {
   label: string;
@@ -49,14 +49,14 @@ export interface ReportFieldConfig {
   placeholder?: string;
   default_value?: string | number | boolean;
   options?: {
-    markdown?: boolean;        // Markdown記述を有効化
-    preview?: boolean;         // プレビュー機能を有効化
-    rows?: number;            // テキストエリアの行数
-    min?: number;             // 数値の最小値
-    max?: number;             // 数値の最大値
-    step?: number;            // 数値のステップ
-    multiple?: boolean;       // ファイル複数選択
-    accept?: string;          // ファイル形式制限
+    markdown?: boolean; // Markdown記述を有効化
+    preview?: boolean; // プレビュー機能を有効化
+    rows?: number; // テキストエリアの行数
+    min?: number; // 数値の最小値
+    max?: number; // 数値の最大値
+    step?: number; // 数値のステップ
+    multiple?: boolean; // ファイル複数選択
+    accept?: string; // ファイル形式制限
     options?: ReportFieldOption[]; // セレクト、ラジオ、チェックボックス用
   };
 }
@@ -184,12 +184,14 @@ export interface ReportListItem {
 export interface ReportDetail extends Report {
   template: ReportTemplate;
   current_status: ReportStatus;
-  approvals: Array<ReportApproval & {
-    approver: {
-  name: string;
-    };
-    status: ReportStatus;
-  }>;
+  approvals: Array<
+    ReportApproval & {
+      approver: {
+        name: string;
+      };
+      status: ReportStatus;
+    }
+  >;
   attachments: ReportAttachment[];
 }
 

@@ -66,7 +66,14 @@ export interface StatusCondition {
   /** フィールド名 */
   field: string;
   /** 演算子 */
-  operator: 'has_sessions' | 'has_completed_sessions' | 'empty' | 'greater_than' | 'less_than' | 'equals' | 'not_equals';
+  operator:
+    | 'has_sessions'
+    | 'has_completed_sessions'
+    | 'empty'
+    | 'greater_than'
+    | 'less_than'
+    | 'equals'
+    | 'not_equals';
   /** 比較値 */
   value: unknown;
 }

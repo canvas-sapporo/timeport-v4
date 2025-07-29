@@ -243,4 +243,4 @@ export const formatDateTimeForInput = (dateTimeString: string): string => {
   } catch {
     return '';
   }
-}; 
+};

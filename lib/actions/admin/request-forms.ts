@@ -54,7 +54,9 @@ export const createRequestForm = async (formData: FormData) => {
         form_config: JSON.parse((formData.get('form_config') as string) || '[]'),
         approval_flow: JSON.parse((formData.get('approval_flow') as string) || '[]'),
         is_active: formData.get('is_active') === 'true',
-        object_config: formData.get('object_config') ? JSON.parse(formData.get('object_config') as string) : undefined,
+        object_config: formData.get('object_config')
+          ? JSON.parse(formData.get('object_config') as string)
+          : undefined,
       };
 
       console.log('作成データ:', rawData);
@@ -109,7 +111,9 @@ export const createRequestForm = async (formData: FormData) => {
       form_config: JSON.parse((formData.get('form_config') as string) || '[]'),
       approval_flow: JSON.parse((formData.get('approval_flow') as string) || '[]'),
       is_active: formData.get('is_active') === 'true',
-      object_config: formData.get('object_config') ? JSON.parse(formData.get('object_config') as string) : undefined,
+      object_config: formData.get('object_config')
+        ? JSON.parse(formData.get('object_config') as string)
+        : undefined,
     };
 
     // バリデーション
@@ -177,7 +181,9 @@ export const updateRequestForm = async (id: string, formData: FormData) => {
         form_config: JSON.parse((formData.get('form_config') as string) || '[]'),
         approval_flow: JSON.parse((formData.get('approval_flow') as string) || '[]'),
         is_active: formData.get('is_active') === 'true',
-        object_config: formData.get('object_config') ? JSON.parse(formData.get('object_config') as string) : undefined,
+        object_config: formData.get('object_config')
+          ? JSON.parse(formData.get('object_config') as string)
+          : undefined,
       };
 
       // バリデーション
@@ -227,7 +233,9 @@ export const updateRequestForm = async (id: string, formData: FormData) => {
       form_config: JSON.parse((formData.get('form_config') as string) || '[]'),
       approval_flow: JSON.parse((formData.get('approval_flow') as string) || '[]'),
       is_active: formData.get('is_active') === 'true',
-      object_config: formData.get('object_config') ? JSON.parse(formData.get('object_config') as string) : undefined,
+      object_config: formData.get('object_config')
+        ? JSON.parse(formData.get('object_config') as string)
+        : undefined,
     };
 
     // バリデーション

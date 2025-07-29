@@ -158,12 +158,15 @@ export interface ObjectMetadata {
   /** オブジェクト特有のバリデーション */
   validation_rules?: ObjectValidationRule[];
   /** フィールド設定 */
-  field_settings?: Record<string, {
-    label: string;
-    type: string;
-    required: boolean;
-    description?: string;
-  }>;
+  field_settings?: Record<
+    string,
+    {
+      label: string;
+      type: string;
+      required: boolean;
+      description?: string;
+    }
+  >;
 }
 
 /**

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Settings, MessageSquare } from 'lucide-react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getChatSendKeySetting, updateChatSendKeySetting } from '@/lib/actions/user-settings';
 import { useAuth } from '@/contexts/auth-context';

@@ -286,10 +286,7 @@ export const getGroups = async (
     const { page = 1, limit = 10, search = '' } = params;
     const offset = (page - 1) * limit;
 
-    let query = supabaseAdmin
-      .from('groups')
-      .select('*', { count: 'exact' })
-      .is('deleted_at', null);
+    let query = supabaseAdmin.from('groups').select('*', { count: 'exact' }).is('deleted_at', null);
 
     // companyIdが指定されている場合のみフィルタリング
     if (companyId) {

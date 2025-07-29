@@ -12,9 +12,11 @@ import type { ClockRecord } from '@/types/attendance';
 /**
  * 申請データを取得する（メンバー用）
  */
-export const getRequests = async (userId?: string): Promise<{ success: boolean; data?: Request[]; error?: string }> => {
+export const getRequests = async (
+  userId?: string
+): Promise<{ success: boolean; data?: Request[]; error?: string }> => {
   console.log('getRequests: 開始', { userId });
-  
+
   try {
     const supabase = createAdminClient();
     console.log('getRequests: Supabase Admin クライアント作成完了');
@@ -31,7 +33,8 @@ export const getRequests = async (userId?: string): Promise<{ success: boolean; 
 
     const { data, error } = await supabase
       .from('requests')
-      .select(`
+      .select(
+        `
         *,
         statuses!requests_status_id_fkey(
           id,
@@ -45,21 +48,25 @@ export const getRequests = async (userId?: string): Promise<{ success: boolean; 
           name,
           approval_flow
         )
-      `)
+      `
+      )
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     console.log('getRequests: クエリ実行結果', { data, error });
-    
+
     // デバッグ: request_formsの詳細をログ出力
     if (data && data.length > 0) {
-      console.log('getRequests: request_forms詳細', data.map(req => ({
-        id: req.id,
-        request_form_id: req.request_form_id,
-        current_approval_step: req.current_approval_step,
-        request_forms: req.request_forms
-      })));
+      console.log(
+        'getRequests: request_forms詳細',
+        data.map((req) => ({
+          id: req.id,
+          request_form_id: req.request_form_id,
+          current_approval_step: req.current_approval_step,
+          request_forms: req.request_forms,
+        }))
+      );
     }
 
     if (error) {
@@ -87,7 +94,11 @@ export const getRequests = async (userId?: string): Promise<{ success: boolean; 
 /**
  * 管理者用の申請データを取得する
  */
-export const getAdminRequests = async (): Promise<{ success: boolean; data?: Request[]; error?: string }> => {
+export const getAdminRequests = async (): Promise<{
+  success: boolean;
+  data?: Request[];
+  error?: string;
+}> => {
   console.log('getAdminRequests: 開始');
 
   try {
@@ -96,7 +107,8 @@ export const getAdminRequests = async (): Promise<{ success: boolean; data?: Req
 
     const { data, error } = await supabase
       .from('requests')
-      .select(`
+      .select(
+        `
         *,
         statuses!requests_status_id_fkey(
           id,
@@ -110,7 +122,8 @@ export const getAdminRequests = async (): Promise<{ success: boolean; data?: Req
           name,
           approval_flow
         )
-      `)
+      `
+      )
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -140,23 +153,23 @@ export const updateRequestStatus = async (
   newStatusCode: string,
   comment?: string
 ): Promise<{ success: boolean; message: string; error?: string }> => {
-      console.log('updateRequestStatus 開始:', { requestId, newStatusCode, comment });
+  console.log('updateRequestStatus 開始:', { requestId, newStatusCode, comment });
 
-    try {
-      const supabase = createAdminClient();
+  try {
+    const supabase = createAdminClient();
 
-      // 現在の申請データを確認
-      const { data: currentRequest, error: currentError } = await supabase
-        .from('requests')
-        .select('*')
-        .eq('id', requestId)
-        .single();
+    // 現在の申請データを確認
+    const { data: currentRequest, error: currentError } = await supabase
+      .from('requests')
+      .select('*')
+      .eq('id', requestId)
+      .single();
 
-      if (currentError) {
-        console.error('現在の申請データ取得エラー:', currentError);
-      } else {
-        console.log('現在の申請データ:', currentRequest);
-      }
+    if (currentError) {
+      console.error('現在の申請データ取得エラー:', currentError);
+    } else {
+      console.log('現在の申請データ:', currentRequest);
+    }
 
     // ステータスコードからステータスIDを取得
     const { data: statusData, error: statusError } = await supabase
@@ -235,7 +248,8 @@ export const approveRequest = async (
     // 申請情報を取得
     const { data: request, error: requestError } = await supabase
       .from('requests')
-      .select(`
+      .select(
+        `
         *,
         request_forms (
           id,
@@ -244,7 +258,8 @@ export const approveRequest = async (
           approval_flow,
           object_config
         )
-      `)
+      `
+      )
       .eq('id', requestId)
       .single();
 
@@ -269,14 +284,17 @@ export const approveRequest = async (
     // オブジェクトタイプの処理
     if (requestForm.object_config) {
       const objectMetadata = requestForm.object_config as ObjectMetadata;
-      
+
       if (objectMetadata.object_type === 'attendance') {
-        const objectFields = requestForm.form_config.filter(
-          (field) => field.type === 'object'
-        );
+        const objectFields = requestForm.form_config.filter((field) => field.type === 'object');
 
         for (const field of objectFields) {
-          const result = await handleAttendanceObjectApproval(request, field, objectMetadata, approverId);
+          const result = await handleAttendanceObjectApproval(
+            request,
+            field,
+            objectMetadata,
+            approverId
+          );
           if (!result.success) {
             return result;
           }
@@ -479,4 +497,4 @@ export const updateRequest = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-}; 
+};

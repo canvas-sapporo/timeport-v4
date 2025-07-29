@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import React from 'react';
+import { ArrowLeft, FileText, Users, Calendar } from 'lucide-react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, FileText, Users, Calendar } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getReportTemplate } from '@/lib/actions/admin/report-templates';
 import { getGroups } from '@/lib/actions/admin/groups';

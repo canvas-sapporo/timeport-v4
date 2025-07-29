@@ -1126,10 +1126,10 @@ export const mockReportTemplates = [
     ],
     approval_flow: {
       type: 'static',
-      approvers: []
+      approvers: [],
     },
     status_flow: {
-      transitions: []
+      transitions: [],
     },
     is_active: true,
     created_at: '2024-01-01T00:00:00Z',

@@ -4,6 +4,7 @@
 
 import type { FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/types/request';
 import type { ClockRecord, ClockBreakRecord } from '@/types/attendance';
+
 import { createDefaultClockRecord, createDefaultBreakRecord } from './attendance-validation';
 
 // ================================
@@ -307,12 +308,15 @@ export const getDefaultApprovalFlow = (category: string): ApprovalStep[] => {
 /**
  * attendanceオブジェクトのフィールド設定を取得
  */
-export const getAttendanceObjectFields = (): Record<string, {
-  label: string;
-  type: string;
-  required: boolean;
-  description?: string;
-}> => ({
+export const getAttendanceObjectFields = (): Record<
+  string,
+  {
+    label: string;
+    type: string;
+    required: boolean;
+    description?: string;
+  }
+> => ({
   work_date: {
     label: '勤務日',
     type: 'date',

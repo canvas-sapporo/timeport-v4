@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAuth } from './auth-context';
 
 import { Attendance, ClockBreakRecord } from '@/types/attendance';
 import { Request, RequestForm } from '@/types/request';
@@ -12,6 +11,8 @@ import { users, requests, notifications, groups, generateAttendanceRecords } fro
 import { getRequestForms } from '@/lib/actions/admin/request-forms';
 import { getRequests } from '@/lib/actions/requests';
 import * as provider from '@/lib/provider';
+
+import { useAuth } from './auth-context';
 
 interface DataContextType {
   attendanceRecords: Attendance[];

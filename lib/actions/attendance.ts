@@ -1980,7 +1980,15 @@ export const getAttendanceStatuses = async (
     }
 
     console.log('getAttendanceStatuses 取得成功:', statuses?.length || 0, '件');
-    console.log('取得されたステータス詳細:', statuses?.map(s => ({ name: s.name, display_name: s.display_name, sort_order: s.sort_order, logic: s.logic })));
+    console.log(
+      '取得されたステータス詳細:',
+      statuses?.map((s) => ({
+        name: s.name,
+        display_name: s.display_name,
+        sort_order: s.sort_order,
+        logic: s.logic,
+      }))
+    );
     return {
       success: true,
       statuses: statuses || [],
@@ -2004,48 +2012,87 @@ export const evaluateStatusLogic = async (
   try {
     const statusLogic: StatusLogic = JSON.parse(logic);
     console.log('evaluateStatusLogic 開始:', { logic, attendanceId: attendance.id });
-    
+
     // 条件を評価
-    const result = statusLogic.conditions.every(condition => {
+    const result = statusLogic.conditions.every((condition) => {
       const fieldValue = getFieldValue(attendance, condition.field);
-      console.log(`条件評価:`, { field: condition.field, operator: condition.operator, value: condition.value, fieldValue });
-      
+      console.log('条件評価:', {
+        field: condition.field,
+        operator: condition.operator,
+        value: condition.value,
+        fieldValue,
+      });
+
       let conditionResult = false;
       switch (condition.operator) {
         case 'has_sessions':
           conditionResult = condition.value === (fieldValue && fieldValue.length > 0);
-          console.log(`has_sessions 結果:`, { fieldValue, length: fieldValue?.length, expected: condition.value, result: conditionResult });
+          console.log('has_sessions 結果:', {
+            fieldValue,
+            length: fieldValue?.length,
+            expected: condition.value,
+            result: conditionResult,
+          });
           return conditionResult;
         case 'has_completed_sessions':
-          conditionResult = condition.value === (fieldValue && fieldValue.some((session: any) => session.in_time && session.out_time && session.out_time !== ''));
-          console.log(`has_completed_sessions 結果:`, { fieldValue, expected: condition.value, result: conditionResult });
+          conditionResult =
+            condition.value ===
+            (fieldValue &&
+              fieldValue.some(
+                (session: any) => session.in_time && session.out_time && session.out_time !== ''
+              ));
+          console.log('has_completed_sessions 結果:', {
+            fieldValue,
+            expected: condition.value,
+            result: conditionResult,
+          });
           return conditionResult;
         case 'empty':
           conditionResult = condition.value === (!fieldValue || fieldValue.length === 0);
-          console.log(`empty 結果:`, { fieldValue, expected: condition.value, result: conditionResult });
+          console.log('empty 結果:', {
+            fieldValue,
+            expected: condition.value,
+            result: conditionResult,
+          });
           return conditionResult;
         case 'greater_than':
           conditionResult = fieldValue > (condition.value as number);
-          console.log(`greater_than 結果:`, { fieldValue, expected: condition.value, result: conditionResult });
+          console.log('greater_than 結果:', {
+            fieldValue,
+            expected: condition.value,
+            result: conditionResult,
+          });
           return conditionResult;
         case 'less_than':
           conditionResult = fieldValue < (condition.value as number);
-          console.log(`less_than 結果:`, { fieldValue, expected: condition.value, result: conditionResult });
+          console.log('less_than 結果:', {
+            fieldValue,
+            expected: condition.value,
+            result: conditionResult,
+          });
           return conditionResult;
         case 'equals':
           conditionResult = fieldValue === condition.value;
-          console.log(`equals 結果:`, { fieldValue, expected: condition.value, result: conditionResult });
+          console.log('equals 結果:', {
+            fieldValue,
+            expected: condition.value,
+            result: conditionResult,
+          });
           return conditionResult;
         case 'not_equals':
           conditionResult = fieldValue !== condition.value;
-          console.log(`not_equals 結果:`, { fieldValue, expected: condition.value, result: conditionResult });
+          console.log('not_equals 結果:', {
+            fieldValue,
+            expected: condition.value,
+            result: conditionResult,
+          });
           return conditionResult;
         default:
-          console.log(`未知のオペレーター:`, condition.operator);
+          console.log('未知のオペレーター:', condition.operator);
           return false;
       }
     });
-    
+
     console.log('evaluateStatusLogic 最終結果:', result);
     return result;
   } catch (error) {
@@ -2061,7 +2108,7 @@ export const evaluateStatusLogic = async (
 const getFieldValue = (obj: any, field: string): any => {
   const fields = field.split('.');
   let value = obj;
-  
+
   for (const f of fields) {
     if (value && typeof value === 'object' && f in value) {
       value = value[f];
@@ -2069,7 +2116,7 @@ const getFieldValue = (obj: any, field: string): any => {
       return undefined;
     }
   }
-  
+
   return value;
 };
 
@@ -2083,24 +2130,27 @@ export const getDynamicAttendanceStatus = async (
   console.log('getDynamicAttendanceStatus 開始:', {
     attendanceId: attendance.id,
     clockRecords: attendance.clock_records,
-    statusesCount: statuses.length
+    statusesCount: statuses.length,
   });
 
   // ロジックを持つステータスを優先的に評価
-  const statusesWithLogic = statuses.filter(s => s.logic && s.is_active);
-  console.log('ロジックを持つステータス:', statusesWithLogic.map(s => ({ name: s.name, sort_order: s.sort_order })));
-  
+  const statusesWithLogic = statuses.filter((s) => s.logic && s.is_active);
+  console.log(
+    'ロジックを持つステータス:',
+    statusesWithLogic.map((s) => ({ name: s.name, sort_order: s.sort_order }))
+  );
+
   for (const status of statusesWithLogic) {
     console.log(`ステータス "${status.name}" のロジック評価開始:`, status.logic);
     const result = await evaluateStatusLogic(status.logic!, attendance);
     console.log(`ステータス "${status.name}" の評価結果:`, result);
-    
+
     if (result) {
       console.log(`ステータス "${status.name}" が適用されます`);
       return status.name;
     }
   }
-  
+
   console.log('ロジックによる判定が失敗、デフォルトロジックを使用');
   // デフォルトの判定ロジック
   const clockRecords = attendance.clock_records || [];

@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { createServerClient } from '@/lib/supabase';
 
 // ================================
@@ -12,11 +13,12 @@ import { createServerClient } from '@/lib/supabase';
  */
 export async function getUserProfile(userId: string) {
   const supabase = createServerClient();
-  
+
   try {
     const { data, error } = await supabase
       .from('user_profiles')
-      .select(`
+      .select(
+        `
         id,
         code,
         family_name,
@@ -31,7 +33,8 @@ export async function getUserProfile(userId: string) {
         is_active,
         created_at,
         updated_at
-      `)
+      `
+      )
       .eq('id', userId)
       .single();
 
@@ -52,22 +55,23 @@ export async function getUserProfile(userId: string) {
  */
 export async function getUserGroups(userId: string) {
   const supabase = createServerClient();
-  
+
   try {
     console.log('getUserGroups 開始:', { userId });
-    
+
     // まず、user_groupsテーブルの全データを確認
     const { data: allUserGroups, error: allUserGroupsError } = await supabase
       .from('user_groups')
       .select('*');
-    
+
     console.log('user_groupsテーブルの全データ:', allUserGroups);
     console.log('user_groupsテーブルの全データエラー:', allUserGroupsError);
-    
+
     // ユーザーが所属するグループを取得
     const { data, error } = await supabase
       .from('user_groups')
-      .select(`
+      .select(
+        `
         group_id,
         groups (
           id,
@@ -78,7 +82,8 @@ export async function getUserGroups(userId: string) {
           created_at,
           updated_at
         )
-      `)
+      `
+      )
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('created_at', { ascending: true });
@@ -91,9 +96,9 @@ export async function getUserGroups(userId: string) {
     }
 
     // グループ情報のみを抽出して返す
-    const groups = data?.map(item => item.groups).filter(Boolean) || [];
+    const groups = data?.map((item) => item.groups).filter(Boolean) || [];
     console.log('抽出されたグループ情報:', groups);
-    
+
     return groups as unknown as Array<{
       id: string;
       code?: string;
@@ -118,11 +123,12 @@ export async function getUserGroups(userId: string) {
  */
 export async function getCompanyInfo(companyId: string) {
   const supabase = createServerClient();
-  
+
   try {
     const { data, error } = await supabase
       .from('companies')
-      .select(`
+      .select(
+        `
         id,
         name,
         code,
@@ -131,7 +137,8 @@ export async function getCompanyInfo(companyId: string) {
         is_active,
         created_at,
         updated_at
-      `)
+      `
+      )
       .eq('id', companyId)
       .single();
 
@@ -156,7 +163,7 @@ export async function getCompanyInfo(companyId: string) {
  */
 export async function getChatSendKeySetting(userId: string): Promise<boolean> {
   const supabase = createServerClient();
-  
+
   try {
     const { data, error } = await supabase
       .from('user_profiles')
@@ -180,25 +187,25 @@ export async function getChatSendKeySetting(userId: string): Promise<boolean> {
  * チャット送信キー設定を更新
  */
 export async function updateChatSendKeySetting(
-  userId: string, 
+  userId: string,
   useShiftEnter: boolean
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
-  
+
   try {
     const { error } = await supabase
       .from('user_profiles')
-      .update({ 
+      .update({
         chat_send_key_shift_enter: useShiftEnter,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
 
     if (error) {
       console.error('Error updating chat send key setting:', error);
-      return { 
-        success: false, 
-        error: '設定の更新に失敗しました' 
+      return {
+        success: false,
+        error: '設定の更新に失敗しました',
       };
     }
 
@@ -206,9 +213,9 @@ export async function updateChatSendKeySetting(
     return { success: true };
   } catch (error) {
     console.error('Error in updateChatSendKeySetting:', error);
-    return { 
-      success: false, 
-      error: '設定の更新に失敗しました' 
+    return {
+      success: false,
+      error: '設定の更新に失敗しました',
     };
   }
 }
@@ -222,14 +229,16 @@ export async function updateChatSendKeySetting(
  */
 export async function getUserSettings(userId: string) {
   const supabase = createServerClient();
-  
+
   try {
     const { data, error } = await supabase
       .from('user_profiles')
-      .select(`
+      .select(
+        `
         id,
         chat_send_key_shift_enter
-      `)
+      `
+      )
       .eq('id', userId)
       .single();
 
@@ -246,4 +255,4 @@ export async function getUserSettings(userId: string) {
     console.error('Error in getUserSettings:', error);
     return null;
   }
-} 
+}

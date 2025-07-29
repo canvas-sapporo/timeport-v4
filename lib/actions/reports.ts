@@ -133,7 +133,10 @@ export const createReport = async (formData: FormData) => {
     return { success: true, data };
   } catch (error) {
     console.error('createReport エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -216,7 +219,10 @@ export const updateReport = async (id: string, formData: FormData) => {
     return { success: true, data };
   } catch (error) {
     console.error('updateReport エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -290,7 +296,10 @@ export const submitReport = async (id: string) => {
     return { success: true, data };
   } catch (error) {
     console.error('submitReport エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -359,7 +368,10 @@ export const deleteReport = async (id: string) => {
     return { success: true };
   } catch (error) {
     console.error('deleteReport エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -367,7 +379,11 @@ export const deleteReport = async (id: string) => {
 // レポート一覧取得
 // ================================
 
-export const getReports = async (): Promise<{ success: boolean; data?: ReportListItem[]; error?: string }> => {
+export const getReports = async (): Promise<{
+  success: boolean;
+  data?: ReportListItem[];
+  error?: string;
+}> => {
   const supabase = createServerClient();
 
   try {
@@ -390,24 +406,24 @@ export const getReports = async (): Promise<{ success: boolean; data?: ReportLis
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      
+
       supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
-      
+
       // 実際の企業IDを取得
       const { data: companies, error: companiesError } = await supabaseClient
         .from('companies')
         .select('id')
         .limit(1);
-      
+
       if (companiesError || !companies || companies.length === 0) {
         throw new Error('企業が見つかりません');
       }
-      
+
       // 一時的に空のレポート一覧を返す
       console.log('管理者権限で取得:', { company_id: companies[0].id });
       return { success: true, data: [] };
@@ -424,7 +440,7 @@ export const getReports = async (): Promise<{ success: boolean; data?: ReportLis
       if (profileError || !userProfile) {
         throw new Error('ユーザープロフィールが見つかりません');
       }
-      
+
       profile = userProfile;
       console.log('認証済みユーザーで取得:', profile);
     }
@@ -432,7 +448,8 @@ export const getReports = async (): Promise<{ success: boolean; data?: ReportLis
     // レポート一覧を取得
     const { data, error } = await supabase
       .from('reports')
-      .select(`
+      .select(
+        `
         id,
         title,
         report_date,
@@ -445,7 +462,8 @@ export const getReports = async (): Promise<{ success: boolean; data?: ReportLis
           font_color,
           background_color
         )
-      `)
+      `
+      )
       .eq('user_id', user.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -475,7 +493,10 @@ export const getReports = async (): Promise<{ success: boolean; data?: ReportLis
     return { success: true, data: reports };
   } catch (error) {
     console.error('getReports エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -483,7 +504,9 @@ export const getReports = async (): Promise<{ success: boolean; data?: ReportLis
 // レポート詳細取得
 // ================================
 
-export const getReport = async (id: string): Promise<{ success: boolean; data?: ReportDetail; error?: string }> => {
+export const getReport = async (
+  id: string
+): Promise<{ success: boolean; data?: ReportDetail; error?: string }> => {
   const supabase = createServerClient();
 
   try {
@@ -502,7 +525,8 @@ export const getReport = async (id: string): Promise<{ success: boolean; data?: 
     // レポート詳細を取得
     const { data, error } = await supabase
       .from('reports')
-      .select(`
+      .select(
+        `
         *,
         report_templates!inner(*),
         report_statuses!inner(*),
@@ -512,7 +536,8 @@ export const getReport = async (id: string): Promise<{ success: boolean; data?: 
           report_statuses!inner(*)
         ),
         report_attachments(*)
-      `)
+      `
+      )
       .eq('id', id)
       .is('deleted_at', null)
       .single();
@@ -532,19 +557,22 @@ export const getReport = async (id: string): Promise<{ success: boolean; data?: 
       ...data,
       template: data.report_templates as any,
       current_status: data.report_statuses as any,
-      approvals: (data.report_approvals as any[] || []).map((approval: any) => ({
+      approvals: ((data.report_approvals as any[]) || []).map((approval: any) => ({
         ...approval,
         approver: { name: approval.user_profiles?.name || '' },
         status: approval.report_statuses,
       })),
-      attachments: data.report_attachments as any[] || [],
+      attachments: (data.report_attachments as any[]) || [],
     };
 
     console.log('レポート詳細取得成功');
     return { success: true, data: reportDetail };
   } catch (error) {
     console.error('getReport エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -552,7 +580,11 @@ export const getReport = async (id: string): Promise<{ success: boolean; data?: 
 // レポート統計取得
 // ================================
 
-export const getReportStatistics = async (): Promise<{ success: boolean; data?: ReportStatistics; error?: string }> => {
+export const getReportStatistics = async (): Promise<{
+  success: boolean;
+  data?: ReportStatistics;
+  error?: string;
+}> => {
   const supabase = createServerClient();
 
   try {
@@ -571,10 +603,12 @@ export const getReportStatistics = async (): Promise<{ success: boolean; data?: 
     // 統計データを取得
     const { data, error } = await supabase
       .from('reports')
-      .select(`
+      .select(
+        `
         current_status_id,
         report_statuses!inner(name)
-      `)
+      `
+      )
       .eq('user_id', user.id)
       .is('deleted_at', null);
 
@@ -586,10 +620,15 @@ export const getReportStatistics = async (): Promise<{ success: boolean; data?: 
     // 統計を計算
     const statistics: ReportStatistics = {
       total_reports: (data as any[]).length,
-      draft_reports: (data as any[]).filter((item: any) => item.report_statuses?.name === 'draft').length,
-      submitted_reports: (data as any[]).filter((item: any) => item.report_statuses?.name === 'submitted').length,
-      completed_reports: (data as any[]).filter((item: any) => item.report_statuses?.name === 'completed').length,
-      pending_approval_reports: (data as any[]).filter((item: any) => 
+      draft_reports: (data as any[]).filter((item: any) => item.report_statuses?.name === 'draft')
+        .length,
+      submitted_reports: (data as any[]).filter(
+        (item: any) => item.report_statuses?.name === 'submitted'
+      ).length,
+      completed_reports: (data as any[]).filter(
+        (item: any) => item.report_statuses?.name === 'completed'
+      ).length,
+      pending_approval_reports: (data as any[]).filter((item: any) =>
         ['submitted', 'unread', 'read', 'review'].includes(item.report_statuses?.name)
       ).length,
     };
@@ -598,6 +637,9 @@ export const getReportStatistics = async (): Promise<{ success: boolean; data?: 
     return { success: true, data: statistics };
   } catch (error) {
     console.error('getReportStatistics エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
-}; 
+};

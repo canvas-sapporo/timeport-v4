@@ -1,6 +1,6 @@
 /**
  * ユーザー会社関連のユーティリティ関数
- * 
+ *
  * ユーザーIDから会社IDを取得する処理を提供
  * users → user_groups → groups → companies の順で参照
  */
@@ -11,18 +11,19 @@ import type { GetUserCompanyResult, UserCompanyInfo } from '@/types/user_profile
 
 /**
  * ユーザーIDから会社IDを取得
- * 
+ *
  * @param userId ユーザーID
  * @returns 会社情報取得結果
  */
 export async function getUserCompany(userId: UUID): Promise<GetUserCompanyResult> {
   const supabase = createServerClient();
-  
+
   try {
     // users → user_groups → groups → companies の順で参照
     const { data, error } = await supabase
       .from('user_groups')
-      .select(`
+      .select(
+        `
         group_id,
         groups!inner (
           id,
@@ -34,7 +35,8 @@ export async function getUserCompany(userId: UUID): Promise<GetUserCompanyResult
             code
           )
         )
-      `)
+      `
+      )
       .eq('user_id', userId)
       .is('deleted_at', null)
       .limit(1)
@@ -44,14 +46,14 @@ export async function getUserCompany(userId: UUID): Promise<GetUserCompanyResult
       console.error('Error fetching user company:', error);
       return {
         success: false,
-        error: 'ユーザーの会社情報の取得に失敗しました'
+        error: 'ユーザーの会社情報の取得に失敗しました',
       };
     }
 
     if (!data || !data.groups) {
       return {
         success: false,
-        error: 'ユーザーが所属するグループが見つかりません'
+        error: 'ユーザーが所属するグループが見つかりません',
       };
     }
 
@@ -61,7 +63,7 @@ export async function getUserCompany(userId: UUID): Promise<GetUserCompanyResult
     if (!company) {
       return {
         success: false,
-        error: 'グループが所属する会社が見つかりません'
+        error: 'グループが所属する会社が見つかりません',
       };
     }
 
@@ -70,26 +72,25 @@ export async function getUserCompany(userId: UUID): Promise<GetUserCompanyResult
       company_name: company.name,
       company_code: company.code,
       group_id: group.id,
-      group_name: group.name
+      group_name: group.name,
     };
 
     return {
       success: true,
-      company_info: companyInfo
+      company_info: companyInfo,
     };
-
   } catch (error) {
     console.error('Unexpected error in getUserCompany:', error);
     return {
       success: false,
-      error: '予期しないエラーが発生しました'
+      error: '予期しないエラーが発生しました',
     };
   }
 }
 
 /**
  * ユーザーIDから会社IDのみを取得（軽量版）
- * 
+ *
  * @param userId ユーザーID
  * @returns 会社ID
  */
@@ -100,24 +101,26 @@ export async function getUserCompanyId(userId: UUID): Promise<UUID | null> {
 
 /**
  * 複数のユーザーIDから会社IDを一括取得
- * 
+ *
  * @param userIds ユーザーID配列
  * @returns ユーザーIDと会社IDのマップ
  */
 export async function getUserCompanyIds(userIds: UUID[]): Promise<Map<UUID, UUID>> {
   const supabase = createServerClient();
   const result = new Map<UUID, UUID>();
-  
+
   try {
     const { data, error } = await supabase
       .from('user_groups')
-      .select(`
+      .select(
+        `
         user_id,
         group_id,
         groups!inner (
           company_id
         )
-      `)
+      `
+      )
       .in('user_id', userIds)
       .is('deleted_at', null);
 
@@ -127,7 +130,7 @@ export async function getUserCompanyIds(userIds: UUID[]): Promise<Map<UUID, UUID
     }
 
     if (data) {
-      data.forEach(item => {
+      data.forEach((item) => {
         if ((item.groups as any)?.company_id) {
           result.set(item.user_id, (item.groups as any).company_id);
         }
@@ -135,7 +138,6 @@ export async function getUserCompanyIds(userIds: UUID[]): Promise<Map<UUID, UUID
     }
 
     return result;
-
   } catch (error) {
     console.error('Unexpected error in getUserCompanyIds:', error);
     return result;
@@ -144,7 +146,7 @@ export async function getUserCompanyIds(userIds: UUID[]): Promise<Map<UUID, UUID
 
 /**
  * ユーザーが指定された会社に所属しているかチェック
- * 
+ *
  * @param userId ユーザーID
  * @param companyId 会社ID
  * @returns 所属しているかどうか
@@ -156,14 +158,14 @@ export async function isUserInCompany(userId: UUID, companyId: UUID): Promise<bo
 
 /**
  * ユーザーが指定された会社の管理者かチェック
- * 
+ *
  * @param userId ユーザーID
  * @param companyId 会社ID
  * @returns 管理者かどうか
  */
 export async function isUserCompanyAdmin(userId: UUID, companyId: UUID): Promise<boolean> {
   const supabase = createServerClient();
-  
+
   try {
     const { data, error } = await supabase
       .from('user_profiles')
@@ -187,9 +189,8 @@ export async function isUserCompanyAdmin(userId: UUID, companyId: UUID): Promise
     }
 
     return false;
-
   } catch (error) {
     console.error('Error checking user company admin:', error);
     return false;
   }
-} 
+}

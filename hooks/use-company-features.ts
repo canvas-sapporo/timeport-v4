@@ -53,7 +53,10 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
           .select('feature_code, is_active')
           .eq('company_id', companyId);
 
-        const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as { data: { feature_code: string; is_active: boolean }[] | null; error: { message: string } | null };
+        const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as {
+          data: { feature_code: string; is_active: boolean }[] | null;
+          error: { message: string } | null;
+        };
 
         if (error) {
           console.error('機能取得エラー:', error);

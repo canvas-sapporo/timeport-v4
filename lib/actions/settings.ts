@@ -1,8 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { createServerClient } from '@/lib/supabase';
-import type { Setting, CsvExportSetting, AttendanceSetting, NotificationSetting, SettingType } from '@/types/settings';
+import type {
+  Setting,
+  CsvExportSetting,
+  AttendanceSetting,
+  NotificationSetting,
+  SettingType,
+} from '@/types/settings';
 
 /**
  * 設定を取得する
@@ -19,7 +26,7 @@ export async function getSetting(
   settingKey: string
 ): Promise<Setting | null> {
   const supabase = createServerClient();
-  
+
   try {
     // 1. まず個人設定を検索
     let query = supabase
@@ -93,18 +100,18 @@ export async function saveSetting(
   isDefault: boolean = false
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
-  
+
   try {
     // 既存の設定を確認
     const existingSetting = await getSetting(userId, role, settingType, settingKey);
-    
+
     if (existingSetting) {
       // 既存設定を更新
       const { error } = await supabase
         .from('settings')
         .update({
           setting_value: settingValue,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', existingSetting.id);
 
@@ -114,16 +121,14 @@ export async function saveSetting(
       }
     } else {
       // 新規設定を作成
-      const { error } = await supabase
-        .from('settings')
-        .insert({
-          role,
-          user_id: role === 'system-admin' ? null : userId,
-          setting_type: settingType,
-          setting_key: settingKey,
-          setting_value: settingValue,
-          is_default: isDefault
-        });
+      const { error } = await supabase.from('settings').insert({
+        role,
+        user_id: role === 'system-admin' ? null : userId,
+        setting_type: settingType,
+        setting_key: settingKey,
+        setting_value: settingValue,
+        is_default: isDefault,
+      });
 
       if (error) {
         console.error('Error creating setting:', error);
@@ -144,9 +149,11 @@ export async function saveSetting(
  * @param settingId 設定ID
  * @returns 成功/失敗の結果
  */
-export async function deleteSetting(settingId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteSetting(
+  settingId: string
+): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient();
-  
+
   try {
     const { error } = await supabase
       .from('settings')
@@ -179,13 +186,9 @@ export async function getUserSettings(
   settingType?: SettingType
 ): Promise<Setting[]> {
   const supabase = createServerClient();
-  
+
   try {
-    let query = supabase
-      .from('settings')
-      .select('*')
-      .eq('user_id', userId)
-      .is('deleted_at', null);
+    let query = supabase.from('settings').select('*').eq('user_id', userId).is('deleted_at', null);
 
     if (settingType) {
       query = query.eq('setting_type', settingType);
@@ -251,4 +254,4 @@ export async function getNotificationSetting(
 ): Promise<NotificationSetting | null> {
   const setting = await getSetting(userId, role, 'notification', settingKey);
   return setting ? (setting.setting_value as NotificationSetting) : null;
-} 
+}

@@ -29,8 +29,6 @@ import {
 } from '@/lib/utils/error-handling';
 import type { ValidationError } from '@/types/common';
 
-
-
 // 環境変数の確認
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -349,9 +347,7 @@ export const createCompany = async (
       },
     ];
 
-    const { error: featuresError } = await supabaseAdmin
-      .from('features')
-      .insert(defaultFeatures);
+    const { error: featuresError } = await supabaseAdmin.from('features').insert(defaultFeatures);
 
     if (featuresError) {
       console.error('企業機能作成エラー:', featuresError);

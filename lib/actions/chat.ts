@@ -1,11 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { createServerClient } from '@/lib/supabase';
-import { 
-  Chat, 
-  ChatMessage, 
-  ChatUser, 
+import {
+  Chat,
+  ChatMessage,
+  ChatUser,
   ChatMessageReaction,
   CreateChatRequest,
   SendMessageRequest,
@@ -13,7 +14,7 @@ import {
   MarkAsReadRequest,
   ChatListView,
   MessageDetail,
-  ChatDetail
+  ChatDetail,
 } from '@/types/chat';
 // ================================
 // ユーザーの会社ID取得
@@ -24,7 +25,7 @@ import {
  */
 export async function getUserCompanyId(userId: string): Promise<string> {
   const supabase = createServerClient();
-  
+
   try {
     // ユーザーのグループを取得
     const { data: userGroupsData, error: userGroupsError } = await supabase
@@ -65,32 +66,37 @@ export async function getUserCompanyId(userId: string): Promise<string> {
 /**
  * ユーザー検索（参加者選択用）
  */
-export async function searchUsers(query: string, currentUserId: string): Promise<Array<{
-  id: string;
-  code: string;
-  family_name: string;
-  first_name: string;
-  family_name_kana: string;
-  first_name_kana: string;
-  email: string;
-}>> {
+export async function searchUsers(
+  query: string,
+  currentUserId: string
+): Promise<
+  Array<{
+    id: string;
+    code: string;
+    family_name: string;
+    first_name: string;
+    family_name_kana: string;
+    first_name_kana: string;
+    email: string;
+  }>
+> {
   const supabase = createServerClient();
-  
+
   console.log('Searching users with query:', query, 'currentUserId:', currentUserId);
-  
+
   try {
     // 段階的にデバッグ：現在のユーザーのuser_groupsデータを取得
     console.log('Step 1: Fetching user_groups data for current user');
     console.log('Current user ID:', currentUserId);
-    
+
     // まず、すべてのuser_groupsデータを取得してデバッグ
     const { data: allUserGroups, error: allUserGroupsError } = await supabase
       .from('user_groups')
       .select('*');
-    
+
     console.log('All user_groups data:', allUserGroups);
     console.log('All user_groups error:', allUserGroupsError);
-    
+
     // 特定のユーザーのuser_groupsデータを取得
     const { data: userGroupsData, error: userGroupsError } = await supabase
       .from('user_groups')
@@ -105,9 +111,8 @@ export async function searchUsers(query: string, currentUserId: string): Promise
     console.log('User groups data:', userGroupsData);
 
     // クライアントサイドでdeleted_atをフィルタリング
-    const activeUserGroups = userGroupsData?.filter(group => 
-      group.deleted_at === null || group.deleted_at === ''
-    ) || [];
+    const activeUserGroups =
+      userGroupsData?.filter((group) => group.deleted_at === null || group.deleted_at === '') || [];
 
     console.log('Active user groups:', activeUserGroups);
 
@@ -122,15 +127,13 @@ export async function searchUsers(query: string, currentUserId: string): Promise
     // グループから会社IDを取得
     console.log('Step 2: Fetching group data');
     console.log('Group ID to fetch:', groupId);
-    
+
     // まず、すべてのgroupsデータを取得してデバッグ
-    const { data: allGroups, error: allGroupsError } = await supabase
-      .from('groups')
-      .select('*');
-    
+    const { data: allGroups, error: allGroupsError } = await supabase.from('groups').select('*');
+
     console.log('All groups data:', allGroups);
     console.log('All groups error:', allGroupsError);
-    
+
     // 特定のグループデータを取得
     const { data: groupData, error: groupError } = await supabase
       .from('groups')
@@ -153,25 +156,26 @@ export async function searchUsers(query: string, currentUserId: string): Promise
     const companyId = groupData.company_id;
     console.log('Company ID:', companyId);
 
-        // 同じ会社のユーザーを検索（簡略化）
+    // 同じ会社のユーザーを検索（簡略化）
     console.log('Step 3: Searching users in same company');
     console.log('Search query:', query);
     console.log('Company ID for filtering:', companyId);
-    
+
     // まず、すべてのuser_profilesデータを取得してデバッグ
     const { data: allUserProfiles, error: allUserProfilesError } = await supabase
       .from('user_profiles')
       .select('*');
-    
+
     console.log('All user_profiles data:', allUserProfiles);
     console.log('All user_profiles error:', allUserProfilesError);
-    
+
     console.log('Searching with query:', query);
-    
+
     // シンプルな部分一致検索（すべてのフィールドで検索）
     const { data, error } = await supabase
       .from('user_profiles')
-      .select(`
+      .select(
+        `
         id,
         code,
         family_name,
@@ -179,9 +183,12 @@ export async function searchUsers(query: string, currentUserId: string): Promise
         family_name_kana,
         first_name_kana,
         email
-      `)
+      `
+      )
       .eq('is_active', true)
-      .or(`code.ilike.%${query}%,family_name.ilike.%${query}%,first_name.ilike.%${query}%,family_name_kana.ilike.%${query}%,first_name_kana.ilike.%${query}%`)
+      .or(
+        `code.ilike.%${query}%,family_name.ilike.%${query}%,first_name.ilike.%${query}%,family_name_kana.ilike.%${query}%,first_name_kana.ilike.%${query}%`
+      )
       .limit(10);
 
     if (error) {
@@ -194,21 +201,23 @@ export async function searchUsers(query: string, currentUserId: string): Promise
 
     // 会社IDでフィルタリング（簡略化：全ユーザーを返す）
     console.log('Step 4: Filtering users by company (simplified)');
-    const users = (data || []).map(user => ({
+    const users = (data || []).map((user) => ({
       id: user.id,
       code: user.code,
       family_name: user.family_name,
       first_name: user.first_name,
       family_name_kana: user.family_name_kana,
       first_name_kana: user.first_name_kana,
-      email: user.email
+      email: user.email,
     }));
 
     console.log('Final users:', users?.length || 0, 'users');
     return users;
   } catch (error) {
     console.error('Unexpected error in searchUsers:', error);
-    throw new Error(`予期しないエラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `予期しないエラー: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -221,7 +230,7 @@ export async function searchUsers(query: string, currentUserId: string): Promise
  */
 export async function getChats(userId: string): Promise<ChatListView[]> {
   const supabase = createServerClient();
-  
+
   try {
     // ユーザーが参加しているチャットを取得（簡素化）
     const { data: userChats, error: userChatsError } = await supabase
@@ -241,7 +250,7 @@ export async function getChats(userId: string): Promise<ChatListView[]> {
     }
 
     // チャットIDのリストを作成
-    const chatIds = userChats.map(uc => uc.chat_id);
+    const chatIds = userChats.map((uc) => uc.chat_id);
 
     // チャット情報を取得
     const { data: chats, error: chatsError } = await supabase
@@ -258,14 +267,16 @@ export async function getChats(userId: string): Promise<ChatListView[]> {
 
     // 各チャットの参加者情報を取得
     const chatListViews: ChatListView[] = [];
-    
+
     for (const chat of chats || []) {
       // チャットの参加者を取得
       const { data: participants, error: participantsError } = await supabase
         .from('chat_users')
-        .select(`
+        .select(
+          `
           user_profiles!inner(family_name, first_name)
-        `)
+        `
+        )
         .eq('chat_id', chat.id)
         .is('deleted_at', null);
 
@@ -275,15 +286,18 @@ export async function getChats(userId: string): Promise<ChatListView[]> {
       }
 
       // 参加者名のリストを作成
-      const participantNames = participants?.map(p => 
-        `${(p.user_profiles as any).family_name} ${(p.user_profiles as any).first_name}`
-      ).join(', ') || '参加者';
+      const participantNames =
+        participants
+          ?.map(
+            (p) => `${(p.user_profiles as any).family_name} ${(p.user_profiles as any).first_name}`
+          )
+          .join(', ') || '参加者';
 
       chatListViews.push({
         ...chat,
         participant_count: participants?.length || 1,
         participant_names: participantNames,
-        last_message_at: chat.last_message_at || chat.updated_at
+        last_message_at: chat.last_message_at || chat.updated_at,
       });
     }
 
@@ -299,7 +313,7 @@ export async function getChats(userId: string): Promise<ChatListView[]> {
  */
 export async function getChatDetail(chatId: string): Promise<ChatDetail | null> {
   const supabase = createServerClient();
-  
+
   // チャット情報を取得
   const { data: chat, error: chatError } = await supabase
     .from('chats')
@@ -315,13 +329,15 @@ export async function getChatDetail(chatId: string): Promise<ChatDetail | null> 
   // 参加者情報を取得
   const { data: participants, error: participantsError } = await supabase
     .from('chat_users')
-    .select(`
+    .select(
+      `
       user_id,
       role,
       last_read_at,
       joined_at,
       user_profiles!inner(family_name, first_name, email)
-    `)
+    `
+    )
     .eq('chat_id', chatId)
     .is('deleted_at', null);
 
@@ -347,16 +363,17 @@ export async function getChatDetail(chatId: string): Promise<ChatDetail | null> 
 
   return {
     ...chat,
-    participants: participants?.map(p => ({
-      user_id: p.user_id,
-      user_name: `${(p.user_profiles as any).family_name} ${(p.user_profiles as any).first_name}`,
-      user_email: (p.user_profiles as any).email,
-      role: p.role,
-      last_read_at: p.last_read_at,
-      joined_at: p.joined_at
-    })) || [],
+    participants:
+      participants?.map((p) => ({
+        user_id: p.user_id,
+        user_name: `${(p.user_profiles as any).family_name} ${(p.user_profiles as any).first_name}`,
+        user_email: (p.user_profiles as any).email,
+        role: p.role,
+        last_read_at: p.last_read_at,
+        joined_at: p.joined_at,
+      })) || [],
     unread_count: unreadCount?.unread_count || 0,
-    last_message: lastMessage || undefined
+    last_message: lastMessage || undefined,
   };
 }
 
@@ -364,16 +381,16 @@ export async function getChatDetail(chatId: string): Promise<ChatDetail | null> 
  * 1対1チャットを作成または取得
  */
 export async function getOrCreateDirectChat(
-  user1Id: string, 
-  user2Id: string, 
+  user1Id: string,
+  user2Id: string,
   companyId: string
 ): Promise<string> {
   const supabase = createServerClient();
-  
+
   const { data, error } = await supabase.rpc('get_or_create_direct_chat', {
     p_user1_id: user1Id,
     p_user2_id: user2Id,
-    p_company_id: companyId
+    p_company_id: companyId,
   });
 
   if (error) {
@@ -389,7 +406,7 @@ export async function getOrCreateDirectChat(
  */
 export async function createGroupChat(request: CreateChatRequest): Promise<string> {
   const supabase = createServerClient();
-  
+
   // チャットを作成
   const { data: chat, error: chatError } = await supabase
     .from('chats')
@@ -398,7 +415,7 @@ export async function createGroupChat(request: CreateChatRequest): Promise<strin
       name: request.name,
       chat_type: request.chat_type,
       created_by: request.participant_ids[0], // 最初の参加者を作成者とする
-      settings: request.settings || {}
+      settings: request.settings || {},
     })
     .select('id')
     .single();
@@ -412,12 +429,10 @@ export async function createGroupChat(request: CreateChatRequest): Promise<strin
   const chatUsers = request.participant_ids.map((userId, index) => ({
     chat_id: chat.id,
     user_id: userId,
-    role: index === 0 ? 'admin' : 'member' // 最初の参加者を管理者とする
+    role: index === 0 ? 'admin' : 'member', // 最初の参加者を管理者とする
   }));
 
-  const { error: usersError } = await supabase
-    .from('chat_users')
-    .insert(chatUsers);
+  const { error: usersError } = await supabase.from('chat_users').insert(chatUsers);
 
   if (usersError) {
     console.error('Error adding participants:', usersError);
@@ -436,22 +451,24 @@ export async function createGroupChat(request: CreateChatRequest): Promise<strin
  * メッセージ一覧を取得
  */
 export async function getMessages(
-  chatId: string, 
-  limit: number = 50, 
+  chatId: string,
+  limit: number = 50,
   offset: number = 0
 ): Promise<ChatMessage[]> {
   const supabase = createServerClient();
-  
+
   const { data, error } = await supabase
     .from('chat_messages')
-    .select(`
+    .select(
+      `
       *,
       user_profiles!inner(
         family_name,
         first_name,
         email
       )
-    `)
+    `
+    )
     .eq('chat_id', chatId)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
@@ -469,12 +486,12 @@ export async function getMessages(
  */
 export async function sendMessage(request: SendMessageRequest): Promise<ChatMessage> {
   const supabase = createServerClient();
-  
+
   // リクエストからユーザーIDを取得
   if (!request.user_id) {
     throw new Error('ユーザーIDが指定されていません');
   }
-  
+
   const { data, error } = await supabase
     .from('chat_messages')
     .insert({
@@ -483,7 +500,7 @@ export async function sendMessage(request: SendMessageRequest): Promise<ChatMess
       message_type: request.message_type || 'text',
       content: request.content,
       attachments: request.attachments || [],
-      reply_to_message_id: request.reply_to_message_id
+      reply_to_message_id: request.reply_to_message_id,
     })
     .select('*')
     .single();
@@ -500,24 +517,24 @@ export async function sendMessage(request: SendMessageRequest): Promise<ChatMess
 /**
  * メッセージを編集
  */
-export async function editMessage(
-  messageId: string, 
-  content: string
-): Promise<ChatMessage> {
+export async function editMessage(messageId: string, content: string): Promise<ChatMessage> {
   const supabase = createServerClient();
-  
+
   // ユーザー認証を確認
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
   if (authError || !user?.id) {
     console.error('Authentication error:', authError);
     throw new Error('ユーザーが認証されていません');
   }
-  
+
   const { data, error } = await supabase
     .from('chat_messages')
     .update({
       content,
-      edited_at: new Date().toISOString()
+      edited_at: new Date().toISOString(),
     })
     .eq('id', messageId)
     .eq('user_id', user.id) // 自分のメッセージのみ編集可能
@@ -538,14 +555,17 @@ export async function editMessage(
  */
 export async function deleteMessage(messageId: string): Promise<void> {
   const supabase = createServerClient();
-  
+
   // ユーザー認証を確認
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
   if (authError || !user?.id) {
     console.error('Authentication error:', authError);
     throw new Error('ユーザーが認証されていません');
   }
-  
+
   const { error } = await supabase
     .from('chat_messages')
     .update({ deleted_at: new Date().toISOString() })
@@ -569,9 +589,9 @@ export async function deleteMessage(messageId: string): Promise<void> {
  */
 export async function markAsRead(request: MarkAsReadRequest): Promise<void> {
   const supabase = createServerClient();
-  
+
   console.log('markAsRead called with:', request);
-  
+
   // バリデーション
   if (!request.chat_id) {
     throw new Error('チャットIDが指定されていません');
@@ -581,11 +601,11 @@ export async function markAsRead(request: MarkAsReadRequest): Promise<void> {
   if (!request.user_id) {
     throw new Error('ユーザーIDが指定されていません');
   }
-  
+
   const { data, error } = await supabase
     .from('chat_users')
     .update({
-      last_read_at: request.last_read_at || new Date().toISOString()
+      last_read_at: request.last_read_at || new Date().toISOString(),
     })
     .eq('chat_id', request.chat_id)
     .eq('user_id', request.user_id)
@@ -609,13 +629,13 @@ export async function markAsRead(request: MarkAsReadRequest): Promise<void> {
  */
 export async function addReaction(request: AddReactionRequest): Promise<ChatMessageReaction> {
   const supabase = createServerClient();
-  
+
   const { data, error } = await supabase
     .from('chat_message_reactions')
     .insert({
       message_id: request.message_id,
       user_id: (await supabase.auth.getUser()).data.user?.id,
-      reaction_type: request.reaction_type
+      reaction_type: request.reaction_type,
     })
     .select('*')
     .single();
@@ -632,12 +652,9 @@ export async function addReaction(request: AddReactionRequest): Promise<ChatMess
 /**
  * リアクションを削除
  */
-export async function removeReaction(
-  messageId: string, 
-  reactionType: string
-): Promise<void> {
+export async function removeReaction(messageId: string, reactionType: string): Promise<void> {
   const supabase = createServerClient();
-  
+
   const { error } = await supabase
     .from('chat_message_reactions')
     .update({ deleted_at: new Date().toISOString() })
@@ -661,19 +678,17 @@ export async function removeReaction(
  * チャットに参加者を追加
  */
 export async function addChatParticipant(
-  chatId: string, 
-  userId: string, 
+  chatId: string,
+  userId: string,
   role: 'admin' | 'member' = 'member'
 ): Promise<void> {
   const supabase = createServerClient();
-  
-  const { error } = await supabase
-    .from('chat_users')
-    .insert({
-      chat_id: chatId,
-      user_id: userId,
-      role
-    });
+
+  const { error } = await supabase.from('chat_users').insert({
+    chat_id: chatId,
+    user_id: userId,
+    role,
+  });
 
   if (error) {
     console.error('Error adding participant:', error);
@@ -686,12 +701,9 @@ export async function addChatParticipant(
 /**
  * チャットから参加者を削除
  */
-export async function removeChatParticipant(
-  chatId: string, 
-  userId: string
-): Promise<void> {
+export async function removeChatParticipant(chatId: string, userId: string): Promise<void> {
   const supabase = createServerClient();
-  
+
   const { error } = await supabase
     .from('chat_users')
     .update({ left_at: new Date().toISOString() })
@@ -710,12 +722,12 @@ export async function removeChatParticipant(
  * 参加者のロールを変更
  */
 export async function updateChatParticipantRole(
-  chatId: string, 
-  userId: string, 
+  chatId: string,
+  userId: string,
   role: 'admin' | 'member'
 ): Promise<void> {
   const supabase = createServerClient();
-  
+
   const { error } = await supabase
     .from('chat_users')
     .update({ role })
@@ -728,4 +740,4 @@ export async function updateChatParticipantRole(
   }
 
   revalidatePath('/member/chat');
-} 
+}

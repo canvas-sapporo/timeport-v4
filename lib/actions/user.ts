@@ -2,7 +2,7 @@
 
 /**
  * ユーザー関連のサーバーアクション
- * 
+ *
  * ユーザーIDから会社IDを取得する処理を提供
  * users → user_groups → groups → companies の順で参照
  */
@@ -12,23 +12,25 @@ import type { UUID } from '@/types/common';
 
 /**
  * ユーザーIDから会社IDを取得（サーバーアクション）
- * 
+ *
  * @param userId ユーザーID
  * @returns 会社ID
  */
 export async function getUserCompanyId(userId: UUID): Promise<UUID | null> {
   const supabase = createServerClient();
-  
+
   try {
     // users → user_groups → groups → companies の順で参照
     const { data, error } = await supabase
       .from('user_groups')
-      .select(`
+      .select(
+        `
         group_id,
         groups!inner (
           company_id
         )
-      `)
+      `
+      )
       .eq('user_id', userId)
       .is('deleted_at', null)
       .limit(1)
@@ -44,7 +46,6 @@ export async function getUserCompanyId(userId: UUID): Promise<UUID | null> {
     }
 
     return (data.groups as any).company_id;
-
   } catch (error) {
     console.error('Unexpected error in getUserCompanyId:', error);
     return null;
@@ -53,7 +54,7 @@ export async function getUserCompanyId(userId: UUID): Promise<UUID | null> {
 
 /**
  * ユーザーIDから会社情報を取得（サーバーアクション）
- * 
+ *
  * @param userId ユーザーID
  * @returns 会社情報
  */
@@ -65,12 +66,13 @@ export async function getUserCompanyInfo(userId: UUID): Promise<{
   group_name: string;
 } | null> {
   const supabase = createServerClient();
-  
+
   try {
     // users → user_groups → groups → companies の順で参照
     const { data, error } = await supabase
       .from('user_groups')
-      .select(`
+      .select(
+        `
         group_id,
         groups!inner (
           id,
@@ -82,7 +84,8 @@ export async function getUserCompanyInfo(userId: UUID): Promise<{
             code
           )
         )
-      `)
+      `
+      )
       .eq('user_id', userId)
       .is('deleted_at', null)
       .limit(1)
@@ -109,9 +112,8 @@ export async function getUserCompanyInfo(userId: UUID): Promise<{
       company_name: company.name,
       company_code: company.code,
       group_id: group.id,
-      group_name: group.name
+      group_name: group.name,
     };
-
   } catch (error) {
     console.error('Unexpected error in getUserCompanyInfo:', error);
     return null;
@@ -120,7 +122,7 @@ export async function getUserCompanyInfo(userId: UUID): Promise<{
 
 /**
  * ユーザーが指定された会社に所属しているかチェック（サーバーアクション）
- * 
+ *
  * @param userId ユーザーID
  * @param companyId 会社ID
  * @returns 所属しているかどうか
@@ -128,4 +130,4 @@ export async function getUserCompanyInfo(userId: UUID): Promise<{
 export async function isUserInCompany(userId: UUID, companyId: UUID): Promise<boolean> {
   const userCompanyId = await getUserCompanyId(userId);
   return userCompanyId === companyId;
-} 
+}

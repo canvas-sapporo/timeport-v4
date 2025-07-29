@@ -13,6 +13,7 @@ import {
   ChevronsUpDown,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
@@ -61,8 +62,6 @@ import {
   getUserCompanyId,
 } from '@/lib/actions/chat';
 import { getChatSendKeySetting } from '@/lib/actions/user-settings';
-
-import { createClient } from '@supabase/supabase-js';
 
 // Supabaseクライアントを直接作成
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

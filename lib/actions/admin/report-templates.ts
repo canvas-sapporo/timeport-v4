@@ -5,7 +5,12 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { createServerClient } from '@/lib/supabase';
-import type { ReportTemplate, ReportFieldConfig, ApprovalFlowConfig, StatusFlowConfig } from '@/types/report';
+import type {
+  ReportTemplate,
+  ReportFieldConfig,
+  ApprovalFlowConfig,
+  StatusFlowConfig,
+} from '@/types/report';
 
 // ================================
 // バリデーションスキーマ
@@ -13,42 +18,67 @@ import type { ReportTemplate, ReportFieldConfig, ApprovalFlowConfig, StatusFlowC
 
 const ReportFieldConfigSchema = z.object({
   id: z.string().min(1, 'フィールドIDは必須です'),
-  type: z.enum(['text', 'textarea', 'number', 'date', 'time', 'datetime', 'email', 'phone', 'url', 'select', 'radio', 'checkbox', 'file', 'hidden']),
+  type: z.enum([
+    'text',
+    'textarea',
+    'number',
+    'date',
+    'time',
+    'datetime',
+    'email',
+    'phone',
+    'url',
+    'select',
+    'radio',
+    'checkbox',
+    'file',
+    'hidden',
+  ]),
   label: z.string().min(1, 'ラベルは必須です'),
   required: z.boolean().optional(),
   placeholder: z.string().optional(),
   default_value: z.union([z.string(), z.number(), z.boolean()]).optional(),
-  options: z.object({
-    markdown: z.boolean().optional(),
-    preview: z.boolean().optional(),
-    rows: z.number().optional(),
-    min: z.number().optional(),
-    max: z.number().optional(),
-    step: z.number().optional(),
-    multiple: z.boolean().optional(),
-    accept: z.string().optional(),
-    options: z.array(z.object({
-      label: z.string(),
-      value: z.union([z.string(), z.number()]),
-    })).optional(),
-  }).optional(),
+  options: z
+    .object({
+      markdown: z.boolean().optional(),
+      preview: z.boolean().optional(),
+      rows: z.number().optional(),
+      min: z.number().optional(),
+      max: z.number().optional(),
+      step: z.number().optional(),
+      multiple: z.boolean().optional(),
+      accept: z.string().optional(),
+      options: z
+        .array(
+          z.object({
+            label: z.string(),
+            value: z.union([z.string(), z.number()]),
+          })
+        )
+        .optional(),
+    })
+    .optional(),
 });
 
 const ApprovalFlowConfigSchema = z.object({
   type: z.enum(['static', 'dynamic']),
-  approvers: z.array(z.object({
-    type: z.enum(['user', 'group']),
-    user_id: z.string().uuid().optional(),
-    group_id: z.string().uuid().optional(),
-  })),
+  approvers: z.array(
+    z.object({
+      type: z.enum(['user', 'group']),
+      user_id: z.string().uuid().optional(),
+      group_id: z.string().uuid().optional(),
+    })
+  ),
 });
 
 const StatusFlowConfigSchema = z.object({
-  transitions: z.array(z.object({
-    from: z.string(),
-    to: z.string(),
-    action: z.string(),
-  })),
+  transitions: z.array(
+    z.object({
+      from: z.string(),
+      to: z.string(),
+      action: z.string(),
+    })
+  ),
 });
 
 const ReportTemplateSchema = z.object({
@@ -88,30 +118,30 @@ export const createReportTemplate = async (formData: FormData) => {
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      
+
       supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
-      
+
       // 実際の企業IDを取得
       const { data: companies, error: companiesError } = await supabaseClient
         .from('companies')
         .select('id')
         .limit(1);
-      
+
       if (companiesError || !companies || companies.length === 0) {
         throw new Error('企業が見つかりません');
       }
-      
+
       // 一時的に管理者権限で作成（後で適切な認証に修正）
       profile = {
         company_id: companies[0].id,
-        role: 'admin'
+        role: 'admin',
       };
-      
+
       console.log('管理者権限で作成:', profile);
     } else if (!user) {
       throw new Error('認証エラーが発生しました');
@@ -130,7 +160,7 @@ export const createReportTemplate = async (formData: FormData) => {
       if (userProfile.role !== 'admin') {
         throw new Error('権限がありません');
       }
-      
+
       profile = userProfile;
       console.log('認証済みユーザーで作成:', profile);
     }
@@ -139,7 +169,7 @@ export const createReportTemplate = async (formData: FormData) => {
     const rawData = {
       name: formData.get('name') as string,
       description: formData.get('description') as string,
-      group_id: formData.get('group_id') as string || undefined,
+      group_id: (formData.get('group_id') as string) || undefined,
       form_config: JSON.parse((formData.get('form_config') as string) || '[]'),
       approval_flow: JSON.parse((formData.get('approval_flow') as string) || '{}'),
       status_flow: JSON.parse((formData.get('status_flow') as string) || '{}'),
@@ -171,7 +201,10 @@ export const createReportTemplate = async (formData: FormData) => {
     return { success: true, data };
   } catch (error) {
     console.error('createReportTemplate エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -202,30 +235,30 @@ export const updateReportTemplate = async (id: string, formData: FormData) => {
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      
+
       supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
-      
+
       // 実際の企業IDを取得
       const { data: companies, error: companiesError } = await supabaseClient
         .from('companies')
         .select('id')
         .limit(1);
-      
+
       if (companiesError || !companies || companies.length === 0) {
         throw new Error('企業が見つかりません');
       }
-      
+
       // 一時的に管理者権限で作成（後で適切な認証に修正）
       profile = {
         company_id: companies[0].id,
-        role: 'admin'
+        role: 'admin',
       };
-      
+
       console.log('管理者権限で更新:', profile);
     } else if (!user) {
       throw new Error('認証エラーが発生しました');
@@ -244,7 +277,7 @@ export const updateReportTemplate = async (id: string, formData: FormData) => {
       if (userProfile.role !== 'admin') {
         throw new Error('権限がありません');
       }
-      
+
       profile = userProfile;
       console.log('認証済みユーザーで更新:', profile);
     }
@@ -302,7 +335,10 @@ export const updateReportTemplate = async (id: string, formData: FormData) => {
     return { success: true, data };
   } catch (error) {
     console.error('updateReportTemplate エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -333,30 +369,30 @@ export const deleteReportTemplate = async (id: string) => {
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      
+
       supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
-      
+
       // 実際の企業IDを取得
       const { data: companies, error: companiesError } = await supabaseClient
         .from('companies')
         .select('id')
         .limit(1);
-      
+
       if (companiesError || !companies || companies.length === 0) {
         throw new Error('企業が見つかりません');
       }
-      
+
       // 一時的に管理者権限で作成（後で適切な認証に修正）
       profile = {
         company_id: companies[0].id,
-        role: 'admin'
+        role: 'admin',
       };
-      
+
       console.log('管理者権限で削除:', profile);
     } else if (!user) {
       throw new Error('認証エラーが発生しました');
@@ -375,7 +411,7 @@ export const deleteReportTemplate = async (id: string) => {
       if (userProfile.role !== 'admin') {
         throw new Error('権限がありません');
       }
-      
+
       profile = userProfile;
       console.log('認証済みユーザーで削除:', profile);
     }
@@ -414,7 +450,10 @@ export const deleteReportTemplate = async (id: string) => {
     return { success: true };
   } catch (error) {
     console.error('deleteReportTemplate エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -445,30 +484,30 @@ export const getReportTemplates = async () => {
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      
+
       supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
-      
+
       // 実際の企業IDを取得
       const { data: companies, error: companiesError } = await supabaseClient
         .from('companies')
         .select('id')
         .limit(1);
-      
+
       if (companiesError || !companies || companies.length === 0) {
         throw new Error('企業が見つかりません');
       }
-      
+
       // 一時的に管理者権限で作成（後で適切な認証に修正）
       profile = {
         company_id: companies[0].id,
-        role: 'admin'
+        role: 'admin',
       };
-      
+
       console.log('管理者権限で取得:', profile);
     } else if (!user) {
       throw new Error('認証エラーが発生しました');
@@ -487,7 +526,7 @@ export const getReportTemplates = async () => {
       if (userProfile.role !== 'admin') {
         throw new Error('権限がありません');
       }
-      
+
       profile = userProfile;
       console.log('認証済みユーザーで取得:', profile);
     }
@@ -509,7 +548,10 @@ export const getReportTemplates = async () => {
     return { success: true, data: data as unknown as ReportTemplate[] };
   } catch (error) {
     console.error('getReportTemplates エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -540,30 +582,30 @@ export const getReportTemplate = async (id: string) => {
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      
+
       supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
-      
+
       // 実際の企業IDを取得
       const { data: companies, error: companiesError } = await supabaseClient
         .from('companies')
         .select('id')
         .limit(1);
-      
+
       if (companiesError || !companies || companies.length === 0) {
         throw new Error('企業が見つかりません');
       }
-      
+
       // 一時的に管理者権限で作成（後で適切な認証に修正）
       profile = {
         company_id: companies[0].id,
-        role: 'admin'
+        role: 'admin',
       };
-      
+
       console.log('管理者権限で取得:', profile);
     } else if (!user) {
       throw new Error('認証エラーが発生しました');
@@ -582,7 +624,7 @@ export const getReportTemplate = async (id: string) => {
       if (userProfile.role !== 'admin') {
         throw new Error('権限がありません');
       }
-      
+
       profile = userProfile;
       console.log('認証済みユーザーで取得:', profile);
     }
@@ -605,6 +647,9 @@ export const getReportTemplate = async (id: string) => {
     return { success: true, data: data as unknown as ReportTemplate };
   } catch (error) {
     console.error('getReportTemplate エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
-}; 
+};

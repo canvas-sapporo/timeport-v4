@@ -7,7 +7,11 @@ import type { ReportTemplate } from '@/types/report';
 // レポートテンプレート一覧取得（メンバー用）
 // ================================
 
-export const getAvailableReportTemplates = async (): Promise<{ success: boolean; data?: ReportTemplate[]; error?: string }> => {
+export const getAvailableReportTemplates = async (): Promise<{
+  success: boolean;
+  data?: ReportTemplate[];
+  error?: string;
+}> => {
   const supabase = createServerClient();
 
   try {
@@ -30,28 +34,28 @@ export const getAvailableReportTemplates = async (): Promise<{ success: boolean;
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      
+
       supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
-      
+
       // 実際の企業IDを取得
       const { data: companies, error: companiesError } = await supabaseClient
         .from('companies')
         .select('id')
         .limit(1);
-      
+
       if (companiesError || !companies || companies.length === 0) {
         throw new Error('企業が見つかりません');
       }
-      
+
       profile = {
-        company_id: companies[0].id
+        company_id: companies[0].id,
       };
-      
+
       console.log('管理者権限で取得:', profile);
     } else if (!user) {
       throw new Error('認証エラーが発生しました');
@@ -66,7 +70,7 @@ export const getAvailableReportTemplates = async (): Promise<{ success: boolean;
       if (profileError || !userProfile) {
         throw new Error('ユーザープロフィールが見つかりません');
       }
-      
+
       profile = userProfile;
       console.log('認証済みユーザーで取得:', profile);
     }
@@ -78,7 +82,7 @@ export const getAvailableReportTemplates = async (): Promise<{ success: boolean;
         .from('user_groups')
         .select('group_id')
         .eq('user_id', user.id);
-      
+
       if (userGroupsError) {
         console.error('ユーザーグループ取得エラー:', userGroupsError);
         throw new Error('ユーザーグループの取得に失敗しました');
@@ -89,23 +93,25 @@ export const getAvailableReportTemplates = async (): Promise<{ success: boolean;
       const { data: allGroups, error: allGroupsError } = await supabaseClient
         .from('groups')
         .select('id');
-      
+
       if (allGroupsError) {
         console.error('全グループ取得エラー:', allGroupsError);
         throw new Error('グループの取得に失敗しました');
       }
-      userGroups = allGroups?.map(g => ({ group_id: g.id })) || [];
+      userGroups = allGroups?.map((g) => ({ group_id: g.id })) || [];
     }
 
-    const userGroupIds = userGroups.map(ug => ug.group_id);
+    const userGroupIds = userGroups.map((ug) => ug.group_id);
 
     // レポートテンプレート一覧を取得
     const { data, error } = await supabaseClient
       .from('report_templates')
-      .select(`
+      .select(
+        `
         *,
         groups(name)
-      `)
+      `
+      )
       .eq('company_id', profile.company_id)
       .eq('is_active', true)
       .is('deleted_at', null)
@@ -121,7 +127,10 @@ export const getAvailableReportTemplates = async (): Promise<{ success: boolean;
     return { success: true, data };
   } catch (error) {
     console.error('getAvailableReportTemplates エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
 };
 
@@ -129,7 +138,9 @@ export const getAvailableReportTemplates = async (): Promise<{ success: boolean;
 // レポートテンプレート詳細取得（メンバー用）
 // ================================
 
-export const getReportTemplateForMember = async (id: string): Promise<{ success: boolean; data?: ReportTemplate; error?: string }> => {
+export const getReportTemplateForMember = async (
+  id: string
+): Promise<{ success: boolean; data?: ReportTemplate; error?: string }> => {
   const supabase = createServerClient();
 
   try {
@@ -152,28 +163,28 @@ export const getReportTemplateForMember = async (id: string): Promise<{ success:
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      
+
       supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
-      
+
       // 実際の企業IDを取得
       const { data: companies, error: companiesError } = await supabaseClient
         .from('companies')
         .select('id')
         .limit(1);
-      
+
       if (companiesError || !companies || companies.length === 0) {
         throw new Error('企業が見つかりません');
       }
-      
+
       profile = {
-        company_id: companies[0].id
+        company_id: companies[0].id,
       };
-      
+
       console.log('管理者権限で取得:', profile);
     } else if (!user) {
       throw new Error('認証エラーが発生しました');
@@ -188,7 +199,7 @@ export const getReportTemplateForMember = async (id: string): Promise<{ success:
       if (profileError || !userProfile) {
         throw new Error('ユーザープロフィールが見つかりません');
       }
-      
+
       profile = userProfile;
       console.log('認証済みユーザーで取得:', profile);
     }
@@ -200,7 +211,7 @@ export const getReportTemplateForMember = async (id: string): Promise<{ success:
         .from('user_groups')
         .select('group_id')
         .eq('user_id', user.id);
-      
+
       if (userGroupsError) {
         console.error('ユーザーグループ取得エラー:', userGroupsError);
         throw new Error('ユーザーグループの取得に失敗しました');
@@ -211,23 +222,25 @@ export const getReportTemplateForMember = async (id: string): Promise<{ success:
       const { data: allGroups, error: allGroupsError } = await supabaseClient
         .from('groups')
         .select('id');
-      
+
       if (allGroupsError) {
         console.error('全グループ取得エラー:', allGroupsError);
         throw new Error('グループの取得に失敗しました');
       }
-      userGroups = allGroups?.map(g => ({ group_id: g.id })) || [];
+      userGroups = allGroups?.map((g) => ({ group_id: g.id })) || [];
     }
 
-    const userGroupIds = userGroups.map(ug => ug.group_id);
+    const userGroupIds = userGroups.map((ug) => ug.group_id);
 
     // レポートテンプレート詳細を取得
     const { data, error } = await supabaseClient
       .from('report_templates')
-      .select(`
+      .select(
+        `
         *,
         groups(name)
-      `)
+      `
+      )
       .eq('id', id)
       .eq('company_id', profile.company_id)
       .eq('is_active', true)
@@ -244,6 +257,9 @@ export const getReportTemplateForMember = async (id: string): Promise<{ success:
     return { success: true, data };
   } catch (error) {
     console.error('getReportTemplateForMember エラー:', error);
-    return { success: false, error: error instanceof Error ? error.message : '不明なエラーが発生しました' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
   }
-}; 
+};

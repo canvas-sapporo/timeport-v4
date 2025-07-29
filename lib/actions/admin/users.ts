@@ -30,11 +30,11 @@ export async function getApprovers(userId?: string) {
     // ユーザーIDが渡されていない場合は認証情報を取得
     let currentUserId = userId;
     if (!currentUserId) {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    console.log('認証結果:', { user, userError });
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      console.log('認証結果:', { user, userError });
 
       if (userError || !user) {
         console.log('認証エラー、空の配列を返す');
@@ -55,12 +55,14 @@ export async function getApprovers(userId?: string) {
     // 1. 企業内のユーザーID一覧を取得
     const { data: userIds, error: userIdsError } = await supabase
       .from('user_groups')
-      .select(`
+      .select(
+        `
         user_id,
         groups!inner (
           company_id
         )
-      `)
+      `
+      )
       .eq('groups.company_id', companyId)
       .is('deleted_at', null);
 
@@ -69,7 +71,7 @@ export async function getApprovers(userId?: string) {
     if (userIdsError) {
       console.error('ユーザーID取得エラー:', userIdsError);
       return { success: false, error: userIdsError.message };
-      }
+    }
 
     if (!userIds || userIds.length === 0) {
       console.log('企業内にユーザーが見つかりません');
