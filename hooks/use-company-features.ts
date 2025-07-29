@@ -31,13 +31,13 @@ export const triggerFeatureUpdate = (companyId: string) => {
 };
 
 export const useCompanyFeatures = (companyId: string | undefined) => {
-  const [features, setFeatures] = useState<{ [key: string]: boolean }>(DEFAULT_FEATURES);
+  const [features, setFeatures] = useState<{ [key: string]: boolean } | null>(null); // nullに変更
   const [isLoading, setIsLoading] = useState(true); // 初期状態をtrueに変更
   const [error, setError] = useState<string | null>(null);
 
   const fetchFeatures = async () => {
     if (!companyId) {
-      setFeatures(DEFAULT_FEATURES);
+      setFeatures(null);
       setIsLoading(false);
       setError(null);
       return;
@@ -77,7 +77,7 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
       if (error) {
         console.error('機能取得エラー:', error);
         setError(error.message);
-        setFeatures(DEFAULT_FEATURES);
+        setFeatures(null);
         // エラー時もキャッシュに保存して、再試行を防ぐ
         featureCache.set(companyId, {
           features: DEFAULT_FEATURES,
@@ -103,7 +103,7 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     } catch (err) {
       console.error('機能取得エラー:', err);
       setError(err instanceof Error ? err.message : '不明なエラー');
-      setFeatures(DEFAULT_FEATURES);
+      setFeatures(null);
     } finally {
       setIsLoading(false);
     }

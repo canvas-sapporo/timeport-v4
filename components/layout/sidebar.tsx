@@ -88,7 +88,7 @@ export default function Sidebar() {
     // ローディング中は一時的に全ての機能を表示（UX向上のため）
     if (isLoadingFeatures) return true;
     // デフォルト値を使用して、未定義の場合も適切に処理
-    return features[feature] ?? false;
+    return features?.[feature] ?? false;
   };
 
   // ログアウト中またはユーザーが存在しない場合は何も表示しない

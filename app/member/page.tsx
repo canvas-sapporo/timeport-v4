@@ -835,7 +835,7 @@ export default function MemberDashboard() {
       />
 
       {/* 機能無効化メッセージ */}
-      {!features.chat && (
+      {features && !features.chat && (
         <Card>
           <CardContent className="p-4">
             <div className="text-center text-gray-500">
@@ -846,7 +846,7 @@ export default function MemberDashboard() {
         </Card>
       )}
 
-      {!features.report && (
+      {features && !features.report && (
         <Card>
           <CardContent className="p-4">
             <div className="text-center text-gray-500">
@@ -857,7 +857,7 @@ export default function MemberDashboard() {
         </Card>
       )}
 
-      {!features.schedule && (
+      {features && !features.schedule && (
         <Card>
           <CardContent className="p-4">
             <div className="text-center text-gray-500">

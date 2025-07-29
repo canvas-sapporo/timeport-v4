@@ -57,7 +57,7 @@ export default function MemberReportPage() {
   const { toast } = useToast();
 
   // 機能チェック
-  const { features } = useCompanyFeatures(user?.company_id);
+  const { features, isLoading: featuresLoading } = useCompanyFeatures(user?.company_id);
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -77,11 +77,11 @@ export default function MemberReportPage() {
 
   // 機能チェック
   useEffect(() => {
-    if (features && !features.report) {
+    if (!featuresLoading && features && !features.report) {
       router.push('/member/feature-disabled');
       return;
     }
-  }, [features, router]);
+  }, [features, featuresLoading, router]);
 
   useEffect(() => {
     const loadData = async () => {

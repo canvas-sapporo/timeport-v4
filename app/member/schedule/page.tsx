@@ -48,7 +48,7 @@ export default function MemberSchedulePage() {
   const router = useRouter();
 
   // 機能チェック
-  const { features } = useCompanyFeatures(user?.company_id);
+  const { features, isLoading: featuresLoading } = useCompanyFeatures(user?.company_id);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -107,11 +107,11 @@ export default function MemberSchedulePage() {
 
   // 機能チェック
   useEffect(() => {
-    if (features && !features.schedule) {
+    if (!featuresLoading && features && !features.schedule) {
       router.push('/member/feature-disabled');
       return;
     }
-  }, [features, router]);
+  }, [features, featuresLoading, router]);
 
   // 日ビューが選択された時に当日の日付にリセット
   useEffect(() => {

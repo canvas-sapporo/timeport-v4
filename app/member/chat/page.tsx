@@ -126,6 +126,14 @@ export default function MemberChatPage() {
 
   const { features, isLoading: featuresLoading, error } = useCompanyFeatures(user?.company_id);
 
+  // 機能チェック
+  useEffect(() => {
+    if (!featuresLoading && features && !features.chat) {
+      router.push('/member/feature-disabled');
+      return;
+    }
+  }, [features, featuresLoading, router]);
+
   console.log('useCompanyFeatures呼び出し後:', {
     features,
     isLoading: featuresLoading,
@@ -238,7 +246,7 @@ export default function MemberChatPage() {
   useEffect(() => {
     console.log('機能フラグチェック:', {
       features,
-      chatEnabled: features.chat,
+      chatEnabled: features?.chat,
       isLoading: featuresLoading,
       error,
     });
@@ -249,7 +257,7 @@ export default function MemberChatPage() {
       return;
     }
 
-    if (!features.chat) {
+    if (!features?.chat) {
       console.log('チャット機能が無効です。リダイレクトします。');
       router.push('/member/feature-disabled');
       return;
