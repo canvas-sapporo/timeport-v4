@@ -28,6 +28,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { getAllCompanyFeatures, toggleFeature } from '@/lib/actions/system-admin/features';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
+import { clearFeatureCache, triggerFeatureUpdate } from '@/hooks/use-company-features';
 
 import CompanyCreateDialog from './CompanyCreateDialog';
 import CompanyEditDialog from './CompanyEditDialog';
@@ -130,6 +131,12 @@ export default function CompanyListTable({
             [featureCode]: enabled,
           },
         }));
+
+        // 少し遅延してからキャッシュをクリアして機能更新イベントを発火
+        setTimeout(() => {
+          clearFeatureCache(companyId);
+          triggerFeatureUpdate(companyId);
+        }, 1000); // 1秒遅延
 
         toast({
           title: '成功',

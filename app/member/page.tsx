@@ -12,11 +12,13 @@ import {
   LogOut,
   Coffee,
   Loader2,
+  MessageSquare,
 } from 'lucide-react';
 import Link from 'next/link';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
+import { useCompanyFeatures } from '@/hooks/use-company-features';
 import { formatDateTime, formatTime } from '@/lib/utils';
 import StatsCard from '@/components/ui/stats-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +44,9 @@ export default function MemberDashboard() {
   const router = useRouter();
   const { toast } = useToast();
   const { requests, notifications } = useData();
+
+  // 機能チェック
+  const { features } = useCompanyFeatures(user?.company_id);
 
   // 状態管理
   const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
@@ -828,6 +833,40 @@ export default function MemberDashboard() {
         users={[]}
         groups={[]}
       />
+
+      {/* 機能無効化メッセージ */}
+      {!features.chat && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center text-gray-500">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2" />
+              <p>チャット機能は現在無効化されています</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!features.report && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center text-gray-500">
+              <FileText className="w-8 h-8 mx-auto mb-2" />
+              <p>レポート機能は現在無効化されています</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!features.schedule && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center text-gray-500">
+              <Calendar className="w-8 h-8 mx-auto mb-2" />
+              <p>スケジュール機能は現在無効化されています</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/contexts/auth-context';
+import { useCompanyFeatures } from '@/hooks/use-company-features';
 // import GlobalLoading from '@/components/ui/global-loading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,9 @@ export default function MemberSchedulePage() {
   // const { user, isLoading } = useAuth();
   const { user } = useAuth();
   const router = useRouter();
+
+  // 機能チェック
+  const { features } = useCompanyFeatures(user?.company_id);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -100,6 +104,14 @@ export default function MemberSchedulePage() {
 
     loadData();
   }, [user]);
+
+  // 機能チェック
+  useEffect(() => {
+    if (features && !features.schedule) {
+      router.push('/member/feature-disabled');
+      return;
+    }
+  }, [features, router]);
 
   // 日ビューが選択された時に当日の日付にリセット
   useEffect(() => {

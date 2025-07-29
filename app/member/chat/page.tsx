@@ -210,6 +210,14 @@ export default function MemberChatPage() {
     }
   }, [user, router]);
 
+  // 機能チェック
+  useEffect(() => {
+    if (features && !features.chat) {
+      router.push('/member/feature-disabled');
+      return;
+    }
+  }, [features, router]);
+
   // チャット送信キー設定を読み込み
   useEffect(() => {
     const loadChatSettings = async () => {

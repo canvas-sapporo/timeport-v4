@@ -6,6 +6,7 @@ import { FileText, Plus, Eye, Edit, Send, Trash2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 import { useAuth } from '@/contexts/auth-context';
+import { useCompanyFeatures } from '@/hooks/use-company-features';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +55,9 @@ export default function MemberReportPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+
+  // 機能チェック
+  const { features } = useCompanyFeatures(user?.company_id);
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -70,6 +74,14 @@ export default function MemberReportPage() {
       return;
     }
   }, [user, router]);
+
+  // 機能チェック
+  useEffect(() => {
+    if (features && !features.report) {
+      router.push('/member/feature-disabled');
+      return;
+    }
+  }, [features, router]);
 
   useEffect(() => {
     const loadData = async () => {
