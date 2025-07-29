@@ -583,25 +583,173 @@ export default function MemberDashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">今月の統計</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <StatsCard
-              key={index}
-              title={stat.title}
-              value={stat.value}
-              change={stat.change}
-              icon={stat.icon}
-            />
-          ))}
+      {/* 統計カード - デスクトップのみ */}
+      <div className="hidden lg:grid lg:grid-cols-3 gap-4 mb-6">
+        <StatsCard
+          title="出勤日数"
+          value={`${uniqueWorkDays}日`}
+          change={workDaysChange}
+          icon={<Calendar className="w-6 h-6" />}
+        />
+        <StatsCard
+          title="残業時間"
+          value={overtimeHours}
+          change={overtimeChange}
+          icon={<Clock className="w-6 h-6" />}
+        />
+        <StatsCard
+          title="申請中"
+          value={`${pendingRequests.length}件`}
+          icon={<FileText className="w-6 h-6" />}
+        />
+      </div>
+
+      {/* モバイル用レイアウト: 打刻、打刻履歴、統計の順 */}
+      <div className="block lg:hidden space-y-6">
+        {/* Time Clock */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="w-5 h-5" />
+              <span>打刻</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <TimeDisplay />
+
+            {/* 出勤ボタン - 新しいセッションを開始できる場合のみ表示 */}
+            {/* canStartNewSession: 出勤していない OR 退勤済み */}
+            {canStartNewSession && (
+              <Button
+                onClick={() => {
+                  console.log('出勤ボタンがクリックされました');
+                  console.log('handleClockIn関数を呼び出します');
+                  handleClockIn();
+                  console.log('handleClockIn関数呼び出し完了');
+                }}
+                disabled={isLoading}
+                className={`w-full h-12 bg-green-600 hover:bg-green-700 relative overflow-hidden transition-all duration-200 ${
+                  isLoading && loadingAction === 'clockIn' ? 'animate-pulse shadow-lg' : ''
+                }`}
+              >
+                {isLoading && loadingAction === 'clockIn' ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    出勤中...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5 mr-2" />
+                    出勤
+                  </>
+                )}
+              </Button>
+            )}
+
+            {/* 退勤・休憩ボタン - 現在勤務中の場合のみ表示 */}
+            {/* isCurrentlyWorking: 出勤済み AND 退勤していない */}
+            {isCurrentlyWorking && (
+              <>
+                {!isOnBreak ? (
+                  <Button
+                    onClick={handleStartBreak}
+                    disabled={isLoading}
+                    className={`w-full h-12 bg-orange-200 hover:bg-orange-300 text-orange-800 border-orange-300 transition-all duration-200 ${
+                      isLoading && loadingAction === 'startBreak' ? 'animate-pulse shadow-lg' : ''
+                    }`}
+                  >
+                    {isLoading && loadingAction === 'startBreak' ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        休憩開始中...
+                      </>
+                    ) : (
+                      <>
+                        <Coffee className="w-5 h-5 mr-2" />
+                        休憩開始
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleEndBreak}
+                    disabled={isLoading}
+                    className={`w-full h-12 bg-orange-200 hover:bg-orange-300 text-orange-800 border-orange-300 transition-all duration-200 ${
+                      isLoading && loadingAction === 'endBreak' ? 'animate-pulse shadow-lg' : ''
+                    }`}
+                  >
+                    {isLoading && loadingAction === 'endBreak' ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        休憩終了中...
+                      </>
+                    ) : (
+                      <>
+                        <Coffee className="w-5 h-5 mr-2" />
+                        休憩終了
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {/* 退勤ボタン - 休憩中でも退勤可能 */}
+                <Button
+                  onClick={handleClockOut}
+                  disabled={isLoading}
+                  className={`w-full h-12 bg-red-600 hover:bg-red-700 transition-all duration-200 ${
+                    isLoading && loadingAction === 'clockOut' ? 'animate-pulse shadow-lg' : ''
+                  }`}
+                >
+                  {isLoading && loadingAction === 'clockOut' ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      退勤中...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="w-5 h-5 mr-2" />
+                      退勤
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Clock History */}
+        <ClockHistory
+          userId={user.id}
+          todayAttendance={todayAttendance}
+          attendanceRecords={attendanceRecords}
+          onRefresh={() => fetchAttendanceData(user.id)}
+          onCsvExport={() => setCsvExportOpen(true)}
+        />
+
+        {/* 統計カード - モバイル用 */}
+        <div className="grid grid-cols-1 gap-4">
+          <StatsCard
+            title="出勤日数"
+            value={`${uniqueWorkDays}日`}
+            change={workDaysChange}
+            icon={<Calendar className="w-6 h-6" />}
+          />
+          <StatsCard
+            title="残業時間"
+            value={overtimeHours}
+            change={overtimeChange}
+            icon={<Clock className="w-6 h-6" />}
+          />
+          <StatsCard
+            title="申請中"
+            value={`${pendingRequests.length}件`}
+            icon={<FileText className="w-6 h-6" />}
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* デスクトップ用レイアウト: 従来通りの2カラム */}
+      <div className="hidden lg:grid lg:grid-cols-2 gap-6">
         {/* Time Clock */}
         <Card>
           <CardHeader>
