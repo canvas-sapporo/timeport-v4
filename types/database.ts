@@ -129,6 +129,7 @@ export interface Attendance extends BaseEntity {
   late_minutes: number;
   early_leave_minutes: number;
   status: 'normal' | 'late' | 'early_leave' | 'absent';
+  attendance_status_id?: UUID;
   auto_calculated: boolean;
   description?: string;
   approved_by?: UUID;

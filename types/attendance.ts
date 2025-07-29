@@ -15,9 +15,10 @@ import type { BaseEntity, UUID, DateString, TimeString, Timestamp } from './comm
  * - normal: 正常出勤
  * - late: 遅刻
  * - early_leave: 早退
+ * - late_early_leave: 遅刻・早退
  * - absent: 欠勤
  */
-export type AttendanceStatus = 'normal' | 'late' | 'early_leave' | 'absent';
+export type AttendanceStatus = 'normal' | 'late' | 'early_leave' | 'late_early_leave' | 'absent';
 
 /**
  * 勤怠ステータスエンティティ
@@ -142,6 +143,8 @@ export interface Attendance extends BaseEntity {
   early_leave_minutes: number;
   /** ステータス */
   status: 'normal' | 'late' | 'early_leave' | 'absent';
+  /** 勤怠ステータスID（attendance_statusesテーブルへの参照） */
+  attendance_status_id?: UUID;
   /** 自動計算フラグ */
   auto_calculated: boolean;
   /** 備考 */

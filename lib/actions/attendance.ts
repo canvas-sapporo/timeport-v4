@@ -1730,6 +1730,64 @@ export const getWorkTypes = async (): Promise<{ id: string; name: string }[]> =>
   }
 };
 
+export const getWorkTypeDetail = async (workTypeId: string): Promise<{
+  id: string;
+  name: string;
+  code?: string;
+  work_start_time: string;
+  work_end_time: string;
+  break_duration_minutes: number;
+  is_flexible: boolean;
+  flex_start_time?: string;
+  flex_end_time?: string;
+  core_start_time?: string;
+  core_end_time?: string;
+  overtime_threshold_minutes: number;
+  late_threshold_minutes: number;
+  description?: string;
+}> => {
+  try {
+    console.log('getWorkTypeDetail 開始:', workTypeId);
+
+    const { data: workType, error } = await supabaseAdmin
+      .from('work_types')
+      .select(`
+        id,
+        name,
+        code,
+        work_start_time,
+        work_end_time,
+        break_duration_minutes,
+        is_flexible,
+        flex_start_time,
+        flex_end_time,
+        core_start_time,
+        core_end_time,
+        overtime_threshold_minutes,
+        late_threshold_minutes,
+        description
+      `)
+      .eq('id', workTypeId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error) {
+      console.error('勤務形態詳細取得エラー:', error);
+      throw error;
+    }
+
+    if (!workType) {
+      throw new Error('勤務形態が見つかりません');
+    }
+
+    console.log('getWorkTypeDetail 取得成功:', workType.name);
+    return workType;
+  } catch (error) {
+    console.error('getWorkTypeDetail エラー:', error);
+    throw error;
+  }
+};
+
 /**
  * 勤怠記録の時刻を編集（データ複製による履歴管理）
  */
