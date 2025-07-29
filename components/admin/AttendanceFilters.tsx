@@ -27,6 +27,7 @@ interface AdminAttendanceFiltersProps {
   users: { id: string; name: string; code?: string }[];
   groups: { id: string; name: string; code?: string }[];
   isLoading?: boolean;
+  onResetFilters?: () => void;
 }
 
 export default function AdminAttendanceFilters({
@@ -37,6 +38,7 @@ export default function AdminAttendanceFilters({
   users,
   groups,
   isLoading = false,
+  onResetFilters,
 }: AdminAttendanceFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -101,15 +103,19 @@ export default function AdminAttendanceFilters({
   };
 
   const clearFilters = () => {
-    onFiltersChange({
-      dateRange: { startDate: null, endDate: null },
-      status: [],
-      hasOvertime: null,
-      workTypeId: null,
-      approvalStatus: null,
-      userId: null,
-      groupId: null,
-    });
+    if (onResetFilters) {
+      onResetFilters();
+    } else {
+      onFiltersChange({
+        dateRange: { startDate: null, endDate: null },
+        status: [],
+        hasOvertime: null,
+        workTypeId: null,
+        approvalStatus: null,
+        userId: null,
+        groupId: null,
+      });
+    }
   };
 
   // アクティブなフィルター数を計算

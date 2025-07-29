@@ -14,6 +14,7 @@ import {
   Eye,
   Plus,
   Trash2,
+  X,
 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -57,7 +58,13 @@ export default function AdminAttendancePage() {
   const router = useRouter();
   const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('attendance-filters-month');
+      return saved || new Date().toISOString().slice(0, 7);
+    }
+    return new Date().toISOString().slice(0, 7);
+  });
   const [selectedDescription, setSelectedDescription] = useState<string | null>(null);
   const [isDescriptionDialogOpen, setIsDescriptionDialogOpen] = useState(false);
   const [selectedBreakDetails, setSelectedBreakDetails] = useState<Attendance | null>(null);
@@ -73,14 +80,26 @@ export default function AdminAttendancePage() {
   const [selectedAttendanceId, setSelectedAttendanceId] = useState<string | null>(null);
 
   // フィルター状態
-  const [filters, setFilters] = useState<AttendanceFilters>({
-    dateRange: { startDate: null, endDate: null },
-    status: [],
-    hasOvertime: null,
-    workTypeId: null,
-    approvalStatus: null,
-    userId: null,
-    groupId: null,
+  const [filters, setFilters] = useState<AttendanceFilters>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('attendance-filters');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (error) {
+          console.error('保存されたフィルター設定の解析に失敗:', error);
+        }
+      }
+    }
+    return {
+      dateRange: { startDate: null, endDate: null },
+      status: [],
+      hasOvertime: null,
+      workTypeId: null,
+      approvalStatus: null,
+      userId: null,
+      groupId: null,
+    };
   });
 
   // ユーザーとグループデータ
@@ -94,22 +113,34 @@ export default function AdminAttendancePage() {
   const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
 
   // 表示項目の設定
-  const [visibleColumns, setVisibleColumns] = useState({
-    employee: true,
-    date: true,
-    clockIn: true,
-    clockOut: true,
-    workTime: true,
-    overtime: true,
-    status: true,
-    notes: true,
-    break: false,
-    workType: false,
-    late: false,
-    earlyLeave: false,
-    approval: false,
-    approver: false,
-    updatedAt: false,
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('attendance-visible-columns');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (error) {
+          console.error('保存された表示項目設定の解析に失敗:', error);
+        }
+      }
+    }
+    return {
+      employee: true,
+      date: true,
+      clockIn: true,
+      clockOut: true,
+      workTime: true,
+      overtime: true,
+      status: true,
+      notes: true,
+      break: false,
+      workType: false,
+      late: false,
+      earlyLeave: false,
+      approval: false,
+      approver: false,
+      updatedAt: false,
+    };
   });
 
   // フィルタリング関数
@@ -166,6 +197,42 @@ export default function AdminAttendancePage() {
       return true;
     });
   };
+
+  // フィルター設定を保存する関数
+  const saveFilters = (newFilters: AttendanceFilters) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('attendance-filters', JSON.stringify(newFilters));
+    }
+  };
+
+  // 月設定を保存する関数
+  const saveMonth = (newMonth: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('attendance-filters-month', newMonth);
+    }
+  };
+
+  // 表示項目設定を保存する関数
+  const saveVisibleColumns = (newColumns: typeof visibleColumns) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('attendance-visible-columns', JSON.stringify(newColumns));
+    }
+  };
+
+  // フィルター設定が変更されたときに保存
+  useEffect(() => {
+    saveFilters(filters);
+  }, [filters]);
+
+  // 月設定が変更されたときに保存
+  useEffect(() => {
+    saveMonth(selectedMonth);
+  }, [selectedMonth]);
+
+  // 表示項目設定が変更されたときに保存
+  useEffect(() => {
+    saveVisibleColumns(visibleColumns);
+  }, [visibleColumns]);
 
   // ユーザーとグループデータ取得
   useEffect(() => {
@@ -501,14 +568,14 @@ export default function AdminAttendancePage() {
   };
 
   const handleColumnToggle = (columnKey: keyof typeof visibleColumns) => {
-    setVisibleColumns((prev) => ({
+    setVisibleColumns((prev: typeof visibleColumns) => ({
       ...prev,
       [columnKey]: !prev[columnKey],
     }));
   };
 
   const handleResetColumns = () => {
-    setVisibleColumns({
+    const defaultColumns = {
       employee: true,
       date: true,
       clockIn: true,
@@ -524,7 +591,24 @@ export default function AdminAttendancePage() {
       approval: false,
       approver: false,
       updatedAt: false,
-    });
+    };
+    setVisibleColumns(defaultColumns);
+    saveVisibleColumns(defaultColumns);
+  };
+
+  // フィルターをリセットする関数
+  const handleResetFilters = () => {
+    const defaultFilters: AttendanceFilters = {
+      dateRange: { startDate: null, endDate: null },
+      status: [],
+      hasOvertime: null,
+      workTypeId: null,
+      approvalStatus: null,
+      userId: null,
+      groupId: null,
+    };
+    setFilters(defaultFilters);
+    saveFilters(defaultFilters);
   };
 
   // 操作ボタンのハンドラー
@@ -685,6 +769,10 @@ export default function AdminAttendancePage() {
           <p className="text-gray-600">全メンバーの勤怠記録を管理できます</p>
         </div>
         <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={handleResetFilters}>
+            <X className="w-4 h-4 mr-2" />
+            フィルターリセット
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setIsColumnSettingsDialogOpen(true)}>
             <Settings className="w-4 h-4 mr-2" />
             表示項目
@@ -818,6 +906,7 @@ export default function AdminAttendancePage() {
             users={users}
             groups={groups}
             isLoading={isLoadingUsers || isLoadingGroups}
+            onResetFilters={handleResetFilters}
           />
 
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto table-scrollbar">
