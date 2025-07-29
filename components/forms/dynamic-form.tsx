@@ -20,6 +20,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import ClockRecordsInput from './clock-records-input';
 
 interface DynamicFormProps {
   requestType: RequestForm;
@@ -173,6 +174,35 @@ const DynamicFormField = ({
               id={field.name}
             />
             <Label htmlFor={field.name}>{field.label}</Label>
+          </div>
+        );
+
+      case 'object':
+        // オブジェクトタイプの処理
+        if (
+          field.metadata &&
+          typeof field.metadata === 'object' &&
+          'object_type' in field.metadata
+        ) {
+          const metadata = field.metadata as { object_type: string; field_type?: string };
+
+          if (metadata.object_type === 'attendance' && metadata.field_type === 'clock_records') {
+            return (
+              <ClockRecordsInput
+                value={value || []}
+                onChange={(newValue) => setValue(field.name, newValue)}
+                error={error?.message}
+                disabled={false}
+              />
+            );
+          }
+        }
+        return (
+          <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
+            オブジェクトタイプ:{' '}
+            {field.metadata && typeof field.metadata === 'object' && 'object_type' in field.metadata
+              ? (field.metadata as { object_type: string }).object_type
+              : 'unknown'}
           </div>
         );
 

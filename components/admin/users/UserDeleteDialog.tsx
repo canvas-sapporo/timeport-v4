@@ -85,7 +85,7 @@ export default function UserDeleteDialog({ user, onSuccess }: UserDeleteDialogPr
           <div className="rounded-lg border p-4">
             <h4 className="font-medium">削除対象ユーザー</h4>
             <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-              <p>メンバー番号: {user.code}</p>
+              <p>コード: {user.code}</p>
               <p>
                 氏名: {user.family_name} {user.first_name}
               </p>

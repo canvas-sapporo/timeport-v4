@@ -45,7 +45,7 @@ import type { UUID } from '@/types/common';
 
 // バリデーションスキーマ
 const updateUserSchema = z.object({
-  code: z.string().min(1, 'メンバー番号は必須です'),
+  code: z.string().min(1, '個人コードは必須です'),
   family_name: z.string().min(1, '姓は必須です'),
   first_name: z.string().min(1, '名は必須です'),
   family_name_kana: z.string().min(1, '姓（カナ）は必須です'),
@@ -255,7 +255,7 @@ export default function UserEditDialog({
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>メンバー番号 *</FormLabel>
+                    <FormLabel>個人コード *</FormLabel>
                     <FormControl>
                       <Input placeholder="A001" {...field} />
                     </FormControl>

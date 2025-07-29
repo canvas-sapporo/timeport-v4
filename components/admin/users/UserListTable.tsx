@@ -167,7 +167,7 @@ export default function UserListTable({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="名前、カナ、メール、メンバー番号、電話番号で検索"
+                placeholder="名前、カナ、メール、個人コード、電話番号で検索"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -230,7 +230,7 @@ export default function UserListTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>メンバー番号</TableHead>
+                <TableHead>個人コード</TableHead>
                 <TableHead>氏名</TableHead>
                 <TableHead>メールアドレス</TableHead>
                 <TableHead>所属グループ</TableHead>

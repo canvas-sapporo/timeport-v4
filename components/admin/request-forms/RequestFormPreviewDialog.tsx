@@ -32,11 +32,7 @@ export default function RequestFormPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-4xl max-h-[90vh] overflow-y-auto dialog-scrollbar"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>申請フォームプレビュー: {requestForm.name}</DialogTitle>
           <DialogDescription>

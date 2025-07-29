@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './auth-context';
 
 import { Attendance, ClockBreakRecord } from '@/types/attendance';
 import { Request, RequestForm } from '@/types/request';
@@ -9,6 +10,7 @@ import { Notification } from '@/types/system';
 import { Group } from '@/types/groups';
 import { users, requests, notifications, groups, generateAttendanceRecords } from '@/lib/mock';
 import { getRequestForms } from '@/lib/actions/admin/request-forms';
+import { getRequests } from '@/lib/actions/requests';
 import * as provider from '@/lib/provider';
 
 interface DataContextType {
@@ -28,6 +30,7 @@ interface DataContextType {
   clockOut: (userId: string, time: string) => void;
   startBreak: (userId: string, time: string) => void;
   endBreak: (userId: string, time: string) => void;
+  refreshRequests: () => Promise<void>;
   // 後方互換性のため
   departments: Group[];
   workplaces: Group[];
@@ -37,9 +40,24 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
-  const [requestsState, setRequests] = useState<Request[]>(requests);
+  const [requestsState, setRequests] = useState<Request[]>([]);
   const [notificationsState, setNotifications] = useState<Notification[]>(notifications);
   const [requestFormsState, setRequestForms] = useState<RequestForm[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // AuthContextからユーザー情報を取得
+  const { user } = useAuth();
+
+  // ユーザーIDが変更されたときにcurrentUserIdを更新
+  useEffect(() => {
+    if (user?.id) {
+      console.log('DataProvider: ユーザーID更新:', user.id);
+      setCurrentUserId(user.id);
+    } else {
+      console.log('DataProvider: ユーザーIDクリア');
+      setCurrentUserId(null);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     // Generate attendance records for all users
@@ -51,17 +69,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setAttendanceRecords(allRecords);
   }, []);
 
-  // 申請フォームを取得（管理者ページでのみ実行）
+  // 申請フォームを取得（全ページで実行）
   useEffect(() => {
     const fetchRequestForms = async () => {
-      // 現在のパスを確認
-      const pathname = window.location.pathname;
-
-      // 管理者ページでのみ実行
-      if (!pathname.startsWith('/admin') && !pathname.startsWith('/system-admin')) {
-        return;
-      }
-
       try {
         const result = await getRequestForms();
         if (result.success && result.data) {
@@ -76,6 +86,39 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     fetchRequestForms();
   }, []);
+
+  // 申請データを取得（全ページで実行）
+  useEffect(() => {
+    console.log('DataProvider: fetchRequests useEffect 開始');
+
+    const fetchRequests = async () => {
+      console.log('DataProvider: fetchRequests 関数開始');
+      try {
+        console.log('DataProvider: getRequests 呼び出し前');
+        const result = await getRequests(currentUserId || undefined);
+        console.log('DataProvider: getRequests 結果:', result);
+
+        if (result.success && result.data) {
+          console.log('DataProvider: 申請データ設定:', result.data);
+          setRequests(result.data);
+        } else {
+          console.error('申請データ取得失敗:', result.error);
+        }
+      } catch (error) {
+        console.error('申請データ取得エラー:', error);
+        console.error('エラーの詳細:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          error: error,
+        });
+      }
+    };
+
+    // currentUserIdが設定されている場合のみ実行
+    if (currentUserId) {
+      fetchRequests();
+    }
+  }, [currentUserId]);
 
   const updateAttendance = (record: Attendance) => {
     setAttendanceRecords((prev) => {
@@ -98,6 +141,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('data-context createRequest: エラー', error);
       throw error;
+    }
+  };
+
+  const refreshRequests = async () => {
+    console.log('data-context refreshRequests: 開始');
+    try {
+      const result = await getRequests(currentUserId || undefined);
+      console.log('data-context refreshRequests: 結果:', result);
+
+      if (result.success && result.data) {
+        console.log('data-context refreshRequests: 申請データ更新:', result.data);
+        setRequests(result.data);
+      } else {
+        console.error('申請データ再取得失敗:', result.error);
+      }
+    } catch (error) {
+      console.error('申請データ再取得エラー:', error);
     }
   };
 
@@ -235,6 +295,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         clockOut,
         startBreak,
         endBreak,
+        refreshRequests,
       }}
     >
       {children}

@@ -1,6 +1,6 @@
 'use server';
 
-import { createServerClient, supabase } from '@/lib/supabase';
+import { createAdminClient, supabase } from '@/lib/supabase';
 import { AppError, withErrorHandling } from '@/lib/utils/error-handling';
 
 // ================================
@@ -34,7 +34,7 @@ export const getCompanyFeatures = async (
   companyId: string
 ): Promise<{ success: true; data: CompanyFeatures } | { success: false; error: AppError }> => {
   return withErrorHandling(async () => {
-    const supabase = createServerClient();
+    const supabase = createAdminClient();
 
     const { data: features, error } = await supabase
       .from('features')
@@ -84,7 +84,7 @@ export const getAllCompanyFeatures = async (): Promise<
   { success: true; data: CompanyFeatures[] } | { success: false; error: AppError }
 > => {
   return withErrorHandling(async () => {
-    const supabase = createServerClient();
+    const supabase = createAdminClient();
 
     // まず企業一覧を取得
     const { data: companies, error: companiesError } = await supabase
@@ -150,7 +150,7 @@ export const toggleFeature = async (
   request: FeatureToggleRequest
 ): Promise<{ success: true; data: any } | { success: false; error: AppError }> => {
   return withErrorHandling(async () => {
-    const supabase = createServerClient();
+    const supabase = createAdminClient();
 
     const { data: feature, error } = await supabase
       .from('features')
@@ -177,7 +177,7 @@ export const updateCompanyFeatures = async (
   features: { chat: boolean; report: boolean; schedule: boolean }
 ): Promise<{ success: true; data: any[] } | { success: false; error: AppError }> => {
   return withErrorHandling(async () => {
-    const supabase = createServerClient();
+    const supabase = createAdminClient();
 
     // トランザクション的に更新
     const updates = [
@@ -221,7 +221,7 @@ export const createCompanyFeatures = async (
   companyId: string
 ): Promise<{ success: true; data: any[] } | { success: false; error: AppError }> => {
   return withErrorHandling(async () => {
-    const supabase = createServerClient();
+    const supabase = createAdminClient();
 
     const defaultFeatures = [
       {
@@ -269,7 +269,7 @@ export const isFeatureEnabled = async (
   featureCode: string
 ): Promise<{ success: true; data: boolean } | { success: false; error: AppError }> => {
   return withErrorHandling(async () => {
-    const supabase = createServerClient();
+    const supabase = createAdminClient();
 
     const { data: feature, error } = await supabase
       .from('features')
@@ -300,7 +300,7 @@ export const getCompanyFeatureStatus = async (
     console.log('getCompanyFeatureStatus 開始: companyId =', companyId);
 
     try {
-      const supabase = createServerClient();
+      const supabase = createAdminClient();
       console.log('createServerClient 成功');
 
       const { data: features, error } = await supabase

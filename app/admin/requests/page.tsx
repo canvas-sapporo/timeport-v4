@@ -6,6 +6,7 @@ import { FileText, Check, X, Eye, FormInput, Plus, Edit, Trash2, Loader2 } from 
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +29,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRequestForms, deleteRequestForm } from '@/lib/actions/admin/request-forms';
+import { getAdminRequests } from '@/lib/actions/requests';
 import type { RequestForm } from '@/types/request';
 import RequestFormEditDialog from '@/components/admin/request-forms/RequestFormEditDialog';
 import RequestFormCreateDialog from '@/components/admin/request-forms/RequestFormCreateDialog';
@@ -55,7 +57,10 @@ import {
 export default function AdminRequestsPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { requests, users, updateRequest } = useData();
+  const { users, updateRequest } = useData();
+  const { toast } = useToast();
+  const [requests, setRequests] = useState<any[]>([]);
+  const [isRequestsLoading, setIsRequestsLoading] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [activeTab, setActiveTab] = useState('requests');
@@ -91,12 +96,36 @@ export default function AdminRequestsPage() {
     }
   };
 
+  // 管理者用申請データ取得関数
+  const fetchAdminRequests = async () => {
+    setIsRequestsLoading(true);
+    try {
+      const result = await getAdminRequests();
+      if (result.success && result.data) {
+        setRequests(result.data);
+      } else {
+        console.error('管理者申請データ取得失敗:', result.error);
+      }
+    } catch (error) {
+      console.error('管理者申請データ取得エラー:', error);
+    } finally {
+      setIsRequestsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       router.push('/login');
       return;
     }
   }, [user, router]);
+
+  // 管理者用申請データを取得
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      fetchAdminRequests();
+    }
+  }, [user]);
 
   // 申請フォームタブがアクティブになったときにデータを取得
   useEffect(() => {
@@ -124,17 +153,20 @@ export default function AdminRequestsPage() {
     setRejectionReason('');
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary">承認待ち</Badge>;
-      case 'approved':
-        return <Badge variant="default">承認済み</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">却下</Badge>;
-      default:
-        return <Badge variant="outline">-</Badge>;
-    }
+  const getStatusBadge = (status: any) => {
+    if (!status) return <Badge variant="outline">-</Badge>;
+
+    // statusesオブジェクトから情報を取得
+    const statusName = status.name || '不明';
+    const statusColor = status.color || '#6B7280';
+
+    let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'outline';
+
+    if (status.code === 'pending') variant = 'secondary';
+    else if (status.code === 'approved') variant = 'default';
+    else if (status.code === 'rejected') variant = 'destructive';
+
+    return <Badge variant={variant}>{statusName}</Badge>;
   };
 
   const formatDate = (date?: string) =>
@@ -253,23 +285,7 @@ export default function AdminRequestsPage() {
                                 ? formatDate(request.start_date)
                                 : '-'}
                         </TableCell>
-                        <TableCell>
-                          <Select
-                            value={request.status_id ?? 'pending'}
-                            onValueChange={(value) => {
-                              updateRequest(request.id, { status_id: value });
-                            }}
-                          >
-                            <SelectTrigger className="w-28">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">未承認</SelectItem>
-                              <SelectItem value="approved">承認</SelectItem>
-                              <SelectItem value="rejected">却下</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
+                        <TableCell>{getStatusBadge(request.statuses)}</TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <Button
@@ -374,7 +390,11 @@ export default function AdminRequestsPage() {
                       <TableRow key={form.id}>
                         <TableCell className="font-medium">{form.name}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{form.code}</Badge>
+                          {form.code ? (
+                            <Badge variant="outline">{form.code}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell className="max-w-xs truncate">{form.description}</TableCell>
                         <TableCell>{form.form_config.length}項目</TableCell>
@@ -486,16 +506,28 @@ export default function AdminRequestsPage() {
 
                     if (result.success) {
                       console.log('削除成功');
+                      toast({
+                        title: '申請フォームを削除しました',
+                        description: `${deleteTargetForm.name}が正常に削除されました`,
+                      });
                       setDeleteDialogOpen(false);
                       setDeleteTargetForm(null);
                       fetchRequestForms();
                     } else {
                       console.error('削除失敗:', result.error);
-                      alert(`削除に失敗しました: ${result.error}`);
+                      toast({
+                        title: 'エラー',
+                        description: result.error || '申請フォームの削除に失敗しました',
+                        variant: 'destructive',
+                      });
                     }
                   } catch (error) {
                     console.error('削除処理エラー:', error);
-                    alert(`削除処理でエラーが発生しました: ${error}`);
+                    toast({
+                      title: 'エラー',
+                      description: '申請フォームの削除中にエラーが発生しました',
+                      variant: 'destructive',
+                    });
                   }
                 }
               }}

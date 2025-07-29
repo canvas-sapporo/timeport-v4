@@ -277,10 +277,10 @@ export const deleteGroup = async (
  * グループ一覧取得
  */
 export const getGroups = async (
-  companyId: string,
+  companyId?: string,
   params: GroupSearchParams = {}
 ): Promise<{ success: true; data: GroupListResponse } | { success: false; error: AppError }> => {
-  console.log('getGroups called with params:', params);
+  console.log('getGroups called with companyId:', companyId, 'params:', params);
 
   return withErrorHandling(async () => {
     const { page = 1, limit = 10, search = '' } = params;
@@ -289,8 +289,12 @@ export const getGroups = async (
     let query = supabaseAdmin
       .from('groups')
       .select('*', { count: 'exact' })
-      .eq('company_id', companyId)
       .is('deleted_at', null);
+
+    // companyIdが指定されている場合のみフィルタリング
+    if (companyId) {
+      query = query.eq('company_id', companyId);
+    }
 
     // 検索条件
     if (search) {

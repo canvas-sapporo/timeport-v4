@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Plus, Eye, Edit, Send } from 'lucide-react';
+import { FileText, Plus, Eye, Edit, Send, Trash2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,18 +28,41 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getReports, getReportTemplates, createReport } from '@/lib/mock';
-import { Report, ReportTemplate, FormField } from '@/types/report';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { getReports, createReport, submitReport, deleteReport } from '@/lib/actions/reports';
+import {
+  getAvailableReportTemplates,
+  getReportTemplateForMember,
+} from '@/lib/actions/report-templates';
+import type { ReportListItem, ReportTemplate, ReportFieldConfig } from '@/types/report';
+
+// Markdownエディタを動的インポート
+const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
 
 export default function MemberReportPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [report, setReport] = useState<Report[]>([]);
+  const { toast } = useToast();
+  const [reports, setReports] = useState<ReportListItem[]>([]);
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
-  const [formData, setFormData] = useState<Record<string, unknown>>({});
-  // const [isDataLoading, setIsDataLoading] = useState(true);
+  const [formData, setFormData] = useState<Record<string, string | number | boolean | string[]>>(
+    {}
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user || (user.role !== 'member' && user.role !== 'admin')) {
@@ -51,77 +75,196 @@ export default function MemberReportPage() {
     const loadData = async () => {
       if (user) {
         try {
-          const [reportsData, templatesData] = await Promise.all([
-            // getReport(user.id),
-            getReports('user3'),
-            getReportTemplates(),
+          setIsLoading(true);
+          const [reportsResult, templatesResult] = await Promise.all([
+            getReports(),
+            getAvailableReportTemplates(),
           ]);
-          setReport(reportsData);
-          setTemplates(templatesData);
+
+          if (reportsResult.success && reportsResult.data) {
+            setReports(reportsResult.data);
+          }
+
+          if (templatesResult.success && templatesResult.data) {
+            setTemplates(templatesResult.data);
+          }
         } catch (error) {
           console.error('Error loading data:', error);
+          toast({
+            title: 'エラー',
+            description: 'データの読み込みに失敗しました',
+            variant: 'destructive',
+          });
+        } finally {
+          setIsLoading(false);
         }
       }
     };
 
     loadData();
-  }, [user]);
+  }, [user, toast]);
 
-  const handleTemplateSelect = (template: ReportTemplate) => {
-    setSelectedTemplate(template);
-    const initialData: Record<string, unknown> = {};
-    template.form_fields.forEach((field) => {
-      initialData[field.name] = '';
-    });
-    setFormData(initialData);
-    setIsCreateOpen(true);
-  };
-
-  const handleCreateReport = async () => {
-    if (!selectedTemplate) return;
-
+  const handleTemplateSelect = async (template: ReportTemplate) => {
     try {
-      const result = await createReport(selectedTemplate.id, formData);
-      if (result.success) {
-        setReport((prev) => [...prev, result.data]);
-        setIsCreateOpen(false);
-        setSelectedTemplate(null);
-        setFormData({});
+      // テンプレートの詳細を取得
+      const result = await getReportTemplateForMember(template.id);
+      if (result.success && result.data) {
+        setSelectedTemplate(result.data);
+        const initialData: Record<string, string | number | boolean | string[]> = {};
+        result.data.form_config.forEach((field) => {
+          if (field.default_value !== undefined) {
+            initialData[field.id] = field.default_value;
+          } else {
+            switch (field.type) {
+              case 'textarea':
+              case 'text':
+              case 'email':
+              case 'phone':
+              case 'url':
+                initialData[field.id] = '';
+                break;
+              case 'number':
+                initialData[field.id] = 0;
+                break;
+              case 'checkbox':
+                initialData[field.id] = false;
+                break;
+              case 'select':
+              case 'radio':
+                initialData[field.id] = '';
+                break;
+              case 'file':
+                initialData[field.id] = [];
+                break;
+              default:
+                initialData[field.id] = '';
+            }
+          }
+        });
+        setFormData(initialData);
+        setIsCreateOpen(true);
       }
     } catch (error) {
-      console.error('Error creating report:', error);
+      console.error('Error loading template:', error);
+      toast({
+        title: 'エラー',
+        description: 'テンプレートの読み込みに失敗しました',
+        variant: 'destructive',
+      });
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const colors = {
-      draft: 'bg-gray-500',
-      submitted: 'bg-blue-500',
-      reviewed: 'bg-green-500',
-    };
-    const labels = {
-      draft: '下書き',
-      submitted: '提出済み',
-      reviewed: '確認済み',
-    };
-    return (
-      <Badge className={`${colors[status as keyof typeof colors]} text-white`}>
-        {labels[status as keyof typeof labels]}
-      </Badge>
-    );
+  const handleCreateReport = async (action: 'draft' | 'submit') => {
+    if (!selectedTemplate) return;
+
+    try {
+      setIsSubmitting(true);
+      const formDataObj = new FormData();
+      formDataObj.append('template_id', selectedTemplate.id as string);
+      formDataObj.append('title', `レポート - ${new Date().toLocaleDateString('ja-JP')}`);
+      formDataObj.append('content', JSON.stringify(formData));
+      formDataObj.append('report_date', new Date().toISOString().split('T')[0] || '');
+
+      const result = await createReport(formDataObj);
+      if (result.success && result.data) {
+        if (action === 'submit') {
+          // 提出する場合は、作成後に提出APIを呼び出す
+          const submitResult = await submitReport(result.data.id);
+          if (submitResult.success) {
+            toast({
+              title: '成功',
+              description: 'レポートを提出しました',
+            });
+          }
+        } else {
+          toast({
+            title: '成功',
+            description: 'レポートを下書き保存しました',
+          });
+        }
+
+        // レポート一覧を再読み込み
+        const reportsResult = await getReports();
+        if (reportsResult.success && reportsResult.data) {
+          setReports(reportsResult.data);
+        }
+
+        setIsCreateOpen(false);
+        setSelectedTemplate(null);
+        setFormData({});
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.error || 'レポートの作成に失敗しました',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error creating report:', error);
+      toast({
+        title: 'エラー',
+        description: 'レポートの作成に失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const renderFormField = (field: FormField) => {
-    const value = (formData[field.name] as string) || '';
+  const handleDeleteReport = async (reportId: string) => {
+    try {
+      const result = await deleteReport(reportId);
+      if (result.success) {
+        toast({
+          title: '成功',
+          description: 'レポートを削除しました',
+        });
+        // レポート一覧を再読み込み
+        const reportsResult = await getReports();
+        if (reportsResult.success && reportsResult.data) {
+          setReports(reportsResult.data);
+        }
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.error || 'レポートの削除に失敗しました',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      toast({
+        title: 'エラー',
+        description: 'レポートの削除に失敗しました',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const renderFormField = (field: ReportFieldConfig) => {
+    const value = formData[field.id];
 
     switch (field.type) {
       case 'textarea':
+        if (field.options?.markdown) {
+          return (
+            <div data-color-mode="light">
+              <MDEditor
+                value={String(value || '')}
+                onChange={(val) => setFormData((prev) => ({ ...prev, [field.id]: val || '' }))}
+                placeholder={field.placeholder}
+                preview={field.options.preview ? 'live' : 'edit'}
+                height={field.options.rows ? field.options.rows * 20 : 200}
+              />
+            </div>
+          );
+        }
         return (
           <Textarea
-            value={value}
-            onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            value={String(value || '')}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))}
             placeholder={field.placeholder}
-            rows={4}
+            rows={field.options?.rows || 4}
             required={field.required}
           />
         );
@@ -129,20 +272,23 @@ export default function MemberReportPage() {
         return (
           <Input
             type="number"
-            value={value}
-            onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            value={String(value || '')}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, [field.id]: Number(e.target.value) }))
+            }
             placeholder={field.placeholder}
             required={field.required}
-            min={field.validation?.min}
-            max={field.validation?.max}
+            min={field.options?.min}
+            max={field.options?.max}
+            step={field.options?.step}
           />
         );
       case 'date':
         return (
           <Input
             type="date"
-            value={value}
-            onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            value={String(value || '')}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))}
             required={field.required}
           />
         );
@@ -150,42 +296,137 @@ export default function MemberReportPage() {
         return (
           <Input
             type="time"
-            value={value}
-            onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            value={String(value || '')}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+            required={field.required}
+          />
+        );
+      case 'datetime':
+        return (
+          <Input
+            type="datetime-local"
+            value={String(value || '')}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+            required={field.required}
+          />
+        );
+      case 'email':
+        return (
+          <Input
+            type="email"
+            value={String(value || '')}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+            placeholder={field.placeholder}
+            required={field.required}
+          />
+        );
+      case 'phone':
+        return (
+          <Input
+            type="tel"
+            value={String(value || '')}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+            placeholder={field.placeholder}
+            required={field.required}
+          />
+        );
+      case 'url':
+        return (
+          <Input
+            type="url"
+            value={String(value || '')}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+            placeholder={field.placeholder}
             required={field.required}
           />
         );
       case 'select':
         return (
           <Select
-            value={value}
-            onValueChange={(val) => setFormData((prev) => ({ ...prev, [field.name]: val }))}
+            value={String(value || '')}
+            onValueChange={(val) => setFormData((prev) => ({ ...prev, [field.id]: val }))}
           >
             <SelectTrigger>
               <SelectValue placeholder={field.placeholder} />
             </SelectTrigger>
             <SelectContent>
-              {field.options?.map((option: string) => (
-                <SelectItem key={option} value={option}>
-                  {option}
+              {field.options?.options?.map((option) => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         );
+      case 'radio':
+        return (
+          <div className="space-y-2">
+            {field.options?.options?.map((option) => (
+              <div key={option.value} className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id={`${field.id}-${option.value}`}
+                  name={field.id}
+                  value={String(option.value)}
+                  checked={String(value) === String(option.value)}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+                  required={field.required}
+                />
+                <Label htmlFor={`${field.id}-${option.value}`}>{option.label}</Label>
+              </div>
+            ))}
+          </div>
+        );
+      case 'checkbox':
+        return (
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id={field.id}
+              checked={Boolean(value)}
+              onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.checked }))}
+              required={field.required}
+            />
+            <Label htmlFor={field.id}>{field.label}</Label>
+          </div>
+        );
+      case 'file':
+        return (
+          <Input
+            type="file"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              setFormData((prev) => ({ ...prev, [field.id]: files.map((f) => f.name) }));
+            }}
+            multiple={field.options?.multiple}
+            accept={field.options?.accept}
+            required={field.required}
+          />
+        );
+      case 'hidden':
+        return null;
       default:
         return (
           <Input
-            value={value}
-            onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            value={String(value || '')}
+            onChange={(e) => setFormData((prev) => ({ ...prev, [field.id]: e.target.value }))}
             placeholder={field.placeholder}
             required={field.required}
-            minLength={field.validation?.minLength}
-            maxLength={field.validation?.maxLength}
           />
         );
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -214,11 +455,11 @@ export default function MemberReportPage() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-medium">{template.name}</h3>
-                  <Badge variant="outline">{template.template_type}</Badge>
+                  <Badge variant="outline">{template.group_id ? 'グループ限定' : '全員'}</Badge>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">{template.description}</p>
                 <div className="text-xs text-gray-500">
-                  {template.form_fields.length}項目のフォーム
+                  {template.form_config.length}項目のフォーム
                 </div>
               </div>
             ))}
@@ -248,46 +489,73 @@ export default function MemberReportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {report.map((report) => {
-                const template = templates.find((t) => t.id === report.template_id);
-                return (
-                  <TableRow key={report.id}>
-                    <TableCell className="font-medium">{report.title}</TableCell>
-                    <TableCell>{template?.name}</TableCell>
-                    <TableCell>
-                      {new Date(report.report_date).toLocaleDateString('ja-JP')}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(report.status)}</TableCell>
-                    <TableCell>
-                      {report.submitted_at
-                        ? new Date(report.submitted_at).toLocaleDateString('ja-JP')
-                        : '-'}
-                    </TableCell>
-                    <TableCell>{report.reviewed_by ? '確認済み' : '-'}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
+              {reports.map((report) => (
+                <TableRow key={report.id}>
+                  <TableCell className="font-medium">{report.title}</TableCell>
+                  <TableCell>{report.template_name}</TableCell>
+                  <TableCell>{new Date(report.report_date).toLocaleDateString('ja-JP')}</TableCell>
+                  <TableCell>
+                    <Badge
+                      style={{
+                        backgroundColor: report.current_status.background_color,
+                        color: report.current_status.font_color,
+                      }}
+                    >
+                      {report.current_status.display_name}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {report.submitted_at
+                      ? new Date(report.submitted_at).toLocaleDateString('ja-JP')
+                      : '-'}
+                  </TableCell>
+                  <TableCell>{report.approver_name || '-'}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Button variant="ghost" size="sm">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {report.current_status.name === 'draft' && (
                         <Button variant="ghost" size="sm">
-                          <Eye className="w-4 h-4" />
+                          <Edit className="w-4 h-4" />
                         </Button>
-                        {report.status === 'draft' && (
-                          <Button variant="ghost" size="sm">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {report.status === 'draft' && (
-                          <Button variant="ghost" size="sm">
-                            <Send className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                      )}
+                      {report.current_status.name === 'draft' && (
+                        <Button variant="ghost" size="sm">
+                          <Send className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {report.current_status.name === 'draft' && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>レポートを削除しますか？</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                この操作は取り消せません。レポートが完全に削除されます。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteReport(report.id)}>
+                                削除
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
 
-          {report.length === 0 && (
+          {reports.length === 0 && (
             <div className="text-center py-8">
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">レポートがありません</p>
@@ -299,29 +567,37 @@ export default function MemberReportPage() {
 
       {/* Create Report Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedTemplate?.name} - 新規作成</DialogTitle>
           </DialogHeader>
           {selectedTemplate && (
             <div className="space-y-4">
-              {selectedTemplate.form_fields
-                .sort((a, b) => a.order - b.order)
-                .map((field) => (
-                  <div key={field.id}>
-                    <Label htmlFor={field.name}>
-                      {field.label}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
-                    </Label>
-                    {renderFormField(field)}
-                  </div>
-                ))}
+              {selectedTemplate.form_config.map((field) => (
+                <div key={field.id}>
+                  <Label htmlFor={field.id}>
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                  </Label>
+                  {renderFormField(field)}
+                </div>
+              ))}
               <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateOpen(false)}
+                  disabled={isSubmitting}
+                >
                   キャンセル
                 </Button>
-                <Button onClick={handleCreateReport}>下書き保存</Button>
-                <Button onClick={handleCreateReport} className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => handleCreateReport('draft')} disabled={isSubmitting}>
+                  下書き保存
+                </Button>
+                <Button
+                  onClick={() => handleCreateReport('submit')}
+                  disabled={isSubmitting}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
                   提出
                 </Button>
               </div>

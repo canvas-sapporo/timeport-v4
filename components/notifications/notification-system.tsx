@@ -11,7 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -264,6 +270,9 @@ export default function NotificationSystem({ onNotificationClick }: Notification
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>通知一覧</DialogTitle>
+            <DialogDescription>
+              システムからの通知やリクエスト関連のメッセージを確認できます。
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {notifications.map((notification) => (

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
+import { Toaster } from '@/components/ui/toaster';
 
 import Sidebar from './sidebar';
 import Header from './header';
@@ -90,6 +91,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </main>
         </div>
       </div>
+      <Toaster />
     </>
   );
 }

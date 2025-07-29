@@ -189,7 +189,7 @@ export default function CompanyCreateDialog({
         return (
           <>
             <Label htmlFor="admin-code">
-              管理者メンバー番号<span className="text-red-500 ml-1">*</span>
+              管理者コード<span className="text-red-500 ml-1">*</span>
             </Label>
             <Input
               id="admin-code"

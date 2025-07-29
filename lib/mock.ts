@@ -1088,58 +1088,50 @@ export const mockTodos: Todo[] = [
 // レポートテンプレートモックデータ
 // ================================
 
-export const mockReportTemplates: ReportTemplate[] = [
+export const mockReportTemplates = [
   {
     id: 'template1',
     company_id: 'company1',
     name: '日報テンプレート',
     description: '毎日の業務報告用',
-    template_type: 'daily',
-    form_fields: [
+    form_config: [
       {
         id: 'today_tasks',
-        name: 'today_tasks',
         type: 'textarea',
         label: '今日の作業内容',
         placeholder: '本日実施した作業を記入してください',
         required: true,
-        validation: { minLength: 10, maxLength: 1000 },
-        order: 1,
       },
       {
         id: 'tomorrow_tasks',
-        name: 'tomorrow_tasks',
         type: 'textarea',
         label: '明日の予定',
         placeholder: '明日の作業予定を記入してください',
         required: true,
-        validation: { minLength: 5, maxLength: 500 },
-        order: 2,
       },
       {
         id: 'issues',
-        name: 'issues',
         type: 'textarea',
         label: '課題・問題点',
         placeholder: '課題や問題点があれば記入してください',
         required: false,
-        validation: { maxLength: 500 },
-        order: 3,
       },
       {
         id: 'work_hours',
-        name: 'work_hours',
         type: 'number',
         label: '作業時間',
         placeholder: '8.0',
         required: true,
-        validation: { min: 0, max: 24 },
-        order: 4,
       },
     ],
+    approval_flow: {
+      type: 'static',
+      approvers: []
+    },
+    status_flow: {
+      transitions: []
+    },
     is_active: true,
-    display_order: 1,
-    created_by: 'user2',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
   },
@@ -1196,40 +1188,37 @@ export const mockReportTemplates: ReportTemplate[] = [
 export const mockReports: Report[] = [
   {
     id: 'report1',
+    company_id: 'company1',
     template_id: 'template1',
     user_id: 'user3',
     title: '2024年1月20日 日報',
     report_date: '2024-01-20',
-    form_data: {
+    content: {
       today_tasks: 'ユーザー画面のレスポンシブ対応を実施。スマートフォン表示の調整を完了。',
       tomorrow_tasks: 'API仕様書の確認とバックエンドチームとの打ち合わせ。',
       issues: '特になし',
       work_hours: 8.0,
     },
-    status: 'submitted',
+    current_status_id: 'status1',
     submitted_at: '2024-01-20T18:00:00Z',
-    is_read: false,
     created_at: '2024-01-20T17:30:00Z',
     updated_at: '2024-01-20T18:00:00Z',
   },
   {
     id: 'report2',
+    company_id: 'company1',
     template_id: 'template1',
     user_id: 'user3',
     title: '2024年1月19日 日報',
     report_date: '2024-01-19',
-    form_data: {
+    content: {
       today_tasks: 'コードレビューの実施。新機能のテスト実行。',
       tomorrow_tasks: 'ユーザー画面のデザイン修正作業。',
       issues: 'テスト環境でのパフォーマンス問題を確認',
       work_hours: 7.5,
     },
-    status: 'reviewed',
+    current_status_id: 'status2',
     submitted_at: '2024-01-19T18:00:00Z',
-    reviewed_by: 'user2',
-    reviewed_at: '2024-01-20T09:00:00Z',
-    reviewer_comment: '良い進捗です。パフォーマンス問題は来週対応しましょう。',
-    is_read: true,
     created_at: '2024-01-19T17:30:00Z',
     updated_at: '2024-01-20T09:00:00Z',
   },
@@ -1239,7 +1228,7 @@ export const mockReports: Report[] = [
 // チャットモックデータ
 // ================================
 
-export const mockChats: Chat[] = [
+export const mockChats = [
   {
     id: 'chat1',
     name: 'フロントエンドチーム',
@@ -1262,7 +1251,7 @@ export const mockChats: Chat[] = [
   },
 ];
 
-export const mockChatUsers: ChatUser[] = [
+export const mockChatUsers = [
   {
     id: 'chatuser1',
     chat_id: 'chat1',
@@ -1316,8 +1305,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: 'user4',
     message_type: 'text',
     content: 'お疲れ様です！今日の進捗はいかがですか？',
-    emoji_reactions: {},
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T15:30:00Z',
     updated_at: '2024-01-21T15:30:00Z',
   },
@@ -1327,8 +1315,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
     message_type: 'text',
     content: 'お疲れ様です！レスポンシブ対応が完了しました👍',
-    emoji_reactions: { '👍': ['user4'], '🎉': ['user4'] },
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T15:25:00Z',
     updated_at: '2024-01-21T15:25:00Z',
   },
@@ -1338,8 +1325,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
     message_type: 'text',
     content: 'ありがとうございます！次はバックエンドのAPI連携を進めます',
-    emoji_reactions: {},
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T15:20:00Z',
     updated_at: '2024-01-21T15:20:00Z',
   },
@@ -1349,8 +1335,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: 'user4',
     message_type: 'text',
     content: '素晴らしいですね！進捗を共有していただきありがとうございます',
-    emoji_reactions: { '👍': ['user3'] },
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T15:15:00Z',
     updated_at: '2024-01-21T15:15:00Z',
   },
@@ -1360,8 +1345,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
     message_type: 'text',
     content: '明日のデモの準備も進めています',
-    emoji_reactions: {},
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T15:10:00Z',
     updated_at: '2024-01-21T15:10:00Z',
   },
@@ -1371,8 +1355,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: 'user2',
     message_type: 'text',
     content: '明日の会議の件でご相談があります',
-    emoji_reactions: {},
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T14:20:00Z',
     updated_at: '2024-01-21T14:20:00Z',
   },
@@ -1382,8 +1365,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
     message_type: 'text',
     content: 'はい、どのような件でしょうか？',
-    emoji_reactions: {},
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T14:15:00Z',
     updated_at: '2024-01-21T14:15:00Z',
   },
@@ -1393,8 +1375,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: 'user2',
     message_type: 'text',
     content: '新しいプロジェクトの立ち上げについてです',
-    emoji_reactions: {},
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T14:10:00Z',
     updated_at: '2024-01-21T14:10:00Z',
   },
@@ -1404,8 +1385,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076',
     message_type: 'text',
     content: '承知いたしました。詳細を教えていただけますか？',
-    emoji_reactions: {},
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T14:05:00Z',
     updated_at: '2024-01-21T14:05:00Z',
   },
@@ -1415,8 +1395,7 @@ export const mockChatMessages: ChatMessage[] = [
     user_id: 'user2',
     message_type: 'text',
     content: '明日の会議で詳しく説明させていただきます',
-    emoji_reactions: { '👍': ['user3'] },
-    is_edited: false,
+    attachments: [],
     created_at: '2024-01-21T14:00:00Z',
     updated_at: '2024-01-21T14:00:00Z',
   },
@@ -1507,17 +1486,13 @@ export const createReport = async (templateId: string, data: Record<string, unkn
 
   const newReport: Report = {
     id: `report_${Date.now()}`,
+    company_id: 'company1',
     template_id: templateId,
     user_id: 'user3', // Current user
     title: `${template.name} - ${new Date().toLocaleDateString('ja-JP')}`,
     report_date: new Date().toISOString().split('T')[0],
-    form_data: data,
-    status: 'draft',
-    is_read: false,
-    submitted_at: undefined,
-    reviewed_by: undefined,
-    reviewed_at: undefined,
-    reviewer_comment: undefined,
+    content: data as Record<string, string | number | boolean | string[]>,
+    current_status_id: 'status1',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -1533,8 +1508,7 @@ export const sendMessage = async (chatId: string, content: string, userId?: stri
     user_id: userId || '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076', // Current user
     message_type: 'text',
     content,
-    emoji_reactions: {},
-    is_edited: false,
+    attachments: [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

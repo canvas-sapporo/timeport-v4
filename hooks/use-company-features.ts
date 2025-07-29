@@ -15,7 +15,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5分
 
 export const useCompanyFeatures = (companyId: string | undefined) => {
   const [features, setFeatures] = useState<{ [key: string]: boolean }>(DEFAULT_FEATURES);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // 初期状態をtrueに変更
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

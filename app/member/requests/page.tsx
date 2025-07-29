@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Plus, Eye } from 'lucide-react';
+import { FileText, Plus, Eye, Send, Edit } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
+import { updateRequestStatus } from '@/lib/actions/requests';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,17 +37,26 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import ClockRecordsInput from '@/components/forms/clock-records-input';
+import { RequestEditDialog } from '@/components/member/RequestEditDialog';
 
 export default function MemberRequestsPage() {
   const { user } = useAuth();
-  const { requests, requestForms, createRequest } = useData();
+  const { requests, requestForms, createRequest, users, refreshRequests } = useData();
   const router = useRouter();
   const [selectedRequestType, setSelectedRequestType] = useState<string>('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [requestToSubmit, setRequestToSubmit] = useState<any>(null);
+  const [requestToEdit, setRequestToEdit] = useState<any>(null);
   const [formData, setFormData] = useState<
     Record<string, string | number | boolean | Date | string[]>
   >({});
   const [filter, setFilter] = useState('all');
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!user || (user.role !== 'member' && user.role !== 'admin')) {
@@ -58,24 +69,61 @@ export default function MemberRequestsPage() {
     return null;
   }
 
-  const userRequests = requests.filter((r) => r.user_id === user.id);
+  console.log('MemberRequestsPage: デバッグ情報', {
+    user: user,
+    userId: user?.id,
+    requestsCount: requests.length,
+    requests: requests,
+    requestFormsCount: requestForms.length,
+  });
+
+  const userRequests = requests.filter((r) => {
+    console.log('フィルタリング比較:', {
+      requestUserId: r.user_id,
+      currentUserId: user.id,
+      isMatch: r.user_id === user.id,
+      requestUserIdType: typeof r.user_id,
+      currentUserIdType: typeof user.id,
+    });
+    return r.user_id === user.id;
+  });
+
+  console.log('フィルタリング結果:', {
+    userRequestsCount: userRequests.length,
+    userRequests: userRequests,
+  });
+
   const activeRequestForms = requestForms.filter((rf) => rf.is_active && !rf.deleted_at);
 
-  const getStatusBadge = (statusId: string) => {
-    // ステータスIDからステータスを判定（簡易版）
-    if (statusId === 'pending' || statusId === '1') {
-      return <Badge variant="secondary">承認待ち</Badge>;
-    } else if (statusId === 'approved' || statusId === '2') {
-      return <Badge variant="default">承認済み</Badge>;
-    } else if (statusId === 'rejected' || statusId === '3') {
-      return <Badge variant="destructive">却下</Badge>;
-    } else {
+  const getStatusBadge = (status: any) => {
+    if (!status) {
       return <Badge variant="outline">-</Badge>;
     }
+
+    // ステータスオブジェクトから情報を取得
+    const statusName = status.name || '不明';
+    const statusColor = status.color || '#6B7280';
+
+    // 色に基づいてBadgeのvariantを決定
+    let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'outline';
+
+    if (statusColor === '#10B981') {
+      variant = 'default'; // 緑色（承認済み）
+    } else if (statusColor === '#F59E0B') {
+      variant = 'secondary'; // 黄色（承認待ち）
+    } else if (statusColor === '#EF4444') {
+      variant = 'destructive'; // 赤色（却下）
+    }
+
+    return (
+      <Badge variant={variant} style={{ backgroundColor: statusColor, color: 'white' }}>
+        {statusName}
+      </Badge>
+    );
   };
 
-  const handleCreateRequest = async () => {
-    console.log('handleCreateRequest: 開始');
+  const handleCreateRequest = async (statusCode: 'draft' | 'pending' = 'draft') => {
+    console.log('handleCreateRequest: 開始', { statusCode });
 
     if (!selectedRequestType) {
       console.log('handleCreateRequest: selectedRequestTypeが未選択');
@@ -92,14 +140,56 @@ export default function MemberRequestsPage() {
 
     console.log('handleCreateRequest: requestForm:', requestForm);
 
+    // 指定されたステータスを取得
+    let statusId = null;
+    try {
+      const { getDefaultStatus } = await import('@/lib/supabase-provider');
+      statusId = await getDefaultStatus('request', statusCode);
+    } catch (error) {
+      console.warn('ステータスの取得に失敗:', error);
+    }
+
+    // 日付データのバリデーションとクリーンアップ
+    const validateAndCleanDate = (dateValue: any): string | null => {
+      if (!dateValue) return null;
+
+      const dateStr = String(dateValue);
+
+      // 空文字列や無効な文字列の場合はnullを返す
+      if (!dateStr.trim() || dateStr === 'aaa' || dateStr === 'undefined' || dateStr === 'null') {
+        return null;
+      }
+
+      // 日付として有効かチェック
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+
+      // YYYY-MM-DD形式で返す
+      return date.toISOString().split('T')[0];
+    };
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // フォームデータから無効な日付値を除去
+    const cleanedFormData = { ...formData };
+    Object.keys(cleanedFormData).forEach((key) => {
+      const value = cleanedFormData[key];
+      if (value === 'aaa' || value === 'undefined' || value === 'null' || value === '') {
+        delete cleanedFormData[key];
+      }
+    });
+
     const requestData = {
       user_id: user.id,
       request_form_id: selectedRequestType,
       title: requestForm.name,
-      form_data: formData,
-      target_date: (formData.target_date as string) || new Date().toISOString().split('T')[0],
-      start_date: (formData.start_date as string) || new Date().toISOString().split('T')[0],
-      end_date: (formData.end_date as string) || new Date().toISOString().split('T')[0],
+      form_data: cleanedFormData,
+      target_date: validateAndCleanDate(formData.target_date) || today,
+      start_date: validateAndCleanDate(formData.start_date) || today,
+      end_date: validateAndCleanDate(formData.end_date) || today,
+      status_id: statusId,
       submission_comment: '',
       current_approval_step: 1,
       comments: [],
@@ -111,8 +201,29 @@ export default function MemberRequestsPage() {
     try {
       await createRequest(requestData);
       console.log('handleCreateRequest: 申請作成成功');
+
+      // ステータスに応じたトーストメッセージを表示
+      if (statusCode === 'draft') {
+        toast({
+          title: '下書き保存完了',
+          description: '申請が下書きとして保存されました。',
+        });
+      } else if (statusCode === 'pending') {
+        toast({
+          title: '申請完了',
+          description: '申請が正常に送信されました。',
+        });
+      }
+
+      // 申請履歴を最新データに更新
+      await refreshRequests();
     } catch (error) {
       console.error('handleCreateRequest: 申請作成エラー:', error);
+      toast({
+        title: 'エラー',
+        description: '申請の作成に失敗しました。',
+        variant: 'destructive',
+      });
     }
 
     setIsCreateDialogOpen(false);
@@ -120,10 +231,64 @@ export default function MemberRequestsPage() {
     setFormData({});
   };
 
+  const handleViewRequest = (request: any) => {
+    console.log('handleViewRequest: 開始', request);
+    setSelectedRequest(request);
+    setIsDetailDialogOpen(true);
+  };
+
+  const handleSubmitRequest = (request: any) => {
+    console.log('handleSubmitRequest: 開始', request);
+    setRequestToSubmit(request);
+    setIsSubmitDialogOpen(true);
+  };
+
+  const handleEditRequest = (request: any) => {
+    console.log('handleEditRequest: 開始', request);
+    setRequestToEdit(request);
+    setIsEditDialogOpen(true);
+  };
+
+  const confirmSubmitRequest = async () => {
+    if (!requestToSubmit) return;
+
+    console.log('confirmSubmitRequest: 開始', requestToSubmit);
+
+    try {
+      // 「承認待ち」ステータスコードを渡す
+      const result = await updateRequestStatus(requestToSubmit.id, 'pending');
+
+      if (result.success) {
+        toast({
+          title: '申請完了',
+          description: '申請が正常に送信されました。',
+        });
+        setIsSubmitDialogOpen(false);
+        setRequestToSubmit(null);
+        // 申請履歴を最新データに更新
+        await refreshRequests();
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.error || '申請の送信に失敗しました。',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('confirmSubmitRequest: エラー', error);
+      toast({
+        title: 'エラー',
+        description: '申請の送信に失敗しました。',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const renderFormField = (field: any) => {
     const value = formData[field.name];
     const inputValue = formData[field.name];
     const selectValue = formData[field.name];
+
     switch (field.type) {
       case 'textarea':
         return (
@@ -151,6 +316,36 @@ export default function MemberRequestsPage() {
               ))}
             </SelectContent>
           </Select>
+        );
+      case 'object':
+        // オブジェクトタイプの処理
+        if (
+          field.metadata &&
+          typeof field.metadata === 'object' &&
+          'object_type' in field.metadata
+        ) {
+          const metadata = field.metadata as { object_type: string; field_type?: string };
+
+          if (metadata.object_type === 'attendance' && metadata.field_type === 'clock_records') {
+            return (
+              <ClockRecordsInput
+                value={(value as any) || []}
+                onChange={(newValue) =>
+                  setFormData((prev) => ({ ...prev, [field.name]: newValue }))
+                }
+                error={undefined}
+                disabled={false}
+              />
+            );
+          }
+        }
+        return (
+          <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
+            オブジェクトタイプ:{' '}
+            {field.metadata && typeof field.metadata === 'object' && 'object_type' in field.metadata
+              ? (field.metadata as { object_type: string }).object_type
+              : 'unknown'}
+          </div>
         );
       default:
         return (
@@ -225,7 +420,193 @@ export default function MemberRequestsPage() {
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   キャンセル
                 </Button>
-                <Button onClick={handleCreateRequest} disabled={!selectedRequestType}>
+                <Button
+                  variant="outline"
+                  onClick={() => handleCreateRequest('draft')}
+                  disabled={!selectedRequestType}
+                >
+                  下書き
+                </Button>
+                <Button
+                  onClick={() => handleCreateRequest('pending')}
+                  disabled={!selectedRequestType}
+                >
+                  申請する
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* 申請詳細ダイアログ */}
+        <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto dialog-scrollbar">
+            <DialogHeader>
+              <DialogTitle>申請詳細</DialogTitle>
+              <DialogDescription>申請の詳細情報を確認できます。</DialogDescription>
+            </DialogHeader>
+            {selectedRequest && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="font-medium">申請種別</Label>
+                    <p className="text-sm text-gray-600">{selectedRequest.title}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">申請日</Label>
+                    <p className="text-sm text-gray-600">
+                      {selectedRequest.created_at
+                        ? new Date(selectedRequest.created_at).toLocaleDateString('ja-JP')
+                        : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">対象日</Label>
+                    <p className="text-sm text-gray-600">
+                      {selectedRequest.target_date
+                        ? new Date(selectedRequest.target_date).toLocaleDateString('ja-JP')
+                        : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">ステータス</Label>
+                    <div className="mt-1">{getStatusBadge(selectedRequest.statuses)}</div>
+                  </div>
+                </div>
+
+                {selectedRequest.form_data && Object.keys(selectedRequest.form_data).length > 0 && (
+                  <div>
+                    <Label className="font-medium">申請内容</Label>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                      <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {JSON.stringify(selectedRequest.form_data, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {selectedRequest.submission_comment && (
+                  <div>
+                    <Label className="font-medium">申請コメント</Label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {selectedRequest.submission_comment}
+                    </p>
+                  </div>
+                )}
+
+                {/* 承認フロー表示 */}
+                <div>
+                  <Label className="font-medium">承認フロー</Label>
+                  <div className="mt-2 space-y-2">
+                    {(() => {
+                      const requestForm = requestForms.find(
+                        (f) => f.id === selectedRequest.request_form_id
+                      );
+                      if (
+                        !requestForm ||
+                        !requestForm.approval_flow ||
+                        requestForm.approval_flow.length === 0
+                      ) {
+                        return (
+                          <div className="p-3 bg-gray-50 rounded-md">
+                            <p className="text-sm text-gray-600">承認フローが設定されていません</p>
+                          </div>
+                        );
+                      }
+
+                      return requestForm.approval_flow.map((step, index) => {
+                        const isCurrentStep = step.step === selectedRequest.current_approval_step;
+                        const isCompleted = selectedRequest.current_approval_step > step.step;
+                        const isPending = selectedRequest.current_approval_step === step.step;
+
+                        return (
+                          <div
+                            key={step.step}
+                            className={`p-3 rounded-md border ${
+                              isCurrentStep
+                                ? 'bg-blue-50 border-blue-200'
+                                : isCompleted
+                                  ? 'bg-green-50 border-green-200'
+                                  : 'bg-gray-50 border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <div
+                                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                                    isCurrentStep
+                                      ? 'bg-blue-500 text-white'
+                                      : isCompleted
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-gray-300 text-gray-600'
+                                  }`}
+                                >
+                                  {step.step}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {(() => {
+                                      const approver = users.find((u) => u.id === step.approver_id);
+                                      return approver
+                                        ? `${approver.family_name} ${approver.first_name}`
+                                        : `承認者 ${step.step}`;
+                                    })()}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {(() => {
+                                      const approver = users.find((u) => u.id === step.approver_id);
+                                      return approver?.role === 'admin' ? '管理者' : '承認者';
+                                    })()}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-xs">
+                                {isCurrentStep && (
+                                  <span className="text-blue-600 font-medium">承認待ち</span>
+                                )}
+                                {isCompleted && (
+                                  <span className="text-green-600 font-medium">承認済み</span>
+                                )}
+                                {!isCurrentStep && !isCompleted && (
+                                  <span className="text-gray-500">未処理</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
+                    閉じる
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* 申請確認ダイアログ */}
+        <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>申請確認</DialogTitle>
+              <DialogDescription>{requestToSubmit?.title}を申請しますか？</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-3 bg-blue-50 rounded-md">
+                <p className="text-sm text-blue-700">
+                  申請を送信すると、承認者の承認を待つ状態になります。
+                </p>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
+                  キャンセル
+                </Button>
+                <Button onClick={confirmSubmitRequest} className="bg-blue-600 hover:bg-blue-700">
                   申請する
                 </Button>
               </div>
@@ -233,6 +614,20 @@ export default function MemberRequestsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* 申請編集ダイアログ */}
+      <RequestEditDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setRequestToEdit(null);
+        }}
+        request={requestToEdit}
+        requestForms={requestForms}
+        onSuccess={() => {
+          refreshRequests();
+        }}
+      />
 
       <Card>
         <CardHeader>
@@ -271,12 +666,53 @@ export default function MemberRequestsPage() {
                           ? new Date(request.start_date).toLocaleDateString('ja-JP')
                           : '-'}
                   </TableCell>
-                  <TableCell>{getStatusBadge(request.status_id || 'pending')}</TableCell>
-                  <TableCell>{'-'}</TableCell>
+                  <TableCell>{getStatusBadge((request as any).statuses)}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                    {(() => {
+                      // 承認フローから現在の承認者を取得
+                      if (
+                        (request as any).request_forms?.approval_flow &&
+                        request.current_approval_step
+                      ) {
+                        const currentStep = (request as any).request_forms.approval_flow.find(
+                          (step: any) => step.step === request.current_approval_step
+                        );
+                        if (currentStep) {
+                          // 承認者IDからユーザー情報を取得
+                          const approver = users.find((u: any) => u.id === currentStep.approver_id);
+                          if (approver) {
+                            return `${approver.family_name} ${approver.first_name}`;
+                          }
+                        }
+                      }
+                      return '-';
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleViewRequest(request)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {/* 下書き状態の場合のみ編集ボタンと申請ボタンを表示 */}
+                      {(request as any).statuses?.code === 'draft' && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditRequest(request)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSubmitRequest(request)}
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

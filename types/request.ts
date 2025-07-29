@@ -82,6 +82,88 @@ export interface RequestForm extends BaseEntity {
   is_active: boolean;
   /** 表示順序 */
   display_order: number;
+  /** オブジェクト設定（オブジェクトタイプの申請フォーム用） */
+  object_config?: ObjectMetadata;
+}
+
+/**
+ * フォームフィールドタイプ
+ */
+export type FormFieldType =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'date'
+  | 'time'
+  | 'datetime-local'
+  | 'email'
+  | 'tel'
+  | 'url'
+  | 'password'
+  | 'select'
+  | 'radio'
+  | 'checkbox'
+  | 'file'
+  | 'hidden'
+  | 'object';
+
+/**
+ * バリデーションルール
+ */
+export interface ValidationRule {
+  /** ルールタイプ */
+  type:
+    | 'required'
+    | 'minLength'
+    | 'maxLength'
+    | 'min'
+    | 'max'
+    | 'pattern'
+    | 'email'
+    | 'tel'
+    | 'url'
+    | 'custom';
+  /** ルール値 */
+  value?: string | number;
+  /** エラーメッセージ */
+  message?: string;
+  /** カスタムバリデーター */
+  validator?: string;
+}
+
+/**
+ * オブジェクトバリデーションルール
+ */
+export interface ObjectValidationRule {
+  /** ルールタイプ */
+  type: 'date_past_only' | 'clock_records_valid' | 'required_field';
+  /** エラーメッセージ */
+  message: string;
+  /** 対象フィールド */
+  target_field?: string;
+}
+
+/**
+ * オブジェクトメタデータ
+ */
+export interface ObjectMetadata {
+  /** オブジェクトタイプ */
+  object_type: 'attendance';
+  /** 編集可能フィールド */
+  editable_fields: string[];
+  /** 必須フィールド */
+  required_fields: string[];
+  /** 除外フィールド */
+  excluded_fields: string[];
+  /** オブジェクト特有のバリデーション */
+  validation_rules?: ObjectValidationRule[];
+  /** フィールド設定 */
+  field_settings?: Record<string, {
+    label: string;
+    type: string;
+    required: boolean;
+    description?: string;
+  }>;
 }
 
 /**
@@ -117,51 +199,7 @@ export interface FormFieldConfig {
   /** 計算設定 */
   calculation_config?: CalculationConfig;
   /** メタデータ */
-  metadata?: Record<string, string | number | boolean>;
-}
-
-/**
- * フォームフィールドタイプ
- */
-export type FormFieldType =
-  | 'text'
-  | 'textarea'
-  | 'number'
-  | 'date'
-  | 'time'
-  | 'datetime-local'
-  | 'email'
-  | 'tel'
-  | 'url'
-  | 'password'
-  | 'select'
-  | 'radio'
-  | 'checkbox'
-  | 'file'
-  | 'hidden';
-
-/**
- * バリデーションルール
- */
-export interface ValidationRule {
-  /** ルールタイプ */
-  type:
-    | 'required'
-    | 'minLength'
-    | 'maxLength'
-    | 'min'
-    | 'max'
-    | 'pattern'
-    | 'email'
-    | 'tel'
-    | 'url'
-    | 'custom';
-  /** ルール値 */
-  value?: string | number;
-  /** エラーメッセージ */
-  message?: string;
-  /** カスタムバリデーター */
-  validator?: string;
+  metadata?: Record<string, string | number | boolean> | ObjectMetadata;
 }
 
 /**

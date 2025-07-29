@@ -2025,11 +2025,11 @@ export const evaluateStatusLogic = async (
           console.log(`empty 結果:`, { fieldValue, expected: condition.value, result: conditionResult });
           return conditionResult;
         case 'greater_than':
-          conditionResult = fieldValue > condition.value;
+          conditionResult = fieldValue > (condition.value as number);
           console.log(`greater_than 結果:`, { fieldValue, expected: condition.value, result: conditionResult });
           return conditionResult;
         case 'less_than':
-          conditionResult = fieldValue < condition.value;
+          conditionResult = fieldValue < (condition.value as number);
           console.log(`less_than 結果:`, { fieldValue, expected: condition.value, result: conditionResult });
           return conditionResult;
         case 'equals':

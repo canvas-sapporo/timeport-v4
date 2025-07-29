@@ -34,18 +34,25 @@ export default function RequestFormDeleteDialog({
   const handleDelete = async () => {
     if (!requestForm) return;
 
+    console.log('削除処理開始:', requestForm.id);
     setIsLoading(true);
     try {
       const result = await deleteRequestForm(requestForm.id);
+      console.log('削除結果:', result);
 
       if (result.success) {
+        console.log('成功トースト呼び出し');
         toast({
           title: '申請フォームを削除しました',
           description: `${requestForm.name}が正常に削除されました`,
         });
-        onOpenChange(false);
-        onSuccess();
+        // トーストが表示されるまで少し待ってからダイアログを閉じる
+        setTimeout(() => {
+          onOpenChange(false);
+          onSuccess();
+        }, 100);
       } else {
+        console.log('エラートースト呼び出し:', result.error);
         toast({
           title: 'エラー',
           description: result.error || '申請フォームの削除に失敗しました',
@@ -54,6 +61,7 @@ export default function RequestFormDeleteDialog({
       }
     } catch (error) {
       console.error('申請フォーム削除エラー:', error);
+      console.log('例外トースト呼び出し');
       toast({
         title: 'エラー',
         description: '申請フォームの削除中にエラーが発生しました',

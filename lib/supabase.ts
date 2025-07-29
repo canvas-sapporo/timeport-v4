@@ -47,7 +47,7 @@ export const supabase = (() => {
 })();
 
 // サーバーサイド用のクライアント（シングルトン）
-let serverClient: ReturnType<typeof createClient> | null = null;
+const serverClient: ReturnType<typeof createClient> | null = null;
 
 export const createServerClient = () => {
   // サーバーサイドでのみ新しいインスタンスを作成
@@ -55,27 +55,47 @@ export const createServerClient = () => {
     throw new Error('createServerClient should only be called on the server side');
   }
 
-  if (!serverClient) {
-    // 環境変数を直接参照
-    const supabaseUrl = 'https://lftxabbornwajhxeirqt.supabase.co';
-    const serviceRoleKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxmdHhhYmJvcm53YWpoeGVpcnF0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjYzMjU3NiwiZXhwIjoyMDY4MjA4NTc2fQ.b8mUB_5F9VA4PyWNqpD_XUQRCe0A2k1i10XGiwFC8CE';
+  // 環境変数から正しいAPIキーを取得
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-    console.log('Server Actions - 環境変数確認:');
-    console.log('NEXT_PUBLIC_SUPABASE_URL: 設定済み');
-    console.log('SUPABASE_SERVICE_ROLE_KEY: 設定済み');
-
-    serverClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
-      },
-      db: {},
-    });
+  if (!supabaseUrl || !anonKey) {
+    throw new Error('Supabase環境変数が設定されていません');
   }
 
-  return serverClient;
+  return createClient(supabaseUrl, anonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+    db: {},
+  });
+};
+
+// Admin用のクライアント（Service Role Key使用）
+export const createAdminClient = () => {
+  // サーバーサイドでのみ新しいインスタンスを作成
+  if (typeof window !== 'undefined') {
+    throw new Error('createAdminClient should only be called on the server side');
+  }
+
+  // 環境変数から正しいAPIキーを取得
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase Admin環境変数が設定されていません');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+    db: {},
+  });
 };
 
 // スキーマキャッシュをリフレッシュする関数

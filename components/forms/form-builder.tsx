@@ -54,6 +54,7 @@ const FIELD_TYPES: { value: FormFieldType; label: string; icon: string }[] = [
   { value: 'checkbox', label: 'チェックボックス', icon: '☑️' },
   { value: 'file', label: 'ファイル', icon: '📎' },
   { value: 'hidden', label: '隠しフィールド', icon: '👻' },
+  { value: 'object', label: 'オブジェクト', icon: '🗂️' },
 ];
 
 const VALIDATION_TYPES = [
@@ -816,11 +817,7 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
 
       {/* 計算設定ダイアログ */}
       <Dialog open={calculationSettingsOpen} onOpenChange={setCalculationSettingsOpen}>
-        <DialogContent
-          className="max-w-lg"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-        >
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>計算設定</DialogTitle>
             <DialogDescription>フィールドの計算設定を行います。</DialogDescription>

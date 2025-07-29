@@ -75,3 +75,14 @@ export const formatTime = (time: string | Date | null | undefined): string => {
 export const formatDate = (date: string | Date | null | undefined): string => {
   return formatDateTime(date, false);
 };
+
+/**
+ * ひらがなをカタカナに変換
+ * @param text 変換する文字列
+ * @returns カタカナに変換された文字列
+ */
+export const hiraganaToKatakana = (text: string): string => {
+  return text.replace(/[\u3041-\u3096]/g, (char) => {
+    return String.fromCharCode(char.charCodeAt(0) + 0x60);
+  });
+};

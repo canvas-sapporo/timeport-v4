@@ -2,8 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { createServerClient } from '@/lib/supabase';
+import { createAdminClient, createServerClient } from '@/lib/supabase';
 import { withErrorHandling, AppError } from '@/lib/utils/error-handling';
+import { getUserCompanyId } from '@/lib/actions/user';
 import type {
   CreateUserProfileInput,
   UpdateUserProfileInput,
@@ -18,45 +19,70 @@ const REQUIRE_PASSWORD_CHANGE = process.env.NEXT_PUBLIC_REQUIRE_PASSWORD_CHANGE 
 const EMAIL_UNIQUE_PER_COMPANY = process.env.NEXT_PUBLIC_EMAIL_UNIQUE_PER_COMPANY === 'true';
 
 /**
- * 承認者選択用のユーザー一覧を取得
+ * 承認者選択用のユーザー一覧を取得（企業内のユーザーのみ）
  */
-export async function getApprovers() {
-  console.log('getApprovers: 開始');
+export async function getApprovers(userId?: string) {
+  console.log('getApprovers: 開始', { userId });
 
   try {
-    const supabase = createServerClient();
+    const supabase = createAdminClient();
 
-    // 認証情報を取得
+    // ユーザーIDが渡されていない場合は認証情報を取得
+    let currentUserId = userId;
+    if (!currentUserId) {
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
     console.log('認証結果:', { user, userError });
 
-    if (userError) {
-      console.log('認証エラー、service_role_keyで試行');
-      // 認証エラーの場合はservice_role_keyを使用
-      const supabaseAdmin = createServerClient();
-
-      const { data, error } = await supabaseAdmin
-        .from('user_profiles')
-        .select('id, first_name, family_name, email, role')
-        .eq('is_active', true)
-        .order('family_name', { ascending: true });
-
-      if (error) {
-        console.error('承認者取得エラー:', error);
-        return { success: false, error: error.message };
+      if (userError || !user) {
+        console.log('認証エラー、空の配列を返す');
+        return { success: false, error: '認証エラーが発生しました', data: [] };
       }
-
-      return { success: true, data };
+      currentUserId = user.id;
     }
 
-    // 認証済みユーザーの場合
+    // ログインユーザーの企業IDを取得
+    const companyId = await getUserCompanyId(currentUserId);
+    console.log('企業ID取得結果:', { currentUserId, companyId });
+    if (!companyId) {
+      console.error('ユーザーの企業情報を取得できませんでした');
+      return { success: false, error: 'ユーザーの企業情報を取得できませんでした' };
+    }
+
+    // 同じ企業内のユーザーのみを取得（2段階クエリ）
+    // 1. 企業内のユーザーID一覧を取得
+    const { data: userIds, error: userIdsError } = await supabase
+      .from('user_groups')
+      .select(`
+        user_id,
+        groups!inner (
+          company_id
+        )
+      `)
+      .eq('groups.company_id', companyId)
+      .is('deleted_at', null);
+
+    console.log('ユーザーID取得結果:', { userIds, userIdsError });
+
+    if (userIdsError) {
+      console.error('ユーザーID取得エラー:', userIdsError);
+      return { success: false, error: userIdsError.message };
+      }
+
+    if (!userIds || userIds.length === 0) {
+      console.log('企業内にユーザーが見つかりません');
+      return { success: true, data: [] };
+    }
+
+    // 2. ユーザー詳細情報を取得
+    const userIdList = userIds.map((item: any) => item.user_id);
     const { data, error } = await supabase
       .from('user_profiles')
       .select('id, first_name, family_name, email, role')
       .eq('is_active', true)
+      .in('id', userIdList)
       .order('family_name', { ascending: true });
 
     if (error) {
@@ -79,7 +105,7 @@ export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) =
   return withErrorHandling(async () => {
     console.log('ユーザー一覧取得開始:', { companyId, params });
 
-    const supabaseAdmin = createServerClient();
+    const supabaseAdmin = createAdminClient();
 
     // 一時的に全てのユーザーを取得
     const { data: allUsers, error: allUsersError } = await supabaseAdmin
@@ -189,7 +215,7 @@ export const getUser = async (userId: UUID) => {
   return withErrorHandling(async () => {
     console.log('ユーザー詳細取得開始:', userId);
 
-    const supabaseAdmin = createServerClient();
+    const supabaseAdmin = createAdminClient();
     const { data, error } = await supabaseAdmin
       .from('user_profiles')
       .select(
@@ -233,7 +259,7 @@ export const createUser = async (companyId: UUID, input: CreateUserProfileInput)
   return withErrorHandling(async () => {
     console.log('ユーザー作成開始:', { companyId, input });
 
-    const supabaseAdmin = createServerClient();
+    const supabaseAdmin = createAdminClient();
 
     // バリデーション
     if (EMAIL_UNIQUE_PER_COMPANY) {
@@ -249,7 +275,7 @@ export const createUser = async (companyId: UUID, input: CreateUserProfileInput)
       }
     }
 
-    // メンバー番号の重複チェック
+    // 個人コードの重複チェック
     const { data: existingCode } = await supabaseAdmin
       .from('user_profiles')
       .select('id')
@@ -257,7 +283,7 @@ export const createUser = async (companyId: UUID, input: CreateUserProfileInput)
       .is('deleted_at', null);
 
     if (existingCode && existingCode.length > 0) {
-      throw new AppError('このメンバー番号は既に使用されています', 'VALIDATION_ERROR');
+      throw new AppError('この個人コードは既に使用されています', 'VALIDATION_ERROR');
     }
 
     // 1. Supabase Authでユーザー作成
@@ -339,7 +365,7 @@ export const updateUser = async (userId: UUID, input: UpdateUserProfileInput) =>
   return withErrorHandling(async () => {
     console.log('ユーザー更新開始:', { userId, input });
 
-    const supabaseAdmin = createServerClient();
+    const supabaseAdmin = createAdminClient();
 
     // 最後の管理者チェック
     if (input.role === 'member' || input.is_active === false) {
@@ -373,7 +399,7 @@ export const updateUser = async (userId: UUID, input: UpdateUserProfileInput) =>
       }
     }
 
-    // メンバー番号重複チェック
+    // 個人コード重複チェック
     if (input.code) {
       const { data: existingCode } = await supabaseAdmin
         .from('user_profiles')
@@ -383,7 +409,7 @@ export const updateUser = async (userId: UUID, input: UpdateUserProfileInput) =>
         .is('deleted_at', null);
 
       if (existingCode && existingCode.length > 0) {
-        throw new AppError('このメンバー番号は既に使用されています', 'VALIDATION_ERROR');
+        throw new AppError('この個人コードは既に使用されています', 'VALIDATION_ERROR');
       }
     }
 
@@ -451,7 +477,7 @@ export const deleteUser = async (userId: UUID) => {
   return withErrorHandling(async () => {
     console.log('ユーザー削除開始:', userId);
 
-    const supabaseAdmin = createServerClient();
+    const supabaseAdmin = createAdminClient();
 
     // ユーザーの存在確認とステータスチェック
     const { data: user, error: fetchError } = await supabaseAdmin
@@ -515,7 +541,7 @@ export const getUserStats = async (companyId: UUID) => {
   return withErrorHandling(async () => {
     console.log('ユーザー統計取得開始:', companyId);
 
-    const supabaseAdmin = createServerClient();
+    const supabaseAdmin = createAdminClient();
 
     // 企業内のユーザーを特定するために、user_groupsを通じてcompany_idを確認
     const { data: userGroupsData, error: userGroupsError } = await supabaseAdmin
@@ -572,7 +598,7 @@ export const debugDatabaseState = async (companyId: UUID) => {
   return withErrorHandling(async () => {
     console.log('=== データベース状態デバッグ開始 ===');
 
-    const supabaseAdmin = createServerClient();
+    const supabaseAdmin = createAdminClient();
 
     // 1. 全ユーザーを取得
     const { data: allUsers, error: allUsersError } = await supabaseAdmin

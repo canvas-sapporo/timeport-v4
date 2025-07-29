@@ -80,3 +80,24 @@ export type { AttendanceDetailView, RequestDetailView, UserDetailView } from './
 
 // 出席関連
 export type { Attendance, MonthlyAttendanceStats } from './attendance';
+
+// レポート関連
+export type {
+  ReportStatus,
+  ReportTemplate,
+  ReportFieldType,
+  ReportFieldConfig,
+  ReportFieldOption,
+  ApprovalFlowConfig,
+  StatusFlowConfig,
+  StatusTransition,
+  Report,
+  ReportApproval,
+  ReportAttachment,
+  CreateReportData,
+  UpdateReportData,
+  ApproveReportData,
+  ReportListItem,
+  ReportDetail,
+  ReportStatistics,
+} from './report';

@@ -25,6 +25,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 import type { ApprovalStep } from '@/types/request';
 import { getApprovers } from '@/lib/actions/admin/users';
 
@@ -45,6 +47,8 @@ export default function ApprovalFlowBuilder({
   approvalFlow,
   onApprovalFlowChange,
 }: ApprovalFlowBuilderProps) {
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedStep, setSelectedStep] = useState<ApprovalStep | null>(null);
   const [stepSettingsOpen, setStepSettingsOpen] = useState(false);
   const [approvers, setApprovers] = useState<Approver[]>([]);
@@ -53,21 +57,39 @@ export default function ApprovalFlowBuilder({
   // 承認者一覧を取得
   useEffect(() => {
     const fetchApprovers = async () => {
+      if (!user?.id) {
+        console.log('ユーザー情報が取得できません');
+        return;
+      }
+
       setIsLoadingApprovers(true);
       try {
-        const result = await getApprovers();
+        const result = await getApprovers(user.id);
         if (result.success && result.data) {
           setApprovers(result.data as Approver[]);
+        } else if (result.error) {
+          toast({
+            title: 'エラー',
+            description: result.error,
+            variant: 'destructive',
+          });
+          setApprovers([]);
         }
       } catch (error) {
         console.error('承認者取得エラー:', error);
+        toast({
+          title: 'エラー',
+          description: '承認者の取得中にエラーが発生しました',
+          variant: 'destructive',
+        });
+        setApprovers([]);
       } finally {
         setIsLoadingApprovers(false);
       }
     };
 
     fetchApprovers();
-  }, []);
+  }, [toast, user?.id]);
 
   // ステップを追加
   const addStep = useCallback(() => {
@@ -227,11 +249,7 @@ export default function ApprovalFlowBuilder({
 
       {/* ステップ設定ダイアログ */}
       <Dialog open={stepSettingsOpen} onOpenChange={setStepSettingsOpen}>
-        <DialogContent
-          className="max-w-2xl"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-        >
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>ステップ設定</DialogTitle>
             <DialogDescription>承認ステップの詳細設定を行います。</DialogDescription>
@@ -316,13 +334,11 @@ const StepSettingsForm = ({
           </SelectTrigger>
           <SelectContent>
             {isLoadingApprovers ? (
-              <SelectItem value="" disabled>
-                読み込み中...
-              </SelectItem>
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">読み込み中...</div>
             ) : approvers.length === 0 ? (
-              <SelectItem value="" disabled>
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">
                 承認者が見つかりません
-              </SelectItem>
+              </div>
             ) : (
               approvers.map((approver) => (
                 <SelectItem key={approver.id} value={approver.id}>

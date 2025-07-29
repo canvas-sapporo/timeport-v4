@@ -27,6 +27,7 @@ import type { Company } from '@/types/company';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { getAllCompanyFeatures, toggleFeature } from '@/lib/actions/system-admin/features';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 
 import CompanyCreateDialog from './CompanyCreateDialog';
 import CompanyEditDialog from './CompanyEditDialog';
@@ -56,8 +57,15 @@ export default function CompanyListTable({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
 
+  // 認証コンテキストを取得
+  const { user, isLoggingOut } = useAuth();
+
   // 企業機能データを取得
   useEffect(() => {
+    // ログアウト中またはユーザーが存在しない場合は機能取得をスキップ
+    if (isLoggingOut || !user) {
+      return;
+    }
     const fetchCompanyFeatures = async () => {
       try {
         // サーバーアクションとして呼び出し
@@ -88,10 +96,15 @@ export default function CompanyListTable({
     };
 
     fetchCompanyFeatures();
-  }, [toast]);
+  }, [toast, user, isLoggingOut]);
 
   // 機能切り替えハンドラー
   const handleFeatureToggle = async (companyId: string, featureCode: string, enabled: boolean) => {
+    // ログアウト中またはユーザーが存在しない場合は処理をスキップ
+    if (isLoggingOut || !user) {
+      return;
+    }
+
     const loadingKey = `${companyId}-${featureCode}`;
 
     // 少し遅延してからローディング状態を開始（一瞬の禁止マーク表示を防ぐ）

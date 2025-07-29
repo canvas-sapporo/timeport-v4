@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   User,
   MessageSquare,
+  ClipboardList,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -38,6 +39,12 @@ const adminMenuItems = [
   { href: '/admin', icon: Home, label: 'ダッシュボード' },
   { href: '/admin/attendance', icon: Clock, label: '勤怠管理' },
   { href: '/admin/requests', icon: FileText, label: '申請管理' },
+  {
+    href: '/admin/report-templates',
+    icon: ClipboardList,
+    label: 'レポート管理',
+    feature: 'report' as const,
+  },
   { href: '/admin/users', icon: Users, label: 'ユーザー管理' },
   { href: '/admin/group', icon: Building, label: 'グループ管理' },
   { href: '/admin/settings', icon: Settings, label: '設定' },
@@ -54,7 +61,14 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const { user, logout, isLoggingOut } = useAuth();
-  const { features, isLoading: isLoadingFeatures, error } = useCompanyFeatures(user?.company_id);
+
+  // ログアウト中またはユーザーが存在しない場合は機能取得をスキップ
+  const shouldFetchFeatures = !isLoggingOut && user && user.company_id;
+  const {
+    features,
+    isLoading: isLoadingFeatures,
+    error,
+  } = useCompanyFeatures(shouldFetchFeatures ? user.company_id : undefined);
 
   // デバッグログ
   console.log('Sidebar 機能状態:', {
@@ -63,9 +77,13 @@ export default function Sidebar() {
     features,
     isLoadingFeatures,
     error,
+    isLoggingOut,
+    shouldFetchFeatures,
   });
 
   const isFeatureEnabled = (feature: 'chat' | 'report' | 'schedule') => {
+    // ログアウト中は機能チェックをスキップ
+    if (isLoggingOut) return false;
     if (user?.role === 'system-admin') return true;
     // ローディング中は一時的に全ての機能を表示（UX向上のため）
     if (isLoadingFeatures) return true;
@@ -73,7 +91,8 @@ export default function Sidebar() {
     return features[feature] ?? false;
   };
 
-  if (!user) return null;
+  // ログアウト中またはユーザーが存在しない場合は何も表示しない
+  if (isLoggingOut || !user) return null;
 
   const getMenuItems = () => {
     // メンバー用メニュー項目を機能チェックでフィルタリング

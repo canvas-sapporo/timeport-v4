@@ -22,11 +22,7 @@
   ],
 
   // 使用するプラグインを指定
-  "plugins": [
-    "@typescript-eslint",
-    "import",
-    "prettier"
-  ],
+  "plugins": ["@typescript-eslint", "import", "prettier"],
 
   // TypeScriptのパーサーとそのオプション
   "parser": "@typescript-eslint/parser",
@@ -62,12 +58,32 @@
     ],
 
     // Prettier に違反している箇所を警告
-    "prettier/prettier": "warn",
-
-    // function() {} → const fn = () => {}
-    "prefer-arrow-callback": ["error"],
-    "func-style": ["error", "expression"]
+    "prettier/prettier": "warn"
   },
+
+  "overrides": [
+    {
+      // components, hooks, contexts, scripts ではアロー関数を強制
+      "files": [
+        "components/**/*.{ts,tsx}",
+        "hooks/**/*.{ts,tsx}",
+        "contexts/**/*.{ts,tsx}",
+        "scripts/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "prefer-arrow-callback": ["error"],
+        "func-style": ["error", "expression"]
+      }
+    },
+    {
+      // app, lib, types ではfunction宣言を許容（むしろ推奨）
+      "files": ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "types/**/*.{ts,tsx}"],
+      "rules": {
+        "prefer-arrow-callback": "off",
+        "func-style": ["error", "declaration"]
+      }
+    }
+  ],
 
   // import 解決のための設定
   "settings": {

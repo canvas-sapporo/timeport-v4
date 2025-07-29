@@ -573,3 +573,22 @@ export const getDepartments = () =>
   getGroups().then((groups: any) => groups.filter((g: any) => g.level === 2));
 export const getWorkplaces = () =>
   getGroups().then((groups: any) => groups.filter((g: any) => g.level === 1));
+
+// デフォルトステータスを取得する関数
+export const getDefaultStatus = async (category: string = 'request', code: string = 'draft') => {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data, error } = await supabase
+    .from('statuses')
+    .select('id')
+    .eq('category', category)
+    .eq('code', code)
+    .single();
+
+  if (error) {
+    console.warn('デフォルトステータスの取得に失敗:', error);
+    return null;
+  }
+
+  return data?.id;
+};

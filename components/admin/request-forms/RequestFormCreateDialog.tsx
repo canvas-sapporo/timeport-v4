@@ -29,9 +29,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { createRequestForm } from '@/lib/actions/admin/request-forms';
 import { getDefaultFormConfig, getDefaultApprovalFlow } from '@/lib/utils/request-type-defaults';
+import { getObjectTypeDefaults } from '@/lib/utils/request-type-utils';
 import FormBuilder from '@/components/forms/form-builder';
 import ApprovalFlowBuilder from '@/components/admin/request-forms/ApprovalFlowBuilder';
-import type { RequestForm, FormFieldConfig, ApprovalStep } from '@/types/request';
+import ObjectTypeSettingsDialog from '@/components/forms/object-type-settings-dialog';
+import type { RequestForm, FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/types/request';
 
 const requestTypeSchema = z.object({
   name: z.string().min(1, '申請フォーム名は必須です'),
@@ -71,6 +73,9 @@ export default function RequestFormCreateDialog({
   const [formConfig, setFormConfig] = useState<FormFieldConfig[]>([]);
   const [approvalFlow, setApprovalFlow] = useState<ApprovalStep[]>([]);
   const [activeTab, setActiveTab] = useState<'basic' | 'form' | 'approval'>('basic');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+  const [objectTypeSettingsOpen, setObjectTypeSettingsOpen] = useState(false);
+  const [objectMetadata, setObjectMetadata] = useState<ObjectMetadata | null>(null);
 
   const {
     register,
@@ -97,56 +102,126 @@ export default function RequestFormCreateDialog({
     }
   }, [watchedCategory, selectedCategory]);
 
-  // カテゴリが変更されたときにデフォルト設定を更新
+  // カテゴリが変更されたときの処理
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     setValue('category', category);
+  };
 
-    // カテゴリが選択された場合、デフォルト設定を適用
-    if (category && formConfig.length === 0) {
-      setFormConfig(getDefaultFormConfig(category));
+  // バリデーション関数
+  const validateCurrentTab = () => {
+    const errors: Record<string, string[]> = {};
+
+    if (activeTab === 'basic') {
+      const basicErrors: string[] = [];
+      if (!watch('name') || watch('name').trim() === '') {
+        basicErrors.push('申請フォーム名');
+      }
+      if (!watch('category') || watch('category') === '') {
+        basicErrors.push('カテゴリ');
+      }
+      if (basicErrors.length > 0) {
+        errors.basic = basicErrors;
+      }
+    } else if (activeTab === 'form') {
+      if (formConfig.length === 0) {
+        errors.form = ['フォーム項目を設定してください'];
+      }
+    } else if (activeTab === 'approval') {
+      if (approvalFlow.length === 0) {
+        errors.approval = ['承認フローを設定してください'];
+      } else {
+        const approvalErrors: string[] = [];
+        for (const step of approvalFlow) {
+          if (!step.name) {
+            approvalErrors.push(`ステップ${step.step}のステップ名`);
+          }
+          if (!step.approver_id) {
+            approvalErrors.push(`ステップ${step.step}の承認者`);
+          }
+        }
+        if (approvalErrors.length > 0) {
+          errors.approval = approvalErrors;
+        }
+      }
     }
-    if (category && approvalFlow.length === 0) {
-      setApprovalFlow(getDefaultApprovalFlow(category));
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // 次へボタンの処理
+  const handleNext = () => {
+    if (validateCurrentTab()) {
+      if (activeTab === 'basic') {
+        setActiveTab('form');
+      } else if (activeTab === 'form') {
+        setActiveTab('approval');
+      }
+    } else {
+      const currentErrors = validationErrors[activeTab] || [];
+      toast({
+        title: 'エラー',
+        description: `以下の項目を設定してください：${currentErrors.join('、')}`,
+        variant: 'destructive',
+      });
     }
+  };
+
+  // 戻るボタンの処理
+  const handleBack = () => {
+    if (activeTab === 'form') {
+      setActiveTab('basic');
+    } else if (activeTab === 'approval') {
+      setActiveTab('form');
+    }
+  };
+
+  // 全バリデーションOKかチェック
+  const isAllValidationOK = () => {
+    // 基本情報のバリデーション
+    if (
+      !watch('name') ||
+      watch('name').trim() === '' ||
+      !watch('category') ||
+      watch('category') === ''
+    ) {
+      return false;
+    }
+    // フォーム項目のバリデーション
+    if (formConfig.length === 0) {
+      return false;
+    }
+    // 承認フローのバリデーション
+    if (approvalFlow.length === 0) {
+      return false;
+    }
+    for (const step of approvalFlow) {
+      if (!step.name || !step.approver_id) {
+        return false;
+      }
+    }
+    return true;
   };
 
   const onSubmit = async (data: RequestTypeFormData) => {
     console.log('フォーム送信開始:', data);
     console.log('フォーム設定:', formConfig);
     console.log('承認フロー:', approvalFlow);
+    console.log('オブジェクトメタデータ:', objectMetadata);
 
-    // 承認フローのバリデーション
-    if (approvalFlow.length === 0) {
+    // 全バリデーションをチェック
+    if (!isAllValidationOK()) {
       toast({
         title: 'エラー',
-        description: '承認フローを設定してください',
+        description: 'すべての項目を正しく設定してください',
         variant: 'destructive',
       });
       return;
     }
 
-    // 承認フローの各ステップのバリデーション
-    for (const step of approvalFlow) {
-      if (!step.name || !step.approver_id) {
-        toast({
-          title: 'エラー',
-          description: `ステップ${step.step}の承認者を設定してください`,
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-
-    // フォーム項目のバリデーション
-    if (formConfig.length === 0) {
-      toast({
-        title: 'エラー',
-        description: 'フォーム項目を設定してください',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // フォーム設定をそのまま使用（field.metadataは既に正しく設定されている）
+    const finalFormConfig = [...formConfig];
 
     setIsLoading(true);
     try {
@@ -155,9 +230,14 @@ export default function RequestFormCreateDialog({
       formData.append('name', data.name);
       formData.append('description', data.description || '');
       formData.append('category', data.category);
-      formData.append('form_config', JSON.stringify(formConfig));
+      formData.append('form_config', JSON.stringify(finalFormConfig));
       formData.append('approval_flow', JSON.stringify(approvalFlow));
       formData.append('is_active', data.is_active.toString());
+
+      // オブジェクトメタデータがある場合は追加
+      if (objectMetadata) {
+        formData.append('object_config', JSON.stringify(objectMetadata));
+      }
 
       console.log('FormData作成完了');
       const result = await createRequestForm(formData);
@@ -171,6 +251,7 @@ export default function RequestFormCreateDialog({
         setSelectedCategory('');
         setFormConfig([]);
         setApprovalFlow([]);
+        setObjectMetadata(null);
         setActiveTab('basic');
         onOpenChange(false);
         onSuccess();
@@ -199,17 +280,14 @@ export default function RequestFormCreateDialog({
     setValue('category', '');
     setFormConfig([]);
     setApprovalFlow([]);
+    setObjectMetadata(null);
     setActiveTab('basic');
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-4xl max-h-[90vh] overflow-y-auto dialog-scrollbar"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>新規申請フォーム作成</DialogTitle>
           <DialogDescription>
@@ -219,7 +297,26 @@ export default function RequestFormCreateDialog({
 
         <form
           onSubmit={handleSubmit(onSubmit, (errors) => {
-            console.log('バリデーションエラー:', errors);
+            console.log('react-hook-formバリデーションエラー:', errors);
+            const errorMessages: string[] = [];
+
+            if (errors.name) {
+              errorMessages.push('申請フォーム名');
+            }
+            if (errors.category) {
+              errorMessages.push('カテゴリ');
+            }
+            if (errors.display_order) {
+              errorMessages.push('表示順序');
+            }
+
+            if (errorMessages.length > 0) {
+              toast({
+                title: 'エラー',
+                description: `以下の項目を設定してください：${errorMessages.join('、')}`,
+                variant: 'destructive',
+              });
+            }
           })}
           className="space-y-6"
         >
@@ -310,18 +407,36 @@ export default function RequestFormCreateDialog({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">フォーム項目設定</h3>
-                  {selectedCategory && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setFormConfig(getDefaultFormConfig(selectedCategory));
-                      }}
-                    >
-                      デフォルト設定を適用
-                    </Button>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {selectedCategory === 'attendance_correction' && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setObjectTypeSettingsOpen(true)}
+                      >
+                        オブジェクトタイプ設定
+                      </Button>
+                    )}
+                    {selectedCategory && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedCategory === 'attendance_correction' && objectMetadata) {
+                            const { defaultFormConfig } = getObjectTypeDefaults('attendance');
+                            // defaultFormConfigは既に正しいfield.metadataを持っているので、そのまま使用
+                            setFormConfig(defaultFormConfig);
+                          } else {
+                            setFormConfig(getDefaultFormConfig(selectedCategory));
+                          }
+                        }}
+                      >
+                        デフォルト設定を適用
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <FormBuilder formConfig={formConfig} onFormConfigChange={setFormConfig} />
               </div>
@@ -353,14 +468,54 @@ export default function RequestFormCreateDialog({
 
           {/* アクションボタン */}
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={handleCancel} disabled={isLoading}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoading}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
               キャンセル
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBack}
+              disabled={activeTab === 'basic' || isLoading}
+              className="border-gray-400 text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              戻る
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleNext}
+              disabled={activeTab === 'approval' || isLoading}
+              className="border-blue-500 text-blue-600 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              次へ
+            </Button>
+            <Button
+              type="submit"
+              disabled={!isAllValidationOK() || isLoading}
+              className={`${
+                isAllValidationOK()
+                  ? 'bg-green-600 hover:bg-green-700 text-white border-green-600'
+                  : 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed'
+              } disabled:opacity-50`}
+            >
               {isLoading ? '作成中...' : '作成'}
             </Button>
           </div>
         </form>
+
+        {/* オブジェクトタイプ設定ダイアログ */}
+        <ObjectTypeSettingsDialog
+          open={objectTypeSettingsOpen}
+          onOpenChange={setObjectTypeSettingsOpen}
+          metadata={objectMetadata}
+          onMetadataChange={setObjectMetadata}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -104,6 +104,50 @@ export default function RequestFormEditDialog({
   const onSubmit = async (data: RequestTypeFormData) => {
     if (!requestForm) return;
 
+    console.log('フォーム送信開始:', data);
+    console.log('フォーム設定:', formConfig);
+    console.log('承認フロー:', approvalFlow);
+
+    // 承認フローのバリデーション
+    if (approvalFlow.length === 0) {
+      toast({
+        title: 'エラー',
+        description: '承認フローを設定してください',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // 承認フローの各ステップのバリデーション
+    const validationErrors: string[] = [];
+    for (const step of approvalFlow) {
+      if (!step.name) {
+        validationErrors.push(`ステップ${step.step}のステップ名`);
+      }
+      if (!step.approver_id) {
+        validationErrors.push(`ステップ${step.step}の承認者`);
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      toast({
+        title: 'エラー',
+        description: `以下の項目を設定してください：${validationErrors.join('、')}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // フォーム項目のバリデーション
+    if (formConfig.length === 0) {
+      toast({
+        title: 'エラー',
+        description: 'フォーム項目を設定してください',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // FormDataを作成
@@ -151,21 +195,7 @@ export default function RequestFormEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-6xl max-h-[90vh] overflow-y-auto dialog-scrollbar"
-        onPointerDownOutside={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onInteractOutside={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onEscapeKeyDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-      >
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>申請フォーム編集: {requestForm.name}</DialogTitle>
           <DialogDescription>
