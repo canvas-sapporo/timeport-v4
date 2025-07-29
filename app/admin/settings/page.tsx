@@ -46,7 +46,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { getEmploymentTypes, getEmploymentTypeStats } from '@/lib/actions/admin/employment-types';
 import { getWorkTypes, getWorkTypeStats } from '@/lib/actions/admin/work-types';
+import { getAttendanceStatuses } from '@/lib/actions/attendance';
+import { getCompanyInfo } from '@/lib/actions/user-settings';
 import type { EmploymentType, WorkType } from '@/types/employment_type';
+import type { AttendanceStatusEntity } from '@/types/attendance';
+import type { Company } from '@/types/company';
 
 // 時刻フォーマット関数を追加
 const formatTime = (time: string) => {
@@ -69,6 +73,14 @@ export default function AdminSettingsPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('system');
+
+  // Company State
+  const [company, setCompany] = useState<Company | null>(null);
+  const [isCompanyLoading, setIsCompanyLoading] = useState(false);
+
+  // Attendance Statuses State
+  const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusEntity[]>([]);
+  const [isAttendanceStatusesLoading, setIsAttendanceStatusesLoading] = useState(false);
 
   // Employment Types State
   const [employmentTypes, setEmploymentTypes] = useState<EmploymentType[]>([]);
@@ -107,16 +119,6 @@ export default function AdminSettingsPage() {
 
   // System Settings State
   const [systemSettings, setSystemSettings] = useState({
-    companyName: '株式会社TimePort',
-    timezone: 'Asia/Tokyo',
-    workingHours: {
-      start: '09:00',
-      end: '18:00',
-      breakDuration: 60,
-    },
-    overtimeThreshold: 480,
-    autoClockOut: false,
-    requireApproval: true,
     debugMode: false,
     maintenanceMode: false,
     features: {
@@ -138,6 +140,44 @@ export default function AdminSettingsPage() {
     securityAlert: false,
     backupNotification: false,
   });
+
+  // 会社情報取得
+  const fetchCompanyInfo = async () => {
+    if (!user?.company_id) return;
+
+    setIsCompanyLoading(true);
+    try {
+      const companyInfo = await getCompanyInfo(user.company_id);
+      if (companyInfo) {
+        setCompany(companyInfo);
+      } else {
+        console.error('会社情報取得失敗');
+      }
+    } catch (error) {
+      console.error('会社情報取得エラー:', error);
+    } finally {
+      setIsCompanyLoading(false);
+    }
+  };
+
+  // 勤怠ステータス取得
+  const fetchAttendanceStatuses = async () => {
+    if (!user?.company_id) return;
+
+    setIsAttendanceStatusesLoading(true);
+    try {
+      const result = await getAttendanceStatuses(user.company_id);
+      if (result.success && result.statuses) {
+        setAttendanceStatuses(result.statuses);
+      } else {
+        console.error('勤怠ステータス取得失敗:', result.error);
+      }
+    } catch (error) {
+      console.error('勤怠ステータス取得エラー:', error);
+    } finally {
+      setIsAttendanceStatusesLoading(false);
+    }
+  };
 
   // 雇用形態データ取得
   const fetchEmploymentTypes = async () => {
@@ -201,6 +241,16 @@ export default function AdminSettingsPage() {
     if (!user || user.role !== 'admin') {
       router.push('/login');
       return;
+    }
+
+    // システムタブがアクティブになったときに会社情報を取得
+    if (activeTab === 'system') {
+      fetchCompanyInfo();
+    }
+
+    // 勤怠管理タブがアクティブになったときに勤怠ステータスを取得
+    if (activeTab === 'attendance') {
+      fetchAttendanceStatuses();
     }
 
     // 雇用形態タブがアクティブになったときにデータを取得
@@ -299,7 +349,7 @@ export default function AdminSettingsPage() {
         {/* システム設定 */}
         {activeTab === 'system' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -308,130 +358,72 @@ export default function AdminSettingsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="companyName">会社名</Label>
-                    <Input
-                      id="companyName"
-                      value={systemSettings.companyName}
-                      onChange={(e) =>
-                        setSystemSettings((prev) => ({
-                          ...prev,
-                          companyName: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="timezone">タイムゾーン</Label>
-                    <Select
-                      value={systemSettings.timezone}
-                      onValueChange={(value) =>
-                        setSystemSettings((prev) => ({
-                          ...prev,
-                          timezone: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Asia/Tokyo">Asia/Tokyo (JST)</SelectItem>
-                        <SelectItem value="UTC">UTC</SelectItem>
-                        <SelectItem value="America/New_York">America/New_York (EST)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    onClick={() => handleSaveSettings('company')}
-                    disabled={isLoading}
-                    className="w-full"
-                    variant="timeport-primary"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    保存
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Clock className="w-5 h-5" />
-                    <span>勤務時間設定</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="workStart">勤務開始時刻</Label>
-                      <Input
-                        id="workStart"
-                        type="time"
-                        value={systemSettings.workingHours.start}
-                        onChange={(e) =>
-                          setSystemSettings((prev) => ({
-                            ...prev,
-                            workingHours: { ...prev.workingHours, start: e.target.value },
-                          }))
-                        }
-                      />
+                  {isCompanyLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        <span>会社情報を読み込み中...</span>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="workEnd">勤務終了時刻</Label>
-                      <Input
-                        id="workEnd"
-                        type="time"
-                        value={systemSettings.workingHours.end}
-                        onChange={(e) =>
-                          setSystemSettings((prev) => ({
-                            ...prev,
-                            workingHours: { ...prev.workingHours, end: e.target.value },
-                          }))
-                        }
-                      />
+                  ) : company ? (
+                    <>
+                      <div>
+                        <Label htmlFor="companyName">会社名</Label>
+                        <Input
+                          id="companyName"
+                          value={company.name}
+                          onChange={(e) =>
+                            setCompany((prev) => (prev ? { ...prev, name: e.target.value } : null))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="companyCode">会社コード</Label>
+                        <Input
+                          id="companyCode"
+                          value={company.code}
+                          onChange={(e) =>
+                            setCompany((prev) => (prev ? { ...prev, code: e.target.value } : null))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="companyAddress">住所</Label>
+                        <Textarea
+                          id="companyAddress"
+                          value={company.address || ''}
+                          onChange={(e) =>
+                            setCompany((prev) =>
+                              prev ? { ...prev, address: e.target.value } : null
+                            )
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="companyPhone">電話番号</Label>
+                        <Input
+                          id="companyPhone"
+                          value={company.phone || ''}
+                          onChange={(e) =>
+                            setCompany((prev) => (prev ? { ...prev, phone: e.target.value } : null))
+                          }
+                        />
+                      </div>
+                      <Button
+                        onClick={() => handleSaveSettings('company')}
+                        disabled={isLoading}
+                        className="w-full"
+                        variant="timeport-primary"
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        保存
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">会社情報を取得できませんでした</p>
                     </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="breakDuration">休憩時間（分）</Label>
-                    <Input
-                      id="breakDuration"
-                      type="number"
-                      value={systemSettings.workingHours.breakDuration}
-                      onChange={(e) =>
-                        setSystemSettings((prev) => ({
-                          ...prev,
-                          workingHours: {
-                            ...prev.workingHours,
-                            breakDuration: parseInt(e.target.value),
-                          },
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="overtimeThreshold">残業開始閾値（分）</Label>
-                    <Input
-                      id="overtimeThreshold"
-                      type="number"
-                      value={systemSettings.overtimeThreshold}
-                      onChange={(e) =>
-                        setSystemSettings((prev) => ({
-                          ...prev,
-                          overtimeThreshold: parseInt(e.target.value),
-                        }))
-                      }
-                    />
-                  </div>
-                  <Button
-                    onClick={() => handleSaveSettings('working-hours')}
-                    disabled={isLoading}
-                    className="w-full"
-                    variant="timeport-primary"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    保存
-                  </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -704,71 +696,45 @@ export default function AdminSettingsPage() {
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-4 rounded-lg border">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                        <span className="font-medium">正常</span>
+                  {isAttendanceStatusesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        <span>ステータスを読み込み中...</span>
                       </div>
-                      <p className="text-sm text-gray-600">通常の勤務状態</p>
                     </div>
-
-                    <div className="bg-white p-4 rounded-lg border">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <span className="font-medium">遅刻</span>
-                      </div>
-                      <p className="text-sm text-gray-600">遅刻した勤務状態</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {attendanceStatuses.map((status) => (
+                        <div key={status.id} className="bg-white p-4 rounded-lg border">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: status.background_color }}
+                            ></div>
+                            <span className="font-medium">{status.display_name}</span>
+                            {status.is_required && (
+                              <Badge variant="outline" className="text-xs">
+                                必須
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600">{status.description}</p>
+                        </div>
+                      ))}
+                      {attendanceStatuses.length === 0 && (
+                        <div className="col-span-full text-center py-8">
+                          <p className="text-gray-500">勤怠ステータスが登録されていません</p>
+                        </div>
+                      )}
                     </div>
-
-                    <div className="bg-white p-4 rounded-lg border">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        <span className="font-medium">早退</span>
-                      </div>
-                      <p className="text-sm text-gray-600">早退した勤務状態</p>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-lg border">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                        <span className="font-medium">欠勤</span>
-                      </div>
-                      <p className="text-sm text-gray-600">欠勤状態</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* 勤怠設定セクション */}
                 <div className="border rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">勤怠設定</h3>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>自動退勤</Label>
-                        <p className="text-sm text-gray-500">勤務終了時刻に自動で退勤処理</p>
-                      </div>
-                      <Switch
-                        checked={systemSettings.autoClockOut}
-                        onCheckedChange={(checked) =>
-                          setSystemSettings((prev) => ({ ...prev, autoClockOut: checked }))
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>承認必須</Label>
-                        <p className="text-sm text-gray-500">勤怠記録の承認を必須にする</p>
-                      </div>
-                      <Switch
-                        checked={systemSettings.requireApproval}
-                        onCheckedChange={(checked) =>
-                          setSystemSettings((prev) => ({ ...prev, requireApproval: checked }))
-                        }
-                      />
-                    </div>
-
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>遅刻アラート</Label>
