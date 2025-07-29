@@ -172,7 +172,7 @@ export default function MemberProfilePage() {
               </div>
 
               <div>
-                <Label>企業コード</Label>
+                <Label>コード</Label>
                 <div className="mt-1 text-sm text-gray-900">{companyInfo?.code || '-'}</div>
               </div>
 

@@ -6,8 +6,11 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function CompanyListPage() {
-  // 新しいServer Actionを使用してデータを取得
-  const companiesResult = await getCompanies();
+  // 新しいServer Actionを使用してデータを取得（created_at降順で初期表示）
+  const companiesResult = await getCompanies({
+    orderBy: 'created_at',
+    ascending: false,
+  });
   const statsResult = await getCompanyStats();
 
   if (!companiesResult.success) {

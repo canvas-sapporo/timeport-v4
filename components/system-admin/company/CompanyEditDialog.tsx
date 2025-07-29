@@ -116,7 +116,7 @@ export default function CompanyEditDialog({
           </div>
           <div>
             <Label htmlFor="edit-company-code">
-              企業コード<span className="text-red-500 ml-1">*</span>
+              コード<span className="text-red-500 ml-1">*</span>
             </Label>
             <Input
               id="edit-company-code"

@@ -57,7 +57,7 @@ const validateCreateCompanyForm = (form: CreateCompanyFormData): CompanyValidati
   const nameError = validateRequired(form.name, '企業名');
   if (nameError) errors.push(nameError);
 
-  const codeError = validateRequired(form.code, '企業コード');
+  const codeError = validateRequired(form.code, 'コード');
   if (codeError) errors.push(codeError);
 
   // グループ情報のバリデーション
@@ -105,7 +105,7 @@ const validateEditCompanyForm = (form: EditCompanyFormData): CompanyValidationRe
   const nameError = validateRequired(form.name, '企業名');
   if (nameError) errors.push(nameError);
 
-  const codeError = validateRequired(form.code, '企業コード');
+  const codeError = validateRequired(form.code, 'コード');
   if (codeError) errors.push(codeError);
 
   return {
@@ -123,7 +123,7 @@ const validateEditCompanyForm = (form: EditCompanyFormData): CompanyValidationRe
 // ================================
 
 /**
- * 企業コードの重複チェック
+ * コードの重複チェック
  */
 const checkCompanyCodeExists = async (code: string, excludeId?: string): Promise<boolean> => {
   const query = supabaseAdmin
@@ -194,10 +194,10 @@ export const createCompany = async (
       throw AppError.fromValidationErrors(validation.errors, '企業作成');
     }
 
-    // 企業コードの重複チェック
+    // コードの重複チェック
     const codeExists = await checkCompanyCodeExists(form.code);
     if (codeExists) {
-      throw AppError.duplicate('企業コード', form.code);
+      throw AppError.duplicate('コード', form.code);
     }
 
     // メールアドレスの重複チェック
@@ -377,10 +377,10 @@ export const updateCompany = async (
       throw AppError.fromValidationErrors(validation.errors, '企業更新');
     }
 
-    // 企業コードの重複チェック（自分以外）
+    // コードの重複チェック（自分以外）
     const codeExists = await checkCompanyCodeExists(form.code, id);
     if (codeExists) {
-      throw AppError.duplicate('企業コード', form.code);
+      throw AppError.duplicate('コード', form.code);
     }
 
     // 企業の存在確認

@@ -9,6 +9,9 @@ import {
   HelpCircle,
   Search,
   Filter,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -45,6 +48,10 @@ export default function CompanyListTable({
 }) {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [sortField, setSortField] = useState<
+    'created_at' | 'name' | 'code' | 'is_active' | 'updated_at'
+  >('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [companyFeatures, setCompanyFeatures] = useState<
     Record<string, { chat: boolean; report: boolean; schedule: boolean }>
   >({});
@@ -165,37 +172,114 @@ export default function CompanyListTable({
     }
   };
 
-  // ステータスでフィルタリング
+  // 並び替え関数
+  const handleSort = (field: 'created_at' | 'name' | 'code' | 'is_active' | 'updated_at') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // 並び替えアイコンを取得
+  const getSortIcon = (field: 'created_at' | 'name' | 'code' | 'is_active' | 'updated_at') => {
+    if (sortField !== field) {
+      return <ChevronsUpDown className="w-4 h-4" />;
+    }
+    return sortDirection === 'asc' ? (
+      <ChevronUp className="w-4 h-4" />
+    ) : (
+      <ChevronDown className="w-4 h-4" />
+    );
+  };
+
+  // 日時フォーマット関数
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return '--';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
+
+  const formatTime = (dateString: string | null | undefined) => {
+    if (!dateString) return '--';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // フィルタリングと並び替え
   const filteredCompanies = useMemo(() => {
     let result = companies;
+
+    // ステータスでフィルタリング
     if (selectedStatus === 'active') {
       result = result.filter((c) => c.is_active);
     } else if (selectedStatus === 'inactive') {
       result = result.filter((c) => !c.is_active);
     }
-    if (!search)
-      return [...result].sort((a, b) => {
-        if (!a.updated_at || !b.updated_at) return 0;
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      });
-    const lower = search.toLowerCase();
-    return result
-      .filter(
+
+    // 検索でフィルタリング
+    if (search) {
+      const lower = search.toLowerCase();
+      result = result.filter(
         (c) =>
           (c.name && c.name.toLowerCase().includes(lower)) ||
           (c.code && c.code.toLowerCase().includes(lower)) ||
           (c.address && c.address.toLowerCase().includes(lower)) ||
           (c.phone && c.phone.toLowerCase().includes(lower))
-      )
-      .sort((a, b) => {
-        if (!a.updated_at || !b.updated_at) return 0;
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      });
-  }, [companies, search, selectedStatus]);
+      );
+    }
+
+    // 並び替え
+    return [...result].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'created_at':
+          aValue = a.created_at ? new Date(a.created_at).getTime() : 0;
+          bValue = b.created_at ? new Date(b.created_at).getTime() : 0;
+          break;
+        case 'name':
+          aValue = a.name || '';
+          bValue = b.name || '';
+          break;
+        case 'code':
+          aValue = a.code || '';
+          bValue = b.code || '';
+          break;
+        case 'is_active':
+          aValue = a.is_active ? 1 : 0;
+          bValue = b.is_active ? 1 : 0;
+          break;
+        case 'updated_at':
+          aValue = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          bValue = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (sortDirection === 'asc') {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+      } else {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+      }
+    });
+  }, [companies, search, selectedStatus, sortField, sortDirection]);
 
   const handleReset = () => {
     setSearch('');
     setSelectedStatus('all');
+    setSortField('created_at');
+    setSortDirection('desc');
   };
 
   // 編集ボタン押下時
@@ -315,10 +399,52 @@ export default function CompanyListTable({
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="px-4 py-2 text-left font-medium">企業名</th>
-                <th className="px-4 py-2 text-left font-medium">企業コード</th>
-                <th className="px-4 py-2 text-center font-medium">ステータス</th>
+                <th className="px-4 py-2 text-left font-medium">
+                  <button
+                    onClick={() => handleSort('name')}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
+                    企業名
+                    {getSortIcon('name')}
+                  </button>
+                </th>
+                <th className="px-4 py-2 text-left font-medium">
+                  <button
+                    onClick={() => handleSort('code')}
+                    className="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
+                    コード
+                    {getSortIcon('code')}
+                  </button>
+                </th>
+                <th className="px-4 py-2 text-center font-medium">
+                  <button
+                    onClick={() => handleSort('is_active')}
+                    className="flex items-center gap-1 hover:text-primary transition-colors mx-auto"
+                  >
+                    ステータス
+                    {getSortIcon('is_active')}
+                  </button>
+                </th>
                 <th className="px-4 py-2 text-center font-medium">機能</th>
+                <th className="px-4 py-2 text-center font-medium">
+                  <button
+                    onClick={() => handleSort('created_at')}
+                    className="flex items-center gap-1 hover:text-primary transition-colors mx-auto"
+                  >
+                    作成日時
+                    {getSortIcon('created_at')}
+                  </button>
+                </th>
+                <th className="px-4 py-2 text-center font-medium">
+                  <button
+                    onClick={() => handleSort('updated_at')}
+                    className="flex items-center gap-1 hover:text-primary transition-colors mx-auto"
+                  >
+                    更新日時
+                    {getSortIcon('updated_at')}
+                  </button>
+                </th>
                 <th className="px-4 py-2 text-center font-medium">操作</th>
               </tr>
             </thead>
@@ -399,6 +525,22 @@ export default function CompanyListTable({
                           </div>
                         </div>
                       </td>
+                      <td className="px-4 py-2 text-center whitespace-nowrap text-sm">
+                        <div className="flex flex-col">
+                          <div className="font-medium">{formatDate(company.created_at)}</div>
+                          <div className="text-xs text-gray-500">
+                            {formatTime(company.created_at)}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-center whitespace-nowrap text-sm">
+                        <div className="flex flex-col">
+                          <div className="font-medium">{formatDate(company.updated_at)}</div>
+                          <div className="text-xs text-gray-500">
+                            {formatTime(company.updated_at)}
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-4 py-2 text-center">
                         <Button
                           variant="ghost"
@@ -433,7 +575,7 @@ export default function CompanyListTable({
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="text-center py-6 text-muted-foreground">
+                  <td colSpan={9} className="text-center py-6 text-muted-foreground">
                     企業データがありません
                   </td>
                 </tr>

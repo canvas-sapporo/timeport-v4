@@ -129,7 +129,7 @@ export default function CompanyCreateDialog({
             )}
 
             <Label htmlFor="company-code">
-              企業コード<span className="text-red-500 ml-1">*</span>
+              コード<span className="text-red-500 ml-1">*</span>
             </Label>
             <Input
               id="company-code"
