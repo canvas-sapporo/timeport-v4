@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
+import { useRouter } from 'next/navigation';
 
 // メニュー項目の定義（機能チェックなし）
 const baseUserMenuItems = [
@@ -57,10 +58,19 @@ const systemAdminMenuItems = [
   { href: '/system-admin/system', icon: BarChart3, label: 'システム管理' },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onToggle?: () => void;
+}
+
+export default function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const { user, logout, isLoggingOut } = useAuth();
+  const router = useRouter();
+
+  // デバッグログ
+  console.log('Sidebar props:', { isOpen, onToggle: !!onToggle });
 
   // ログアウト中またはユーザーが存在しない場合は機能取得をスキップ
   const shouldFetchFeatures = !isLoggingOut && user && user.company_id;
@@ -128,22 +138,31 @@ export default function Sidebar() {
 
   const menuItems = getMenuItems();
 
+  // デバッグ用：実際のクラス名を出力
+  const sidebarClasses = cn(
+    'fixed left-0 top-0 z-50 h-full min-h-screen timeport-sidebar text-white transition-all duration-300 shadow-2xl flex flex-col',
+    'lg:relative lg:z-0 lg:translate-x-0',
+    isOpen && 'mobile-open',
+    isCollapsed ? 'w-16' : 'w-64'
+  );
+
+  console.log('サイドバークラス名:', sidebarClasses);
+  console.log('isOpen状態:', isOpen);
+
   return (
     <>
       {/* Mobile overlay */}
-      {!isCollapsed && (
+      {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 lg:hidden z-40"
-          onClick={() => setIsCollapsed(true)}
+          onClick={() => {
+            console.log('オーバーレイがクリックされました');
+            onToggle?.();
+          }}
         />
       )}
 
-      <aside
-        className={cn(
-          'fixed left-0 top-0 z-50 h-full min-h-screen timeport-sidebar text-white transition-all duration-300 lg:relative lg:z-0 shadow-2xl flex flex-col',
-          isCollapsed ? 'w-16' : 'w-64'
-        )}
-      >
+      <aside className={sidebarClasses}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/20">
           <div className={cn('flex items-center space-x-3', isCollapsed && 'justify-center')}>
@@ -189,6 +208,43 @@ export default function Sidebar() {
                 </p>
               </div>
             )}
+
+            {/* Navigation Buttons - Mobile Only, Icon Only */}
+            {(user?.role === 'admin' || user?.role === 'system-admin') && (
+              <div className="lg:hidden flex space-x-1">
+                {/* Show "メンバー画面" button when on admin pages (but not for system-admin) */}
+                {pathname.startsWith('/admin') && user?.role !== 'system-admin' && (
+                  <button
+                    onClick={() => {
+                      router.push('/member');
+                      onToggle?.(); // モバイルでサイドバーを閉じる
+                    }}
+                    className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition-colors"
+                    title="メンバー画面"
+                  >
+                    <Users className="w-4 h-4 text-white" />
+                  </button>
+                )}
+
+                {/* Show "管理者画面" button when on member pages */}
+                {pathname.startsWith('/member') && (
+                  <button
+                    onClick={() => {
+                      if (user?.role === 'system-admin') {
+                        router.push('/system-admin');
+                      } else {
+                        router.push('/admin');
+                      }
+                      onToggle?.(); // モバイルでサイドバーを閉じる
+                    }}
+                    className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition-colors"
+                    title="管理者画面"
+                  >
+                    <Settings className="w-4 h-4 text-white" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -220,6 +276,7 @@ export default function Sidebar() {
                   isCollapsed && 'justify-center'
                 )}
                 prefetch={true}
+                onClick={onToggle} // モバイルでメニュー項目クリック時にサイドバーを閉じる
               >
                 <Icon className={cn('w-5 h-5 flex-shrink-0', isActive && 'animate-pulse')} />
                 {!isCollapsed && <span className="ml-3">{item.label}</span>}

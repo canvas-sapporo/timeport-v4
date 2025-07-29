@@ -16,7 +16,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import NotificationSystem from '@/components/notifications/notification-system';
 
-export default function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export default function Header({ onMenuClick }: HeaderProps) {
   const { user } = useAuth();
   const { notifications, markNotificationAsRead } = useData();
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,22 +33,15 @@ export default function Header() {
     markNotificationAsRead(notificationId);
   };
 
-  const handleMemberViewClick = () => {
-    router.push('/member');
-  };
-
-  const handleAdminViewClick = () => {
-    if (user?.role === 'system-admin') {
-      router.push('/system-admin');
-    } else {
-      router.push('/admin');
-    }
-  };
-
   return (
     <header className="h-16 timeport-header text-white flex items-center justify-between px-6 shadow-lg relative z-20">
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/10">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden text-white hover:bg-white/10"
+          onClick={onMenuClick}
+        >
           <Menu className="w-5 h-5" />
         </Button>
 
@@ -60,37 +57,6 @@ export default function Header() {
       </div>
 
       <div className="flex items-center space-x-4">
-        {/* Navigation Button - Show different button based on current page */}
-        {(user?.role === 'admin' || user?.role === 'system-admin') && (
-          <>
-            {/* Show "メンバー画面" button when on admin pages (but not for system-admin) */}
-            {pathname.startsWith('/admin') && user?.role !== 'system-admin' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleMemberViewClick}
-                className="text-white hover:text-gray-100 bg-gradient-to-r from-blue-500/90 to-purple-600/90 hover:bg-gradient-to-l hover:from-blue-600 hover:to-purple-700 focus:ring-4 focus:outline-none focus:ring-blue-300/30 font-medium rounded-lg text-sm px-4 py-2 transition-all duration-300 flex items-center space-x-2 shadow-lg hover:shadow-xl group border-0 backdrop-blur-sm"
-              >
-                <Users className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
-                <span className="hidden sm:inline">メンバー画面</span>
-              </Button>
-            )}
-
-            {/* Show "管理者画面" button when on member pages */}
-            {pathname.startsWith('/member') && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleAdminViewClick}
-                className="text-white hover:text-gray-100 bg-gradient-to-r from-blue-500/90 to-purple-600/90 hover:bg-gradient-to-l hover:from-blue-600 hover:to-purple-700 focus:ring-4 focus:outline-none focus:ring-blue-300/30 font-medium rounded-lg text-sm px-4 py-2 transition-all duration-300 flex items-center space-x-2 shadow-lg hover:shadow-xl group border-0 backdrop-blur-sm"
-              >
-                <Settings className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
-                <span className="hidden sm:inline">管理者画面</span>
-              </Button>
-            )}
-          </>
-        )}
-
         <NotificationSystem
           onNotificationClick={(notification) => {
             if (notification.related_request_id) {

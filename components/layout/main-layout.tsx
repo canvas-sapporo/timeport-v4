@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { Toaster } from '@/components/ui/toaster';
@@ -18,6 +18,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { user, isLoading, isLoggingOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // ハンバーガーメニューのトグル関数
+  const toggleSidebar = () => {
+    console.log('ハンバーガーメニューがクリックされました。現在の状態:', isSidebarOpen);
+    setIsSidebarOpen(!isSidebarOpen);
+    console.log('新しい状態:', !isSidebarOpen);
+  };
 
   // ユーザーが認証されていない場合は、ログインページにリダイレクト
   useEffect(() => {
@@ -26,6 +34,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
       router.push('/login');
     }
   }, [user, isLoading, pathname, router]);
+
+  // ページ遷移時にサイドバーを閉じる（モバイル）
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [pathname]);
 
   // ログインページ、feature-disabledページ、エラーページ、404ページの場合はレイアウトを適用しない
   if (
@@ -83,11 +96,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
           ))}
         </div>
 
-        <Sidebar />
-        <div className="flex-1 flex flex-col relative z-10 h-full">
-          <Header />
-          <main className="flex-1 p-6 overflow-y-auto custom-scrollbar h-full">
-            <div className="max-w-7xl mx-auto animate-slide-in">{children}</div>
+        <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
+        <div className="flex-1 flex flex-col relative z-10 h-full w-full lg:w-auto main-container">
+          <Header onMenuClick={toggleSidebar} />
+          <main className="flex-1 p-4 lg:p-6 overflow-y-auto custom-scrollbar h-full w-full mobile-main">
+            <div className="w-full max-w-7xl mx-auto animate-slide-in">{children}</div>
           </main>
         </div>
       </div>
