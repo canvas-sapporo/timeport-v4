@@ -1730,7 +1730,9 @@ export const getWorkTypes = async (): Promise<{ id: string; name: string }[]> =>
   }
 };
 
-export const getWorkTypeDetail = async (workTypeId: string): Promise<{
+export const getWorkTypeDetail = async (
+  workTypeId: string
+): Promise<{
   id: string;
   name: string;
   code?: string;
@@ -1751,7 +1753,8 @@ export const getWorkTypeDetail = async (workTypeId: string): Promise<{
 
     const { data: workType, error } = await supabaseAdmin
       .from('work_types')
-      .select(`
+      .select(
+        `
         id,
         name,
         code,
@@ -1766,7 +1769,8 @@ export const getWorkTypeDetail = async (workTypeId: string): Promise<{
         overtime_threshold_minutes,
         late_threshold_minutes,
         description
-      `)
+      `
+      )
       .eq('id', workTypeId)
       .is('deleted_at', null)
       .single();

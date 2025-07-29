@@ -56,58 +56,58 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     setIsLoading(true);
     setError(null);
 
-      try {
-        console.log('機能取得開始:', companyId);
+    try {
+      console.log('機能取得開始:', companyId);
 
-        // タイムアウトを設定（5秒）
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('機能取得タイムアウト')), 5000);
+      // タイムアウトを設定（5秒）
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('機能取得タイムアウト')), 5000);
+      });
+
+      const fetchPromise = supabase
+        .from('features')
+        .select('feature_code, is_active')
+        .eq('company_id', companyId);
+
+      const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as {
+        data: { feature_code: string; is_active: boolean }[] | null;
+        error: { message: string } | null;
+      };
+
+      if (error) {
+        console.error('機能取得エラー:', error);
+        setError(error.message);
+        setFeatures(null);
+        // エラー時もキャッシュに保存して、再試行を防ぐ
+        featureCache.set(companyId, {
+          features: DEFAULT_FEATURES,
+          timestamp: Date.now(),
+        });
+      } else {
+        const map = { ...DEFAULT_FEATURES };
+        data?.forEach((f: { feature_code: string; is_active: boolean }) => {
+          if (f.feature_code in map) {
+            map[f.feature_code as keyof typeof DEFAULT_FEATURES] = f.is_active;
+          }
         });
 
-        const fetchPromise = supabase
-          .from('features')
-          .select('feature_code, is_active')
-          .eq('company_id', companyId);
+        console.log('機能取得成功:', companyId, map);
+        setFeatures(map);
 
-        const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as {
-          data: { feature_code: string; is_active: boolean }[] | null;
-          error: { message: string } | null;
-        };
-
-        if (error) {
-          console.error('機能取得エラー:', error);
-          setError(error.message);
-        setFeatures(null);
-          // エラー時もキャッシュに保存して、再試行を防ぐ
-          featureCache.set(companyId, {
-            features: DEFAULT_FEATURES,
-            timestamp: Date.now(),
-          });
-        } else {
-          const map = { ...DEFAULT_FEATURES };
-          data?.forEach((f: { feature_code: string; is_active: boolean }) => {
-            if (f.feature_code in map) {
-              map[f.feature_code as keyof typeof DEFAULT_FEATURES] = f.is_active;
-            }
-          });
-
-          console.log('機能取得成功:', companyId, map);
-          setFeatures(map);
-
-          // キャッシュに保存
-          featureCache.set(companyId, {
-            features: map,
-            timestamp: Date.now(),
-          });
-        }
-      } catch (err) {
-        console.error('機能取得エラー:', err);
-        setError(err instanceof Error ? err.message : '不明なエラー');
-      setFeatures(null);
-      } finally {
-        setIsLoading(false);
+        // キャッシュに保存
+        featureCache.set(companyId, {
+          features: map,
+          timestamp: Date.now(),
+        });
       }
-    };
+    } catch (err) {
+      console.error('機能取得エラー:', err);
+      setError(err instanceof Error ? err.message : '不明なエラー');
+      setFeatures(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // 手動更新関数
   const refetch = async () => {
