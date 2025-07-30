@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
   Clock,
@@ -23,7 +23,6 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
-import { useRouter } from 'next/navigation';
 
 // メニュー項目の定義（機能チェックなし）
 const baseUserMenuItems = [
