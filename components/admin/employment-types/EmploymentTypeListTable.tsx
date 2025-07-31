@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { EmploymentType } from '@/types/employment_type';
+import type { EmploymentType } from '@/schemas/employment-type';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 import EmploymentTypeCreateDialog from './EmploymentTypeCreateDialog';
@@ -299,18 +299,18 @@ export default function EmploymentTypeListTable({
       {/* ダイアログ */}
       <EmploymentTypeCreateDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        onOpenChangeAction={setCreateDialogOpen}
         onSuccess={onDataChange}
       />
       <EmploymentTypeEditDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        onOpenChangeAction={setEditDialogOpen}
         employmentType={editTarget}
         onSuccess={onDataChange}
       />
       <EmploymentTypeDeleteDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
+        onOpenChangeAction={setDeleteDialogOpen}
         employmentType={deleteTarget}
         onSuccess={onDataChange}
       />

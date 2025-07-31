@@ -1,17 +1,34 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
 import { createAdminClient, createServerClient } from '@/lib/supabase';
 import { withErrorHandling, AppError } from '@/lib/utils/error-handling';
 import { getUserCompanyId } from '@/lib/actions/user';
-import type {
-  CreateUserProfileInput,
-  UpdateUserProfileInput,
-  UserSearchParams,
-  UserProfile,
-} from '@/types/user_profiles';
+import type { UserProfile } from '@/schemas/user_profile';
 import type { UUID } from '@/types/common';
+import {
+  ApproverListResponseSchema,
+  UserListResponseSchema,
+  UserDetailResponseSchema,
+  CreateUserResultSchema,
+  UpdateUserResultSchema,
+  DeleteUserResultSchema,
+  UserStatsSchema,
+  UserProfileSchema,
+  type CreateUserProfileInput,
+  type UpdateUserProfileInput,
+  type UserSearchParams,
+  type ApproverListResponse,
+  type UserListResponse,
+  type UserDetailResponse,
+  type CreateUserResult,
+  type UpdateUserResult,
+  type DeleteUserResult,
+  type UserStats,
+} from '@/schemas/users';
+import { Group } from '@/schemas/group';
 
 // 環境変数から設定を取得
 const DEFAULT_PASSWORD = process.env.NEXT_PUBLIC_DEFAULT_USER_PASSWORD || 'Passw0rd!';
@@ -21,7 +38,7 @@ const EMAIL_UNIQUE_PER_COMPANY = process.env.NEXT_PUBLIC_EMAIL_UNIQUE_PER_COMPAN
 /**
  * 承認者選択用のユーザー一覧を取得（企業内のユーザーのみ）
  */
-export async function getApprovers(userId?: string) {
+export async function getApprovers(userId?: string): Promise<ApproverListResponse> {
   console.log('getApprovers: 開始', { userId });
 
   try {
@@ -48,7 +65,7 @@ export async function getApprovers(userId?: string) {
     console.log('企業ID取得結果:', { currentUserId, companyId });
     if (!companyId) {
       console.error('ユーザーの企業情報を取得できませんでした');
-      return { success: false, error: 'ユーザーの企業情報を取得できませんでした' };
+      return { success: false, error: 'ユーザーの企業情報を取得できませんでした', data: [] };
     }
 
     // 同じ企業内のユーザーのみを取得（2段階クエリ）
@@ -70,7 +87,7 @@ export async function getApprovers(userId?: string) {
 
     if (userIdsError) {
       console.error('ユーザーID取得エラー:', userIdsError);
-      return { success: false, error: userIdsError.message };
+      return { success: false, error: userIdsError.message, data: [] };
     }
 
     if (!userIds || userIds.length === 0) {
@@ -79,7 +96,7 @@ export async function getApprovers(userId?: string) {
     }
 
     // 2. ユーザー詳細情報を取得
-    const userIdList = userIds.map((item: any) => item.user_id);
+    const userIdList = userIds.map((item: { user_id: string }) => item.user_id);
     const { data, error } = await supabase
       .from('user_profiles')
       .select('id, first_name, family_name, email, role')
@@ -89,22 +106,25 @@ export async function getApprovers(userId?: string) {
 
     if (error) {
       console.error('承認者取得エラー:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message, data: [] };
     }
 
     console.log('承認者取得成功:', data?.length || 0, '件');
     return { success: true, data };
   } catch (error) {
     console.error('承認者取得エラー:', error);
-    return { success: false, error: '承認者取得中にエラーが発生しました' };
+    return { success: false, error: '承認者取得中にエラーが発生しました', data: [] };
   }
 }
 
 /**
  * 企業内のユーザー一覧を取得
  */
-export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) => {
-  return withErrorHandling(async () => {
+export async function getUsers(
+  companyId: UUID,
+  params: UserSearchParams = {}
+): Promise<UserListResponse> {
+  try {
     console.log('ユーザー一覧取得開始:', { companyId, params });
 
     const supabaseAdmin = createAdminClient();
@@ -117,12 +137,17 @@ export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) =
 
     if (allUsersError) {
       console.error('全ユーザー取得エラー:', allUsersError);
-      throw AppError.fromSupabaseError(allUsersError, '全ユーザー取得');
+      return {
+        success: false,
+        data: [],
+        total: 0,
+        error: '全ユーザー取得に失敗しました',
+      };
     }
 
     // 各ユーザーのグループ情報を取得
     const usersWithGroups = await Promise.all(
-      (allUsers || []).map(async (user: any) => {
+      (allUsers || []).map(async (user: z.infer<typeof UserProfileSchema>) => {
         const { data: userGroups } = await supabaseAdmin
           .from('user_groups')
           .select(
@@ -148,7 +173,7 @@ export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) =
 
     // 企業内のユーザーのみをフィルタリング
     const companyUsers = usersWithGroups.filter((user) =>
-      user.groups.some((group: any) => group.company_id === companyId)
+      user.groups.some((group: Group) => group.company_id === companyId)
     );
 
     console.log('企業内ユーザー:', companyUsers);
@@ -202,18 +227,25 @@ export const getUsers = async (companyId: UUID, params: UserSearchParams = {}) =
     });
 
     return {
-      users: paginatedUsers,
+      success: true,
+      data: paginatedUsers,
       total: filteredUsers.length,
-      page,
-      limit,
     };
-  });
-};
+  } catch (error) {
+    console.error('getUsers エラー:', error);
+    return {
+      success: false,
+      data: [],
+      total: 0,
+      error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+    };
+  }
+}
 
 /**
  * ユーザー詳細を取得
  */
-export const getUser = async (userId: UUID) => {
+export async function getUser(userId: UUID): Promise<UserDetailResponse> {
   return withErrorHandling(async () => {
     console.log('ユーザー詳細取得開始:', userId);
 
@@ -252,7 +284,7 @@ export const getUser = async (userId: UUID) => {
 
     return user;
   });
-};
+}
 
 /**
  * ユーザーを作成

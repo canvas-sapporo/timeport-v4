@@ -16,7 +16,7 @@ import { getWorkTypeDetail } from '@/lib/actions/attendance';
 
 interface WorkTypeDetailDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   workTypeId: string | null;
 }
 
@@ -39,7 +39,7 @@ interface WorkTypeDetail {
 
 export default function WorkTypeDetailDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   workTypeId,
 }: WorkTypeDetailDialogProps) {
   const [workTypeDetail, setWorkTypeDetail] = useState<WorkTypeDetail | null>(null);
@@ -85,7 +85,7 @@ export default function WorkTypeDetailDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">

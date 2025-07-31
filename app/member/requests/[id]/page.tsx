@@ -5,12 +5,11 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Download, Trash2, MessageSquare, Send, Check, X } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, MessageSquare, Check, X } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,20 +24,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Request,
-  RequestDetail,
-  RequestComment,
-  RequestAttachment,
-  ApprovalStep,
-} from '@/types/request';
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from '@/components/ui/select';
+import { RequestDetail, RequestComment, RequestAttachment, ApprovalStep } from '@/schemas/request';
 import { supabase } from '@/lib/supabase';
 
 // コメント投稿スキーマ
@@ -99,7 +92,7 @@ export default function RequestDetailPage() {
     loadRequestDetail();
   }, [user, router, requestId]);
 
-  const loadRequestDetail = async () => {
+  async function loadRequestDetail() {
     if (!user) return;
 
     try {
@@ -174,9 +167,9 @@ export default function RequestDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handleCommentSubmit = async (data: CommentFormData) => {
+  async function handleCommentSubmit(data: CommentFormData) {
     if (!request || !user) return;
 
     setIsSubmitting(true);
@@ -207,9 +200,9 @@ export default function RequestDetailPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
-  const handleApprovalSubmit = async (data: ApprovalFormData) => {
+  async function handleApprovalSubmit(data: ApprovalFormData) {
     if (!request || !user) return;
 
     setIsSubmitting(true);
@@ -256,9 +249,9 @@ export default function RequestDetailPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
-  const handleDeleteAttachment = async (attachmentId: string) => {
+  async function handleDeleteAttachment(attachmentId: string) {
     if (!request || !user) return;
 
     // 権限チェック（アップロード者または管理者のみ削除可能）
@@ -279,9 +272,9 @@ export default function RequestDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ファイルの削除に失敗しました');
     }
-  };
+  }
 
-  const getStatusBadge = (status: string) => {
+  function getStatusBadge(status: string) {
     switch (status) {
       case 'pending':
         return <Badge variant="secondary">承認待ち</Badge>;
@@ -292,7 +285,7 @@ export default function RequestDetailPage() {
       default:
         return <Badge variant="outline">-</Badge>;
     }
-  };
+  }
 
   if (!user || (user.role !== 'member' && user.role !== 'admin')) {
     return null;

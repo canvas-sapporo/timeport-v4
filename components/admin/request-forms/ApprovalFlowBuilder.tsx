@@ -27,12 +27,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import type { ApprovalStep } from '@/types/request';
+import type { ApprovalStep } from '@/schemas/request';
 import { getApprovers } from '@/lib/actions/admin/users';
 
 interface ApprovalFlowBuilderProps {
   approvalFlow: ApprovalStep[];
-  onApprovalFlowChange: (flow: ApprovalStep[]) => void;
+  onApprovalFlowChangeAction: (flow: ApprovalStep[]) => void;
 }
 
 interface Approver {
@@ -45,7 +45,7 @@ interface Approver {
 
 export default function ApprovalFlowBuilder({
   approvalFlow,
-  onApprovalFlowChange,
+  onApprovalFlowChangeAction,
 }: ApprovalFlowBuilderProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -104,10 +104,10 @@ export default function ApprovalFlowBuilder({
     };
 
     const newFlow = [...approvalFlow, newStep];
-    onApprovalFlowChange(newFlow);
+    onApprovalFlowChangeAction(newFlow);
     setSelectedStep(newStep);
     setStepSettingsOpen(true);
-  }, [approvalFlow, onApprovalFlowChange]);
+  }, [approvalFlow, onApprovalFlowChangeAction]);
 
   // ステップを削除
   const removeStep = useCallback(
@@ -118,9 +118,9 @@ export default function ApprovalFlowBuilder({
           ...step,
           step: index + 1,
         }));
-      onApprovalFlowChange(newFlow);
+      onApprovalFlowChangeAction(newFlow);
     },
-    [approvalFlow, onApprovalFlowChange]
+    [approvalFlow, onApprovalFlowChangeAction]
   );
 
   // ステップを編集
@@ -139,11 +139,11 @@ export default function ApprovalFlowBuilder({
       const newFlow = approvalFlow.map((step) =>
         step.step === updatedStep.step ? updatedStep : step
       );
-      onApprovalFlowChange(newFlow);
+      onApprovalFlowChangeAction(newFlow);
       setStepSettingsOpen(false);
       setSelectedStep(null);
     },
-    [approvalFlow, onApprovalFlowChange]
+    [approvalFlow, onApprovalFlowChangeAction]
   );
 
   // ドラッグ&ドロップ処理
@@ -161,9 +161,9 @@ export default function ApprovalFlowBuilder({
         step: index + 1,
       }));
 
-      onApprovalFlowChange(newFlow);
+      onApprovalFlowChangeAction(newFlow);
     },
-    [approvalFlow, onApprovalFlowChange]
+    [approvalFlow, onApprovalFlowChangeAction]
   );
 
   return (

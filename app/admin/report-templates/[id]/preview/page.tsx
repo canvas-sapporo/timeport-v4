@@ -28,22 +28,22 @@ export default function PreviewReportTemplatePage({ params }: { params: Promise<
   const [template, setTemplate] = useState<ReportTemplate | null>(null);
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
   const [previewData, setPreviewData] = useState<Record<string, any>>({});
-  const [templateId, setTemplateId] = useState<string>('');
+  // const [templateId, setTemplateId] = useState<string>('');
 
   useEffect(() => {
-    const initData = async () => {
+    async function initData() {
       try {
         const resolvedParams = await params;
-        setTemplateId(resolvedParams.id);
+        // setTemplateId(resolvedParams.id);
         await loadData(resolvedParams.id);
       } catch (error) {
         console.error('初期化エラー:', error);
       }
-    };
+    }
     initData();
   }, [params]);
 
-  const loadData = async (id: string) => {
+  async function loadData(id: string) {
     try {
       // テンプレート情報を取得
       const templateResult = await getReportTemplate(id);
@@ -93,9 +93,9 @@ export default function PreviewReportTemplatePage({ params }: { params: Promise<
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const renderPreviewField = (field: ReportFieldConfig) => {
+  function renderPreviewField(field: ReportFieldConfig) {
     const value = previewData[field.id] || '';
 
     switch (field.type) {
@@ -251,7 +251,7 @@ export default function PreviewReportTemplatePage({ params }: { params: Promise<
           />
         );
     }
-  };
+  }
 
   if (isLoading) {
     return (

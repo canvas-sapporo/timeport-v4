@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { getGroups, getGroupStats } from '@/lib/actions/admin/groups';
 import GroupListTable from '@/components/admin/groups/GroupListTable';
-import type { Group } from '@/types/groups';
+import type { Group } from '@/schemas/group';
 import { supabase } from '@/lib/supabase';
 
 export default function AdminGroupPage() {
@@ -22,7 +22,7 @@ export default function AdminGroupPage() {
   });
 
   // データ再取得関数
-  const refetchData = async (companyId: string) => {
+  async function refetchData(companyId: string) {
     try {
       const [groupsResult, statsResult] = await Promise.all([
         getGroups(companyId),
@@ -39,7 +39,7 @@ export default function AdminGroupPage() {
     } catch (error) {
       console.error('データの再取得に失敗しました:', error);
     }
-  };
+  }
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -47,7 +47,7 @@ export default function AdminGroupPage() {
       return;
     }
 
-    const fetchData = async () => {
+    async function fetchData() {
       try {
         // デバッグ用：ユーザー情報をログ出力
         console.log('現在のユーザー情報:', user);
@@ -102,7 +102,7 @@ export default function AdminGroupPage() {
       } finally {
         setIsLoading(false);
       }
-    };
+    }
 
     fetchData();
   }, [user, router]);

@@ -9,6 +9,11 @@
 
 import { createServerClient } from '@/lib/supabase';
 import type { UUID } from '@/types/common';
+import type {
+  UserCompanyInfo,
+  GetUserCompanyResult,
+  GetCompanyInfoResult,
+} from '@/schemas/user_profile';
 
 /**
  * ユーザーIDから会社IDを取得（サーバーアクション）
@@ -45,7 +50,7 @@ export async function getUserCompanyId(userId: UUID): Promise<UUID | null> {
       return null;
     }
 
-    return (data.groups as any).company_id;
+    return (data.groups as unknown as { company_id: string }).company_id;
   } catch (error) {
     console.error('Unexpected error in getUserCompanyId:', error);
     return null;
@@ -58,13 +63,7 @@ export async function getUserCompanyId(userId: UUID): Promise<UUID | null> {
  * @param userId ユーザーID
  * @returns 会社情報
  */
-export async function getUserCompanyInfo(userId: UUID): Promise<{
-  company_id: UUID;
-  company_name: string;
-  company_code: string;
-  group_id: UUID;
-  group_name: string;
-} | null> {
+export async function getUserCompanyInfo(userId: UUID): Promise<UserCompanyInfo | null> {
   const supabase = createServerClient();
 
   try {
@@ -100,8 +99,13 @@ export async function getUserCompanyInfo(userId: UUID): Promise<{
       return null;
     }
 
-    const group = data.groups as any;
-    const company = group.companies as any;
+    const group = data.groups as unknown as {
+      id: string;
+      company_id: string;
+      name: string;
+      companies: { id: string; name: string; code: string };
+    };
+    const company = group.companies;
 
     if (!company) {
       return null;

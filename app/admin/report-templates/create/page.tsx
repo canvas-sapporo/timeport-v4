@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { createReportTemplate } from '@/lib/actions/admin/report-templates';
-import type { ReportFieldConfig } from '@/types/report';
+import type { ReportFieldConfig } from '@/schemas/report';
 
 // フィールドタイプの定義
 const fieldTypes = [
@@ -50,7 +50,7 @@ export default function CreateReportTemplatePage() {
   const [formFields, setFormFields] = useState<ReportFieldConfig[]>([]);
 
   // フィールドを追加
-  const addField = (fieldType: string) => {
+  function addField(fieldType: string) {
     const newField: ReportFieldConfig = {
       id: `field_${Date.now()}`,
       type: fieldType as any,
@@ -106,38 +106,38 @@ export default function CreateReportTemplatePage() {
     }
 
     setFormFields([...formFields, newField]);
-  };
+  }
 
   // フィールドを削除
-  const removeField = (index: number) => {
+  function removeField(index: number) {
     setFormFields(formFields.filter((_, i) => i !== index));
-  };
+  }
 
   // フィールドを更新
-  const updateField = (index: number, field: ReportFieldConfig) => {
+  function updateField(index: number, field: ReportFieldConfig) {
     const newFields = [...formFields];
     newFields[index] = field;
     setFormFields(newFields);
-  };
+  }
 
   // フィールドを上に移動
-  const moveFieldUp = (index: number) => {
+  function moveFieldUp(index: number) {
     if (index === 0) return;
     const newFields = [...formFields];
     [newFields[index], newFields[index - 1]] = [newFields[index - 1], newFields[index]];
     setFormFields(newFields);
-  };
+  }
 
   // フィールドを下に移動
-  const moveFieldDown = (index: number) => {
+  function moveFieldDown(index: number) {
     if (index === formFields.length - 1) return;
     const newFields = [...formFields];
     [newFields[index], newFields[index + 1]] = [newFields[index + 1], newFields[index]];
     setFormFields(newFields);
-  };
+  }
 
   // フォーム送信
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     if (!basicInfo.name.trim()) {
       toast({
         title: 'エラー',
@@ -213,7 +213,7 @@ export default function CreateReportTemplatePage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   return (
     <div className="container mx-auto p-6">

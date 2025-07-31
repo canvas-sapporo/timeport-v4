@@ -1,19 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Search, Menu, Users, Settings } from 'lucide-react';
+import { Search, Menu } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import NotificationSystem from '@/components/notifications/notification-system';
 
 interface HeaderProps {
@@ -26,12 +20,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
   const pathname = usePathname();
-
-  const unreadNotifications = notifications.filter((n) => !n.is_read && n.user_id === user?.id);
-
-  const handleNotificationClick = (notificationId: string) => {
-    markNotificationAsRead(notificationId);
-  };
 
   return (
     <header className="h-16 timeport-header text-white flex items-center justify-between px-6 shadow-lg relative z-20">

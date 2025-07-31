@@ -6,10 +6,10 @@ import { createServerClient } from '@/lib/supabase';
  * 機能制御ミドルウェア
  * ユーザーがアクセスしようとしている機能が企業で有効になっているかをチェック
  */
-export const checkFeatureAccess = async (
+export async function checkFeatureAccess(
   request: NextRequest,
   featureCode: string
-): Promise<{ allowed: boolean; redirectUrl?: string }> => {
+): Promise<{ allowed: boolean; redirectUrl?: string }> {
   try {
     const supabase = createServerClient();
 
@@ -68,12 +68,12 @@ export const checkFeatureAccess = async (
     console.error('機能制御チェックエラー:', error);
     return { allowed: false, redirectUrl: '/error' };
   }
-};
+}
 
 /**
  * 機能制御ミドルウェア（Next.js Middleware用）
  */
-export const withFeatureCheck = (featureCode: string) => {
+export function withFeatureCheck(featureCode: string) {
   return async (request: NextRequest) => {
     const result = await checkFeatureAccess(request, featureCode);
 
@@ -83,15 +83,15 @@ export const withFeatureCheck = (featureCode: string) => {
 
     return NextResponse.next();
   };
-};
+}
 
 /**
  * 複数機能の制御チェック
  */
-export const checkMultipleFeatures = async (
+export async function checkMultipleFeatures(
   request: NextRequest,
   featureCodes: string[]
-): Promise<{ allowed: boolean; redirectUrl?: string; disabledFeatures?: string[] }> => {
+): Promise<{ allowed: boolean; redirectUrl?: string; disabledFeatures?: string[] }> {
   try {
     const supabase = createServerClient();
 
@@ -163,4 +163,4 @@ export const checkMultipleFeatures = async (
     console.error('複数機能制御チェックエラー:', error);
     return { allowed: false, redirectUrl: '/error' };
   }
-};
+}

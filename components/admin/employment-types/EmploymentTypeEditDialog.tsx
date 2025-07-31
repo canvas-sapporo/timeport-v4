@@ -23,18 +23,18 @@ import {
   updateEmploymentType,
   toggleEmploymentTypeStatus,
 } from '@/lib/actions/admin/employment-types';
-import type { EmploymentType, EditEmploymentTypeFormData } from '@/types/employment_type';
+import type { EmploymentType, EditEmploymentTypeFormData } from '@/schemas/employment-type';
 
 interface EmploymentTypeEditDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   employmentType: EmploymentType | null;
   onSuccess?: () => void;
 }
 
 export default function EmploymentTypeEditDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   employmentType,
   onSuccess,
 }: EmploymentTypeEditDialogProps) {
@@ -84,7 +84,7 @@ export default function EmploymentTypeEditDialog({
           title: '成功',
           description: '雇用形態が正常に更新されました',
         });
-        onOpenChange(false);
+        onOpenChangeAction(false);
         onSuccess?.();
       } else {
         toast({
@@ -140,7 +140,7 @@ export default function EmploymentTypeEditDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -204,7 +204,7 @@ export default function EmploymentTypeEditDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
               disabled={isLoading}
             >
               キャンセル

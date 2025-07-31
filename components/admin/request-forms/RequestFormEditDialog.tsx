@@ -29,7 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { updateRequestForm } from '@/lib/actions/admin/request-forms';
 import FormBuilder from '@/components/forms/form-builder';
 import ApprovalFlowBuilder from '@/components/admin/request-forms/ApprovalFlowBuilder';
-import type { RequestForm, FormFieldConfig, ApprovalStep } from '@/types/request';
+import type { RequestForm, FormFieldConfig, ApprovalStep } from '@/schemas/request';
 
 const requestTypeSchema = z.object({
   name: z.string().min(1, '申請フォーム名は必須です'),
@@ -43,9 +43,9 @@ type RequestTypeFormData = z.infer<typeof requestTypeSchema>;
 
 interface RequestFormEditDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   requestForm: RequestForm | null;
-  onSuccess: () => void;
+  onSuccessAction: () => void;
 }
 
 const CATEGORIES = [
@@ -61,9 +61,9 @@ const CATEGORIES = [
 
 export default function RequestFormEditDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   requestForm,
-  onSuccess,
+  onSuccessAction,
 }: RequestFormEditDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -166,8 +166,8 @@ export default function RequestFormEditDialog({
           title: '申請フォームを更新しました',
           description: `${data.name}が正常に更新されました`,
         });
-        onOpenChange(false);
-        onSuccess();
+        onOpenChangeAction(false);
+        onSuccessAction();
       } else {
         toast({
           title: 'エラー',
@@ -188,13 +188,13 @@ export default function RequestFormEditDialog({
   };
 
   const handleCancel = () => {
-    onOpenChange(false);
+    onOpenChangeAction(false);
   };
 
   if (!requestForm) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>申請フォーム編集: {requestForm.name}</DialogTitle>
@@ -286,7 +286,7 @@ export default function RequestFormEditDialog({
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">フォーム項目設定</h3>
                 </div>
-                <FormBuilder formConfig={formConfig} onFormConfigChange={setFormConfig} />
+                <FormBuilder formConfig={formConfig} onFormConfigChangeAction={setFormConfig} />
               </div>
             </TabsContent>
 
@@ -298,7 +298,7 @@ export default function RequestFormEditDialog({
                 </div>
                 <ApprovalFlowBuilder
                   approvalFlow={approvalFlow}
-                  onApprovalFlowChange={setApprovalFlow}
+                  onApprovalFlowChangeAction={setApprovalFlow}
                 />
               </div>
             </TabsContent>

@@ -38,9 +38,9 @@ import { useToast } from '@/hooks/use-toast';
 import { updateUser } from '@/lib/actions/admin/users';
 import { getEmploymentTypes } from '@/lib/actions/admin/employment-types';
 import { getWorkTypes } from '@/lib/actions/admin/work-types';
-import type { UserProfile } from '@/types/user_profiles';
-import type { Group } from '@/types/groups';
-import type { EmploymentType, WorkType } from '@/types/employment_type';
+import type { UserProfile } from '@/schemas/user_profile';
+import type { Group } from '@/schemas/group';
+import type { EmploymentType, WorkType } from '@/schemas/employment-type';
 import type { UUID } from '@/types/common';
 
 // バリデーションスキーマ

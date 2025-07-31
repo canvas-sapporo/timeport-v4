@@ -1,8 +1,8 @@
-import { AuthUser } from '@/types/auth';
+import { AuthUser } from '@/schemas/auth';
 
 import { supabase } from './supabase';
 
-export const loginUser = async (
+export async function loginUser(
   email: string,
   password: string
 ): Promise<{
@@ -12,7 +12,7 @@ export const loginUser = async (
   email: string;
   role: 'system-admin' | 'admin' | 'member';
   primary_group_id: string;
-} | null> => {
+} | null> {
   try {
     console.log('ログイン開始:', email);
 
@@ -92,9 +92,9 @@ export const loginUser = async (
     console.error('ログインエラー:', error);
     return null;
   }
-};
+}
 
-export const logoutUser = async (): Promise<void> => {
+export async function logoutUser(): Promise<void> {
   try {
     // Supabaseでサインアウト（グローバルスコープで実行）
     const { error } = await supabase.auth.signOut({ scope: 'global' });
@@ -123,9 +123,9 @@ export const logoutUser = async (): Promise<void> => {
   } catch (error) {
     console.error('ログアウトエラー:', error);
   }
-};
+}
 
-export const getCurrentUser = (): AuthUser | null => {
+export function getCurrentUser(): AuthUser | null {
   try {
     if (typeof window === 'undefined') return null;
     const stored = localStorage.getItem('auth-user');
@@ -133,10 +133,10 @@ export const getCurrentUser = (): AuthUser | null => {
   } catch {
     return null;
   }
-};
+}
 
-export const setCurrentUser = (user: AuthUser): void => {
+export function setCurrentUser(user: AuthUser): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem('auth-user', JSON.stringify(user));
   }
-};
+}

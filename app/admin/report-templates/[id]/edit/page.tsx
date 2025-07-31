@@ -44,7 +44,7 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [template, setTemplate] = useState<ReportTemplate | null>(null);
+  // const [template, setTemplate] = useState<ReportTemplate | null>(null);
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
   const [templateId, setTemplateId] = useState<string>('');
 
@@ -59,24 +59,24 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
   const [formConfig, setFormConfig] = useState<ReportFieldConfig[]>([]);
 
   useEffect(() => {
-    const initData = async () => {
+    async function initData() {
       try {
         const resolvedParams = await params;
         await loadData(resolvedParams.id);
       } catch (error) {
         console.error('初期化エラー:', error);
       }
-    };
+    }
     initData();
   }, [params]);
 
-  const loadData = async (id: string) => {
+  async function loadData(id: string) {
     try {
       setTemplateId(id);
       // テンプレート情報を取得
       const templateResult = await getReportTemplate(id);
       if (templateResult.success && templateResult.data) {
-        setTemplate(templateResult.data);
+        // setTemplate(templateResult.data);
         setFormData({
           name: templateResult.data.name,
           description: templateResult.data.description || '',
@@ -117,9 +117,9 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSaving(true);
 
@@ -163,9 +163,9 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
     } finally {
       setIsSaving(false);
     }
-  };
+  }
 
-  const addField = () => {
+  function addField() {
     const newField: ReportFieldConfig = {
       id: `field_${Date.now()}`,
       type: 'text',
@@ -174,19 +174,19 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
       placeholder: '',
     };
     setFormConfig([...formConfig, newField]);
-  };
+  }
 
-  const removeField = (index: number) => {
+  function removeField(index: number) {
     setFormConfig(formConfig.filter((_, i) => i !== index));
-  };
+  }
 
-  const updateField = (index: number, field: Partial<ReportFieldConfig>) => {
+  function updateField(index: number, field: Partial<ReportFieldConfig>) {
     const newConfig = [...formConfig];
     newConfig[index] = { ...newConfig[index], ...field };
     setFormConfig(newConfig);
-  };
+  }
 
-  const moveField = (index: number, direction: 'up' | 'down') => {
+  function moveField(index: number, direction: 'up' | 'down') {
     const newConfig = [...formConfig];
     if (direction === 'up' && index > 0) {
       [newConfig[index], newConfig[index - 1]] = [newConfig[index - 1], newConfig[index]];
@@ -194,7 +194,7 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
       [newConfig[index], newConfig[index + 1]] = [newConfig[index + 1], newConfig[index]];
     }
     setFormConfig(newConfig);
-  };
+  }
 
   if (isLoading) {
     return (

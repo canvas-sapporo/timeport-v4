@@ -9,7 +9,7 @@ import { getAttendanceStatuses } from '@/lib/actions/attendance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { AttendanceStatusEntity } from '@/types/attendance';
+import type { AttendanceStatusData } from '@/schemas/attendance';
 import AttendanceStatusListTable from '@/components/admin/attendance-statuses/AttendanceStatusListTable';
 import AttendanceStatusCreateDialog from '@/components/admin/attendance-statuses/AttendanceStatusCreateDialog';
 import AttendanceStatusEditDialog from '@/components/admin/attendance-statuses/AttendanceStatusEditDialog';
@@ -19,7 +19,7 @@ export default function AdminAttendanceStatusesPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [statuses, setStatuses] = useState<AttendanceStatusEntity[]>([]);
+  const [statuses, setStatuses] = useState<AttendanceStatusData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +27,7 @@ export default function AdminAttendanceStatusesPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<AttendanceStatusEntity | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<AttendanceStatusData | null>(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -42,7 +42,7 @@ export default function AdminAttendanceStatusesPage() {
     }
   }, [user]);
 
-  const fetchStatuses = async () => {
+  async function fetchStatuses() {
     if (!user?.company_id) return;
 
     setIsLoading(true);
@@ -60,29 +60,29 @@ export default function AdminAttendanceStatusesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handleCreate = () => {
+  function handleCreate() {
     setCreateDialogOpen(true);
-  };
+  }
 
-  const handleEdit = (status: AttendanceStatusEntity) => {
+  function handleEdit(status: AttendanceStatusData) {
     setSelectedStatus(status);
     setEditDialogOpen(true);
-  };
+  }
 
-  const handleDelete = (status: AttendanceStatusEntity) => {
+  function handleDelete(status: AttendanceStatusData) {
     setSelectedStatus(status);
     setDeleteDialogOpen(true);
-  };
+  }
 
-  const handleOperationSuccess = () => {
+  function handleOperationSuccess() {
     fetchStatuses();
     toast({
       title: '操作完了',
       description: '勤怠ステータスが正常に更新されました',
     });
-  };
+  }
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -202,9 +202,9 @@ export default function AdminAttendanceStatusesPage() {
         <CardContent>
           <AttendanceStatusListTable
             statuses={statuses}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onCreate={handleCreate}
+            onEditAction={handleEdit}
+            onDeleteAction={handleDelete}
+            onCreateAction={handleCreate}
           />
         </CardContent>
       </Card>
@@ -212,7 +212,7 @@ export default function AdminAttendanceStatusesPage() {
       {/* 作成ダイアログ */}
       <AttendanceStatusCreateDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        onOpenChangeAction={setCreateDialogOpen}
         companyId={user.company_id || ''}
         onSuccess={handleOperationSuccess}
       />
@@ -220,7 +220,7 @@ export default function AdminAttendanceStatusesPage() {
       {/* 編集ダイアログ */}
       <AttendanceStatusEditDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        onOpenChangeAction={setEditDialogOpen}
         status={selectedStatus}
         onSuccess={handleOperationSuccess}
       />
@@ -228,7 +228,7 @@ export default function AdminAttendanceStatusesPage() {
       {/* 削除ダイアログ */}
       <AttendanceStatusDeleteDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
+        onOpenChangeAction={setDeleteDialogOpen}
         status={selectedStatus}
         onSuccess={handleOperationSuccess}
       />

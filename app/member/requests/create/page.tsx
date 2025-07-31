@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Upload, X, FileText } from 'lucide-react';
+import { ArrowLeft, X, FileText } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
@@ -23,8 +23,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { FormFieldConfig, RequestForm } from '@/types/request';
+import { FormFieldConfig, RequestForm } from '@/schemas/request';
 import DynamicForm from '@/components/forms/dynamic-form';
 import { supabase } from '@/lib/supabase';
 
@@ -44,9 +43,7 @@ export default function CreateRequestPage() {
   const requestTypeId = searchParams.get('type');
 
   const [selectedRequestForm, setSelectedRequestForm] = useState<RequestForm | null>(null);
-  const [formData, setFormData] = useState<
-    Record<string, string | number | boolean | Date | string[]>
-  >({});
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +53,7 @@ export default function CreateRequestPage() {
     handleSubmit,
     formState: { errors },
     setValue,
-    watch,
+    // watch,
   } = useForm<CreateRequestFormData>({
     resolver: zodResolver(createRequestSchema),
   });
@@ -80,16 +77,16 @@ export default function CreateRequestPage() {
     return null;
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
     setAttachments((prev) => [...prev, ...files]);
-  };
+  }
 
-  const removeAttachment = (index: number) => {
+  function removeAttachment(index: number) {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
-  };
+  }
 
-  const uploadFiles = async (requestId: string): Promise<string[]> => {
+  async function uploadFiles(requestId: string): Promise<string[]> {
     if (attachments.length === 0) return [];
 
     const uploadedUrls: string[] = [];
@@ -110,9 +107,10 @@ export default function CreateRequestPage() {
     }
 
     return uploadedUrls;
-  };
+  }
 
-  const onSubmit = async (data: CreateRequestFormData) => {
+  async function onSubmit(data: CreateRequestFormData) {
+    if (!user) return;
     if (!selectedRequestForm) {
       setError('リクエストタイプを選択してください');
       return;
@@ -120,17 +118,15 @@ export default function CreateRequestPage() {
 
     setIsSubmitting(true);
     setError(null);
-
     try {
       // リクエストIDを生成
       const requestId = Date.now().toString();
-
       // リクエストを作成
       await createRequest({
         user_id: user.id,
-        request_form_id: selectedRequestForm.id,
+        request_form_id: selectedRequestForm!.id,
         title: data.title,
-        form_data: formData,
+        form_data: formData as Record<string, string | number | boolean | Date | string[]>,
         target_date: new Date().toISOString().split('T')[0],
         start_date: new Date().toISOString().split('T')[0],
         end_date: new Date().toISOString().split('T')[0],
@@ -139,11 +135,9 @@ export default function CreateRequestPage() {
         comments: [],
         attachments: [],
       });
-
       // 添付ファイルをアップロード
       if (attachments.length > 0) {
         const attachmentUrls = await uploadFiles(requestId);
-
         // 添付ファイル情報をリクエストに追加
         await supabase.from('request_attachments').insert(
           attachmentUrls.map((url, index) => ({
@@ -155,20 +149,17 @@ export default function CreateRequestPage() {
           }))
         );
       }
-
       router.push('/member/requests');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'リクエストの作成に失敗しました');
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
-  const handleFormDataChange = (
-    data: Record<string, string | number | boolean | Date | string[]>
-  ) => {
+  function handleFormDataChange(data: Record<string, unknown>) {
     setFormData(data);
-  };
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">

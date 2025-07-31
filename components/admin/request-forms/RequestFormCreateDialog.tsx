@@ -33,7 +33,7 @@ import { getObjectTypeDefaults } from '@/lib/utils/request-type-utils';
 import FormBuilder from '@/components/forms/form-builder';
 import ApprovalFlowBuilder from '@/components/admin/request-forms/ApprovalFlowBuilder';
 import ObjectTypeSettingsDialog from '@/components/forms/object-type-settings-dialog';
-import type { RequestForm, FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/types/request';
+import type { RequestForm, FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/schemas/request';
 
 const requestTypeSchema = z.object({
   name: z.string().min(1, '申請フォーム名は必須です'),
@@ -47,8 +47,8 @@ type RequestTypeFormData = z.infer<typeof requestTypeSchema>;
 
 interface RequestFormCreateDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onOpenChangeAction: (open: boolean) => void;
+  onSuccessAction: () => void;
 }
 
 const CATEGORIES = [
@@ -64,8 +64,8 @@ const CATEGORIES = [
 
 export default function RequestFormCreateDialog({
   open,
-  onOpenChange,
-  onSuccess,
+  onOpenChangeAction,
+  onSuccessAction,
 }: RequestFormCreateDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -253,8 +253,8 @@ export default function RequestFormCreateDialog({
         setApprovalFlow([]);
         setObjectMetadata(null);
         setActiveTab('basic');
-        onOpenChange(false);
-        onSuccess();
+        onOpenChangeAction(false);
+        onSuccessAction();
       } else {
         toast({
           title: 'エラー',
@@ -282,11 +282,11 @@ export default function RequestFormCreateDialog({
     setApprovalFlow([]);
     setObjectMetadata(null);
     setActiveTab('basic');
-    onOpenChange(false);
+    onOpenChangeAction(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>新規申請フォーム作成</DialogTitle>
@@ -425,9 +425,7 @@ export default function RequestFormCreateDialog({
                         size="sm"
                         onClick={() => {
                           if (selectedCategory === 'attendance_correction' && objectMetadata) {
-                            const { defaultFormConfig } = getObjectTypeDefaults('attendance');
-                            // defaultFormConfigは既に正しいfield.metadataを持っているので、そのまま使用
-                            setFormConfig(defaultFormConfig);
+                            setFormConfig(getDefaultFormConfig(selectedCategory));
                           } else {
                             setFormConfig(getDefaultFormConfig(selectedCategory));
                           }
@@ -438,7 +436,7 @@ export default function RequestFormCreateDialog({
                     )}
                   </div>
                 </div>
-                <FormBuilder formConfig={formConfig} onFormConfigChange={setFormConfig} />
+                <FormBuilder formConfig={formConfig} onFormConfigChangeAction={setFormConfig} />
               </div>
             </TabsContent>
 
@@ -460,7 +458,7 @@ export default function RequestFormCreateDialog({
                 </div>
                 <ApprovalFlowBuilder
                   approvalFlow={approvalFlow}
-                  onApprovalFlowChange={setApprovalFlow}
+                  onApprovalFlowChangeAction={setApprovalFlow}
                 />
               </div>
             </TabsContent>
@@ -512,9 +510,9 @@ export default function RequestFormCreateDialog({
         {/* オブジェクトタイプ設定ダイアログ */}
         <ObjectTypeSettingsDialog
           open={objectTypeSettingsOpen}
-          onOpenChange={setObjectTypeSettingsOpen}
+          onOpenChangeAction={setObjectTypeSettingsOpen}
           metadata={objectMetadata}
-          onMetadataChange={setObjectMetadata}
+          onMetadataChangeAction={setObjectMetadata}
         />
       </DialogContent>
     </Dialog>

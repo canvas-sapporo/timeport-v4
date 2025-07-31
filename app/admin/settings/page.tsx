@@ -8,7 +8,6 @@ import {
   Clock,
   Bell,
   Shield,
-  Database,
   Save,
   Plus,
   Edit,
@@ -26,15 +25,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from '@/components/ui/select';
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// import { Separator } from '@/components/ui/separator';
 import {
   Table,
   TableBody,
@@ -48,15 +47,16 @@ import { getEmploymentTypes, getEmploymentTypeStats } from '@/lib/actions/admin/
 import { getWorkTypes, getWorkTypeStats } from '@/lib/actions/admin/work-types';
 import { getAttendanceStatuses } from '@/lib/actions/attendance';
 import { getCompanyInfo } from '@/lib/actions/user-settings';
-import type { EmploymentType, WorkType } from '@/types/employment_type';
-import type { AttendanceStatusEntity } from '@/types/attendance';
-import type { Company } from '@/types/company';
+import type { EmploymentType, WorkType } from '@/schemas/employment-type';
+import type { AttendanceStatusData } from '@/schemas/attendance';
+import type { Company } from '@/schemas/company';
+import type { CompanyInfo } from '@/schemas/user_profile';
 
 // 時刻フォーマット関数を追加
-const formatTime = (time: string) => {
+function formatTime(time: string) {
   if (!time) return '--:--';
   return time.substring(0, 5); // HH:MM形式で表示
-};
+}
 
 // 雇用形態管理用ダイアログコンポーネントをインポート
 import EmploymentTypeCreateDialog from '@/components/admin/employment-types/EmploymentTypeCreateDialog';
@@ -75,11 +75,11 @@ export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState('system');
 
   // Company State
-  const [company, setCompany] = useState<Company | null>(null);
+  const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [isCompanyLoading, setIsCompanyLoading] = useState(false);
 
   // Attendance Statuses State
-  const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusEntity[]>([]);
+  const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusData[]>([]);
   const [isAttendanceStatusesLoading, setIsAttendanceStatusesLoading] = useState(false);
 
   // Employment Types State
@@ -142,7 +142,7 @@ export default function AdminSettingsPage() {
   });
 
   // 会社情報取得
-  const fetchCompanyInfo = async () => {
+  async function fetchCompanyInfo() {
     if (!user?.company_id) return;
 
     setIsCompanyLoading(true);
@@ -158,10 +158,10 @@ export default function AdminSettingsPage() {
     } finally {
       setIsCompanyLoading(false);
     }
-  };
+  }
 
   // 勤怠ステータス取得
-  const fetchAttendanceStatuses = async () => {
+  async function fetchAttendanceStatuses() {
     if (!user?.company_id) return;
 
     setIsAttendanceStatusesLoading(true);
@@ -177,10 +177,10 @@ export default function AdminSettingsPage() {
     } finally {
       setIsAttendanceStatusesLoading(false);
     }
-  };
+  }
 
   // 雇用形態データ取得
-  const fetchEmploymentTypes = async () => {
+  async function fetchEmploymentTypes() {
     if (!user?.company_id) return;
 
     setIsEmploymentTypesLoading(true);
@@ -206,10 +206,10 @@ export default function AdminSettingsPage() {
     } finally {
       setIsEmploymentTypesLoading(false);
     }
-  };
+  }
 
   // 勤務形態データ取得
-  const fetchWorkTypes = async () => {
+  async function fetchWorkTypes() {
     if (!user?.company_id) return;
 
     setIsWorkTypesLoading(true);
@@ -235,7 +235,41 @@ export default function AdminSettingsPage() {
     } finally {
       setIsWorkTypesLoading(false);
     }
-  };
+  }
+
+  async function handleSaveSettings(settingsType: string) {
+    setIsLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log(`Saving ${settingsType} settings...`);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // 雇用形態編集ボタン押下時
+  function handleEditEmploymentType(employmentType: EmploymentType) {
+    setEditEmploymentTypeTarget(employmentType);
+    setEditEmploymentTypeDialogOpen(true);
+  }
+
+  // 雇用形態削除ボタン押下時
+  function handleDeleteEmploymentType(employmentType: EmploymentType) {
+    setDeleteEmploymentTypeTarget(employmentType);
+    setDeleteEmploymentTypeDialogOpen(true);
+  }
+
+  // 勤務形態編集ボタン押下時
+  function handleEditWorkType(workType: WorkType) {
+    setEditWorkTypeTarget(workType);
+    setEditWorkTypeDialogOpen(true);
+  }
+
+  // 勤務形態削除ボタン押下時
+  function handleDeleteWorkType(workType: WorkType) {
+    setDeleteWorkTypeTarget(workType);
+    setDeleteWorkTypeDialogOpen(true);
+  }
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -268,16 +302,6 @@ export default function AdminSettingsPage() {
     return null;
   }
 
-  const handleSaveSettings = async (settingsType: string) => {
-    setIsLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log(`Saving ${settingsType} settings...`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const tabs = [
     { id: 'system', label: 'システム', icon: Settings },
     { id: 'notifications', label: '通知', icon: Bell },
@@ -286,30 +310,6 @@ export default function AdminSettingsPage() {
     { id: 'employment-types', label: '雇用形態', icon: Users },
     { id: 'work-types', label: '勤務形態', icon: Briefcase },
   ];
-
-  // 雇用形態編集ボタン押下時
-  const handleEditEmploymentType = (employmentType: EmploymentType) => {
-    setEditEmploymentTypeTarget(employmentType);
-    setEditEmploymentTypeDialogOpen(true);
-  };
-
-  // 雇用形態削除ボタン押下時
-  const handleDeleteEmploymentType = (employmentType: EmploymentType) => {
-    setDeleteEmploymentTypeTarget(employmentType);
-    setDeleteEmploymentTypeDialogOpen(true);
-  };
-
-  // 勤務形態編集ボタン押下時
-  const handleEditWorkType = (workType: WorkType) => {
-    setEditWorkTypeTarget(workType);
-    setEditWorkTypeDialogOpen(true);
-  };
-
-  // 勤務形態削除ボタン押下時
-  const handleDeleteWorkType = (workType: WorkType) => {
-    setDeleteWorkTypeTarget(workType);
-    setDeleteWorkTypeDialogOpen(true);
-  };
 
   return (
     <div className="space-y-6">
@@ -852,7 +852,9 @@ export default function AdminSettingsPage() {
                               {type.is_active ? '有効' : '無効'}
                             </Badge>
                           </TableCell>
-                          <TableCell>{new Date(type.updated_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {type.updated_at ? new Date(type.updated_at).toLocaleDateString() : '-'}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
                               <Button
@@ -967,7 +969,9 @@ export default function AdminSettingsPage() {
                               {type.is_active ? '有効' : '無効'}
                             </Badge>
                           </TableCell>
-                          <TableCell>{new Date(type.updated_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {type.updated_at ? new Date(type.updated_at).toLocaleDateString() : '-'}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
                               <Button
@@ -1006,18 +1010,18 @@ export default function AdminSettingsPage() {
       {/* 雇用形態管理ダイアログ */}
       <EmploymentTypeCreateDialog
         open={createEmploymentTypeDialogOpen}
-        onOpenChange={setCreateEmploymentTypeDialogOpen}
+        onOpenChangeAction={setCreateEmploymentTypeDialogOpen}
         onSuccess={fetchEmploymentTypes}
       />
       <EmploymentTypeEditDialog
         open={editEmploymentTypeDialogOpen}
-        onOpenChange={setEditEmploymentTypeDialogOpen}
+        onOpenChangeAction={setEditEmploymentTypeDialogOpen}
         employmentType={editEmploymentTypeTarget}
         onSuccess={fetchEmploymentTypes}
       />
       <EmploymentTypeDeleteDialog
         open={deleteEmploymentTypeDialogOpen}
-        onOpenChange={setDeleteEmploymentTypeDialogOpen}
+        onOpenChangeAction={setDeleteEmploymentTypeDialogOpen}
         employmentType={deleteEmploymentTypeTarget}
         onSuccess={fetchEmploymentTypes}
       />
@@ -1025,23 +1029,23 @@ export default function AdminSettingsPage() {
       {/* 勤務形態管理ダイアログ */}
       <WorkTypeCreateDialog
         open={createWorkTypeDialogOpen}
-        onOpenChange={setCreateWorkTypeDialogOpen}
+        onOpenChangeAction={setCreateWorkTypeDialogOpen}
         companyId={user?.company_id || ''}
-        onSuccess={fetchWorkTypes}
+        onSuccessAction={fetchWorkTypes}
       />
       <WorkTypeEditDialog
         open={editWorkTypeDialogOpen}
-        onOpenChange={setEditWorkTypeDialogOpen}
+        onOpenChangeAction={setEditWorkTypeDialogOpen}
         workType={editWorkTypeTarget}
         companyId={user?.company_id || ''}
-        onSuccess={fetchWorkTypes}
+        onSuccessAction={fetchWorkTypes}
       />
       <WorkTypeDeleteDialog
         open={deleteWorkTypeDialogOpen}
-        onOpenChange={setDeleteWorkTypeDialogOpen}
+        onOpenChangeAction={setDeleteWorkTypeDialogOpen}
         workType={deleteWorkTypeTarget}
         companyId={user?.company_id || ''}
-        onSuccess={fetchWorkTypes}
+        onSuccessAction={fetchWorkTypes}
       />
     </div>
   );

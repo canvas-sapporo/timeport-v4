@@ -13,17 +13,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { RequestForm } from '@/types/request';
+import type { RequestForm } from '@/schemas/request';
 
 interface RequestFormPreviewDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   requestForm: RequestForm | null;
 }
 
 export default function RequestFormPreviewDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   requestForm,
 }: RequestFormPreviewDialogProps) {
   const [activeTab, setActiveTab] = useState('basic');
@@ -31,7 +31,7 @@ export default function RequestFormPreviewDialog({
   if (!requestForm) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>申請フォームプレビュー: {requestForm.name}</DialogTitle>

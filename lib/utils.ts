@@ -1,9 +1,9 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-export const cn = (...inputs: ClassValue[]) => {
+export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
-};
+}
 
 /**
  * 日時を「YYYY年MM月DD日hh:mm」形式でフォーマット
@@ -11,10 +11,10 @@ export const cn = (...inputs: ClassValue[]) => {
  * @param includeTime 時刻を含めるかどうか（デフォルト: true）
  * @returns フォーマットされた日時文字列
  */
-export const formatDateTime = (
+export function formatDateTime(
   date: string | Date | null | undefined,
   includeTime: boolean = true
-): string => {
+): string {
   if (!date) return '--:--';
 
   try {
@@ -40,14 +40,14 @@ export const formatDateTime = (
     console.error('日時フォーマットエラー:', error);
     return '--:--';
   }
-};
+}
 
 /**
  * 時刻のみを「hh:mm」形式でフォーマット
  * @param time 時刻文字列またはDateオブジェクト
  * @returns フォーマットされた時刻文字列
  */
-export const formatTime = (time: string | Date | null | undefined): string => {
+export function formatTime(time: string | Date | null | undefined): string {
   if (!time) return '--:--';
 
   try {
@@ -65,24 +65,24 @@ export const formatTime = (time: string | Date | null | undefined): string => {
     console.error('時刻フォーマットエラー:', error);
     return '--:--';
   }
-};
+}
 
 /**
  * 日付のみを「YYYY年MM月DD日」形式でフォーマット
  * @param date 日付文字列またはDateオブジェクト
  * @returns フォーマットされた日付文字列
  */
-export const formatDate = (date: string | Date | null | undefined): string => {
+export function formatDate(date: string | Date | null | undefined): string {
   return formatDateTime(date, false);
-};
+}
 
 /**
  * ひらがなをカタカナに変換
  * @param text 変換する文字列
  * @returns カタカナに変換された文字列
  */
-export const hiraganaToKatakana = (text: string): string => {
+export function hiraganaToKatakana(text: string): string {
   return text.replace(/[\u3041-\u3096]/g, (char) => {
     return String.fromCharCode(char.charCodeAt(0) + 0x60);
   });
-};
+}

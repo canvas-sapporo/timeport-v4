@@ -15,7 +15,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { deleteUser } from '@/lib/actions/admin/users';
-import type { UserProfile } from '@/types/user_profiles';
+import type { UserProfile } from '@/schemas/user_profile';
 
 interface UserDeleteDialogProps {
   user: UserProfile;

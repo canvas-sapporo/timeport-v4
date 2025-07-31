@@ -26,23 +26,23 @@ import { Badge } from '@/components/ui/badge';
 import { getAttendanceDetail, updateAttendance, getWorkTypes } from '@/lib/actions/attendance';
 import { formatDate, formatTime } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import type { Attendance, ClockRecord } from '@/types/attendance';
+import type { AttendanceData, ClockRecord } from '@/schemas/attendance';
 
 interface AttendanceEditDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   attendanceId: string | null;
   onSuccess?: () => void;
 }
 
 export default function AttendanceEditDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   attendanceId,
   onSuccess,
 }: AttendanceEditDialogProps) {
   const { toast } = useToast();
-  const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +135,7 @@ export default function AttendanceEditDialog({
           description: result.message,
         });
         onSuccess?.();
-        onOpenChange(false);
+        onOpenChangeAction(false);
       } else {
         toast({
           title: '更新失敗',
@@ -171,7 +171,7 @@ export default function AttendanceEditDialog({
 
   if (isLoading) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChangeAction}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>勤怠記録編集</DialogTitle>
@@ -187,7 +187,7 @@ export default function AttendanceEditDialog({
 
   if (error) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChangeAction}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>勤怠記録編集</DialogTitle>
@@ -210,7 +210,7 @@ export default function AttendanceEditDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -418,7 +418,7 @@ export default function AttendanceEditDialog({
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+          <Button variant="outline" onClick={() => onOpenChangeAction(false)} disabled={isSaving}>
             <X className="w-4 h-4 mr-2" />
             キャンセル
           </Button>

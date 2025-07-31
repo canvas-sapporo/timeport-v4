@@ -22,8 +22,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { UserProfile } from '@/types/user_profiles';
-import type { Group } from '@/types/groups';
+import type { UserProfile } from '@/schemas/user_profile';
+import type { Group } from '@/schemas/group';
 import type { UUID } from '@/types/common';
 
 import UserCreateDialog from './UserCreateDialog';
@@ -41,7 +41,7 @@ interface UserListTableProps {
     admin: number;
     member: number;
   };
-  onRefresh: () => void;
+  onRefreshAction: () => void;
 }
 
 export default function UserListTable({
@@ -49,7 +49,7 @@ export default function UserListTable({
   groups,
   companyId,
   stats,
-  onRefresh,
+  onRefreshAction,
 }: UserListTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('all');
@@ -224,7 +224,7 @@ export default function UserListTable({
             <Users className="w-5 h-5" />
             <span>ユーザー一覧</span>
           </CardTitle>
-          <UserCreateDialog companyId={companyId} groups={groups} onSuccess={onRefresh} />
+          <UserCreateDialog companyId={companyId} groups={groups} onSuccess={onRefreshAction} />
         </CardHeader>
         <CardContent>
           <Table>
@@ -274,9 +274,9 @@ export default function UserListTable({
                         user={user}
                         groups={groups}
                         companyId={companyId}
-                        onSuccess={onRefresh}
+                        onSuccess={onRefreshAction}
                       />
-                      <UserDeleteDialog user={user} onSuccess={onRefresh} />
+                      <UserDeleteDialog user={user} onSuccess={onRefreshAction} />
                     </div>
                   </TableCell>
                 </TableRow>

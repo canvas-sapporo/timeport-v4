@@ -19,17 +19,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { createGroup } from '@/lib/actions/admin/groups';
-import type { CreateGroupFormData } from '@/types/groups';
+import type { CreateGroupFormData } from '@/schemas/group';
 
 interface GroupCreateDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
 export default function GroupCreateDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   onSuccess,
 }: GroupCreateDialogProps) {
   const { toast } = useToast();
@@ -63,7 +63,7 @@ export default function GroupCreateDialog({
           title: '成功',
           description: 'グループが正常に作成されました',
         });
-        onOpenChange(false);
+        onOpenChangeAction(false);
         setForm({ name: '', code: '', description: '' });
         onSuccess?.();
       } else {
@@ -89,7 +89,7 @@ export default function GroupCreateDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-[425px] dialog-scrollbar">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -136,7 +136,7 @@ export default function GroupCreateDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
               disabled={isLoading}
             >
               キャンセル

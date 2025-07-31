@@ -18,17 +18,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { createEmploymentType } from '@/lib/actions/admin/employment-types';
-import type { CreateEmploymentTypeFormData } from '@/types/employment_type';
+import type { CreateEmploymentTypeFormData } from '@/schemas/employment-type';
 
 interface EmploymentTypeCreateDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
 export default function EmploymentTypeCreateDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   onSuccess,
 }: EmploymentTypeCreateDialogProps) {
   const { toast } = useToast();
@@ -61,7 +61,7 @@ export default function EmploymentTypeCreateDialog({
           title: '成功',
           description: '雇用形態が正常に作成されました',
         });
-        onOpenChange(false);
+        onOpenChangeAction(false);
         setForm({ code: '', name: '', description: '' });
         onSuccess?.();
       } else {
@@ -87,7 +87,7 @@ export default function EmploymentTypeCreateDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -135,7 +135,7 @@ export default function EmploymentTypeCreateDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
               disabled={isLoading}
             >
               キャンセル

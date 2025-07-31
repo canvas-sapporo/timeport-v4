@@ -30,7 +30,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createWorkType } from '@/lib/actions/admin/work-types';
 import { useToast } from '@/hooks/use-toast';
-import type { CreateWorkTypeFormData } from '@/types/employment_type';
+import type { CreateWorkTypeFormData } from '@/schemas/employment-type';
 
 const createWorkTypeSchema = z
   .object({
@@ -105,16 +105,16 @@ const createWorkTypeSchema = z
 
 interface WorkTypeCreateDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   companyId: string;
-  onSuccess: () => void;
+  onSuccessAction: () => void;
 }
 
 export default function WorkTypeCreateDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   companyId,
-  onSuccess,
+  onSuccessAction,
 }: WorkTypeCreateDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -152,8 +152,8 @@ export default function WorkTypeCreateDialog({
           description: `${data.name} が正常に作成されました`,
         });
         form.reset();
-        onOpenChange(false);
-        onSuccess();
+        onOpenChangeAction(false);
+        onSuccessAction();
       } else {
         toast({
           title: 'エラーが発生しました',
@@ -174,7 +174,7 @@ export default function WorkTypeCreateDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>勤務形態を作成</DialogTitle>
@@ -441,7 +441,7 @@ export default function WorkTypeCreateDialog({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => onOpenChangeAction(false)}
                 disabled={isLoading}
               >
                 キャンセル

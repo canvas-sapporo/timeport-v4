@@ -4,18 +4,8 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
-import type {
-  CreateGroupFormData,
-  EditGroupFormData,
-  CreateGroupResult,
-  UpdateGroupResult,
-  DeleteGroupResult,
-  GroupListResponse,
-  GroupSearchParams,
-  GroupStats,
-  GroupValidationResult,
-} from '@/types/groups';
 import {
   AppError,
   withErrorHandling,
@@ -24,6 +14,29 @@ import {
   validateRequired,
 } from '@/lib/utils/error-handling';
 import type { ValidationError } from '@/types/common';
+import {
+  CreateGroupFormSchema,
+  EditGroupFormSchema,
+  GroupSearchParamsSchema,
+  GroupSchema,
+  CreateGroupResultSchema,
+  UpdateGroupResultSchema,
+  DeleteGroupResultSchema,
+  GroupListResponseSchema,
+  GroupStatsSchema,
+  ToggleGroupStatusResultSchema,
+  GroupDeletionSafetyResultSchema,
+  GroupValidationResultSchema,
+  type CreateGroupFormData,
+  type EditGroupFormData,
+  type CreateGroupResult,
+  type UpdateGroupResult,
+  type DeleteGroupResult,
+  type GroupListResponse,
+  type GroupSearchParams,
+  type GroupStats,
+  type GroupValidationResult,
+} from '@/schemas/group';
 
 // 環境変数の確認
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -46,7 +59,9 @@ const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
 /**
  * グループ作成フォームのバリデーション
  */
-const validateCreateGroupForm = (form: CreateGroupFormData): GroupValidationResult => {
+function validateCreateGroupForm(
+  form: z.infer<typeof CreateGroupFormSchema>
+): GroupValidationResult {
   const errors: ValidationError[] = [];
 
   const nameError = validateRequired(form.name, 'グループ名');
@@ -55,17 +70,17 @@ const validateCreateGroupForm = (form: CreateGroupFormData): GroupValidationResu
   return {
     isValid: errors.length === 0,
     errors: errors.map((error) => ({
-      field: error.field as keyof CreateGroupFormData,
+      field: String(error.field),
       message: error.message,
       code: error.code || 'VALIDATION_ERROR',
     })),
   };
-};
+}
 
 /**
  * グループ編集フォームのバリデーション
  */
-const validateEditGroupForm = (form: EditGroupFormData): GroupValidationResult => {
+function validateEditGroupForm(form: z.infer<typeof EditGroupFormSchema>): GroupValidationResult {
   const errors: ValidationError[] = [];
 
   const nameError = validateRequired(form.name, 'グループ名');
@@ -74,12 +89,12 @@ const validateEditGroupForm = (form: EditGroupFormData): GroupValidationResult =
   return {
     isValid: errors.length === 0,
     errors: errors.map((error) => ({
-      field: error.field as keyof EditGroupFormData,
+      field: String(error.field),
       message: error.message,
       code: error.code || 'VALIDATION_ERROR',
     })),
   };
-};
+}
 
 // ================================
 // データベース操作関数
@@ -88,11 +103,11 @@ const validateEditGroupForm = (form: EditGroupFormData): GroupValidationResult =
 /**
  * グループコードの重複チェック
  */
-const checkGroupCodeExists = async (
+async function checkGroupCodeExists(
   code: string,
   companyId: string,
   excludeId?: string
-): Promise<boolean> => {
+): Promise<boolean> {
   const query = supabaseAdmin
     .from('groups')
     .select('id')
@@ -106,7 +121,7 @@ const checkGroupCodeExists = async (
 
   const { data } = await query;
   return (data?.length || 0) > 0;
-};
+}
 
 // ================================
 // Server Actions
@@ -115,10 +130,13 @@ const checkGroupCodeExists = async (
 /**
  * グループ作成
  */
-export const createGroup = async (
-  form: CreateGroupFormData,
+export async function createGroup(
+  form: z.infer<typeof CreateGroupFormSchema>,
   companyId: string
-): Promise<{ success: true; data: CreateGroupResult } | { success: false; error: AppError }> => {
+): Promise<
+  | { success: true; data: z.infer<typeof CreateGroupResultSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('createGroup called with form:', form);
 
   // 環境変数の確認
@@ -184,16 +202,19 @@ export const createGroup = async (
       updated_at: group.updated_at,
     };
   }, 'グループ作成');
-};
+}
 
 /**
  * グループ更新
  */
-export const updateGroup = async (
+export async function updateGroup(
   id: string,
-  form: EditGroupFormData,
+  form: z.infer<typeof EditGroupFormSchema>,
   companyId: string
-): Promise<{ success: true; data: UpdateGroupResult } | { success: false; error: AppError }> => {
+): Promise<
+  | { success: true; data: z.infer<typeof UpdateGroupResultSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('updateGroup called with form:', form);
 
   return withErrorHandling(async () => {
@@ -238,15 +259,18 @@ export const updateGroup = async (
       updated_at: group.updated_at,
     };
   }, 'グループ更新');
-};
+}
 
 /**
  * グループ削除
  */
-export const deleteGroup = async (
+export async function deleteGroup(
   id: string,
   companyId: string
-): Promise<{ success: true; data: DeleteGroupResult } | { success: false; error: AppError }> => {
+): Promise<
+  | { success: true; data: z.infer<typeof DeleteGroupResultSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('deleteGroup called with id:', id);
 
   return withErrorHandling(async () => {
@@ -271,15 +295,18 @@ export const deleteGroup = async (
       deleted_at: group.deleted_at!,
     };
   }, 'グループ削除');
-};
+}
 
 /**
  * グループ一覧取得
  */
-export const getGroups = async (
+export async function getGroups(
   companyId?: string,
-  params: GroupSearchParams = {}
-): Promise<{ success: true; data: GroupListResponse } | { success: false; error: AppError }> => {
+  params: Partial<z.infer<typeof GroupSearchParamsSchema>> = {}
+): Promise<
+  | { success: true; data: z.infer<typeof GroupListResponseSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('getGroups called with companyId:', companyId, 'params:', params);
 
   return withErrorHandling(async () => {
@@ -316,14 +343,16 @@ export const getGroups = async (
       limit,
     };
   }, 'グループ一覧取得');
-};
+}
 
 /**
  * グループ統計取得
  */
-export const getGroupStats = async (
+export async function getGroupStats(
   companyId: string
-): Promise<{ success: true; data: GroupStats } | { success: false; error: AppError }> => {
+): Promise<
+  { success: true; data: z.infer<typeof GroupStatsSchema> } | { success: false; error: AppError }
+> {
   console.log('getGroupStats called');
 
   return withErrorHandling(async () => {
@@ -347,17 +376,18 @@ export const getGroupStats = async (
       inactive,
     };
   }, 'グループ統計取得');
-};
+}
 
 /**
  * グループの有効/無効を切り替え
  */
-export const toggleGroupStatus = async (
+export async function toggleGroupStatus(
   id: string,
   companyId: string
 ): Promise<
-  { success: true; data: { id: string; is_active: boolean } } | { success: false; error: AppError }
-> => {
+  | { success: true; data: z.infer<typeof ToggleGroupStatusResultSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('toggleGroupStatus called with id:', id, 'companyId:', companyId);
 
   return withErrorHandling(async () => {
@@ -405,24 +435,21 @@ export const toggleGroupStatus = async (
       is_active: group.is_active,
     };
   }, 'グループステータス切り替え');
-};
+}
 
 /**
  * グループ削除前のユーザー所属状況チェック
  */
-export const checkGroupDeletionSafety = async (
+export async function checkGroupDeletionSafety(
   groupId: string,
   companyId: string
 ): Promise<
   | {
       success: true;
-      data: {
-        canDelete: boolean;
-        affectedUsers: Array<{ id: string; full_name: string; email: string }>;
-      };
+      data: z.infer<typeof GroupDeletionSafetyResultSchema>;
     }
   | { success: false; error: AppError }
-> => {
+> {
   console.log('checkGroupDeletionSafety called with groupId:', groupId, 'companyId:', companyId);
 
   return withErrorHandling(async () => {
@@ -497,4 +524,4 @@ export const checkGroupDeletionSafety = async (
       affectedUsers,
     };
   }, 'グループ削除安全性チェック');
-};
+}

@@ -24,18 +24,18 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { updateAttendanceStatus } from '@/lib/actions/attendance';
-import type { AttendanceStatusEntity } from '@/types/attendance';
+import type { AttendanceStatusData } from '@/schemas/attendance';
 
 interface AttendanceStatusEditDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  status: AttendanceStatusEntity | null;
+  onOpenChangeAction: (open: boolean) => void;
+  status: AttendanceStatusData | null;
   onSuccess?: () => void;
 }
 
 export default function AttendanceStatusEditDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   status,
   onSuccess,
 }: AttendanceStatusEditDialogProps) {
@@ -99,7 +99,7 @@ export default function AttendanceStatusEditDialog({
           description: '勤怠ステータスが正常に更新されました',
         });
         onSuccess?.();
-        onOpenChange(false);
+        onOpenChangeAction(false);
       } else {
         toast({
           title: '更新失敗',
@@ -123,7 +123,7 @@ export default function AttendanceStatusEditDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -267,7 +267,7 @@ export default function AttendanceStatusEditDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
               disabled={isSaving}
             >
               キャンセル

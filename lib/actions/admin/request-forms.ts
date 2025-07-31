@@ -5,26 +5,25 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { createServerClient } from '@/lib/supabase';
-import type { RequestForm, FormFieldConfig, ApprovalStep } from '@/types/request';
+import type { RequestForm, FormFieldConfig, ApprovalStep } from '@/schemas/request';
+import {
+  RequestFormSchema,
+  CreateRequestFormResultSchema,
+  UpdateRequestFormResultSchema,
+  DeleteRequestFormResultSchema,
+  RequestFormListResponseSchema,
+  RequestFormDetailSchema,
+} from '@/schemas/request-forms';
 
 // ================================
 // バリデーションスキーマ
 // ================================
 
-const RequestFormSchema = z.object({
-  name: z.string().min(1, '申請フォーム名は必須です'),
-  description: z.string().optional(),
-  category: z.string().min(1, 'カテゴリは必須です'),
-  form_config: z.array(z.any()).default([]),
-  approval_flow: z.array(z.any()).default([]),
-  is_active: z.boolean().default(true),
-});
-
 // ================================
 // 申請フォーム作成
 // ================================
 
-export const createRequestForm = async (formData: FormData) => {
+export async function createRequestForm(formData: FormData) {
   const supabase = createServerClient();
 
   try {
@@ -140,13 +139,13 @@ export const createRequestForm = async (formData: FormData) => {
       error: error instanceof Error ? error.message : '申請フォームの作成に失敗しました',
     };
   }
-};
+}
 
 // ================================
 // 申請フォーム更新
 // ================================
 
-export const updateRequestForm = async (id: string, formData: FormData) => {
+export async function updateRequestForm(id: string, formData: FormData) {
   const supabase = createServerClient();
 
   try {
@@ -266,13 +265,13 @@ export const updateRequestForm = async (id: string, formData: FormData) => {
       error: error instanceof Error ? error.message : '申請フォームの更新に失敗しました',
     };
   }
-};
+}
 
 // ================================
 // 申請フォーム削除（論理削除）
 // ================================
 
-export const deleteRequestForm = async (id: string) => {
+export async function deleteRequestForm(id: string) {
   const supabase = createServerClient();
 
   try {
@@ -357,13 +356,13 @@ export const deleteRequestForm = async (id: string) => {
       error: error instanceof Error ? error.message : '申請フォームの削除に失敗しました',
     };
   }
-};
+}
 
 // ================================
 // 申請フォームステータス切り替え
 // ================================
 
-export const toggleRequestFormStatus = async (id: string) => {
+export async function toggleRequestFormStatus(id: string) {
   const supabase = createServerClient();
 
   try {
@@ -425,13 +424,13 @@ export const toggleRequestFormStatus = async (id: string) => {
       error: error instanceof Error ? error.message : '申請フォームのステータス更新に失敗しました',
     };
   }
-};
+}
 
 // ================================
 // 申請フォーム一覧取得
 // ================================
 
-export const getRequestForms = async () => {
+export async function getRequestForms() {
   const supabase = createServerClient();
 
   try {
@@ -504,13 +503,13 @@ export const getRequestForms = async () => {
       data: [],
     };
   }
-};
+}
 
 // ================================
 // 申請フォーム詳細取得
 // ================================
 
-export const getRequestForm = async (id: string) => {
+export async function getRequestForm(id: string) {
   const supabase = createServerClient();
 
   try {
@@ -555,4 +554,4 @@ export const getRequestForm = async (id: string) => {
       error: error instanceof Error ? error.message : '申請フォームの詳細取得に失敗しました',
     };
   }
-};
+}

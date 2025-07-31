@@ -1,17 +1,19 @@
 'use server';
 
+import { z } from 'zod';
+
 import { createServerClient } from '@/lib/supabase';
-import type { ReportTemplate } from '@/types/report';
+import type { ReportTemplateData as ReportTemplate } from '@/schemas/report-templates';
 
 // ================================
 // レポートテンプレート一覧取得（メンバー用）
 // ================================
 
-export const getAvailableReportTemplates = async (): Promise<{
+export async function getAvailableReportTemplates(): Promise<{
   success: boolean;
   data?: ReportTemplate[];
   error?: string;
-}> => {
+}> {
   const supabase = createServerClient();
 
   try {
@@ -132,15 +134,15 @@ export const getAvailableReportTemplates = async (): Promise<{
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポートテンプレート詳細取得（メンバー用）
 // ================================
 
-export const getReportTemplateForMember = async (
+export async function getReportTemplateForMember(
   id: string
-): Promise<{ success: boolean; data?: ReportTemplate; error?: string }> => {
+): Promise<{ success: boolean; data?: ReportTemplate; error?: string }> {
   const supabase = createServerClient();
 
   try {
@@ -262,4 +264,4 @@ export const getReportTemplateForMember = async (
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}

@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import type { AttendanceFilters, AttendanceStatus } from '@/types/attendance';
+import type { AttendanceFilters, AttendanceStatusData } from '@/schemas/attendance';
 
 interface WorkType {
   id: string;
@@ -25,14 +25,14 @@ interface WorkType {
 
 interface AttendanceFiltersProps {
   filters: AttendanceFilters;
-  onFiltersChange: (filters: AttendanceFilters) => void;
+  onFiltersChangeAction: (filters: AttendanceFilters) => void;
   workTypes: WorkType[];
   selectedMonth: string;
-  onMonthChange: (month: string) => void;
+  onMonthChangeAction: (month: string) => void;
   isLoading?: boolean;
 }
 
-const statusOptions: { value: AttendanceStatus; label: string; color: string }[] = [
+const statusOptions: { value: string; label: string; color: string }[] = [
   { value: 'normal', label: '正常', color: 'bg-green-100 text-green-800' },
   { value: 'late', label: '遅刻', color: 'bg-red-100 text-red-800' },
   { value: 'early_leave', label: '早退', color: 'bg-orange-100 text-orange-800' },
@@ -41,16 +41,15 @@ const statusOptions: { value: AttendanceStatus; label: string; color: string }[]
 
 export default function AttendanceFilters({
   filters,
-  onFiltersChange,
+  onFiltersChangeAction,
   workTypes,
   selectedMonth,
-  onMonthChange,
-  isLoading = false,
+  onMonthChangeAction,
 }: AttendanceFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       dateRange: {
         ...filters.dateRange,
@@ -59,12 +58,12 @@ export default function AttendanceFilters({
     });
   };
 
-  const handleStatusChange = (status: AttendanceStatus, checked: boolean) => {
+  const handleStatusChange = (status: string, checked: boolean) => {
     const newStatus = checked
       ? [...filters.status, status]
       : filters.status.filter((s) => s !== status);
 
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       status: newStatus,
     });
@@ -73,14 +72,14 @@ export default function AttendanceFilters({
   const handleOvertimeChange = (value: string) => {
     const hasOvertime =
       value === 'true' ? true : value === 'false' ? false : value === 'all' ? null : null;
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       hasOvertime,
     });
   };
 
   const handleWorkTypeChange = (workTypeId: string) => {
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       workTypeId: workTypeId === 'all' ? null : workTypeId,
     });
@@ -89,19 +88,21 @@ export default function AttendanceFilters({
   const handleApprovalStatusChange = (status: string) => {
     const approvalStatus =
       status === 'all' ? null : (status as 'pending' | 'approved' | 'rejected');
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       approvalStatus,
     });
   };
 
   const clearFilters = () => {
-    onFiltersChange({
+    onFiltersChangeAction({
       dateRange: { startDate: null, endDate: null },
       status: [],
       hasOvertime: null,
       workTypeId: null,
       approvalStatus: null,
+      userId: null,
+      groupId: null,
     });
   };
 
@@ -220,7 +221,7 @@ export default function AttendanceFilters({
                   id="month-selector"
                   type="month"
                   value={selectedMonth}
-                  onChange={(e) => onMonthChange(e.target.value)}
+                  onChange={(e) => onMonthChangeAction(e.target.value)}
                   className="w-40"
                 />
               </div>

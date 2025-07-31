@@ -4,21 +4,9 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
-import type {
-  CreateWorkTypeInput,
-  UpdateWorkTypeInput,
-  WorkType,
-  WorkTypeListResponse,
-  WorkTypeSearchParams,
-  WorkTypeStats,
-  WorkTypeValidationResult,
-  CreateWorkTypeFormData,
-  EditWorkTypeFormData,
-  CreateWorkTypeResult,
-  UpdateWorkTypeResult,
-  DeleteWorkTypeResult,
-} from '@/types/employment_type';
+import type { CreateWorkTypeInput, UpdateWorkTypeInput, WorkType } from '@/schemas/employment-type';
 import {
   AppError,
   withErrorHandling,
@@ -27,6 +15,26 @@ import {
   validateRequired,
 } from '@/lib/utils/error-handling';
 import type { ValidationError } from '@/types/common';
+import {
+  CreateWorkTypeFormDataSchema,
+  EditWorkTypeFormDataSchema,
+  WorkTypeSearchParamsSchema,
+  WorkTypeValidationResultSchema,
+  CreateWorkTypeResultSchema,
+  UpdateWorkTypeResultSchema,
+  DeleteWorkTypeResultSchema,
+  WorkTypeListResponseSchema,
+  WorkTypeStatsSchema,
+  type CreateWorkTypeFormData,
+  type EditWorkTypeFormData,
+  type WorkTypeSearchParams,
+  type WorkTypeValidationResult,
+  type CreateWorkTypeResult,
+  type UpdateWorkTypeResult,
+  type DeleteWorkTypeResult,
+  type WorkTypeListResponse,
+  type WorkTypeStats,
+} from '@/schemas/work-types';
 
 // 環境変数の確認
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -49,7 +57,7 @@ const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
 /**
  * 勤務形態作成フォームのバリデーション
  */
-const validateCreateWorkTypeForm = (form: CreateWorkTypeFormData): WorkTypeValidationResult => {
+function validateCreateWorkTypeForm(form: CreateWorkTypeFormData): WorkTypeValidationResult {
   const errors: ValidationError[] = [];
 
   const nameError = validateRequired(form.name, '勤務形態名');
@@ -114,12 +122,12 @@ const validateCreateWorkTypeForm = (form: CreateWorkTypeFormData): WorkTypeValid
       code: error.code || 'VALIDATION_ERROR',
     })),
   };
-};
+}
 
 /**
  * 勤務形態編集フォームのバリデーション
  */
-const validateEditWorkTypeForm = (form: EditWorkTypeFormData): WorkTypeValidationResult => {
+function validateEditWorkTypeForm(form: EditWorkTypeFormData): WorkTypeValidationResult {
   const errors: ValidationError[] = [];
 
   const nameError = validateRequired(form.name, '勤務形態名');
@@ -184,12 +192,12 @@ const validateEditWorkTypeForm = (form: EditWorkTypeFormData): WorkTypeValidatio
       code: error.code || 'VALIDATION_ERROR',
     })),
   };
-};
+}
 
 /**
  * 勤務形態の時間バリデーション
  */
-const validateWorkTypeTimes = (form: CreateWorkTypeFormData | EditWorkTypeFormData): void => {
+function validateWorkTypeTimes(form: CreateWorkTypeFormData | EditWorkTypeFormData): void {
   // 勤務時間の整合性チェック
   if (form.work_start_time && form.work_end_time) {
     if (form.work_start_time >= form.work_end_time) {
@@ -225,7 +233,7 @@ const validateWorkTypeTimes = (form: CreateWorkTypeFormData | EditWorkTypeFormDa
       }
     }
   }
-};
+}
 
 // ================================
 // ヘルパー関数
@@ -234,11 +242,11 @@ const validateWorkTypeTimes = (form: CreateWorkTypeFormData | EditWorkTypeFormDa
 /**
  * 勤務形態コードの重複チェック
  */
-const checkWorkTypeCodeExists = async (
+async function checkWorkTypeCodeExists(
   code: string,
   companyId: string,
   excludeId?: string
-): Promise<boolean> => {
+): Promise<boolean> {
   let query = supabaseAdmin
     .from('work_types')
     .select('id')
@@ -258,12 +266,12 @@ const checkWorkTypeCodeExists = async (
   }
 
   return (data && data.length > 0) || false;
-};
+}
 
 /**
  * 勤務形態の使用状況チェック
  */
-const checkWorkTypeUsage = async (id: string): Promise<boolean> => {
+async function checkWorkTypeUsage(id: string): Promise<boolean> {
   // ユーザープロフィールで使用中
   const { data: users, error: usersError } = await supabaseAdmin
     .from('user_profiles')
@@ -312,7 +320,7 @@ const checkWorkTypeUsage = async (id: string): Promise<boolean> => {
   }
 
   return (history && history.length > 0) || false;
-};
+}
 
 // ================================
 // Server Actions
@@ -321,10 +329,10 @@ const checkWorkTypeUsage = async (id: string): Promise<boolean> => {
 /**
  * 勤務形態作成
  */
-export const createWorkType = async (
+export async function createWorkType(
   form: CreateWorkTypeFormData,
   companyId: string
-): Promise<{ success: true; data: CreateWorkTypeResult } | { success: false; error: AppError }> => {
+): Promise<{ success: true; data: CreateWorkTypeResult } | { success: false; error: AppError }> {
   console.log('createWorkType called with form:', form);
 
   // 環境変数の確認
@@ -417,16 +425,16 @@ export const createWorkType = async (
       created_at: workType.created_at,
     };
   });
-};
+}
 
 /**
  * 勤務形態更新
  */
-export const updateWorkType = async (
+export async function updateWorkType(
   id: string,
   form: EditWorkTypeFormData,
   companyId: string
-): Promise<{ success: true; data: UpdateWorkTypeResult } | { success: false; error: AppError }> => {
+): Promise<{ success: true; data: UpdateWorkTypeResult } | { success: false; error: AppError }> {
   console.log('updateWorkType called with id:', id, 'form:', form);
 
   return withErrorHandling(async () => {
@@ -499,15 +507,15 @@ export const updateWorkType = async (
       updated_at: workType.updated_at,
     };
   });
-};
+}
 
 /**
  * 勤務形態削除
  */
-export const deleteWorkType = async (
+export async function deleteWorkType(
   id: string,
   replacementWorkTypeId?: string
-): Promise<{ success: true; data: DeleteWorkTypeResult } | { success: false; error: AppError }> => {
+): Promise<{ success: true; data: DeleteWorkTypeResult } | { success: false; error: AppError }> {
   console.log(
     'deleteWorkType called with id:',
     id,
@@ -585,15 +593,15 @@ export const deleteWorkType = async (
       deleted_at: new Date().toISOString(),
     };
   });
-};
+}
 
 /**
  * 勤務形態一覧取得
  */
-export const getWorkTypes = async (
+export async function getWorkTypes(
   companyId: string,
   params: WorkTypeSearchParams = {}
-): Promise<{ success: true; data: WorkTypeListResponse } | { success: false; error: AppError }> => {
+): Promise<{ success: true; data: WorkTypeListResponse } | { success: false; error: AppError }> {
   console.log('getWorkTypes called with companyId:', companyId, 'params:', params);
 
   return withErrorHandling(async () => {
@@ -649,14 +657,14 @@ export const getWorkTypes = async (
       limit,
     };
   });
-};
+}
 
 /**
  * 勤務形態統計取得
  */
-export const getWorkTypeStats = async (
+export async function getWorkTypeStats(
   companyId: string
-): Promise<{ success: true; data: WorkTypeStats } | { success: false; error: AppError }> => {
+): Promise<{ success: true; data: WorkTypeStats } | { success: false; error: AppError }> {
   console.log('getWorkTypeStats called with companyId:', companyId);
 
   return withErrorHandling(async () => {
@@ -682,17 +690,17 @@ export const getWorkTypeStats = async (
       flexible,
     };
   });
-};
+}
 
 /**
  * 勤務形態ステータス切り替え
  */
-export const toggleWorkTypeStatus = async (
+export async function toggleWorkTypeStatus(
   id: string,
   companyId: string
 ): Promise<
   { success: true; data: { id: string; is_active: boolean } } | { success: false; error: AppError }
-> => {
+> {
   console.log('toggleWorkTypeStatus called with id:', id);
 
   return withErrorHandling(async () => {
@@ -731,4 +739,4 @@ export const toggleWorkTypeStatus = async (
       is_active: workType.is_active,
     };
   });
-};
+}

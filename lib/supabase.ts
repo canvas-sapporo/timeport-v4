@@ -47,9 +47,9 @@ export const supabase = (() => {
 })();
 
 // サーバーサイド用のクライアント（シングルトン）
-const serverClient: ReturnType<typeof createClient> | null = null;
+// const serverClient: ReturnType<typeof createClient> | null = null;
 
-export const createServerClient = () => {
+export function createServerClient() {
   // サーバーサイドでのみ新しいインスタンスを作成
   if (typeof window !== 'undefined') {
     throw new Error('createServerClient should only be called on the server side');
@@ -71,10 +71,10 @@ export const createServerClient = () => {
     },
     db: {},
   });
-};
+}
 
 // Admin用のクライアント（Service Role Key使用）
-export const createAdminClient = () => {
+export function createAdminClient() {
   // サーバーサイドでのみ新しいインスタンスを作成
   if (typeof window !== 'undefined') {
     throw new Error('createAdminClient should only be called on the server side');
@@ -96,10 +96,10 @@ export const createAdminClient = () => {
     },
     db: {},
   });
-};
+}
 
 // スキーマキャッシュをリフレッシュする関数
-export const refreshSchemaCache = async () => {
+export async function refreshSchemaCache() {
   try {
     console.log('スキーマキャッシュリフレッシュ開始');
 
@@ -126,10 +126,10 @@ export const refreshSchemaCache = async () => {
     });
     return false;
   }
-};
+}
 
 // Supabase接続テスト用の関数
-export const testSupabaseConnection = async () => {
+export async function testSupabaseConnection() {
   try {
     console.log('Supabase接続テスト開始');
     console.log('URL:', supabaseUrl);
@@ -149,4 +149,4 @@ export const testSupabaseConnection = async () => {
     console.error('Supabase接続テストエラー:', error);
     return false;
   }
-};
+}

@@ -26,25 +26,25 @@ import { Separator } from '@/components/ui/separator';
 import { getAttendanceDetail, getAttendanceStatuses } from '@/lib/actions/attendance';
 import WorkTypeDetailDialog from '@/components/admin/WorkTypeDetailDialog';
 import { formatDate, formatTime } from '@/lib/utils';
-import type { Attendance, AttendanceStatusEntity, ClockBreakRecord } from '@/types/attendance';
+import type { AttendanceData, AttendanceStatusData, ClockBreakRecord } from '@/schemas/attendance';
 
 interface AttendancePreviewDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   attendanceId: string | null;
   companyId?: string;
 }
 
 export default function AttendancePreviewDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   attendanceId,
   companyId,
 }: AttendancePreviewDialogProps) {
-  const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusEntity[]>([]);
+  const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusData[]>([]);
 
   // 勤務形態詳細ダイアログの状態
   const [workTypeDetailDialogOpen, setWorkTypeDetailDialogOpen] = useState(false);
@@ -103,7 +103,7 @@ export default function AttendancePreviewDialog({
 
   // 勤怠ステータスを動的に計算する関数
   const getAttendanceStatus = (
-    record?: Attendance
+    record?: AttendanceData
   ): 'normal' | 'late' | 'early_leave' | 'late_early_leave' | 'absent' => {
     if (!record) return 'absent';
 
@@ -198,7 +198,7 @@ export default function AttendancePreviewDialog({
 
   if (isLoading) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChangeAction}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>勤怠記録詳細</DialogTitle>
@@ -214,7 +214,7 @@ export default function AttendancePreviewDialog({
 
   if (error) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChangeAction}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>勤怠記録詳細</DialogTitle>
@@ -238,7 +238,7 @@ export default function AttendancePreviewDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChangeAction}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto dialog-scrollbar">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -576,7 +576,7 @@ export default function AttendancePreviewDialog({
           </div>
 
           <div className="flex justify-end pt-4">
-            <Button onClick={() => onOpenChange(false)}>閉じる</Button>
+            <Button onClick={() => onOpenChangeAction(false)}>閉じる</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -584,7 +584,7 @@ export default function AttendancePreviewDialog({
       {/* 勤務形態詳細ダイアログ */}
       <WorkTypeDetailDialog
         open={workTypeDetailDialogOpen}
-        onOpenChange={setWorkTypeDetailDialogOpen}
+        onOpenChangeAction={setWorkTypeDetailDialogOpen}
         workTypeId={selectedWorkTypeId}
       />
     </>

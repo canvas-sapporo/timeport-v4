@@ -30,7 +30,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { updateWorkType, toggleWorkTypeStatus } from '@/lib/actions/admin/work-types';
 import { useToast } from '@/hooks/use-toast';
-import type { WorkType, EditWorkTypeFormData } from '@/types/employment_type';
+import type { WorkType, EditWorkTypeFormData } from '@/schemas/employment-type';
 
 const editWorkTypeSchema = z
   .object({
@@ -105,18 +105,18 @@ const editWorkTypeSchema = z
 
 interface WorkTypeEditDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   workType: WorkType | null;
   companyId: string;
-  onSuccess: () => void;
+  onSuccessAction: () => void;
 }
 
 export default function WorkTypeEditDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   workType,
   companyId,
-  onSuccess,
+  onSuccessAction,
 }: WorkTypeEditDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isStatusLoading, setIsStatusLoading] = useState(false);
@@ -177,8 +177,8 @@ export default function WorkTypeEditDialog({
           title: '勤務形態を更新しました',
           description: `${data.name} が正常に更新されました`,
         });
-        onOpenChange(false);
-        onSuccess();
+        onOpenChangeAction(false);
+        onSuccessAction();
       } else {
         toast({
           title: 'エラーが発生しました',
@@ -210,7 +210,7 @@ export default function WorkTypeEditDialog({
           title: 'ステータスを変更しました',
           description: `${workType.name} を${result.data.is_active ? '有効' : '無効'}にしました`,
         });
-        onSuccess();
+        onSuccessAction();
       } else {
         toast({
           title: 'エラーが発生しました',
@@ -233,7 +233,7 @@ export default function WorkTypeEditDialog({
   if (!workType) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>勤務形態を編集</DialogTitle>
@@ -529,7 +529,7 @@ export default function WorkTypeEditDialog({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => onOpenChangeAction(false)}
                 disabled={isLoading}
               >
                 キャンセル

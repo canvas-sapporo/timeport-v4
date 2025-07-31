@@ -15,17 +15,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { createCompany } from '@/lib/actions/system-admin/company';
-import type { CreateCompanyFormData } from '@/types/company';
+import type { CreateCompanyFormData } from '@/schemas/company';
 import { AppError } from '@/lib/utils/error-handling';
 
 const steps = [{ label: '企業情報' }, { label: 'グループ情報' }, { label: '管理者ユーザー情報' }];
 
 export default function CompanyCreateDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
 }: {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
 }) {
   const [step, setStep] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
@@ -61,7 +61,7 @@ export default function CompanyCreateDialog({
       const result = await createCompany(form);
 
       if (result.success) {
-        onOpenChange(false);
+        onOpenChangeAction(false);
         setStep(0);
         setForm({
           name: '',
@@ -308,7 +308,7 @@ export default function CompanyCreateDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>企業追加</DialogTitle>

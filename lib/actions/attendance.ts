@@ -4,17 +4,18 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
 import type {
+  AttendanceStatusData,
+  ClockType,
+  StatusLogic,
   ClockOperation,
   ClockResult,
-  Attendance,
+  AttendanceData as Attendance,
   ClockBreakRecord,
-  ClockType,
   ClockRecord,
-  AttendanceStatusEntity,
-  StatusLogic,
-} from '@/types/attendance';
+} from '@/schemas/attendance';
 import {
   AppError,
   withErrorHandling,
@@ -47,23 +48,23 @@ const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
 /**
  * 打刻時刻のバリデーション
  */
-const validateClockTime = (timestamp: string): boolean => {
+function validateClockTime(timestamp: string): boolean {
   const clockTime = new Date(timestamp);
   const now = new Date();
   const timeDiff = Math.abs(now.getTime() - clockTime.getTime());
 
   // 24時間以内の打刻のみ許可
   return timeDiff <= 24 * 60 * 60 * 1000;
-};
+}
 
 /**
  * 打刻操作のバリデーション
  */
-const validateClockOperation = async (
+async function validateClockOperation(
   userId: string,
   type: ClockType,
   timestamp: string
-): Promise<{ isValid: boolean; error?: string }> => {
+): Promise<{ isValid: boolean; error?: string }> {
   console.log('validateClockOperation 開始:', { userId, type, timestamp });
   const today = new Date().toISOString().split('T')[0];
   console.log('今日の日付:', today);
@@ -139,7 +140,7 @@ const validateClockOperation = async (
 
   console.log('validateClockOperation 完了: 有効');
   return { isValid: true };
-};
+}
 
 // ================================
 // 勤務時間計算関数
@@ -148,12 +149,12 @@ const validateClockOperation = async (
 /**
  * 勤務時間を計算
  */
-const calculateWorkTime = async (
+async function calculateWorkTime(
   clockInTime: string,
   clockOutTime: string,
   breakRecords: ClockBreakRecord[],
   workTypeId?: string
-): Promise<{ actualWorkMinutes: number; overtimeMinutes: number }> => {
+): Promise<{ actualWorkMinutes: number; overtimeMinutes: number }> {
   const clockIn = new Date(clockInTime);
   const clockOut = new Date(clockOutTime);
 
@@ -226,7 +227,7 @@ const calculateWorkTime = async (
   });
 
   return { actualWorkMinutes, overtimeMinutes };
-};
+}
 
 // ================================
 // Server Actions
@@ -235,11 +236,11 @@ const calculateWorkTime = async (
 /**
  * 出勤打刻
  */
-export const clockIn = async (
+export async function clockIn(
   userId: string,
   timestamp: string,
   workTypeId?: string
-): Promise<ClockResult> => {
+): Promise<ClockResult> {
   console.log('=== clockIn Server Action 開始 ===');
   console.log('clockIn 開始:', { userId, timestamp, workTypeId });
 
@@ -310,12 +311,12 @@ export const clockIn = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 退勤打刻
  */
-export const clockOut = async (userId: string, timestamp: string): Promise<ClockResult> => {
+export async function clockOut(userId: string, timestamp: string): Promise<ClockResult> {
   console.log('clockOut 開始:', { userId, timestamp });
 
   // 環境変数の確認
@@ -500,12 +501,12 @@ export const clockOut = async (userId: string, timestamp: string): Promise<Clock
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 休憩開始
  */
-export const startBreak = async (userId: string, timestamp: string): Promise<ClockResult> => {
+export async function startBreak(userId: string, timestamp: string): Promise<ClockResult> {
   try {
     if (!validateClockTime(timestamp)) {
       return {
@@ -596,12 +597,12 @@ export const startBreak = async (userId: string, timestamp: string): Promise<Clo
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 休憩終了
  */
-export const endBreak = async (userId: string, timestamp: string): Promise<ClockResult> => {
+export async function endBreak(userId: string, timestamp: string): Promise<ClockResult> {
   try {
     if (!validateClockTime(timestamp)) {
       return {
@@ -698,12 +699,12 @@ export const endBreak = async (userId: string, timestamp: string): Promise<Clock
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 今日の勤怠記録を取得（複数回出退勤対応）
  */
-export const getTodayAttendance = async (userId: string): Promise<Attendance | null> => {
+export async function getTodayAttendance(userId: string): Promise<Attendance | null> {
   try {
     const today = new Date().toISOString().split('T')[0];
 
@@ -743,12 +744,12 @@ export const getTodayAttendance = async (userId: string): Promise<Attendance | n
     console.error('今日の勤怠記録取得エラー:', error);
     return null;
   }
-};
+}
 
 /**
  * メンバーページ用の軽量な勤怠記録取得（今月と前月のみ）
  */
-export const getMemberAttendance = async (userId: string): Promise<Attendance[]> => {
+export async function getMemberAttendance(userId: string): Promise<Attendance[]> {
   try {
     console.log('getMemberAttendance 開始:', { userId });
 
@@ -810,16 +811,16 @@ export const getMemberAttendance = async (userId: string): Promise<Attendance[]>
     console.error('getMemberAttendance エラー:', error);
     return [];
   }
-};
+}
 
 /**
  * ユーザーの勤怠記録一覧を取得（拡張版）
  */
-export const getUserAttendance = async (
+export async function getUserAttendance(
   userId: string,
   startDate?: string,
   endDate?: string
-): Promise<Attendance[]> => {
+): Promise<Attendance[]> {
   try {
     console.log('getUserAttendance 開始:', { userId, startDate, endDate });
 
@@ -996,12 +997,12 @@ export const getUserAttendance = async (
     console.error('getUserAttendance エラー:', error);
     throw error;
   }
-};
+}
 
 /**
  * ユーザーが利用可能な勤務タイプ一覧を取得
  */
-export const getUserWorkTypes = async (userId: string): Promise<{ id: string; name: string }[]> => {
+export async function getUserWorkTypes(userId: string): Promise<{ id: string; name: string }[]> {
   try {
     console.log('getUserWorkTypes 開始:', { userId });
 
@@ -1049,12 +1050,12 @@ export const getUserWorkTypes = async (userId: string): Promise<{ id: string; na
     console.error('getUserWorkTypes エラー:', error);
     return [];
   }
-};
+}
 
 /**
  * ユーザーの勤務タイプを取得
  */
-export const getUserWorkType = async (userId: string): Promise<string | undefined> => {
+export async function getUserWorkType(userId: string): Promise<string | undefined> {
   try {
     console.log('getUserWorkType 開始:', { userId });
 
@@ -1077,16 +1078,16 @@ export const getUserWorkType = async (userId: string): Promise<string | undefine
     console.error('getUserWorkType エラー:', error);
     return undefined;
   }
-};
+}
 
 /**
  * 管理者用：全メンバーの勤怠記録一覧を取得
  */
-export const getAllAttendance = async (
+export async function getAllAttendance(
   companyId: string,
   startDate?: string,
   endDate?: string
-): Promise<Attendance[]> => {
+): Promise<Attendance[]> {
   try {
     console.log('getAllAttendance 開始:', { companyId, startDate, endDate });
 
@@ -1319,14 +1320,14 @@ export const getAllAttendance = async (
     console.error('getAllAttendance エラー:', error);
     throw error;
   }
-};
+}
 
 /**
  * 管理者用：企業内の全ユーザー一覧を取得
  */
-export const getCompanyUsers = async (
+export async function getCompanyUsers(
   companyId: string
-): Promise<{ id: string; name: string; code?: string }[]> => {
+): Promise<{ id: string; name: string; code?: string }[]> {
   try {
     console.log('getCompanyUsers 開始:', { companyId });
 
@@ -1380,14 +1381,14 @@ export const getCompanyUsers = async (
     console.error('getCompanyUsers エラー:', error);
     throw error;
   }
-};
+}
 
 /**
  * 管理者用：企業内の全グループ一覧を取得
  */
-export const getCompanyGroups = async (
+export async function getCompanyGroups(
   companyId: string
-): Promise<{ id: string; name: string; code?: string }[]> => {
+): Promise<{ id: string; name: string; code?: string }[]> {
   try {
     console.log('getCompanyGroups 開始:', { companyId });
 
@@ -1416,12 +1417,12 @@ export const getCompanyGroups = async (
     console.error('getCompanyGroups エラー:', error);
     throw error;
   }
-};
+}
 
 /**
  * 勤怠記録の更新
  */
-export const updateAttendance = async (
+export async function updateAttendance(
   attendanceId: string,
   updateData: {
     work_type_id?: string;
@@ -1436,7 +1437,7 @@ export const updateAttendance = async (
     approved_by?: string;
     approved_at?: string;
   }
-): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> => {
+): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> {
   try {
     console.log('updateAttendance 開始:', { attendanceId, updateData });
 
@@ -1532,14 +1533,14 @@ export const updateAttendance = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 勤怠記録の論理削除
  */
-export const deleteAttendance = async (
+export async function deleteAttendance(
   attendanceId: string
-): Promise<{ success: boolean; message: string; error?: string }> => {
+): Promise<{ success: boolean; message: string; error?: string }> {
   try {
     console.log('deleteAttendance 開始:', { attendanceId });
 
@@ -1607,14 +1608,14 @@ export const deleteAttendance = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 勤怠記録の詳細取得（プレビュー用）
  */
-export const getAttendanceDetail = async (
+export async function getAttendanceDetail(
   attendanceId: string
-): Promise<{ success: boolean; attendance?: Attendance; error?: string }> => {
+): Promise<{ success: boolean; attendance?: Attendance; error?: string }> {
   try {
     console.log('getAttendanceDetail 開始:', { attendanceId });
 
@@ -1700,12 +1701,12 @@ export const getAttendanceDetail = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 勤務タイプ一覧を取得
  */
-export const getWorkTypes = async (): Promise<{ id: string; name: string }[]> => {
+export async function getWorkTypes(): Promise<{ id: string; name: string }[]> {
   try {
     console.log('getWorkTypes 開始');
 
@@ -1728,11 +1729,9 @@ export const getWorkTypes = async (): Promise<{ id: string; name: string }[]> =>
     console.error('getWorkTypes エラー:', error);
     return [];
   }
-};
+}
 
-export const getWorkTypeDetail = async (
-  workTypeId: string
-): Promise<{
+export async function getWorkTypeDetail(workTypeId: string): Promise<{
   id: string;
   name: string;
   code?: string;
@@ -1747,7 +1746,7 @@ export const getWorkTypeDetail = async (
   overtime_threshold_minutes: number;
   late_threshold_minutes: number;
   description?: string;
-}> => {
+}> {
   try {
     console.log('getWorkTypeDetail 開始:', workTypeId);
 
@@ -1790,17 +1789,17 @@ export const getWorkTypeDetail = async (
     console.error('getWorkTypeDetail エラー:', error);
     throw error;
   }
-};
+}
 
 /**
  * 勤怠記録の時刻を編集（データ複製による履歴管理）
  */
-export const editAttendanceTime = async (
+export async function editAttendanceTime(
   attendanceId: string,
   clockRecords: ClockRecord[],
   editReason: string,
   editedBy: string
-): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> => {
+): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> {
   try {
     console.log('editAttendanceTime 開始:', { attendanceId, editReason, editedBy });
 
@@ -1906,14 +1905,12 @@ export const editAttendanceTime = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * clock_recordsのバリデーション
  */
-const validateClockRecords = (
-  clockRecords: ClockRecord[]
-): { isValid: boolean; error?: string } => {
+function validateClockRecords(clockRecords: ClockRecord[]): { isValid: boolean; error?: string } {
   if (!clockRecords || clockRecords.length === 0) {
     return { isValid: false, error: '勤務記録が入力されていません' };
   }
@@ -1984,15 +1981,15 @@ const validateClockRecords = (
   }
 
   return { isValid: true };
-};
+}
 
 /**
  * 最新の勤怠記録を取得（編集履歴を考慮）
  */
-export const getLatestAttendance = async (
+export async function getLatestAttendance(
   userId: string,
   workDate: string
-): Promise<Attendance | null> => {
+): Promise<Attendance | null> {
   try {
     const { data, error } = await supabaseAdmin
       .from('attendances')
@@ -2014,14 +2011,14 @@ export const getLatestAttendance = async (
     console.error('getLatestAttendance エラー:', error);
     return null;
   }
-};
+}
 
 /**
  * 会社の勤怠ステータス一覧を取得
  */
-export const getAttendanceStatuses = async (
+export async function getAttendanceStatuses(
   companyId: string
-): Promise<{ success: boolean; statuses?: AttendanceStatusEntity[]; error?: string }> => {
+): Promise<{ success: boolean; statuses?: AttendanceStatusData[]; error?: string }> {
   try {
     console.log('getAttendanceStatuses 開始:', { companyId });
 
@@ -2062,15 +2059,12 @@ export const getAttendanceStatuses = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * ステータス判定ロジックを実行する関数
  */
-export const evaluateStatusLogic = async (
-  logic: string,
-  attendance: Attendance
-): Promise<boolean> => {
+export async function evaluateStatusLogic(logic: string, attendance: Attendance): Promise<boolean> {
   try {
     const statusLogic: StatusLogic = JSON.parse(logic);
     console.log('evaluateStatusLogic 開始:', { logic, attendanceId: attendance.id });
@@ -2088,29 +2082,33 @@ export const evaluateStatusLogic = async (
       let conditionResult = false;
       switch (condition.operator) {
         case 'has_sessions':
-          conditionResult = condition.value === (fieldValue && fieldValue.length > 0);
+          conditionResult =
+            condition.value === (Array.isArray(fieldValue) && fieldValue.length > 0);
           console.log('has_sessions 結果:', {
             fieldValue,
-            length: fieldValue?.length,
+            length: Array.isArray(fieldValue) ? fieldValue.length : 0,
             expected: condition.value,
             result: conditionResult,
           });
           return conditionResult;
-        case 'has_completed_sessions':
+        case 'has_complete_sessions':
           conditionResult =
             condition.value ===
-            (fieldValue &&
+            (Array.isArray(fieldValue) &&
               fieldValue.some(
-                (session: any) => session.in_time && session.out_time && session.out_time !== ''
+                (session: { in_time: string; out_time: string }) =>
+                  session.in_time && session.out_time && session.out_time !== ''
               ));
-          console.log('has_completed_sessions 結果:', {
+          console.log('has_complete_sessions 結果:', {
             fieldValue,
             expected: condition.value,
             result: conditionResult,
           });
           return conditionResult;
         case 'empty':
-          conditionResult = condition.value === (!fieldValue || fieldValue.length === 0);
+          conditionResult =
+            condition.value ===
+            (!fieldValue || (Array.isArray(fieldValue) && fieldValue.length === 0));
           console.log('empty 結果:', {
             fieldValue,
             expected: condition.value,
@@ -2118,7 +2116,8 @@ export const evaluateStatusLogic = async (
           });
           return conditionResult;
         case 'greater_than':
-          conditionResult = fieldValue > (condition.value as number);
+          conditionResult =
+            typeof fieldValue === 'number' && fieldValue > (condition.value as number);
           console.log('greater_than 結果:', {
             fieldValue,
             expected: condition.value,
@@ -2126,7 +2125,8 @@ export const evaluateStatusLogic = async (
           });
           return conditionResult;
         case 'less_than':
-          conditionResult = fieldValue < (condition.value as number);
+          conditionResult =
+            typeof fieldValue === 'number' && fieldValue < (condition.value as number);
           console.log('less_than 結果:', {
             fieldValue,
             expected: condition.value,
@@ -2161,34 +2161,35 @@ export const evaluateStatusLogic = async (
     console.error('ステータス判定ロジック実行エラー:', error);
     return false;
   }
-};
+}
 
 /**
  * オブジェクトからフィールド値を取得する関数
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getFieldValue = (obj: any, field: string): any => {
+function getFieldValue(obj: Record<string, unknown>, field: string): unknown {
   const fields = field.split('.');
-  let value = obj;
+  let value: unknown = obj;
 
   for (const f of fields) {
-    if (value && typeof value === 'object' && f in value) {
-      value = value[f];
+    if (value && typeof value === 'object' && !Array.isArray(value) && f in value) {
+      const objValue = value as Record<string, unknown>;
+      value = objValue[f];
     } else {
       return undefined;
     }
   }
 
   return value;
-};
+}
 
 /**
  * 勤怠記録のステータスを動的に判定する関数
  */
-export const getDynamicAttendanceStatus = async (
+export async function getDynamicAttendanceStatus(
   attendance: Attendance,
-  statuses: AttendanceStatusEntity[]
-): Promise<string> => {
+  statuses: AttendanceStatusData[]
+): Promise<string> {
   console.log('getDynamicAttendanceStatus 開始:', {
     attendanceId: attendance.id,
     clockRecords: attendance.clock_records,
@@ -2224,12 +2225,12 @@ export const getDynamicAttendanceStatus = async (
   if (!hasAnySession) return 'absent';
   if (!hasCompletedSession) return 'normal';
   return 'normal';
-};
+}
 
 /**
  * 勤怠ステータスを作成
  */
-export const createAttendanceStatus = async (
+export async function createAttendanceStatus(
   companyId: string,
   statusData: {
     name: string;
@@ -2241,7 +2242,7 @@ export const createAttendanceStatus = async (
     logic?: string;
     description?: string;
   }
-): Promise<{ success: boolean; status?: AttendanceStatusEntity; error?: string }> => {
+): Promise<{ success: boolean; status?: AttendanceStatusData; error?: string }> {
   try {
     console.log('createAttendanceStatus 開始:', { companyId, statusData });
 
@@ -2276,12 +2277,12 @@ export const createAttendanceStatus = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 勤怠ステータスを更新
  */
-export const updateAttendanceStatus = async (
+export async function updateAttendanceStatus(
   statusId: string,
   updateData: {
     display_name?: string;
@@ -2293,7 +2294,7 @@ export const updateAttendanceStatus = async (
     logic?: string;
     description?: string;
   }
-): Promise<{ success: boolean; status?: AttendanceStatusEntity; error?: string }> => {
+): Promise<{ success: boolean; status?: AttendanceStatusData; error?: string }> {
   try {
     console.log('updateAttendanceStatus 開始:', { statusId, updateData });
 
@@ -2324,14 +2325,14 @@ export const updateAttendanceStatus = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 勤怠ステータスを削除（論理削除）
  */
-export const deleteAttendanceStatus = async (
+export async function deleteAttendanceStatus(
   statusId: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('deleteAttendanceStatus 開始:', { statusId });
 
@@ -2359,4 +2360,4 @@ export const deleteAttendanceStatus = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}

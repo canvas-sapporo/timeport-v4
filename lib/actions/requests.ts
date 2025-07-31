@@ -6,15 +6,20 @@ import { z } from 'zod';
 
 import { createServerClient, createAdminClient } from '@/lib/supabase';
 import { validateAttendanceObject } from '@/lib/utils/attendance-validation';
-import type { Request, RequestForm, ObjectMetadata } from '@/types/request';
-import type { ClockRecord } from '@/types/attendance';
+import type {
+  RequestForm,
+  ObjectMetadata,
+  RequestData as Request,
+  GetRequestsResult,
+  UpdateRequestResult,
+  ApproveRequestResult,
+} from '@/schemas/request';
+import type { ClockRecord } from '@/schemas/attendance';
 
 /**
  * 申請データを取得する（メンバー用）
  */
-export const getRequests = async (
-  userId?: string
-): Promise<{ success: boolean; data?: Request[]; error?: string }> => {
+export async function getRequests(userId?: string): Promise<GetRequestsResult> {
   console.log('getRequests: 開始', { userId });
 
   try {
@@ -89,16 +94,12 @@ export const getRequests = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 管理者用の申請データを取得する
  */
-export const getAdminRequests = async (): Promise<{
-  success: boolean;
-  data?: Request[];
-  error?: string;
-}> => {
+export async function getAdminRequests(): Promise<GetRequestsResult> {
   console.log('getAdminRequests: 開始');
 
   try {
@@ -143,16 +144,16 @@ export const getAdminRequests = async (): Promise<{
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 申請ステータスを更新する
  */
-export const updateRequestStatus = async (
+export async function updateRequestStatus(
   requestId: string,
   newStatusCode: string,
   comment?: string
-): Promise<{ success: boolean; message: string; error?: string }> => {
+): Promise<UpdateRequestResult> {
   console.log('updateRequestStatus 開始:', { requestId, newStatusCode, comment });
 
   try {
@@ -230,16 +231,16 @@ export const updateRequestStatus = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 申請を承認する
  */
-export const approveRequest = async (
+export async function approveRequest(
   requestId: string,
   approverId: string,
   comment?: string
-): Promise<{ success: boolean; message: string; error?: string }> => {
+): Promise<ApproveRequestResult> {
   console.log('approveRequest 開始:', { requestId, approverId, comment });
 
   try {
@@ -291,7 +292,7 @@ export const approveRequest = async (
         for (const field of objectFields) {
           const result = await handleAttendanceObjectApproval(
             request,
-            field,
+            field.name,
             objectMetadata,
             approverId
           );
@@ -336,17 +337,17 @@ export const approveRequest = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * attendanceオブジェクトの承認処理
  */
-const handleAttendanceObjectApproval = async (
-  request: any,
-  field: any,
+async function handleAttendanceObjectApproval(
+  request: Request,
+  field: string,
   metadata: ObjectMetadata,
   approverId: string
-): Promise<{ success: boolean; message: string; error?: string }> => {
+): Promise<{ success: boolean; message: string; error?: string }> {
   console.log('handleAttendanceObjectApproval 開始');
 
   try {
@@ -423,20 +424,20 @@ const handleAttendanceObjectApproval = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}
 
 /**
  * 申請を更新する
  */
-export const updateRequest = async (
+export async function updateRequest(
   requestId: string,
   updateData: {
-    form_data?: any;
+    form_data?: Record<string, unknown>;
     target_date?: string | null;
     start_date?: string | null;
     end_date?: string | null;
   }
-): Promise<{ success: boolean; message: string; error?: string }> => {
+): Promise<UpdateRequestResult> {
   console.log('updateRequest 開始', { requestId, updateData });
 
   try {
@@ -497,4 +498,4 @@ export const updateRequest = async (
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-};
+}

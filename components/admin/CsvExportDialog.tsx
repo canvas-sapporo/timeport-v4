@@ -33,13 +33,13 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import type { CsvExportSetting } from '@/types/settings';
-import type { Attendance, AttendanceFilters } from '@/types/attendance';
+import type { CsvExportSetting } from '@/schemas/setting';
+import type { AttendanceData, AttendanceFilters } from '@/schemas/attendance';
 
 interface CsvExportDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  attendanceRecords: Attendance[];
+  onOpenChangeAction: (open: boolean) => void;
+  attendanceRecords: AttendanceData[];
   users: { id: string; name: string; code?: string }[];
   groups: { id: string; name: string; code?: string }[];
   attendanceFilters?: AttendanceFilters;
@@ -66,7 +66,7 @@ const AVAILABLE_COLUMNS = [
 
 export default function AdminCsvExportDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   attendanceRecords,
   users,
   groups,
@@ -117,7 +117,7 @@ export default function AdminCsvExportDialog({
   });
 
   // プレビューデータ
-  const [previewData, setPreviewData] = useState<Attendance[]>([]);
+  const [previewData, setPreviewData] = useState<AttendanceData[]>([]);
   const [savedSettings, setSavedSettings] = useState<
     Array<{
       id: string;
@@ -176,7 +176,7 @@ export default function AdminCsvExportDialog({
   };
 
   // フィルタリングされたデータを取得
-  const getFilteredRecords = (): Attendance[] => {
+  const getFilteredRecords = (): AttendanceData[] => {
     return attendanceRecords.filter((record) => {
       // 日付範囲フィルター
       if (setting.period.start_date && record.work_date < setting.period.start_date) return false;
@@ -287,7 +287,7 @@ export default function AdminCsvExportDialog({
         description: 'CSVファイルを出力しました',
       });
 
-      onOpenChange(false);
+      onOpenChangeAction(false);
     } catch (error) {
       console.error('CSV出力エラー:', error);
       toast({
@@ -343,7 +343,7 @@ export default function AdminCsvExportDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto dialog-scrollbar">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -776,7 +776,7 @@ export default function AdminCsvExportDialog({
 
 // カラム値を取得する関数
 const getColumnValue = (
-  record: Attendance,
+  record: AttendanceData,
   column: string,
   format: CsvExportSetting['format'],
   users: { id: string; name: string; code?: string }[]
@@ -949,7 +949,7 @@ const formatMinutes = (minutes: number): string => {
 };
 
 // 簡易的なCSVデータ生成関数
-const generateSimpleCsvData = (records: Attendance[], setting: CsvExportSetting): string => {
+const generateSimpleCsvData = (records: AttendanceData[], setting: CsvExportSetting): string => {
   const delimiter = setting.format.delimiter === 'comma' ? ',' : '\t';
   const emptyValue = setting.format.empty_value === 'blank' ? '' : '--';
 

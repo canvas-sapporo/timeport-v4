@@ -1,14 +1,14 @@
 // TimePort Mock Data Provider
 // 開発・テスト用のモックデータ実装
 
-import { Attendance } from '@/types/attendance';
-import { Request, RequestForm } from '@/types/request';
-import { UserProfile } from '@/types/auth';
-import { Notification } from '@/types/system';
-import { Group } from '@/types/groups';
-import { Chat, ChatMessage, ChatUser } from '@/types/chat';
-import { Schedule, Todo, CreateScheduleInput, CreateTodoInput } from '@/types/schedule';
-import { Report, ReportTemplate } from '@/types/report';
+import { AttendanceData } from '@/schemas/attendance';
+import { RequestData, RequestForm, FormFieldConfig, ApprovalStep } from '@/schemas/request';
+import { UserProfile } from '@/schemas/user_profile';
+import { Notification } from '@/schemas/database/feature';
+import { Group } from '@/schemas/group';
+import { ChatMessageData } from '@/schemas/chat';
+import { Schedule, Todo, CreateScheduleInput, CreateTodoInput } from '@/schemas/schedule';
+import { Report } from '@/schemas/report';
 
 // ===== マスターデータ定義 =====
 
@@ -96,14 +96,15 @@ export const mockGroups: Group[] = [
 export const mockUsers: UserProfile[] = [
   {
     id: 'user1',
-    code: 'SA001',
+    code: 'SYS001',
     first_name: 'システム',
     family_name: '管理者',
+    family_name_kana: 'システム',
+    first_name_kana: 'カンリシャ',
     email: 'system@timeport.com',
     role: 'system-admin',
-    primary_group_id: 'group3',
-    work_start_date: '2020-01-01',
     is_active: true,
+    chat_send_key_shift_enter: false,
     created_at: '2020-01-01T00:00:00Z',
     updated_at: '2020-01-01T00:00:00Z',
   },
@@ -112,11 +113,12 @@ export const mockUsers: UserProfile[] = [
     code: 'A001',
     first_name: '管理者',
     family_name: '太郎',
+    family_name_kana: 'カンリシャ',
+    first_name_kana: 'タロウ',
     email: 'admin@timeport.com',
     role: 'admin',
-    primary_group_id: 'group3',
-    work_start_date: '2020-04-01',
     is_active: true,
+    chat_send_key_shift_enter: false,
     created_at: '2020-04-01T00:00:00Z',
     updated_at: '2020-04-01T00:00:00Z',
   },
@@ -125,11 +127,12 @@ export const mockUsers: UserProfile[] = [
     code: 'B001',
     first_name: '田中',
     family_name: '花子',
+    family_name_kana: 'タナカ',
+    first_name_kana: 'ハナコ',
     email: 'member.kyaru@timeport.com',
     role: 'member',
-    primary_group_id: 'group7',
-    work_start_date: '2021-04-01',
     is_active: true,
+    chat_send_key_shift_enter: false,
     created_at: '2021-04-01T00:00:00Z',
     updated_at: '2021-04-01T00:00:00Z',
   },
@@ -138,11 +141,12 @@ export const mockUsers: UserProfile[] = [
     code: 'B002',
     first_name: '佐藤',
     family_name: '次郎',
+    family_name_kana: 'サトウ',
+    first_name_kana: 'ジロウ',
     email: 'sato@timeport.com',
     role: 'member',
-    primary_group_id: 'group8',
-    work_start_date: '2021-06-01',
     is_active: true,
+    chat_send_key_shift_enter: false,
     created_at: '2021-06-01T00:00:00Z',
     updated_at: '2021-06-01T00:00:00Z',
   },
@@ -151,11 +155,12 @@ export const mockUsers: UserProfile[] = [
     code: 'B003',
     first_name: '山田',
     family_name: '三郎',
+    family_name_kana: 'ヤマダ',
+    first_name_kana: 'サブロウ',
     email: 'yamada@timeport.com',
     role: 'member',
-    primary_group_id: 'group5',
-    work_start_date: '2022-01-01',
     is_active: true,
+    chat_send_key_shift_enter: false,
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2022-01-01T00:00:00Z',
   },
@@ -164,11 +169,12 @@ export const mockUsers: UserProfile[] = [
     code: 'B004',
     first_name: '鈴木',
     family_name: '四郎',
+    family_name_kana: 'スズキ',
+    first_name_kana: 'シロウ',
     email: 'suzuki@timeport.com',
     role: 'member',
-    primary_group_id: 'group6',
-    work_start_date: '2022-04-01',
     is_active: true,
+    chat_send_key_shift_enter: false,
     created_at: '2022-04-01T00:00:00Z',
     updated_at: '2022-04-01T00:00:00Z',
   },
@@ -326,8 +332,8 @@ export const mockRequestTypes: RequestForm[] = [
 ];
 
 // 勤怠データ生成関数
-export const generateAttendanceRecords = (userId: string): Attendance[] => {
-  const records: Attendance[] = [];
+export function generateAttendanceRecords(userId: string): AttendanceData[] {
+  const records: AttendanceData[] = [];
   const today = new Date();
 
   for (let i = 0; i < 30; i++) {
@@ -372,11 +378,11 @@ export const generateAttendanceRecords = (userId: string): Attendance[] => {
   }
 
   return records;
-};
+}
 
 const mockAttendanceRecords = mockUsers.flatMap((user) => generateAttendanceRecords(user.id));
 
-const mockRequests: Request[] = [
+const mockRequests: RequestData[] = [
   {
     id: 'app1',
     user_id: 'user3',
@@ -450,7 +456,7 @@ const mockNotifications: Notification[] = [
 
 // ===== API実装 =====
 
-export const getAttendanceData = async (userId?: string) => {
+export async function getAttendanceData(userId?: string) {
   await new Promise((resolve) => setTimeout(resolve, 500)); // API遅延をシミュレート
 
   const records = userId
@@ -458,293 +464,266 @@ export const getAttendanceData = async (userId?: string) => {
     : mockAttendanceRecords;
 
   return { records };
-};
+}
 
-export const getTodayAttendance = async (userId: string) => {
+export async function getTodayAttendance(userId: string) {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   const today = new Date().toISOString().split('T')[0];
   const record = mockAttendanceRecords.find((r) => r.user_id === userId && r.work_date === today);
 
   return record || null;
-};
+}
 
-export const clockIn = async (userId: string, time: string) => {
-  console.log('モック clockIn 開始:', { userId, time });
-
-  try {
-    console.log('モック clockIn: 遅延開始');
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    console.log('モック clockIn: 遅延完了');
-
-    const today = new Date().toISOString().split('T')[0];
-    const recordId = `${userId}-${today}`;
-    console.log('モック clockIn: 記録ID:', recordId);
-
-    console.log('モック clockIn: mockAttendanceRecords長さ:', mockAttendanceRecords.length);
-    const existingIndex = mockAttendanceRecords.findIndex((r) => r.id === recordId);
-    console.log('モック clockIn: 既存記録インデックス:', existingIndex);
-
-    if (existingIndex >= 0) {
-      console.log('モック clockIn: 既存記録を更新');
-      mockAttendanceRecords[existingIndex].clock_in_time = time;
-      mockAttendanceRecords[existingIndex].updated_at = new Date().toISOString();
-    } else {
-      console.log('モック clockIn: 新規記録を作成');
-      const newRecord = {
-        id: recordId,
-        user_id: userId,
-        work_date: today,
-        clock_in_time: time,
-        break_records: [],
-        clock_records: [],
-        overtime_minutes: 0,
-        late_minutes: 0,
-        early_leave_minutes: 0,
-        status: 'normal' as const,
-        auto_calculated: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      console.log('モック clockIn: 新規記録:', newRecord);
-      mockAttendanceRecords.push(newRecord);
-    }
-
-    console.log('モック clockIn: 成功');
-    return { success: true, message: '出勤しました' };
-  } catch (error) {
-    console.error('モック clockIn: エラー:', error);
-    throw error;
-  }
-};
-
-export const clockOut = async (userId: string, time: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
+export async function clockIn(userId: string, time: string) {
   const today = new Date().toISOString().split('T')[0];
-  const recordId = `${userId}-${today}`;
+  const existingRecord = mockAttendanceRecords.find(
+    (r) => r.user_id === userId && r.work_date === today
+  );
 
-  const existingIndex = mockAttendanceRecords.findIndex((r) => r.id === recordId);
-  if (existingIndex >= 0) {
-    const record = mockAttendanceRecords[existingIndex];
-    if (record.clock_in_time) {
-      const clockInTime = new Date(`${today}T${record.clock_in_time}:00`);
-      const clockOutTime = new Date(`${today}T${time}:00`);
-      const workMinutes = Math.floor((clockOutTime.getTime() - clockInTime.getTime()) / 60000) - 60;
-      const overtimeMinutes = Math.max(0, workMinutes - 480);
-
-      mockAttendanceRecords[existingIndex] = {
-        ...record,
-        clock_out_time: time,
-        overtime_minutes: overtimeMinutes,
-        updated_at: new Date().toISOString(),
-      };
-    }
+  if (existingRecord) {
+    existingRecord.clock_in_time = time;
+    return { success: true, message: '出勤しました', data: existingRecord };
   }
 
-  return { success: true, message: '退勤しました' };
-};
+  const newRecord: AttendanceData = {
+    id: `att_${Date.now()}`,
+    user_id: userId,
+    work_date: today,
+    clock_in_time: time,
+    clock_out_time: undefined,
+    break_records: [],
+    clock_records: [],
+    actual_work_minutes: 0,
+    overtime_minutes: 0,
+    late_minutes: 0,
+    early_leave_minutes: 0,
+    status: 'normal',
+    auto_calculated: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 
-export const startBreak = async (userId: string, time: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  mockAttendanceRecords.push(newRecord);
+  return { success: true, message: '出勤しました', data: newRecord };
+}
 
+export async function clockOut(userId: string, time: string) {
   const today = new Date().toISOString().split('T')[0];
-  const recordId = `${userId}-${today}`;
+  const record = mockAttendanceRecords.find((r) => r.user_id === userId && r.work_date === today);
 
-  const existingIndex = mockAttendanceRecords.findIndex((r) => r.id === recordId);
-  if (existingIndex >= 0) {
-    const record = mockAttendanceRecords[existingIndex];
-    const newBreakRecord = { break_start: time, break_end: '' };
-    mockAttendanceRecords[existingIndex] = {
-      ...record,
-      break_records: [...record.break_records, newBreakRecord],
-      updated_at: new Date().toISOString(),
-    };
+  if (!record || !record.clock_in_time) {
+    throw new Error('出勤記録が見つかりません');
   }
 
-  return { success: true, message: '休憩を開始しました' };
-};
+  record.clock_out_time = time;
 
-export const endBreak = async (userId: string, time: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  // 勤務時間計算
+  const clockInTime = new Date(`${today}T${record.clock_in_time}:00`);
+  const clockOutTime = new Date(`${today}T${time}:00`);
+  const workMinutes = Math.floor((clockOutTime.getTime() - clockInTime.getTime()) / 60000) - 60;
+  const overtimeMinutes = Math.max(0, workMinutes - 480);
 
+  record.actual_work_minutes = workMinutes;
+  record.overtime_minutes = overtimeMinutes;
+  record.updated_at = new Date().toISOString();
+
+  return { success: true, message: '退勤しました', data: record };
+}
+
+export async function startBreak(userId: string, time: string) {
   const today = new Date().toISOString().split('T')[0];
-  const recordId = `${userId}-${today}`;
+  const record = mockAttendanceRecords.find((r) => r.user_id === userId && r.work_date === today);
 
-  const existingIndex = mockAttendanceRecords.findIndex((r) => r.id === recordId);
-  if (existingIndex >= 0) {
-    const record = mockAttendanceRecords[existingIndex];
-    const updatedBreakRecords = [...record.break_records];
-    const lastBreak = updatedBreakRecords[updatedBreakRecords.length - 1];
-    if (lastBreak && !lastBreak.break_end) {
-      lastBreak.break_end = time;
-    }
-    mockAttendanceRecords[existingIndex] = {
-      ...record,
-      break_records: updatedBreakRecords,
-      updated_at: new Date().toISOString(),
-    };
+  if (!record) {
+    throw new Error('出勤記録が見つかりません');
   }
 
-  return { success: true, message: '休憩を終了しました' };
-};
+  record.break_records.push({ break_start: time, break_end: '' });
+  record.updated_at = new Date().toISOString();
 
-export const getUserData = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  return { success: true, message: '休憩を開始しました', data: record };
+}
+
+export async function endBreak(userId: string, time: string) {
+  const today = new Date().toISOString().split('T')[0];
+  const record = mockAttendanceRecords.find((r) => r.user_id === userId && r.work_date === today);
+
+  if (!record) {
+    throw new Error('出勤記録が見つかりません');
+  }
+
+  const lastBreak = record.break_records[record.break_records.length - 1];
+  if (!lastBreak || lastBreak.break_end) {
+    throw new Error('開始中の休憩が見つかりません');
+  }
+
+  lastBreak.break_end = time;
+  record.updated_at = new Date().toISOString();
+
+  return { success: true, message: '休憩を終了しました', data: record };
+}
+
+export async function getUserData() {
   return { users: mockUsers };
-};
+}
 
-export const getUserProfile = async (userId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function getUserProfile(userId: string) {
+  return mockUsers.find((u) => u.id === userId) || null;
+}
+
+export async function updateUserProfile(userId: string, updates: Record<string, unknown>) {
   const user = mockUsers.find((u) => u.id === userId);
-  return user || null;
-};
-
-export const updateUserProfile = async (userId: string, updates: any) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const userIndex = mockUsers.findIndex((u) => u.id === userId);
-  if (userIndex >= 0) {
-    mockUsers[userIndex] = { ...mockUsers[userIndex], ...updates };
-    return { success: true, message: 'プロフィールを更新しました' };
+  if (!user) {
+    throw new Error('ユーザーが見つかりません');
   }
-  return { success: false, error: 'ユーザーが見つかりません' };
-};
 
-export const getRequestData = async (userId?: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  Object.assign(user, updates);
+  user.updated_at = new Date().toISOString();
 
-  const requests = userId ? mockRequests.filter((a) => a.user_id === userId) : mockRequests;
+  return { success: true, message: 'プロフィールを更新しました', data: user };
+}
+
+export async function getRequestData(userId?: string) {
+  let requests = mockRequests;
+
+  if (userId) {
+    requests = mockRequests.filter((r) => r.user_id === userId);
+  }
 
   return { data: requests };
-};
+}
 
-export const createRequest = async (requestData: any) => {
-  await new Promise((resolve) => setTimeout(resolve, 600));
-
-  const newRequest = {
-    id: `app_${Date.now()}`,
-    ...requestData,
-    status: 'pending' as const,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+export async function createRequest(requestData: Record<string, unknown>) {
+  const newRequest: RequestData = {
+    id: `req_${Date.now()}`,
+    request_form_id: requestData.request_form_id as string,
+    user_id: requestData.user_id as string,
+    title: requestData.title as string,
+    form_data: requestData.form_data as Record<string, string | number | boolean | Date | string[]>,
+    target_date: requestData.target_date as string,
+    start_date: requestData.start_date as string,
+    end_date: requestData.end_date as string,
+    current_approval_step: 1,
+    submission_comment: requestData.submission_comment as string,
+    comments: [],
+    attachments: [],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   mockRequests.push(newRequest);
   return { success: true, message: '申請を提出しました', data: newRequest };
-};
+}
 
-export const updateRequestStatus = async (requestId: string, status: string, updates: any = {}) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const appIndex = mockRequests.findIndex((a) => a.id === requestId);
-  if (appIndex >= 0) {
-    mockRequests[appIndex] = {
-      ...mockRequests[appIndex],
-      status: status as any,
-      updatedAt: new Date().toISOString(),
-      ...updates,
-    };
-    return {
-      success: true,
-      message: `申請を${status === 'approved' ? '承認' : '却下'}しました`,
-    };
+export async function updateRequestStatus(
+  requestId: string,
+  status: string,
+  updates: Record<string, unknown> = {}
+) {
+  const request = mockRequests.find((r) => r.id === requestId);
+  if (!request) {
+    throw new Error('申請が見つかりません');
   }
-  return { success: false, error: '申請が見つかりません' };
-};
 
-export const getRequestForms = async (activeOnly: boolean = false) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  // status_idを更新
+  request.status_id = status;
+  Object.assign(request, updates);
+  request.updated_at = new Date().toISOString();
 
-  const forms = activeOnly ? mockRequestTypes.filter((t) => t.is_active) : mockRequestTypes;
+  return {
+    success: true,
+    message: `申請を${status === 'approved' ? '承認' : '却下'}しました`,
+    data: request,
+  };
+}
+
+export async function getRequestForms(activeOnly: boolean = false) {
+  let forms = mockRequestTypes;
+
+  if (activeOnly) {
+    forms = mockRequestTypes.filter((f) => f.is_active);
+  }
 
   return forms;
-};
+}
 
-export const getRequestForm = async (id: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function getRequestForm(id: string) {
+  return mockRequestTypes.find((f) => f.id === id) || null;
+}
 
-  const type = mockRequestTypes.find((t) => t.id === id);
-  return type || null;
-};
-
-export const createRequestForm = async (formData: any) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const newForm = {
-    id: `app_form_${Date.now()}`,
-    ...formData,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+export async function createRequestForm(formData: Record<string, unknown>) {
+  const newForm: RequestForm = {
+    id: `form_${Date.now()}`,
+    name: formData.name as string,
+    description: formData.description as string,
+    category: formData.category as string,
+    form_config: formData.form_config as FormFieldConfig[],
+    approval_flow: formData.approval_flow as ApprovalStep[],
+    is_active: true,
+    display_order: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   mockRequestTypes.push(newForm);
   return { success: true, message: '申請フォームを作成しました', data: newForm };
-};
+}
 
-export const updateRequestForm = async (id: string, updates: any) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const formIndex = mockRequestTypes.findIndex((t) => t.id === id);
-  if (formIndex >= 0) {
-    mockRequestTypes[formIndex] = {
-      ...mockRequestTypes[formIndex],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    return {
-      success: true,
-      message: '申請フォームを更新しました',
-      data: mockRequestTypes[formIndex],
-    };
+export async function updateRequestForm(id: string, updates: Record<string, unknown>) {
+  const form = mockRequestTypes.find((f) => f.id === id);
+  if (!form) {
+    throw new Error('申請フォームが見つかりません');
   }
-  return { success: false, error: '申請フォームが見つかりません' };
-};
 
-export const deleteRequestForm = async (id: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  Object.assign(form, updates);
+  form.updated_at = new Date().toISOString();
 
-  const formIndex = mockRequestTypes.findIndex((t) => t.id === id);
-  if (formIndex >= 0) {
-    mockRequestTypes.splice(formIndex, 1);
-    return { success: true, message: '申請フォームを削除しました' };
+  return { success: true, message: '申請フォームを更新しました', data: form };
+}
+
+export async function deleteRequestForm(id: string) {
+  const index = mockRequestTypes.findIndex((f) => f.id === id);
+  if (index === -1) {
+    throw new Error('申請フォームが見つかりません');
   }
-  return { success: false, error: '申請フォームが見つかりません' };
-};
 
-export const toggleRequestFormStatus = async (id: string, isActive: boolean) => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  mockRequestTypes.splice(index, 1);
+  return { success: true, message: '申請フォームを削除しました' };
+}
 
-  const formIndex = mockRequestTypes.findIndex((t) => t.id === id);
-  if (formIndex >= 0) {
-    mockRequestTypes[formIndex].is_active = isActive;
-    mockRequestTypes[formIndex].updated_at = new Date().toISOString();
-    const status = isActive ? '有効' : '無効';
-    return {
-      success: true,
-      message: `申請フォームを${status}にしました`,
-      data: mockRequestTypes[formIndex],
-    };
+export async function toggleRequestFormStatus(id: string, isActive: boolean) {
+  const form = mockRequestTypes.find((f) => f.id === id);
+  if (!form) {
+    throw new Error('申請フォームが見つかりません');
   }
-  return { success: false, error: '申請フォームが見つかりません' };
-};
 
-export const getDashboardData = async (userId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  form.is_active = isActive;
+  form.updated_at = new Date().toISOString();
 
-  const userAttendance = mockAttendanceRecords.filter((r) => r.user_id === userId);
+  const status = isActive ? '有効' : '無効';
+  return { success: true, message: `申請フォームを${status}にしました`, data: form };
+}
+
+export async function getDashboardData(userId: string) {
+  const [attendanceResult, requestsResult] = await Promise.all([
+    getAttendanceData(userId),
+    getRequestData(userId),
+  ]);
+
   const thisMonth = new Date().toISOString().slice(0, 7);
-  const thisMonthRecords = userAttendance.filter((r) => r.work_date?.startsWith(thisMonth));
+  const thisMonthRecords = attendanceResult.records.filter((r: AttendanceData) =>
+    r.work_date.startsWith(thisMonth)
+  );
 
   const workDays = thisMonthRecords.length;
   const totalOvertimeMinutes = thisMonthRecords.reduce(
-    (sum, r) => sum + (r.overtime_minutes || 0),
+    (sum: number, r: AttendanceData) => sum + (r.overtime_minutes || 0),
     0
   );
   const overtimeHours = Math.round((totalOvertimeMinutes / 60) * 10) / 10;
 
-  const userRequests = mockRequests.filter((a) => a.user_id === userId);
-  const pendingRequests = userRequests.filter((a) => a.status_id === 'status_pending');
+  const pendingRequests = requestsResult.data.filter((a: RequestData) => a.status_id === 'pending');
 
   return {
     stats: {
@@ -754,26 +733,38 @@ export const getDashboardData = async (userId: string) => {
       totalWorkHours: workDays * 8,
     },
     pendingRequests: pendingRequests.length,
-    recentActivity: [
-      { type: 'clock_in', time: '09:00', date: 'today' },
-      { type: 'request', title: '休暇申請', status: 'pending' },
-    ],
+    recentActivity: [],
   };
-};
+}
 
-export const getAdminDashboardData = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 600));
+export async function getAdminDashboardData() {
+  const [usersResult, requestsResult, attendanceResult] = await Promise.all([
+    getUserData(),
+    getRequestData(),
+    getAttendanceData(),
+  ]);
 
-  const activeUsers = mockUsers.filter((u) => u.is_active).length;
-  const pendingRequests = mockRequests.filter((a) => a.status_id === 'status_pending').length;
-  const todayAttendance = mockAttendanceRecords.filter(
-    (r) => r.work_date === new Date().toISOString().split('T')[0]
+  const activeUsers = usersResult.users.filter((u: UserProfile) => u.is_active).length;
+  const pendingRequests = requestsResult.data.filter(
+    (a: RequestData) => a.status_id === 'pending'
   ).length;
+  const today = new Date().toISOString().split('T')[0];
+  const todayAttendance = attendanceResult.records.filter(
+    (r: AttendanceData) => r.work_date === today
+  ).length;
+
   const thisMonth = new Date().toISOString().slice(0, 7);
-  const monthlyAttendance = mockAttendanceRecords.filter((r) => r.work_date?.startsWith(thisMonth));
+  const monthlyAttendance = attendanceResult.records.filter((r: AttendanceData) =>
+    r.work_date.startsWith(thisMonth)
+  );
   const totalOvertimeHours =
     Math.round(
-      (monthlyAttendance.reduce((sum, r) => sum + (r.overtime_minutes || 0), 0) / 60) * 10
+      (monthlyAttendance.reduce(
+        (sum: number, r: AttendanceData) => sum + (r.overtime_minutes || 0),
+        0
+      ) /
+        60) *
+        10
     ) / 10;
 
   return {
@@ -783,21 +774,18 @@ export const getAdminDashboardData = async () => {
       todayAttendance,
       monthlyOvertimeHours: totalOvertimeHours,
     },
-    recentRequests: mockRequests.slice(0, 5),
+    recentRequests: requestsResult.data.slice(0, 5),
     alerts: [{ type: 'info', message: `${pendingRequests}件の申請が承認待ちです` }],
   };
-};
+}
 
-export const getSettingsData = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
-
+export async function getSettingsData() {
   return {
     features: [
-      { code: 'TIME_CLOCK', name: '打刻機能', enabled: true },
-      { code: 'REQUESTS', name: '申請機能', enabled: true },
-      { code: 'USER_MANAGEMENT', name: 'ユーザー管理', enabled: true },
-      { code: 'GROUP_MANAGEMENT', name: 'グループ管理', enabled: true },
-      { code: 'ANALYTICS', name: '分析機能', enabled: false },
+      { code: 'attendance', name: '勤怠管理', enabled: true },
+      { code: 'requests', name: '申請管理', enabled: true },
+      { code: 'reports', name: 'レポート', enabled: true },
+      { code: 'chat', name: 'チャット', enabled: true },
     ],
     system: {
       companyName: '株式会社TimePort',
@@ -805,81 +793,74 @@ export const getSettingsData = async () => {
       workingHours: { start: '09:00', end: '18:00' },
     },
   };
-};
+}
 
-export const updateSettings = async (settingsType: string, data: any) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+export async function updateSettings(settingsType: string, data: Record<string, unknown>) {
   console.log(`Mock: Updating ${settingsType} settings:`, data);
   return { success: true, message: '設定を更新しました' };
-};
+}
 
-export const getGroupData = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
-
+export async function getGroupData() {
   return {
     groups: mockGroups,
     users: mockUsers,
   };
-};
+}
 
-export const getGroups = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function getGroups() {
   return mockGroups;
-};
+}
 
-export const getNotifications = async (userId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function getNotifications(userId: string) {
   return mockNotifications.filter((n) => n.user_id === userId);
-};
+}
 
-export const markNotificationAsRead = async (notificationId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  const notifIndex = mockNotifications.findIndex((n) => n.id === notificationId);
-  if (notifIndex >= 0) {
-    mockNotifications[notifIndex].is_read = true;
+export async function markNotificationAsRead(notificationId: string) {
+  const notification = mockNotifications.find((n) => n.id === notificationId);
+  if (notification) {
+    notification.is_read = true;
   }
   return { success: true };
-};
+}
 
-export const authenticateUser = async (email: string, password: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 800));
-
+export async function authenticateUser(email: string, password: string) {
   const user = mockUsers.find((u) => u.email === email && u.is_active);
-  if (user && password === 'Passw0rd!') {
-    return {
-      success: true,
-      user: {
-        id: user.id,
-        employee_id: user.code,
-        full_name: `${user.family_name} ${user.first_name}`,
-        email: user.email,
-        role: user.role,
-        primary_group_id: user.primary_group_id,
-      },
-    };
+
+  if (!user) {
+    return { success: false, error: 'メールアドレスまたはパスワードが正しくありません' };
   }
 
   return {
-    success: false,
-    error: 'メールアドレスまたはパスワードが正しくありません',
+    success: true,
+    user: {
+      id: user.id,
+      employeeId: user.code,
+      name: `${user.first_name} ${user.family_name}`,
+      email: user.email,
+      role: user.role,
+    },
   };
-};
+}
 
-export const logoutUser = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function logoutUser() {
   return { success: true };
-};
+}
 
-// 後方互換性のため
-export const getOrganizationData = getGroupData;
-export const getDepartments = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function getDepartments() {
   return mockGroups.filter((g) => g.id.includes('dept'));
-};
-export const getWorkplaces = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+}
+
+export async function getWorkplaces() {
   return mockGroups.filter((g) => g.id.includes('work'));
-};
+}
+
+export async function getOrganizationData() {
+  return {
+    workplaces: mockGroups.filter((g) => g.id.includes('work')),
+    departments: mockGroups.filter((g) => g.id.includes('dept')),
+    users: mockUsers,
+  };
+}
 
 // エクスポート用のエイリアス（後方互換性）
 export const users = mockUsers;
@@ -1298,7 +1279,7 @@ export const mockChatUsers = [
   },
 ];
 
-export const mockChatMessages: ChatMessage[] = [
+export const mockChatMessages: ChatMessageData[] = [
   {
     id: 'message1',
     chat_id: 'chat1',
@@ -1405,48 +1386,49 @@ export const mockChatMessages: ChatMessage[] = [
 // API関数
 // ================================
 
-export const getSchedules = async (userId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function getSchedules(userId: string) {
   return mockSchedules.filter((s) => s.user_id === userId);
-};
+}
 
-export const getTodos = async (userId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function getTodos(userId: string) {
   return mockTodos.filter((t) => t.user_id === userId);
-};
+}
 
-export const getReports = async (userId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function getReports(userId: string) {
   return mockReports.filter((r) => r.user_id === userId);
-};
+}
 
-export const getReportTemplates = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return mockReportTemplates.filter((t) => t.is_active);
-};
+export async function getReportTemplates() {
+  return mockReportTemplates;
+}
 
-export const getChats = async (userId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const userChats = mockChatUsers.filter((cu) => cu.user_id === userId);
-  return mockChats.filter((c) => userChats.some((uc) => uc.chat_id === c.id));
-};
+export async function getChats(userId: string) {
+  // モックデータの構造に合わせて修正
+  return mockChats.filter((c) => c.created_by === userId);
+}
 
-export const getChatMessages = async (chatId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+export async function getChatMessages(chatId: string) {
   return mockChatMessages.filter((m) => m.chat_id === chatId);
-};
+}
 
-export const getChatUsers = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  return mockChatUsers;
-};
+export async function getChatUsers() {
+  return mockUsers.map((u) => ({
+    id: u.id,
+    name: `${u.first_name} ${u.family_name}`,
+    avatar: undefined, // UserProfileにはavatarプロパティがない
+  }));
+}
 
-export const createSchedule = async (data: CreateScheduleInput) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+export async function createSchedule(data: CreateScheduleInput) {
   const newSchedule: Schedule = {
     id: `schedule_${Date.now()}`,
-    user_id: 'user3', // Current user
-    ...data,
+    user_id: 'user1', // デフォルトユーザーID
+    title: data.title,
+    description: data.description || '',
+    start_datetime: data.start_datetime,
+    end_datetime: data.end_datetime,
+    location: data.location || '',
+    url: data.url || '',
     is_all_day: data.is_all_day || false,
     recurrence_type: data.recurrence_type || 'none',
     recurrence_interval: data.recurrence_interval || 1,
@@ -1456,69 +1438,64 @@ export const createSchedule = async (data: CreateScheduleInput) => {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
-  mockSchedules.push(newSchedule);
-  return { success: true, data: newSchedule };
-};
 
-export const createTodo = async (data: CreateTodoInput) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  mockSchedules.push(newSchedule);
+  return { success: true, message: 'スケジュールを作成しました', data: newSchedule };
+}
+
+export async function createTodo(data: CreateTodoInput) {
   const newTodo: Todo = {
     id: `todo_${Date.now()}`,
-    user_id: 'user3', // Current user
-    ...data,
+    user_id: 'user1', // デフォルトユーザーID
+    title: data.title,
+    description: data.description || '',
+    due_date: data.due_date,
     priority: data.priority || 'medium',
     status: 'pending',
-    tags: data.tags || [],
+    shared_with_groups: [],
+    is_private: false,
+    tags: [],
     completion_rate: 0,
-    shared_with_groups: data.shared_with_groups || [],
-    is_private: data.is_private || false,
+    completed_at: undefined,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
+
   mockTodos.push(newTodo);
-  return { success: true, data: newTodo };
-};
+  return { success: true, message: 'タスクを作成しました', data: newTodo };
+}
 
-export const createReport = async (templateId: string, data: Record<string, unknown>) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const template = mockReportTemplates.find((t) => t.id === templateId);
-  if (!template) throw new Error('Template not found');
-
+export async function createReport(templateId: string, data: Record<string, unknown>) {
   const newReport: Report = {
     id: `report_${Date.now()}`,
-    company_id: 'company1',
+    company_id: 'company1', // デフォルト企業ID
+    user_id: 'user1', // デフォルトユーザーID
     template_id: templateId,
-    user_id: 'user3', // Current user
-    title: `${template.name} - ${new Date().toLocaleDateString('ja-JP')}`,
+    title: data.title as string,
+    content: data.content as Record<string, string | number | boolean | string[]>,
+    current_status_id: 'draft',
     report_date: new Date().toISOString().split('T')[0],
-    content: data as Record<string, string | number | boolean | string[]>,
-    current_status_id: 'status1',
+    submitted_at: undefined,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
-  mockReports.push(newReport);
-  return { success: true, data: newReport };
-};
 
-export const sendMessage = async (chatId: string, content: string, userId?: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const newMessage: ChatMessage = {
-    id: `message_${Date.now()}`,
+  mockReports.push(newReport);
+  return { success: true, message: 'レポートを作成しました', data: newReport };
+}
+
+export async function sendMessage(chatId: string, content: string, userId?: string) {
+  const newMessage: ChatMessageData = {
+    id: `msg_${Date.now()}`,
     chat_id: chatId,
-    user_id: userId || '49c83f3d-7c28-4cd8-9fbc-1c2a1c57a076', // Current user
-    message_type: 'text',
+    user_id: userId || 'user1',
     content,
     attachments: [],
-    created_at: new Date().toISOString(),
+    message_type: 'text',
     updated_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
+
   mockChatMessages.push(newMessage);
-
-  // Update chat last message time
-  const chatIndex = mockChats.findIndex((c) => c.id === chatId);
-  if (chatIndex >= 0) {
-    mockChats[chatIndex].last_message_at = newMessage.created_at;
-  }
-
-  return { success: true, data: newMessage };
-};
+  return { success: true, message: 'メッセージを送信しました', data: newMessage };
+}

@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import FormBuilder from '@/components/forms/form-builder';
-import { FormFieldConfig, RequestForm } from '@/types/request';
+import { FormFieldConfig, RequestForm } from '@/schemas/request';
 
 export default function EditRequestTypePage() {
   const { user } = useAuth();
@@ -53,7 +53,7 @@ export default function EditRequestTypePage() {
     );
   }
 
-  const handleSave = async () => {
+  async function handleSave() {
     setIsLoading(true);
     try {
       // In a real app, this would update the backend
@@ -70,11 +70,11 @@ export default function EditRequestTypePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handleCancel = () => {
+  function handleCancel() {
     router.push(`/admin/request-forms/${requestTypeId}`);
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -83,7 +83,7 @@ export default function EditRequestTypePage() {
         <p className="text-gray-600">「{requestType.name}」を編集します</p>
       </div>
 
-      <FormBuilder formConfig={formConfig} onFormConfigChange={setFormConfig} />
+      <FormBuilder formConfig={formConfig} onFormConfigChangeAction={setFormConfig} />
 
       <div className="flex gap-4">
         <button

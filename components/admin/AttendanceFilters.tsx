@@ -17,13 +17,13 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { Combobox } from '@/components/ui/combobox';
-import type { AttendanceFilters, AttendanceStatus } from '@/types/attendance';
+import type { AttendanceStatusData, AttendanceFilters } from '@/schemas/attendance';
 
 interface AdminAttendanceFiltersProps {
   filters: AttendanceFilters;
-  onFiltersChange: (filters: AttendanceFilters) => void;
+  onFiltersChangeAction: (filters: AttendanceFilters) => void;
   selectedMonth: string;
-  onMonthChange: (month: string) => void;
+  onMonthChangeAction: (month: string) => void;
   users: { id: string; name: string; code?: string }[];
   groups: { id: string; name: string; code?: string }[];
   workTypes: { id: string; name: string }[];
@@ -33,9 +33,9 @@ interface AdminAttendanceFiltersProps {
 
 export default function AdminAttendanceFilters({
   filters,
-  onFiltersChange,
+  onFiltersChangeAction,
   selectedMonth,
-  onMonthChange,
+  onMonthChangeAction,
   users,
   groups,
   workTypes,
@@ -45,7 +45,7 @@ export default function AdminAttendanceFilters({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleDateRangeChange = (field: 'startDate' | 'endDate', value: string | null) => {
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       dateRange: {
         ...filters.dateRange,
@@ -54,11 +54,12 @@ export default function AdminAttendanceFilters({
     });
   };
 
-  const handleStatusChange = (status: AttendanceStatus, checked: boolean) => {
+  const handleStatusChange = (status: AttendanceStatusData, checked: boolean) => {
+    const statusId = status.id;
     const newStatuses = checked
-      ? [...filters.status, status]
-      : filters.status.filter((s) => s !== status);
-    onFiltersChange({
+      ? [...filters.status, statusId]
+      : filters.status.filter((s) => s !== statusId);
+    onFiltersChangeAction({
       ...filters,
       status: newStatuses,
     });
@@ -66,7 +67,7 @@ export default function AdminAttendanceFilters({
 
   const handleOvertimeChange = (value: string) => {
     const hasOvertime = value === 'all' ? null : value === 'true';
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       hasOvertime,
     });
@@ -74,7 +75,7 @@ export default function AdminAttendanceFilters({
 
   const handleWorkTypeChange = (value: string) => {
     const workTypeId = value === 'all' ? null : value;
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       workTypeId,
     });
@@ -82,7 +83,7 @@ export default function AdminAttendanceFilters({
 
   const handleApprovalStatusChange = (value: string) => {
     const approvalStatus = value === 'all' ? null : (value as 'pending' | 'approved' | 'rejected');
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       approvalStatus,
     });
@@ -90,7 +91,7 @@ export default function AdminAttendanceFilters({
 
   const handleUserChange = (value: string) => {
     const userId = value === 'all' ? null : value;
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       userId,
     });
@@ -98,7 +99,7 @@ export default function AdminAttendanceFilters({
 
   const handleGroupChange = (value: string) => {
     const groupId = value === 'all' ? null : value;
-    onFiltersChange({
+    onFiltersChangeAction({
       ...filters,
       groupId,
     });
@@ -108,7 +109,7 @@ export default function AdminAttendanceFilters({
     if (onResetFilters) {
       onResetFilters();
     } else {
-      onFiltersChange({
+      onFiltersChangeAction({
         dateRange: { startDate: null, endDate: null },
         status: [],
         hasOvertime: null,
@@ -190,7 +191,7 @@ export default function AdminAttendanceFilters({
                   id="month-selector"
                   type="month"
                   value={selectedMonth}
-                  onChange={(e) => onMonthChange(e.target.value)}
+                  onChange={(e) => onMonthChangeAction(e.target.value)}
                   className="w-40"
                 />
               </div>
@@ -273,17 +274,20 @@ export default function AdminAttendanceFilters({
               <Label className="text-sm font-medium text-gray-700">ステータス</Label>
               <div className="grid grid-cols-2 gap-2 mt-1">
                 {[
-                  { value: 'normal' as AttendanceStatus, label: '正常' },
-                  { value: 'late' as AttendanceStatus, label: '遅刻' },
-                  { value: 'early_leave' as AttendanceStatus, label: '早退' },
-                  { value: 'absent' as AttendanceStatus, label: '欠勤' },
+                  { value: 'normal', label: '正常' },
+                  { value: 'late', label: '遅刻' },
+                  { value: 'early_leave', label: '早退' },
+                  { value: 'absent', label: '欠勤' },
                 ].map((status) => (
                   <div key={status.value} className="flex items-center space-x-2">
                     <Checkbox
                       id={`status-${status.value}`}
                       checked={filters.status.includes(status.value)}
                       onCheckedChange={(checked) =>
-                        handleStatusChange(status.value, checked as boolean)
+                        handleStatusChange(
+                          { id: status.value, name: status.value } as AttendanceStatusData,
+                          checked as boolean
+                        )
                       }
                     />
                     <Label

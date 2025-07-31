@@ -4,20 +4,30 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
 import type {
   CreateCompanyInput,
   UpdateCompanyInput,
+  CreateCompanyFormDataSchema,
+  UpdateCompanyFormDataSchema,
+  CompanySearchParamsSchema,
+  CompanyValidationResultSchema,
+  CreateCompanyResultSchema,
+  UpdateCompanyResultSchema,
+  DeleteCompanyResultSchema,
+  CompanyListResponseSchema,
+  CompanyStatsSchema,
   CreateCompanyFormData,
   EditCompanyFormData,
+  CompanySearchParams,
+  CompanyValidationResult,
   CreateCompanyResult,
   UpdateCompanyResult,
   DeleteCompanyResult,
   CompanyListResponse,
-  CompanySearchParams,
   CompanyStats,
-  CompanyValidationResult,
-} from '@/types/company';
+} from '@/schemas/company';
 import {
   AppError,
   withErrorHandling,
@@ -50,7 +60,7 @@ const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
 /**
  * 会社作成フォームのバリデーション
  */
-const validateCreateCompanyForm = (form: CreateCompanyFormData): CompanyValidationResult => {
+function validateCreateCompanyForm(form: CreateCompanyFormData): CompanyValidationResult {
   const errors: ValidationError[] = [];
 
   // 企業情報のバリデーション
@@ -94,12 +104,12 @@ const validateCreateCompanyForm = (form: CreateCompanyFormData): CompanyValidati
       code: error.code || 'VALIDATION_ERROR',
     })),
   };
-};
+}
 
 /**
  * 会社編集フォームのバリデーション
  */
-const validateEditCompanyForm = (form: EditCompanyFormData): CompanyValidationResult => {
+function validateEditCompanyForm(form: EditCompanyFormData): CompanyValidationResult {
   const errors: ValidationError[] = [];
 
   const nameError = validateRequired(form.name, '企業名');
@@ -116,7 +126,7 @@ const validateEditCompanyForm = (form: EditCompanyFormData): CompanyValidationRe
       code: error.code || 'VALIDATION_ERROR',
     })),
   };
-};
+}
 
 // ================================
 // データベース操作関数
@@ -125,7 +135,7 @@ const validateEditCompanyForm = (form: EditCompanyFormData): CompanyValidationRe
 /**
  * コードの重複チェック
  */
-const checkCompanyCodeExists = async (code: string, excludeId?: string): Promise<boolean> => {
+async function checkCompanyCodeExists(code: string, excludeId?: string): Promise<boolean> {
   const query = supabaseAdmin
     .from('companies')
     .select('id')
@@ -138,12 +148,12 @@ const checkCompanyCodeExists = async (code: string, excludeId?: string): Promise
 
   const { data } = await query;
   return (data?.length || 0) > 0;
-};
+}
 
 /**
  * メールアドレスの重複チェック
  */
-const checkEmailExists = async (email: string): Promise<boolean> => {
+async function checkEmailExists(email: string): Promise<boolean> {
   const { data } = await supabaseAdmin
     .from('user_profiles')
     .select('id')
@@ -151,12 +161,12 @@ const checkEmailExists = async (email: string): Promise<boolean> => {
     .is('deleted_at', null);
 
   return (data?.length || 0) > 0;
-};
+}
 
 /**
  * コードの重複チェック
  */
-const checkUserCodeExists = async (code: string): Promise<boolean> => {
+async function checkUserCodeExists(code: string): Promise<boolean> {
   const { data } = await supabaseAdmin
     .from('user_profiles')
     .select('id')
@@ -164,7 +174,7 @@ const checkUserCodeExists = async (code: string): Promise<boolean> => {
     .is('deleted_at', null);
 
   return (data?.length || 0) > 0;
-};
+}
 
 // ================================
 // Server Actions
@@ -173,9 +183,9 @@ const checkUserCodeExists = async (code: string): Promise<boolean> => {
 /**
  * 企業作成（管理者ユーザー・グループ同時作成）
  */
-export const createCompany = async (
+export async function createCompany(
   form: CreateCompanyFormData
-): Promise<{ success: true; data: CreateCompanyResult } | { success: false; error: AppError }> => {
+): Promise<{ success: true; data: CreateCompanyResult } | { success: false; error: AppError }> {
   console.log('createCompany called with form:', { ...form, admin_password: '[REDACTED]' });
 
   // 環境変数の確認
@@ -361,15 +371,15 @@ export const createCompany = async (
       adminUserId,
     };
   }, '企業作成');
-};
+}
 
 /**
  * 企業更新
  */
-export const updateCompany = async (
+export async function updateCompany(
   id: string,
   form: EditCompanyFormData
-): Promise<{ success: true; data: UpdateCompanyResult } | { success: false; error: AppError }> => {
+): Promise<{ success: true; data: UpdateCompanyResult } | { success: false; error: AppError }> {
   return withErrorHandling(async () => {
     // バリデーション
     const validation = validateEditCompanyForm(form);
@@ -427,14 +437,14 @@ export const updateCompany = async (
       updatedFields,
     };
   }, '企業更新');
-};
+}
 
 /**
  * 企業削除（論理削除）
  */
-export const deleteCompany = async (
+export async function deleteCompany(
   id: string
-): Promise<{ success: true; data: DeleteCompanyResult } | { success: false; error: AppError }> => {
+): Promise<{ success: true; data: DeleteCompanyResult } | { success: false; error: AppError }> {
   return withErrorHandling(async () => {
     // 企業の存在確認
     const { data: existingCompany, error: fetchError } = await supabaseAdmin
@@ -475,14 +485,14 @@ export const deleteCompany = async (
       deletedAt: company.deleted_at!,
     };
   }, '企業削除');
-};
+}
 
 /**
  * 企業一覧取得
  */
-export const getCompanies = async (
+export async function getCompanies(
   params: CompanySearchParams = {}
-): Promise<{ success: true; data: CompanyListResponse } | { success: false; error: AppError }> => {
+): Promise<{ success: true; data: CompanyListResponse } | { success: false; error: AppError }> {
   return withErrorHandling(async () => {
     const {
       search = '',
@@ -550,14 +560,14 @@ export const getCompanies = async (
       },
     };
   }, '企業一覧取得');
-};
+}
 
 /**
  * 企業統計情報取得
  */
-export const getCompanyStats = async (): Promise<
+export async function getCompanyStats(): Promise<
   { success: true; data: CompanyStats } | { success: false; error: AppError }
-> => {
+> {
   return withErrorHandling(async () => {
     const { data: companies, error } = await supabaseAdmin
       .from('companies')
@@ -581,4 +591,4 @@ export const getCompanyStats = async (): Promise<
 
     return stats;
   }, '企業統計取得');
-};
+}

@@ -2,24 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Calendar,
-  Download,
-  Filter,
-  Info,
-  Clock,
-  User,
-  CheckCircle,
-  XCircle,
-  Settings,
-} from 'lucide-react';
+import { Calendar, Download, Info, Clock, CheckCircle, XCircle, Settings } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
-import { formatDate, formatTime } from '@/lib/utils';
+
 import { getUserAttendance, getUserWorkTypes } from '@/lib/actions/attendance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -36,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Attendance, AttendanceStatus, AttendanceFilters } from '@/types/attendance';
+import type { AttendanceData, AttendanceStatusData, AttendanceFilters } from '@/schemas/attendance';
 import AdminCsvExportDialog from '@/components/admin/CsvExportDialog';
 import AttendanceFiltersComponent from '@/components/member/AttendanceFilters';
 import WorkTypeDetailDialog from '@/components/admin/WorkTypeDetailDialog';
@@ -46,18 +35,18 @@ interface CalendarDay {
   date: string;
   weekday: string;
   weekdayColor: string;
-  attendance?: Attendance;
+  attendance?: AttendanceData;
   isWeekend: boolean;
 }
 
 export default function MemberAttendancePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
-  const [selectedBreakDetails, setSelectedBreakDetails] = useState<Attendance | null>(null);
+  const [selectedBreakDetails, setSelectedBreakDetails] = useState<AttendanceData | null>(null);
   const [isBreakDetailsDialogOpen, setIsBreakDetailsDialogOpen] = useState(false);
   const [isColumnSettingsDialogOpen, setIsColumnSettingsDialogOpen] = useState(false);
   const [csvExportOpen, setCsvExportOpen] = useState(false);
@@ -73,6 +62,8 @@ export default function MemberAttendancePage() {
     hasOvertime: null,
     workTypeId: null,
     approvalStatus: null,
+    userId: null,
+    groupId: null,
   });
 
   // 勤務タイプ
@@ -96,7 +87,7 @@ export default function MemberAttendancePage() {
     updatedAt: false,
   });
 
-  // 選択された月の全ての日付を生成する関数
+  // カレンダー日付生成関数
   const generateCalendarDays = (yearMonth: string): CalendarDay[] => {
     const [year, month] = yearMonth.split('-').map(Number);
     const firstDay = new Date(year, month - 1, 1);
@@ -134,7 +125,7 @@ export default function MemberAttendancePage() {
   };
 
   // フィルタリング関数
-  const applyFilters = (records: Attendance[]): Attendance[] => {
+  function applyFilters(records: AttendanceData[]): AttendanceData[] {
     return records.filter((record) => {
       // 日付範囲フィルター
       if (filters.dateRange.startDate && record.work_date < filters.dateRange.startDate) {
@@ -147,7 +138,8 @@ export default function MemberAttendancePage() {
       // ステータスフィルター
       if (filters.status.length > 0) {
         const recordStatus = getAttendanceStatus(record);
-        if (!filters.status.includes(recordStatus)) {
+        const statusString = typeof recordStatus === 'string' ? recordStatus : recordStatus.name;
+        if (!filters.status.includes(statusString)) {
           return false;
         }
       }
@@ -175,10 +167,10 @@ export default function MemberAttendancePage() {
 
       return true;
     });
-  };
+  }
 
   // フィルタリングされた勤怠データを取得する関数
-  const getFilteredAttendanceData = (): Attendance[] => {
+  function getFilteredAttendanceData(): AttendanceData[] {
     // 選択された月の勤怠データのみをフィルタリング
     const filteredRecords = attendanceRecords.filter((record) => {
       if (!record.work_date) return false;
@@ -200,11 +192,11 @@ export default function MemberAttendancePage() {
       if (!a.work_date || !b.work_date) return 0;
       return new Date(a.work_date).getTime() - new Date(b.work_date).getTime();
     });
-  };
+  }
 
   // 勤務タイプ取得
   useEffect(() => {
-    const fetchWorkTypes = async () => {
+    async function fetchWorkTypes() {
       if (!user) return;
 
       try {
@@ -216,14 +208,14 @@ export default function MemberAttendancePage() {
       } finally {
         setIsLoadingWorkTypes(false);
       }
-    };
+    }
 
     fetchWorkTypes();
   }, [user]);
 
   // データ取得
   useEffect(() => {
-    const fetchAttendanceData = async () => {
+    async function fetchAttendanceData() {
       if (!user) {
         console.log('ユーザーが存在しません');
         return;
@@ -255,7 +247,7 @@ export default function MemberAttendancePage() {
       } finally {
         setIsLoading(false);
       }
-    };
+    }
 
     fetchAttendanceData();
   }, [user, selectedMonth]);
@@ -288,7 +280,7 @@ export default function MemberAttendancePage() {
     }
   };
 
-  const getAttendanceStatus = (record?: Attendance): AttendanceStatus => {
+  const getAttendanceStatus = (record?: AttendanceData): AttendanceStatusData | string => {
     if (!record || !record.clock_records || record.clock_records.length === 0) return 'absent';
 
     // 最新のセッションを取得
@@ -298,12 +290,13 @@ export default function MemberAttendancePage() {
     return 'normal';
   };
 
-  const getStatusBadge = (status: AttendanceStatus, isWeekend: boolean) => {
-    if (isWeekend && status === 'absent') {
+  const getStatusBadge = (status: AttendanceStatusData | string, isWeekend: boolean) => {
+    const statusString = typeof status === 'string' ? status : status.name;
+    if (isWeekend && statusString === 'absent') {
       return <Badge variant="outline">休日</Badge>;
     }
 
-    switch (status) {
+    switch (statusString) {
       case 'normal':
         return <Badge variant="default">正常</Badge>;
       case 'late':
@@ -318,14 +311,14 @@ export default function MemberAttendancePage() {
   };
 
   // 最新のセッションから出勤時刻を取得
-  const getClockInTime = (record?: Attendance): string | undefined => {
+  const getClockInTime = (record?: AttendanceData): string | undefined => {
     if (!record?.clock_records || record.clock_records.length === 0) return undefined;
     const latestSession = record.clock_records[record.clock_records.length - 1];
     return latestSession.in_time;
   };
 
   // 最新のセッションから退勤時刻を取得
-  const getClockOutTime = (record?: Attendance): string | undefined => {
+  const getClockOutTime = (record?: AttendanceData): string | undefined => {
     if (!record?.clock_records || record.clock_records.length === 0) return undefined;
     const latestSession = record.clock_records[record.clock_records.length - 1];
     return latestSession.out_time;
@@ -400,7 +393,7 @@ export default function MemberAttendancePage() {
     }
   };
 
-  const handleBreakDetailsClick = (record: Attendance) => {
+  const handleBreakDetailsClick = (record: AttendanceData) => {
     setSelectedBreakDetails(record);
     setIsBreakDetailsDialogOpen(true);
   };
@@ -463,10 +456,10 @@ export default function MemberAttendancePage() {
           {/* フィルターコンポーネント */}
           <AttendanceFiltersComponent
             filters={filters}
-            onFiltersChange={setFilters}
+            onFiltersChangeAction={setFilters}
             workTypes={workTypes}
             selectedMonth={selectedMonth}
-            onMonthChange={setSelectedMonth}
+            onMonthChangeAction={setSelectedMonth}
             isLoading={isLoadingWorkTypes}
           />
 
@@ -748,7 +741,7 @@ export default function MemberAttendancePage() {
       {/* CSV出力ダイアログ */}
       <AdminCsvExportDialog
         open={csvExportOpen}
-        onOpenChange={setCsvExportOpen}
+        onOpenChangeAction={setCsvExportOpen}
         attendanceRecords={attendanceRecords}
         users={[]}
         groups={[]}
@@ -757,7 +750,7 @@ export default function MemberAttendancePage() {
       {/* 勤務形態詳細ダイアログ */}
       <WorkTypeDetailDialog
         open={workTypeDetailDialogOpen}
-        onOpenChange={setWorkTypeDetailDialogOpen}
+        onOpenChangeAction={setWorkTypeDetailDialogOpen}
         workTypeId={selectedWorkTypeId}
       />
     </div>

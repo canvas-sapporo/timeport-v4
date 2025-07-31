@@ -19,18 +19,18 @@ import ClockRecordsInput from '@/components/forms/clock-records-input';
 
 interface RequestEditDialogProps {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   request: any;
   requestForms: any[];
-  onSuccess: () => void;
+  onSuccessAction: () => void;
 }
 
 export function RequestEditDialog({
   isOpen,
-  onClose,
+  onCloseAction,
   request,
   requestForms,
-  onSuccess,
+  onSuccessAction,
 }: RequestEditDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -89,8 +89,8 @@ export function RequestEditDialog({
           title: '申請更新完了',
           description: '申請が正常に更新されました。',
         });
-        onSuccess();
-        onClose();
+        onSuccessAction();
+        onCloseAction();
       } else {
         toast({
           title: 'エラー',
@@ -118,12 +118,12 @@ export function RequestEditDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onCloseAction}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>申請編集</span>
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <Button variant="ghost" size="sm" onClick={onCloseAction}>
               <X className="w-4 h-4" />
             </Button>
           </DialogTitle>
@@ -226,7 +226,7 @@ export function RequestEditDialog({
                     {field.type === 'object' && field.metadata?.object_type === 'attendance' ? (
                       <ClockRecordsInput
                         value={formData[field.name] || []}
-                        onChange={(value) => handleFormDataChange(field.name, value)}
+                        onChangeAction={(value) => handleFormDataChange(field.name, value)}
                       />
                     ) : field.type === 'text' ? (
                       <Input
@@ -266,7 +266,7 @@ export function RequestEditDialog({
 
           {/* ボタン */}
           <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={onClose} disabled={isLoading}>
+            <Button variant="outline" onClick={onCloseAction} disabled={isLoading}>
               キャンセル
             </Button>
             <Button onClick={handleSubmit} disabled={isLoading}>

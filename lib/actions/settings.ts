@@ -1,15 +1,20 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
 import { createServerClient } from '@/lib/supabase';
 import type {
-  Setting,
+  SettingData as Setting,
   CsvExportSetting,
   AttendanceSetting,
   NotificationSetting,
   SettingType,
-} from '@/types/settings';
+  GetSettingResult,
+  SaveSettingResult,
+  DeleteSettingResult,
+  GetUserSettingsResult,
+} from '@/schemas/setting';
 
 /**
  * 設定を取得する
@@ -98,7 +103,7 @@ export async function saveSetting(
   settingKey: string,
   settingValue: CsvExportSetting | AttendanceSetting | NotificationSetting,
   isDefault: boolean = false
-): Promise<{ success: boolean; error?: string }> {
+): Promise<SaveSettingResult> {
   const supabase = createServerClient();
 
   try {
@@ -117,7 +122,11 @@ export async function saveSetting(
 
       if (error) {
         console.error('Error updating setting:', error);
-        return { success: false, error: '設定の更新に失敗しました' };
+        return {
+          success: false,
+          message: '設定の更新に失敗しました',
+          error: '設定の更新に失敗しました',
+        };
       }
     } else {
       // 新規設定を作成
@@ -132,15 +141,23 @@ export async function saveSetting(
 
       if (error) {
         console.error('Error creating setting:', error);
-        return { success: false, error: '設定の作成に失敗しました' };
+        return {
+          success: false,
+          message: '設定の作成に失敗しました',
+          error: '設定の作成に失敗しました',
+        };
       }
     }
 
     revalidatePath('/admin/settings');
-    return { success: true };
+    return { success: true, message: '設定が正常に保存されました' };
   } catch (error) {
     console.error('Error in saveSetting:', error);
-    return { success: false, error: '設定の保存に失敗しました' };
+    return {
+      success: false,
+      message: '設定の保存に失敗しました',
+      error: '設定の保存に失敗しました',
+    };
   }
 }
 
@@ -149,9 +166,7 @@ export async function saveSetting(
  * @param settingId 設定ID
  * @returns 成功/失敗の結果
  */
-export async function deleteSetting(
-  settingId: string
-): Promise<{ success: boolean; error?: string }> {
+export async function deleteSetting(settingId: string): Promise<DeleteSettingResult> {
   const supabase = createServerClient();
 
   try {

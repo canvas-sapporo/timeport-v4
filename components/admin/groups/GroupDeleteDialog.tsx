@@ -16,18 +16,18 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { deleteGroup, checkGroupDeletionSafety } from '@/lib/actions/admin/groups';
-import type { Group } from '@/types/groups';
+import type { Group } from '@/schemas/group';
 
 interface GroupDeleteDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   group: Group | null;
   onSuccess?: () => void;
 }
 
 export default function GroupDeleteDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   group,
   onSuccess,
 }: GroupDeleteDialogProps) {
@@ -96,7 +96,7 @@ export default function GroupDeleteDialog({
           title: '成功',
           description: 'グループが正常に削除されました',
         });
-        onOpenChange(false);
+        onOpenChangeAction(false);
         onSuccess?.();
       } else {
         toast({
@@ -122,7 +122,7 @@ export default function GroupDeleteDialog({
       setShowWarning(false);
       setAffectedUsers([]);
     }
-    onOpenChange(newOpen);
+    onOpenChangeAction(newOpen);
   };
 
   return (
@@ -156,7 +156,7 @@ export default function GroupDeleteDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
               disabled={isLoading || isChecking}
             >
               キャンセル

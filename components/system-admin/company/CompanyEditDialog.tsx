@@ -13,17 +13,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Company } from '@/types/company';
+import { Company } from '@/schemas/company';
 import { updateCompany } from '@/lib/actions/system-admin/company';
-import type { EditCompanyFormData } from '@/types/company';
+import type { EditCompanyFormData } from '@/schemas/company';
 
 export default function CompanyEditDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   company,
 }: {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   company: Company | null;
 }) {
   const [editForm, setEditForm] = useState<EditCompanyFormData>({
@@ -62,7 +62,7 @@ export default function CompanyEditDialog({
         const result = await updateCompany(company.id, editForm);
 
         if (result.success) {
-          onOpenChange(false);
+          onOpenChangeAction(false);
         } else {
           // エラーハンドリング
           const appError = result.error;
@@ -92,7 +92,7 @@ export default function CompanyEditDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>企業編集</DialogTitle>

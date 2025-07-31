@@ -30,7 +30,6 @@ export default async function CompanyListPage() {
   }
 
   const { companies, activeCount, deletedCount } = companiesResult.data;
-  const stats = statsResult.data;
 
   return (
     <CompanyListTable

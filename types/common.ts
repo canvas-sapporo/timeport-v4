@@ -86,7 +86,7 @@ export type UpdateInput<T extends BaseEntity> = Partial<
  * }>;
  * ```
  */
-export type WithRelations<T, R extends Record<string, any>> = T & R;
+export type WithRelations<T, R extends Record<string, unknown>> = T & R;
 
 /**
  * ページネーション情報
@@ -129,7 +129,7 @@ export interface QueryOptions {
   /** 昇順/降順 */
   ascending?: boolean;
   /** フィルター条件 */
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   /** 含めるリレーション */
   include?: string[];
   /** 除外するフィールド */
@@ -159,7 +159,7 @@ export interface SelectOption<T = string | number> {
 /**
  * キーバリューペア
  */
-export interface KeyValuePair<T = any> {
+export interface KeyValuePair<T = unknown> {
   key: string;
   value: T;
 }
@@ -167,12 +167,12 @@ export interface KeyValuePair<T = any> {
 /**
  * 設定値型（JSONB設定フィールド用）
  */
-export type Settings = Record<string, any>;
+export type Settings = Record<string, unknown>;
 
 /**
  * メタデータ型（JSONB詳細フィールド用）
  */
-export type Metadata = Record<string, any>;
+export type Metadata = Record<string, unknown>;
 
 // ================================
 // エラー型
@@ -189,7 +189,7 @@ export interface ValidationError {
   /** エラーコード */
   code?: string;
   /** エラー値 */
-  value?: any;
+  value?: unknown;
 }
 
 /**
@@ -201,7 +201,7 @@ export interface ErrorResponse {
   /** エラーメッセージ */
   message: string;
   /** 詳細情報 */
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   /** バリデーションエラー一覧 */
   validation_errors?: ValidationError[];
   /** タイムスタンプ */
@@ -215,7 +215,7 @@ export interface ErrorResponse {
 /**
  * 操作結果
  */
-export interface OperationResult<T = any> {
+export interface OperationResult<T = unknown> {
   /** 成功フラグ */
   success: boolean;
   /** 結果データ */
@@ -229,7 +229,7 @@ export interface OperationResult<T = any> {
 /**
  * バッチ操作結果
  */
-export interface BatchOperationResult<T = any> {
+export interface BatchOperationResult<T = unknown> {
   /** 総件数 */
   total: number;
   /** 成功件数 */
@@ -242,6 +242,6 @@ export interface BatchOperationResult<T = any> {
   errors: Array<{
     index: number;
     error: string;
-    data?: any;
+    data?: unknown;
   }>;
 }

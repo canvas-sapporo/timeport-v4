@@ -6,40 +6,26 @@ import { z } from 'zod';
 
 import { createServerClient } from '@/lib/supabase';
 import type {
-  CreateReportData,
-  UpdateReportData,
-  ApproveReportData,
+  CreateReportInput,
+  UpdateReportInput,
+  ApproveReportInput,
   ReportListItem,
   ReportDetail,
   ReportStatistics,
-} from '@/types/report';
-
-// ================================
-// バリデーションスキーマ
-// ================================
-
-const CreateReportSchema = z.object({
-  template_id: z.string().uuid('テンプレートIDが無効です'),
-  title: z.string().min(1, 'タイトルは必須です'),
-  content: z.record(z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])),
-  report_date: z.string().min(1, 'レポート日は必須です'),
-});
-
-const UpdateReportSchema = z.object({
-  title: z.string().min(1, 'タイトルは必須です').optional(),
-  content: z.record(z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])).optional(),
-});
-
-const ApproveReportSchema = z.object({
-  status_id: z.string().uuid('ステータスIDが無効です'),
-  comment: z.string().optional(),
-});
+  CreateReportResult,
+  UpdateReportResult,
+  DeleteReportResult,
+  SubmitReportResult,
+  GetReportsResult,
+  GetReportDetailResult,
+  GetReportStatisticsResult,
+} from '@/schemas/report';
 
 // ================================
 // レポート作成
 // ================================
 
-export const createReport = async (formData: FormData) => {
+export async function createReport(formData: FormData): Promise<CreateReportResult | never> {
   const supabase = createServerClient();
 
   try {
@@ -77,7 +63,14 @@ export const createReport = async (formData: FormData) => {
     console.log('作成データ:', rawData);
 
     // バリデーション
-    const validatedData = CreateReportSchema.parse(rawData);
+    const validatedData = z
+      .object({
+        template_id: z.string().uuid('テンプレートIDが無効です'),
+        title: z.string().min(1, 'タイトルは必須です'),
+        content: z.record(z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])),
+        report_date: z.string().min(1, 'レポート日は必須です'),
+      })
+      .parse(rawData);
 
     // テンプレートを取得してデフォルトステータスを確認
     const { data: template, error: templateError } = await supabase
@@ -138,13 +131,16 @@ export const createReport = async (formData: FormData) => {
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポート更新
 // ================================
 
-export const updateReport = async (id: string, formData: FormData) => {
+export async function updateReport(
+  id: string,
+  formData: FormData
+): Promise<UpdateReportResult | never> {
   const supabase = createServerClient();
 
   try {
@@ -195,7 +191,14 @@ export const updateReport = async (id: string, formData: FormData) => {
     console.log('更新データ:', rawData);
 
     // バリデーション
-    const validatedData = UpdateReportSchema.parse(rawData);
+    const validatedData = z
+      .object({
+        title: z.string().min(1, 'タイトルは必須です').optional(),
+        content: z
+          .record(z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]))
+          .optional(),
+      })
+      .parse(rawData);
 
     // レポートを更新
     const { data, error } = await supabase
@@ -224,13 +227,13 @@ export const updateReport = async (id: string, formData: FormData) => {
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポート提出
 // ================================
 
-export const submitReport = async (id: string) => {
+export async function submitReport(id: string): Promise<SubmitReportResult | never> {
   const supabase = createServerClient();
 
   try {
@@ -301,13 +304,13 @@ export const submitReport = async (id: string) => {
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポート削除
 // ================================
 
-export const deleteReport = async (id: string) => {
+export async function deleteReport(id: string): Promise<DeleteReportResult | never> {
   const supabase = createServerClient();
 
   try {
@@ -373,17 +376,13 @@ export const deleteReport = async (id: string) => {
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポート一覧取得
 // ================================
 
-export const getReports = async (): Promise<{
-  success: boolean;
-  data?: ReportListItem[];
-  error?: string;
-}> => {
+export async function getReports(): Promise<GetReportsResult> {
   const supabase = createServerClient();
 
   try {
@@ -498,15 +497,13 @@ export const getReports = async (): Promise<{
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポート詳細取得
 // ================================
 
-export const getReport = async (
-  id: string
-): Promise<{ success: boolean; data?: ReportDetail; error?: string }> => {
+export async function getReport(id: string): Promise<GetReportDetailResult> {
   const supabase = createServerClient();
 
   try {
@@ -574,17 +571,13 @@ export const getReport = async (
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポート統計取得
 // ================================
 
-export const getReportStatistics = async (): Promise<{
-  success: boolean;
-  data?: ReportStatistics;
-  error?: string;
-}> => {
+export async function getReportStatistics(): Promise<GetReportStatisticsResult> {
   const supabase = createServerClient();
 
   try {
@@ -642,4 +635,4 @@ export const getReportStatistics = async (): Promise<{
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}

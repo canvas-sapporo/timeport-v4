@@ -24,16 +24,15 @@
   // 使用するプラグインを指定
   "plugins": ["@typescript-eslint", "import", "prettier"],
 
-  // TypeScriptのパーサーとそのオプション
+  // TypeScript 設定
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    // tsconfig.json の場所を指定
     "project": "./tsconfig.json",
     "tsconfigRootDir": ".",
     "sourceType": "module"
   },
 
-  // 独自に上書きしたいルール設定
+  // 共通ルール
   "rules": {
     // 文末にセミコロンを強制
     "semi": ["error", "always"],
@@ -61,6 +60,7 @@
     "prettier/prettier": "warn"
   },
 
+  // フォルダごとの関数スタイル制御
   "overrides": [
     {
       // components, hooks, contexts, scripts ではアロー関数を強制

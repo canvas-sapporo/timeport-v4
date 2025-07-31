@@ -2,12 +2,12 @@
  * 申請種別のデフォルト設定ユーティリティ
  */
 
-import type { FormFieldConfig, ApprovalStep } from '@/types/request';
+import type { FormFieldConfig, ApprovalStep } from '@/schemas/request';
 
 /**
  * カテゴリ別のデフォルトフォーム設定を取得
  */
-export const getDefaultFormConfig = (category: string): FormFieldConfig[] => {
+export function getDefaultFormConfig(category: string): FormFieldConfig[] {
   const baseFields: FormFieldConfig[] = [
     {
       id: 'field_1',
@@ -230,12 +230,12 @@ export const getDefaultFormConfig = (category: string): FormFieldConfig[] => {
     default:
       return baseFields;
   }
-};
+}
 
 /**
  * デフォルトの承認フローを取得
  */
-export const getDefaultApprovalFlow = (category: string): ApprovalStep[] => {
+export function getDefaultApprovalFlow(category: string): ApprovalStep[] {
   const baseFlow: ApprovalStep[] = [
     {
       step: 1,
@@ -311,4 +311,4 @@ export const getDefaultApprovalFlow = (category: string): ApprovalStep[] => {
     default:
       return baseFlow;
   }
-};
+}

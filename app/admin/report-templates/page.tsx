@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getReportTemplates, deleteReportTemplate } from '@/lib/actions/admin/report-templates';
-import type { ReportTemplate } from '@/types/report';
+import type { ReportTemplate } from '@/schemas/report';
 
 export default function ReportTemplatesPage() {
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function ReportTemplatesPage() {
   const { toast } = useToast();
 
   // テンプレート一覧を取得
-  const fetchTemplates = async () => {
+  async function fetchTemplates() {
     try {
       setIsLoading(true);
       const result = await getReportTemplates();
@@ -62,10 +62,10 @@ export default function ReportTemplatesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   // テンプレート削除
-  const handleDelete = async (id: string) => {
+  async function handleDelete(id: string) {
     try {
       setIsDeleting(id);
       const result = await deleteReportTemplate(id);
@@ -93,7 +93,7 @@ export default function ReportTemplatesPage() {
     } finally {
       setIsDeleting(null);
     }
-  };
+  }
 
   useEffect(() => {
     fetchTemplates();

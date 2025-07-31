@@ -11,16 +11,16 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Company } from '@/types/company';
+import { Company } from '@/schemas/company';
 import { deleteCompany } from '@/lib/actions/system-admin/company';
 
 export default function CompanyDeleteDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   company,
 }: {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   company: Company | null;
 }) {
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,7 @@ export default function CompanyDeleteDialog({
       const result = await deleteCompany(company.id);
 
       if (result.success) {
-        onOpenChange(false);
+        onOpenChangeAction(false);
       } else {
         // エラーハンドリング
         setError(result.error.message);
@@ -49,7 +49,7 @@ export default function CompanyDeleteDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="dialog-scrollbar">
         <DialogHeader>
           <DialogTitle>本当に削除しますか？</DialogTitle>
@@ -59,7 +59,7 @@ export default function CompanyDeleteDialog({
         </DialogHeader>
         {error && <div className="text-destructive text-sm mb-2">{error}</div>}
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button variant="outline" onClick={() => onOpenChangeAction(false)} disabled={loading}>
             キャンセル
           </Button>
           <Button onClick={handleDelete} disabled={loading} variant="destructive">

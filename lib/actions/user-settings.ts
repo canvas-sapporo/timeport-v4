@@ -1,8 +1,22 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
 import { createServerClient } from '@/lib/supabase';
+import type {
+  UserProfile,
+  CompanyInfo,
+  ChatSendKeySetting,
+  UserSettings,
+  GetUserProfileResult,
+  GetUserGroupsResult,
+  GetCompanyInfoResult,
+  GetChatSendKeySettingResult,
+  UpdateChatSendKeySettingResult,
+  GetUserSettingsResult2,
+} from '@/schemas/user_profile';
+import type { Group } from '@/schemas/group';
 
 // ================================
 // ユーザープロフィール関連
@@ -11,7 +25,7 @@ import { createServerClient } from '@/lib/supabase';
 /**
  * ユーザープロフィールを取得
  */
-export async function getUserProfile(userId: string) {
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   const supabase = createServerClient();
 
   try {
@@ -31,6 +45,7 @@ export async function getUserProfile(userId: string) {
         employment_type_id,
         current_work_type_id,
         is_active,
+        chat_send_key_shift_enter,
         created_at,
         updated_at
       `
@@ -53,7 +68,7 @@ export async function getUserProfile(userId: string) {
 /**
  * ユーザーが所属するグループ一覧を取得
  */
-export async function getUserGroups(userId: string) {
+export async function getUserGroups(userId: string): Promise<Group[]> {
   const supabase = createServerClient();
 
   try {
@@ -101,12 +116,15 @@ export async function getUserGroups(userId: string) {
 
     return groups as unknown as Array<{
       id: string;
-      code?: string;
-      name: string;
-      description?: string;
       is_active: boolean;
       created_at: string;
       updated_at: string;
+      name: string;
+      company_id: string;
+      code?: string | undefined;
+      deleted_at?: string | undefined;
+      parent_group_id?: string | undefined;
+      description?: string | undefined;
     }>;
   } catch (error) {
     console.error('Error in getUserGroups:', error);
@@ -121,7 +139,7 @@ export async function getUserGroups(userId: string) {
 /**
  * 企業情報を取得
  */
-export async function getCompanyInfo(companyId: string) {
+export async function getCompanyInfo(companyId: string): Promise<CompanyInfo | null> {
   const supabase = createServerClient();
 
   try {
@@ -189,7 +207,7 @@ export async function getChatSendKeySetting(userId: string): Promise<boolean> {
 export async function updateChatSendKeySetting(
   userId: string,
   useShiftEnter: boolean
-): Promise<{ success: boolean; error?: string }> {
+): Promise<UpdateChatSendKeySettingResult> {
   const supabase = createServerClient();
 
   try {
@@ -205,16 +223,18 @@ export async function updateChatSendKeySetting(
       console.error('Error updating chat send key setting:', error);
       return {
         success: false,
+        message: '設定の更新に失敗しました',
         error: '設定の更新に失敗しました',
       };
     }
 
     revalidatePath('/member/profile');
-    return { success: true };
+    return { success: true, message: '設定が正常に更新されました' };
   } catch (error) {
     console.error('Error in updateChatSendKeySetting:', error);
     return {
       success: false,
+      message: '設定の更新に失敗しました',
       error: '設定の更新に失敗しました',
     };
   }
@@ -227,7 +247,7 @@ export async function updateChatSendKeySetting(
 /**
  * ユーザーの全設定を取得
  */
-export async function getUserSettings(userId: string) {
+export async function getUserSettings(userId: string): Promise<UserSettings | null> {
   const supabase = createServerClient();
 
   try {

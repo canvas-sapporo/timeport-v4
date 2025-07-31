@@ -1,21 +1,23 @@
 'use server';
 
+import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 
 import { createServerClient } from '@/lib/supabase';
 import {
-  Chat,
-  ChatMessage,
-  ChatUser,
-  ChatMessageReaction,
-  CreateChatRequest,
-  SendMessageRequest,
-  AddReactionRequest,
-  MarkAsReadRequest,
-  ChatListView,
-  MessageDetail,
-  ChatDetail,
-} from '@/types/chat';
+  type ChatData as Chat,
+  type ChatMessageData as ChatMessage,
+  type ChatUserData as ChatUser,
+  type ChatMessageReactionData as ChatMessageReaction,
+  type CreateChatRequest,
+  type SendMessageRequest,
+  type AddReactionRequest,
+  type MarkAsReadRequest,
+  type ChatListView,
+  type MessageDetail,
+  type ChatDetail,
+  type UserSearchResult,
+} from '@/schemas/chat';
 // ================================
 // ユーザーの会社ID取得
 // ================================
@@ -289,7 +291,8 @@ export async function getChats(userId: string): Promise<ChatListView[]> {
       const participantNames =
         participants
           ?.map(
-            (p) => `${(p.user_profiles as any).family_name} ${(p.user_profiles as any).first_name}`
+            (p) =>
+              `${(p.user_profiles as unknown as { family_name: string; first_name: string }).family_name} ${(p.user_profiles as unknown as { family_name: string; first_name: string }).first_name}`
           )
           .join(', ') || '参加者';
 
@@ -364,14 +367,17 @@ export async function getChatDetail(chatId: string): Promise<ChatDetail | null> 
   return {
     ...chat,
     participants:
-      participants?.map((p) => ({
-        user_id: p.user_id,
-        user_name: `${(p.user_profiles as any).family_name} ${(p.user_profiles as any).first_name}`,
-        user_email: (p.user_profiles as any).email,
-        role: p.role,
-        last_read_at: p.last_read_at,
-        joined_at: p.joined_at,
-      })) || [],
+      participants?.map((p) => {
+        const userProfile = Array.isArray(p.user_profiles) ? p.user_profiles[0] : p.user_profiles;
+        return {
+          user_id: p.user_id,
+          user_name: `${userProfile?.family_name || ''} ${userProfile?.first_name || ''}`,
+          user_email: userProfile?.email || '',
+          role: p.role,
+          last_read_at: p.last_read_at,
+          joined_at: p.joined_at,
+        };
+      }) || [],
     unread_count: unreadCount?.unread_count || 0,
     last_message: lastMessage || undefined,
   };

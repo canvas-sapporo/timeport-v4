@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Clock,
   Calendar,
@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -25,22 +24,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Attendance, ClockBreakRecord, ClockRecord } from '@/types/attendance';
+import type { AttendanceData, ClockType } from '@/schemas/attendance';
 import { formatDateTime, formatTime } from '@/lib/utils';
 
 interface ClockHistoryProps {
-  userId: string;
-  todayAttendance: Attendance | null;
-  attendanceRecords: Attendance[];
-  onRefresh: () => void;
+  todayAttendance: AttendanceData | null;
+  attendanceRecords: AttendanceData[];
+  onRefreshAction: () => void;
   onCsvExport?: () => void;
 }
 
 export default function ClockHistory({
-  userId,
   todayAttendance,
   attendanceRecords,
-  onRefresh,
+  onRefreshAction,
   onCsvExport,
 }: ClockHistoryProps) {
   const [activeTab, setActiveTab] = useState('today');
@@ -51,7 +48,7 @@ export default function ClockHistory({
   const getTodayClockEvents = () => {
     const events: Array<{
       id: string;
-      type: 'clock_in' | 'clock_out' | 'break_start' | 'break_end';
+      type: ClockType;
       time: string;
       icon: React.ReactNode;
       label: string;
@@ -123,7 +120,7 @@ export default function ClockHistory({
   };
 
   // 勤務時間を計算（clock_recordsベース）
-  const calculateWorkTime = (attendance: Attendance) => {
+  const calculateWorkTime = (attendance: AttendanceData) => {
     const clockRecords = attendance.clock_records || [];
 
     // 全てのセッションの勤務時間を合計
@@ -156,7 +153,7 @@ export default function ClockHistory({
   };
 
   // 勤怠ステータスを取得（clock_recordsベース）
-  const getAttendanceStatus = (attendance: Attendance) => {
+  const getAttendanceStatus = (attendance: AttendanceData) => {
     const clockRecords = attendance.clock_records || [];
     const hasAnySession = clockRecords.length > 0;
     const hasCompletedSession = clockRecords.some((session) => session.in_time && session.out_time);
@@ -296,7 +293,7 @@ export default function ClockHistory({
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" size="sm" onClick={onRefresh}>
+              <Button variant="outline" size="sm" onClick={onRefreshAction}>
                 更新
               </Button>
               {onCsvExport && (
@@ -310,7 +307,6 @@ export default function ClockHistory({
             {filteredRecords.length > 0 ? (
               <div className="space-y-3">
                 {filteredRecords.map((record) => {
-                  const { hours, minutes } = calculateWorkTime(record);
                   const status = getAttendanceStatus(record);
 
                   return (

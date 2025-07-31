@@ -36,7 +36,7 @@ export default function NotificationsSettingsPage() {
     return null;
   }
 
-  const handleSaveSettings = async () => {
+  async function handleSaveSettings() {
     setIsLoading(true);
     try {
       // In a real app, this would save to backend
@@ -45,7 +45,7 @@ export default function NotificationsSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   return (
     <div className="space-y-6">

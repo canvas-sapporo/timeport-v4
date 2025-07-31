@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -52,7 +51,7 @@ export default function SuperAdminFeaturesPage() {
     return null;
   }
 
-  const handleFeatureToggle = (companyId: string, featureKey: string, enabled: boolean) => {
+  function handleFeatureToggle(companyId: string, featureKey: string, enabled: boolean) {
     setCompanyFeatures((prev) =>
       prev.map((company) =>
         company.companyId === companyId
@@ -66,9 +65,9 @@ export default function SuperAdminFeaturesPage() {
           : company
       )
     );
-  };
+  }
 
-  const handleSaveSettings = async () => {
+  async function handleSaveSettings() {
     setIsLoading(true);
     try {
       // In a real app, this would save to backend
@@ -77,7 +76,7 @@ export default function SuperAdminFeaturesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const featureDefinitions = [
     {

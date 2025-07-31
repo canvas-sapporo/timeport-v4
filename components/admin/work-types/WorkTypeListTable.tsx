@@ -22,18 +22,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { WorkType, WorkTypeSearchParams } from '@/types/employment_type';
+import type { WorkType, WorkTypeSearchParams } from '@/schemas/employment-type';
 
 interface WorkTypeListTableProps {
   workTypes: WorkType[];
   total: number;
   page: number;
   limit: number;
-  onSearch: (params: WorkTypeSearchParams) => void;
-  onCreate: () => void;
-  onEdit: (workType: WorkType) => void;
-  onDelete: (workType: WorkType) => void;
-  onToggleStatus: (workType: WorkType) => void;
+  onSearchAction: (params: WorkTypeSearchParams) => void;
+  onCreateAction: () => void;
+  onEditAction: (workType: WorkType) => void;
+  onDeleteAction: (workType: WorkType) => void;
+  onToggleStatusAction: (workType: WorkType) => void;
 }
 
 export default function WorkTypeListTable({
@@ -41,18 +41,18 @@ export default function WorkTypeListTable({
   total,
   page,
   limit,
-  onSearch,
-  onCreate,
-  onEdit,
-  onDelete,
-  onToggleStatus,
+  onSearchAction,
+  onCreateAction,
+  onEditAction,
+  onDeleteAction,
+  onToggleStatusAction,
 }: WorkTypeListTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [flexibleFilter, setFlexibleFilter] = useState<'all' | 'flexible' | 'regular'>('all');
 
   const handleSearch = () => {
-    onSearch({
+    onSearchAction({
       search: searchTerm,
       status: statusFilter,
       is_flexible: flexibleFilter === 'all' ? undefined : flexibleFilter === 'flexible',
@@ -63,7 +63,7 @@ export default function WorkTypeListTable({
   const handleStatusFilterChange = (value: string) => {
     const newStatus = value as 'all' | 'active' | 'inactive';
     setStatusFilter(newStatus);
-    onSearch({
+    onSearchAction({
       search: searchTerm,
       status: newStatus,
       is_flexible: flexibleFilter === 'all' ? undefined : flexibleFilter === 'flexible',
@@ -74,7 +74,7 @@ export default function WorkTypeListTable({
   const handleFlexibleFilterChange = (value: string) => {
     const newFlexible = value as 'all' | 'flexible' | 'regular';
     setFlexibleFilter(newFlexible);
-    onSearch({
+    onSearchAction({
       search: searchTerm,
       status: statusFilter,
       is_flexible: newFlexible === 'all' ? undefined : newFlexible === 'flexible',
@@ -83,7 +83,7 @@ export default function WorkTypeListTable({
   };
 
   const handlePageChange = (newPage: number) => {
-    onSearch({
+    onSearchAction({
       search: searchTerm,
       status: statusFilter,
       is_flexible: flexibleFilter === 'all' ? undefined : flexibleFilter === 'flexible',
@@ -146,7 +146,7 @@ export default function WorkTypeListTable({
             検索
           </Button>
         </div>
-        <Button onClick={onCreate} className="shrink-0">
+        <Button onClick={onCreateAction} className="shrink-0">
           <Plus className="h-4 w-4 mr-2" />
           新規作成
         </Button>
@@ -234,7 +234,7 @@ export default function WorkTypeListTable({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => onEdit(workType)}
+                              onClick={() => onEditAction(workType)}
                               className="h-8 w-8 p-0"
                             >
                               <Edit className="h-4 w-4" />
@@ -250,7 +250,7 @@ export default function WorkTypeListTable({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => onToggleStatus(workType)}
+                              onClick={() => onToggleStatusAction(workType)}
                               className="h-8 w-8 p-0"
                             >
                               <Calendar className="h-4 w-4" />
@@ -268,7 +268,7 @@ export default function WorkTypeListTable({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => onDelete(workType)}
+                              onClick={() => onDeleteAction(workType)}
                               disabled={workType.is_active}
                               className="h-8 w-8 p-0"
                             >

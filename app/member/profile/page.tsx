@@ -11,9 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import UserSettings from '@/components/member/UserSettings';
-import { getCompanyInfo, getUserProfile, getUserGroups } from '@/lib/actions/user-settings';
+import { getCompanyInfo, getUserProfile } from '@/lib/actions/user-settings';
 import { getUserCompanyId } from '@/lib/actions/user';
-import type { UserProfile } from '@/types/user_profiles';
+import type { CompanyInfo } from '@/schemas/user_profile';
 
 export default function MemberProfilePage() {
   const { user } = useAuth();
@@ -24,16 +24,7 @@ export default function MemberProfilePage() {
     family_name: '',
     first_name: '',
   });
-  const [companyInfo, setCompanyInfo] = useState<{
-    id: string;
-    name: string;
-    code: string;
-    address?: string;
-    phone?: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-  } | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [userProfile, setUserProfile] = useState<{
     id: string;
     code: string;
@@ -50,17 +41,6 @@ export default function MemberProfilePage() {
     created_at: string;
     updated_at: string;
   } | null>(null);
-  const [userGroups, setUserGroups] = useState<
-    Array<{
-      id: string;
-      code?: string;
-      name: string;
-      description?: string;
-      is_active: boolean;
-      created_at: string;
-      updated_at: string;
-    }>
-  >([]);
 
   useEffect(() => {
     if (!user || (user.role !== 'member' && user.role !== 'admin')) {
@@ -75,16 +55,11 @@ export default function MemberProfilePage() {
       if (!user?.id) return;
 
       try {
-        const [profile, groups] = await Promise.all([
-          getUserProfile(user.id),
-          getUserGroups(user.id),
-        ]);
+        const profile = await getUserProfile(user.id);
 
         console.log('プロフィールページ - 取得したプロフィール:', profile);
-        console.log('プロフィールページ - 取得したグループ:', groups);
 
         setUserProfile(profile);
-        setUserGroups(groups || []);
       } catch (error) {
         console.error('Error loading user data:', error);
       }
@@ -122,13 +97,16 @@ export default function MemberProfilePage() {
     return null;
   }
 
-  const userGroup = groups.find((g) => g.id === user.primary_group_id);
+  // const userGroup = groups.find((g) => g.id === user.primary_group_id);
 
   const getGroupPath = (groupId: string) => {
     const group = groups.find((g) => g.id === groupId);
     if (!group) return '';
     return group.name;
   };
+
+  // ユーザーが所属するグループを取得
+  const userGroups = groups.filter((group) => group.id === user?.primary_group_id);
 
   const handleEdit = () => {
     setEditData({

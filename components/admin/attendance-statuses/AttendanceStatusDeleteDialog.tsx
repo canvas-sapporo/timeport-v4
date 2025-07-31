@@ -12,18 +12,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { deleteAttendanceStatus } from '@/lib/actions/attendance';
-import type { AttendanceStatusEntity } from '@/types/attendance';
+import type { AttendanceStatusData } from '@/schemas/attendance';
 
 interface AttendanceStatusDeleteDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  status: AttendanceStatusEntity | null;
+  onOpenChangeAction: (open: boolean) => void;
+  status: AttendanceStatusData | null;
   onSuccess?: () => void;
 }
 
 export default function AttendanceStatusDeleteDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   status,
   onSuccess,
 }: AttendanceStatusDeleteDialogProps) {
@@ -41,7 +41,7 @@ export default function AttendanceStatusDeleteDialog({
           description: '勤怠ステータスが正常に削除されました',
         });
         onSuccess?.();
-        onOpenChange(false);
+        onOpenChangeAction(false);
       } else {
         toast({
           title: '削除失敗',
@@ -65,7 +65,7 @@ export default function AttendanceStatusDeleteDialog({
   // 必須ステータスの場合は削除不可
   if (status.is_required) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChangeAction}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-orange-600">
@@ -89,7 +89,7 @@ export default function AttendanceStatusDeleteDialog({
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={() => onOpenChange(false)}>閉じる</Button>
+              <Button onClick={() => onOpenChangeAction(false)}>閉じる</Button>
             </div>
           </div>
         </DialogContent>
@@ -98,7 +98,7 @@ export default function AttendanceStatusDeleteDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -135,7 +135,7 @@ export default function AttendanceStatusDeleteDialog({
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChangeAction(false)}>
               キャンセル
             </Button>
             <Button variant="destructive" onClick={handleDelete}>

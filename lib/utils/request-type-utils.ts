@@ -2,8 +2,8 @@
  * 申請種別関連のユーティリティ関数
  */
 
-import type { FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/types/request';
-import type { ClockRecord, ClockBreakRecord } from '@/types/attendance';
+import type { FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/schemas/request';
+import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
 
 import { createDefaultClockRecord, createDefaultBreakRecord } from './attendance-validation';
 
@@ -14,12 +14,10 @@ import { createDefaultClockRecord, createDefaultBreakRecord } from './attendance
 /**
  * フォーム設定を検証
  */
-export const validateFormConfig = (
-  formConfig: FormFieldConfig[]
-): {
+export function validateFormConfig(formConfig: FormFieldConfig[]): {
   valid: boolean;
   errors: string[];
-} => {
+} {
   const errors: string[] = [];
 
   // フィールドIDの重複チェック
@@ -60,17 +58,15 @@ export const validateFormConfig = (
   });
 
   return { valid: errors.length === 0, errors };
-};
+}
 
 /**
  * 承認フローを検証
  */
-export const validateApprovalFlow = (
-  approvalFlow: ApprovalStep[]
-): {
+export function validateApprovalFlow(approvalFlow: ApprovalStep[]): {
   valid: boolean;
   errors: string[];
-} => {
+} {
   const errors: string[] = [];
 
   if (approvalFlow.length === 0) {
@@ -106,7 +102,7 @@ export const validateApprovalFlow = (
   });
 
   return { valid: errors.length === 0, errors };
-};
+}
 
 // ================================
 // デフォルトフォーム設定
@@ -115,7 +111,7 @@ export const validateApprovalFlow = (
 /**
  * 申請種別カテゴリ別のデフォルトフォーム設定を取得
  */
-export const getDefaultFormConfig = (category: string): FormFieldConfig[] => {
+export function getDefaultFormConfig(category: string): FormFieldConfig[] {
   const defaults: Record<string, FormFieldConfig[]> = {
     leave: [
       {
@@ -248,12 +244,12 @@ export const getDefaultFormConfig = (category: string): FormFieldConfig[] => {
   };
 
   return defaults[category] || [];
-};
+}
 
 /**
  * デフォルト承認フローを取得
  */
-export const getDefaultApprovalFlow = (category: string): ApprovalStep[] => {
+export function getDefaultApprovalFlow(category: string): ApprovalStep[] {
   const defaults: Record<string, ApprovalStep[]> = {
     leave: [
       {
@@ -299,7 +295,7 @@ export const getDefaultApprovalFlow = (category: string): ApprovalStep[] => {
       },
     ]
   );
-};
+}
 
 // ================================
 // オブジェクトタイプ関連
@@ -308,7 +304,7 @@ export const getDefaultApprovalFlow = (category: string): ApprovalStep[] => {
 /**
  * attendanceオブジェクトのフィールド設定を取得
  */
-export const getAttendanceObjectFields = (): Record<
+export function getAttendanceObjectFields(): Record<
   string,
   {
     label: string;
@@ -316,84 +312,78 @@ export const getAttendanceObjectFields = (): Record<
     required: boolean;
     description?: string;
   }
-> => ({
-  work_date: {
-    label: '勤務日',
-    type: 'date',
-    required: true,
-    description: '修正対象の勤務日を選択してください',
-  },
-  clock_records: {
-    label: '打刻記録',
-    type: 'clock_records',
-    required: true,
-    description: '出勤・退勤・休憩時刻を修正してください',
-  },
-});
+> {
+  return {
+    work_date: {
+      label: '勤務日',
+      type: 'date',
+      required: true,
+      description: '修正対象の勤務日を選択してください',
+    },
+    clock_records: {
+      label: '打刻記録',
+      type: 'clock_records',
+      required: true,
+      description: '出勤・退勤・休憩時刻を修正してください',
+    },
+  };
+}
 
-/**
- * attendanceオブジェクトのデフォルトメタデータを生成
- */
-export const createAttendanceObjectMetadata = (): ObjectMetadata => ({
-  object_type: 'attendance',
-  editable_fields: ['work_date', 'clock_records'],
-  required_fields: ['work_date'],
-  excluded_fields: [
-    'id',
-    'created_at',
-    'updated_at',
-    'deleted_at',
-    'user_id',
-    'work_type_id',
-    'actual_work_minutes',
-    'overtime_minutes',
-    'description',
-    'approved_by',
-    'approved_at',
-    'source_id',
-    'edit_reason',
-    'edited_by',
-  ],
-  validation_rules: [
-    {
-      type: 'date_past_only',
-      message: '過去の日付のみ入力可能です',
-    },
-    {
-      type: 'clock_records_valid',
-      message: '打刻記録の形式が正しくありません',
-    },
-    {
-      type: 'required_field',
-      target_field: 'work_date',
-      message: '勤務日は必須です',
-    },
-  ],
-  field_settings: getAttendanceObjectFields(),
-});
+function createAttendanceObjectMetadata(): ObjectMetadata {
+  return {
+    object_type: 'attendance',
+    editable_fields: ['work_date', 'clock_records'],
+    required_fields: ['work_date'],
+    excluded_fields: [
+      'id',
+      'created_at',
+      'updated_at',
+      'deleted_at',
+      'user_id',
+      'work_type_id',
+      'actual_work_minutes',
+      'overtime_minutes',
+      'description',
+      'approved_by',
+      'approved_at',
+      'source_id',
+      'edit_reason',
+      'edited_by',
+    ],
+    validation_rules: [
+      {
+        type: 'date_past_only',
+        message: '過去の日付のみ入力可能です',
+      },
+      {
+        type: 'clock_records_valid',
+        message: '打刻記録の形式が正しくありません',
+      },
+      {
+        type: 'required_field',
+        target_field: 'work_date',
+        message: '勤務日は必須です',
+      },
+    ],
+    field_settings: getAttendanceObjectFields(),
+  };
+}
 
-/**
- * オブジェクトタイプに基づいて動的フォーム設定を生成
- */
-export const generateObjectTypeFormConfig = (
+function generateObjectTypeFormConfig(
   objectType: string,
   editableFields: string[] = []
-): FormFieldConfig[] => {
+): FormFieldConfig[] {
   switch (objectType) {
     case 'attendance':
       return generateAttendanceFormConfig(editableFields);
     default:
       return [];
   }
-};
+}
 
-/**
- * attendanceオブジェクトのフォーム設定を生成
- */
-const generateAttendanceFormConfig = (editableFields: string[]): FormFieldConfig[] => {
+function generateAttendanceFormConfig(editableFields: string[]): FormFieldConfig[] {
   const fields: FormFieldConfig[] = [];
   const fieldSettings = getAttendanceObjectFields();
-
   // work_dateフィールド
   if (editableFields.includes('work_date')) {
     fields.push({
@@ -413,7 +403,6 @@ const generateAttendanceFormConfig = (editableFields: string[]): FormFieldConfig
       width: 'half',
     });
   }
-
   // clock_recordsフィールド
   if (editableFields.includes('clock_records')) {
     fields.push({
@@ -431,46 +420,33 @@ const generateAttendanceFormConfig = (editableFields: string[]): FormFieldConfig
       ],
       order: 2,
       width: 'full',
-      metadata: {
-        object_type: 'attendance',
-        field_type: 'clock_records',
-      },
     });
   }
-
   return fields;
-};
+}
 
-/**
- * オブジェクトタイプのデフォルト設定を取得
- */
-export const getObjectTypeDefaults = (objectType: string) => {
+export function getObjectTypeDefaults(objectType: string) {
   switch (objectType) {
     case 'attendance':
       return {
-        metadata: createAttendanceObjectMetadata(),
-        defaultFormConfig: generateAttendanceFormConfig(['work_date', 'clock_records']),
+        work_date: new Date().toISOString().split('T')[0],
+        clock_records: {
+          in_time: '',
+          out_time: '',
+          breaks: [],
+        },
       };
     default:
-      return {
-        metadata: null,
-        defaultFormConfig: [],
-      };
+      return {};
   }
-};
+}
 
-/**
- * オブジェクトタイプの選択肢を取得
- */
-export const getObjectTypeOptions = () => [
-  {
-    value: 'attendance',
-    label: '勤怠記録',
-    description: '打刻修正の申請',
-  },
-  // 将来的に他のオブジェクトタイプを追加
-];
-
-// ================================
-// 既存の関数はそのまま残す
-// ================================
+export function getObjectTypeOptions() {
+  return [
+    {
+      value: 'attendance',
+      label: '勤怠修正',
+      description: '出退勤時刻の修正申請',
+    },
+  ];
+}

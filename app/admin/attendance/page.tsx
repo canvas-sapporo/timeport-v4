@@ -41,12 +41,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import type {
-  Attendance,
-  AttendanceStatus,
-  AttendanceFilters,
-  AttendanceStatusEntity,
-} from '@/types/attendance';
+import type { AttendanceData, AttendanceStatusData, AttendanceFilters } from '@/schemas/attendance';
 import AdminAttendanceFilters from '@/components/admin/AttendanceFilters';
 import AdminCsvExportDialog from '@/components/admin/CsvExportDialog';
 import AttendancePreviewDialog from '@/components/admin/AttendancePreviewDialog';
@@ -58,7 +53,7 @@ import WorkTypeDetailDialog from '@/components/admin/WorkTypeDetailDialog';
 export default function AdminAttendancePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -69,7 +64,7 @@ export default function AdminAttendancePage() {
   });
   const [selectedDescription, setSelectedDescription] = useState<string | null>(null);
   const [isDescriptionDialogOpen, setIsDescriptionDialogOpen] = useState(false);
-  const [selectedBreakDetails, setSelectedBreakDetails] = useState<Attendance | null>(null);
+  const [selectedBreakDetails, setSelectedBreakDetails] = useState<AttendanceData | null>(null);
   const [isBreakDetailsDialogOpen, setIsBreakDetailsDialogOpen] = useState(false);
   const [isColumnSettingsDialogOpen, setIsColumnSettingsDialogOpen] = useState(false);
   const [csvExportOpen, setCsvExportOpen] = useState(false);
@@ -117,7 +112,7 @@ export default function AdminAttendancePage() {
   const [isLoadingWorkTypes, setIsLoadingWorkTypes] = useState(false);
 
   // ステータスデータ
-  const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusEntity[]>([]);
+  const [attendanceStatuses, setAttendanceStatuses] = useState<AttendanceStatusData[]>([]);
   const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
 
   // 表示項目の設定
@@ -152,7 +147,7 @@ export default function AdminAttendancePage() {
   });
 
   // フィルタリング関数
-  const applyFilters = (records: Attendance[]): Attendance[] => {
+  function applyFilters(records: AttendanceData[]): AttendanceData[] {
     return records.filter((record) => {
       // 日付範囲フィルター
       if (filters.dateRange.startDate && record.work_date < filters.dateRange.startDate) {
@@ -176,7 +171,8 @@ export default function AdminAttendancePage() {
       // ステータスフィルター
       if (filters.status.length > 0) {
         const recordStatus = record.dynamicStatus || getAttendanceStatus(record);
-        if (!filters.status.includes(recordStatus as AttendanceStatus)) {
+        const statusString = typeof recordStatus === 'string' ? recordStatus : recordStatus.name;
+        if (!filters.status.includes(statusString)) {
           return false;
         }
       }
@@ -204,28 +200,28 @@ export default function AdminAttendancePage() {
 
       return true;
     });
-  };
+  }
 
   // フィルター設定を保存する関数
-  const saveFilters = (newFilters: AttendanceFilters) => {
+  function saveFilters(newFilters: AttendanceFilters) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('attendance-filters', JSON.stringify(newFilters));
     }
-  };
+  }
 
   // 月設定を保存する関数
-  const saveMonth = (newMonth: string) => {
+  function saveMonth(newMonth: string) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('attendance-filters-month', newMonth);
     }
-  };
+  }
 
   // 表示項目設定を保存する関数
-  const saveVisibleColumns = (newColumns: typeof visibleColumns) => {
+  function saveVisibleColumns(newColumns: typeof visibleColumns) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('attendance-visible-columns', JSON.stringify(newColumns));
     }
-  };
+  }
 
   // フィルター設定が変更されたときに保存
   useEffect(() => {
@@ -248,7 +244,7 @@ export default function AdminAttendancePage() {
       user: user ? { id: user.id, company_id: user.company_id } : null,
     });
 
-    const fetchUsersAndGroups = async () => {
+    async function fetchUsersAndGroups() {
       if (!user) {
         console.log('fetchUsersAndGroups: userがnullのためスキップ');
         return;
@@ -279,9 +275,9 @@ export default function AdminAttendancePage() {
         setIsLoadingUsers(false);
         setIsLoadingGroups(false);
       }
-    };
+    }
 
-    const fetchAttendanceStatuses = async () => {
+    async function fetchAttendanceStatuses() {
       if (!user?.company_id) {
         console.log('fetchAttendanceStatuses: userまたはcompany_idがnullのためスキップ');
         return;
@@ -303,9 +299,9 @@ export default function AdminAttendancePage() {
       } finally {
         setIsLoadingStatuses(false);
       }
-    };
+    }
 
-    const fetchWorkTypes = async () => {
+    async function fetchWorkTypes() {
       if (!user?.company_id) return;
 
       setIsLoadingWorkTypes(true);
@@ -317,7 +313,7 @@ export default function AdminAttendancePage() {
       } finally {
         setIsLoadingWorkTypes(false);
       }
-    };
+    }
 
     fetchUsersAndGroups();
     fetchAttendanceStatuses();
@@ -325,7 +321,7 @@ export default function AdminAttendancePage() {
   }, [user]);
 
   // 勤怠データ取得関数
-  const fetchAttendanceData = async (currentAttendanceStatuses?: AttendanceStatusEntity[]) => {
+  async function fetchAttendanceData(currentAttendanceStatuses?: AttendanceStatusData[]) {
     if (!user) {
       console.log('ユーザーが存在しません');
       return;
@@ -425,7 +421,7 @@ export default function AdminAttendancePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   // データ取得
   useEffect(() => {
@@ -434,10 +430,10 @@ export default function AdminAttendancePage() {
 
   // ページフォーカス時にデータを再取得（キャッシュ対策）
   useEffect(() => {
-    const handleFocus = () => {
+    function handleFocus() {
       console.log('ページフォーカス検出、データを再取得');
       fetchAttendanceData(attendanceStatuses);
-    };
+    }
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
@@ -455,12 +451,12 @@ export default function AdminAttendancePage() {
   }
 
   // 土日判定関数
-  const isWeekend = (date: string): boolean => {
+  function isWeekend(date: string): boolean {
     const dayOfWeek = new Date(date).getDay();
     return dayOfWeek === 0 || dayOfWeek === 6; // 0: 日曜日, 6: 土曜日
-  };
+  }
 
-  const getDayOfWeekColor = (date: string): string => {
+  function getDayOfWeekColor(date: string): string {
     const dayOfWeek = new Date(date).getDay();
     if (dayOfWeek === 0) {
       return 'text-red-600'; // 日曜日は赤
@@ -468,9 +464,9 @@ export default function AdminAttendancePage() {
       return 'text-blue-600'; // 土曜日は青
     }
     return 'text-gray-600'; // 平日はグレー
-  };
+  }
 
-  const getAttendanceStatus = (record?: Attendance): AttendanceStatus | string => {
+  function getAttendanceStatus(record?: AttendanceData): AttendanceStatusData | string {
     if (!record) return 'absent';
 
     // フォールバック: 従来のロジック
@@ -494,9 +490,9 @@ export default function AdminAttendancePage() {
     }
 
     return 'normal';
-  };
+  }
 
-  const getStatusBadge = (status: AttendanceStatus | string, date?: string) => {
+  function getStatusBadge(status: AttendanceStatusData | string, date?: string) {
     // 土日で欠勤の場合は「休日」として表示
     if (date && isWeekend(date) && status === 'absent') {
       return <Badge variant="outline">休日</Badge>;
@@ -538,9 +534,9 @@ export default function AdminAttendancePage() {
       default:
         return <Badge variant="outline">-</Badge>;
     }
-  };
+  }
 
-  const formatTime = (time?: string) => {
+  function formatTime(time?: string) {
     if (!time) return '--:--';
 
     // ISO文字列から時刻部分を抽出
@@ -552,9 +548,9 @@ export default function AdminAttendancePage() {
     } catch {
       return '--:--';
     }
-  };
+  }
 
-  const formatMinutes = (minutes?: number) => {
+  function formatMinutes(minutes?: number) {
     if (minutes === undefined || minutes === null || minutes === 0) {
       return '--:--';
     }
@@ -562,9 +558,9 @@ export default function AdminAttendancePage() {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}:${mins.toString().padStart(2, '0')}`;
-  };
+  }
 
-  const formatDateTime = (dateTime?: string) => {
+  function formatDateTime(dateTime?: string) {
     if (!dateTime) return '-';
 
     try {
@@ -579,9 +575,9 @@ export default function AdminAttendancePage() {
     } catch {
       return '-';
     }
-  };
+  }
 
-  const getApprovalStatusBadge = (status?: string) => {
+  function getApprovalStatusBadge(status?: string) {
     switch (status) {
       case 'approved':
         return (
@@ -607,26 +603,26 @@ export default function AdminAttendancePage() {
       default:
         return <Badge variant="outline">-</Badge>;
     }
-  };
+  }
 
-  const handleDescriptionClick = (description: string) => {
+  function handleDescriptionClick(description: string) {
     setSelectedDescription(description);
     setIsDescriptionDialogOpen(true);
-  };
+  }
 
-  const handleBreakDetailsClick = (record: Attendance) => {
+  function handleBreakDetailsClick(record: AttendanceData) {
     setSelectedBreakDetails(record);
     setIsBreakDetailsDialogOpen(true);
-  };
+  }
 
-  const handleColumnToggle = (columnKey: keyof typeof visibleColumns) => {
+  function handleColumnToggle(columnKey: keyof typeof visibleColumns) {
     setVisibleColumns((prev: typeof visibleColumns) => ({
       ...prev,
       [columnKey]: !prev[columnKey],
     }));
-  };
+  }
 
-  const handleResetColumns = () => {
+  function handleResetColumns() {
     const defaultColumns = {
       employee: true,
       date: true,
@@ -646,10 +642,10 @@ export default function AdminAttendancePage() {
     };
     setVisibleColumns(defaultColumns);
     saveVisibleColumns(defaultColumns);
-  };
+  }
 
   // フィルターをリセットする関数
-  const handleResetFilters = () => {
+  function handleResetFilters() {
     const defaultFilters: AttendanceFilters = {
       dateRange: { startDate: null, endDate: null },
       status: [],
@@ -661,34 +657,34 @@ export default function AdminAttendancePage() {
     };
     setFilters(defaultFilters);
     saveFilters(defaultFilters);
-  };
+  }
 
   // 操作ボタンのハンドラー
-  const handlePreviewClick = (attendanceId: string) => {
+  function handlePreviewClick(attendanceId: string) {
     setSelectedAttendanceId(attendanceId);
     setPreviewDialogOpen(true);
-  };
+  }
 
-  const handleEditClick = (attendanceId: string) => {
+  function handleEditClick(attendanceId: string) {
     setSelectedAttendanceId(attendanceId);
-    setTimeEditDialogOpen(true);
-  };
+    setEditDialogOpen(true);
+  }
 
-  const handleDeleteClick = (attendanceId: string) => {
+  function handleDeleteClick(attendanceId: string) {
     setSelectedAttendanceId(attendanceId);
     setDeleteDialogOpen(true);
-  };
+  }
 
-  const handleOperationSuccess = () => {
+  function handleOperationSuccess() {
     // データを再取得（少し遅延を入れて確実に更新されるようにする）
     setTimeout(() => {
       console.log('編集操作成功、データを再取得');
       fetchAttendanceData(attendanceStatuses);
     }, 500);
-  };
+  }
 
   // 月の全日期間を生成
-  const generateMonthDays = (yearMonth: string): string[] => {
+  function generateMonthDays(yearMonth: string): string[] {
     const [year, month] = yearMonth.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
     const days: string[] = [];
@@ -699,7 +695,7 @@ export default function AdminAttendancePage() {
     }
 
     return days;
-  };
+  }
 
   // 月の全日期間を取得
   const monthDays = generateMonthDays(selectedMonth);
@@ -708,7 +704,7 @@ export default function AdminAttendancePage() {
   const companyUsers = users;
 
   // 全ユーザーの全日期間の勤怠データを生成
-  const allAttendanceData: Attendance[] = [];
+  const allAttendanceData: AttendanceData[] = [];
 
   companyUsers.forEach((user) => {
     monthDays.forEach((date) => {
@@ -725,7 +721,7 @@ export default function AdminAttendancePage() {
       } else {
         // 勤怠データがない場合の処理
         const isWeekendDay = isWeekend(date);
-        const absentRecord: Attendance = {
+        const absentRecord: AttendanceData = {
           id: `absent-${user.id}-${date}`, // 欠勤データであることを明示
           user_id: user.id,
           work_date: date,
@@ -955,9 +951,9 @@ export default function AdminAttendancePage() {
           {/* フィルターコンポーネント */}
           <AdminAttendanceFilters
             filters={filters}
-            onFiltersChange={setFilters}
+            onFiltersChangeAction={setFilters}
             selectedMonth={selectedMonth}
-            onMonthChange={setSelectedMonth}
+            onMonthChangeAction={setSelectedMonth}
             users={users}
             groups={groups}
             workTypes={workTypes}
@@ -1500,7 +1496,7 @@ export default function AdminAttendancePage() {
       {/* CSV出力ダイアログ */}
       <AdminCsvExportDialog
         open={csvExportOpen}
-        onOpenChange={setCsvExportOpen}
+        onOpenChangeAction={setCsvExportOpen}
         attendanceRecords={filteredRecords}
         users={users}
         groups={groups}
@@ -1511,7 +1507,7 @@ export default function AdminAttendancePage() {
       {/* プレビューダイアログ */}
       <AttendancePreviewDialog
         open={previewDialogOpen}
-        onOpenChange={setPreviewDialogOpen}
+        onOpenChangeAction={setPreviewDialogOpen}
         attendanceId={selectedAttendanceId}
         companyId={user?.company_id}
       />
@@ -1519,7 +1515,7 @@ export default function AdminAttendancePage() {
       {/* 編集ダイアログ */}
       <AttendanceEditDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        onOpenChangeAction={setEditDialogOpen}
         attendanceId={selectedAttendanceId}
         onSuccess={handleOperationSuccess}
       />
@@ -1527,15 +1523,15 @@ export default function AdminAttendancePage() {
       {/* 時刻編集ダイアログ */}
       <AttendanceTimeEditDialog
         open={timeEditDialogOpen}
-        onOpenChange={setTimeEditDialogOpen}
+        onOpenChangeAction={setTimeEditDialogOpen}
         attendanceId={selectedAttendanceId}
-        onSuccess={handleOperationSuccess}
+        onSuccessAction={handleOperationSuccess}
       />
 
       {/* 削除ダイアログ */}
       <AttendanceDeleteDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
+        onOpenChangeAction={setDeleteDialogOpen}
         attendanceId={selectedAttendanceId}
         onSuccess={handleOperationSuccess}
       />
@@ -1543,7 +1539,7 @@ export default function AdminAttendancePage() {
       {/* 勤務形態詳細ダイアログ */}
       <WorkTypeDetailDialog
         open={workTypeDetailDialogOpen}
-        onOpenChange={setWorkTypeDetailDialogOpen}
+        onOpenChangeAction={setWorkTypeDetailDialogOpen}
         workTypeId={selectedWorkTypeId}
       />
     </div>

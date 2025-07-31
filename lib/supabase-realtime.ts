@@ -1,11 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-import {
-  RealtimeEvent,
-  RealtimeMessageEvent,
-  RealtimeReadEvent,
-  RealtimeReactionEvent,
-} from '@/types/chat';
+import { ChatMessageData, ChatMessageReactionData } from '@/schemas/chat';
 
 // Supabase Realtime ペイロード型
 interface RealtimePayload {
@@ -49,9 +44,9 @@ console.log('Supabase client configuration:', {
 // リアルタイムイベントハンドラー型
 // ================================
 
-export type MessageEventHandler = (event: RealtimeMessageEvent) => void;
-export type ReadEventHandler = (event: RealtimeReadEvent) => void;
-export type ReactionEventHandler = (event: RealtimeReactionEvent) => void;
+export type MessageEventHandler = (event: ChatMessageData) => void;
+export type ReadEventHandler = (event: any) => void;
+export type ReactionEventHandler = (event: ChatMessageReactionData) => void;
 
 // ================================
 // リアルタイム接続管理
@@ -164,34 +159,21 @@ class ChatRealtimeManager {
    * メッセージ変更イベントを処理
    */
   private handleMessageChange(payload: unknown) {
-    console.log('Realtime message change received:', payload);
-
     const { eventType, new: newRecord, old: oldRecord } = payload as RealtimePayload;
     const chatId = (newRecord?.chat_id || oldRecord?.chat_id) as string;
 
-    console.log('Chat ID from payload:', chatId);
-    console.log('Event type:', eventType);
-    console.log('New record:', newRecord);
-    console.log('Old record:', oldRecord);
+    if (!chatId) return;
 
-    if (!chatId) {
-      console.log('No chat ID found in payload');
-      return;
-    }
-
-    const handlers = this.messageHandlers.get(chatId as string);
-    console.log('Handlers for chat ID:', chatId, handlers?.length || 0);
-
+    const handlers = this.messageHandlers.get(chatId);
     if (!handlers) {
       console.log('No handlers found for chat ID:', chatId);
       return;
     }
 
-    const event: RealtimeMessageEvent = {
-      type: this.mapEventType(eventType),
+    const event: ChatMessageData = {
+      ...newRecord,
       chat_id: chatId,
-      message: newRecord as any,
-    };
+    } as ChatMessageData;
 
     console.log('Dispatching event to handlers:', event);
     handlers.forEach((handler) => handler(event));
@@ -209,7 +191,7 @@ class ChatRealtimeManager {
     const handlers = this.readHandlers.get(chatId);
     if (!handlers) return;
 
-    const event: RealtimeReadEvent = {
+    const event: any = {
       type: 'read_updated',
       chat_id: chatId,
       user_id: newRecord?.user_id,
@@ -231,11 +213,10 @@ class ChatRealtimeManager {
     const handlers = this.reactionHandlers.get(messageId);
     if (!handlers) return;
 
-    const event: RealtimeReactionEvent = {
-      type: eventType === 'DELETE' ? 'reaction_removed' : 'reaction_added',
+    const event: ChatMessageReactionData = {
+      ...newRecord,
       message_id: messageId,
-      reaction: newRecord || oldRecord,
-    };
+    } as ChatMessageReactionData;
 
     handlers.forEach((handler) => handler(event));
   }

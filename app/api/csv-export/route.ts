@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { createServerClient } from '@/lib/supabase';
 import { getSetting } from '@/lib/actions/settings';
-import type { CsvExportSetting } from '@/types/settings';
+import type { CsvExportSetting } from '@/schemas/setting';
 
 // CSV出力用のAPIエンドポイント
 export async function POST(request: NextRequest) {
@@ -201,26 +201,31 @@ function generateCsvData(attendances: any[], setting: CsvExportSetting): string 
           return attendance.actual_work_minutes
             ? formatMinutes(attendance.actual_work_minutes)
             : emptyValue;
-        case 'overtime':
+        case 'overtime': {
           // 残業時間の計算（8時間を超えた分）
           const workHours = attendance.actual_work_minutes || 0;
           const overtime = Math.max(0, workHours - 480); // 8時間 = 480分
           return overtime > 0 ? formatMinutes(overtime) : emptyValue;
-        case 'break_time':
+        }
+        case 'break_time': {
           // 休憩時間の計算
           const breakRecords = attendance.break_records || [];
-          const totalBreakMinutes = breakRecords.reduce((total: number, br: any) => {
-            if (br.start && br.end) {
-              const start = new Date(br.start);
-              const end = new Date(br.end);
-              return total + Math.floor((end.getTime() - start.getTime()) / (1000 * 60));
-            }
-            return total;
-          }, 0);
+          const totalBreakMinutes = breakRecords.reduce(
+            (total: number, br: Record<string, unknown>) => {
+              if (br.start && br.end && typeof br.start === 'string' && typeof br.end === 'string') {
+                const start = new Date(br.start);
+                const end = new Date(br.end);
+                return total + Math.floor((end.getTime() - start.getTime()) / (1000 * 60));
+              }
+              return total;
+            },
+            0
+          );
           return totalBreakMinutes > 0 ? formatMinutes(totalBreakMinutes) : emptyValue;
+        }
         case 'work_type':
           return attendance.work_types?.name || emptyValue;
-        case 'late':
+        case 'late': {
           // 遅刻判定（15分以上）
           if (attendance.clock_in_time) {
             const clockIn = new Date(attendance.clock_in_time);
@@ -230,7 +235,8 @@ function generateCsvData(attendances: any[], setting: CsvExportSetting): string 
             return lateMinutes > 15 ? formatMinutes(lateMinutes) : emptyValue;
           }
           return emptyValue;
-        case 'early_leave':
+        }
+        case 'early_leave': {
           // 早退判定（30分以上）
           if (attendance.clock_out_time) {
             const clockOut = new Date(attendance.clock_out_time);
@@ -240,6 +246,7 @@ function generateCsvData(attendances: any[], setting: CsvExportSetting): string 
             return earlyMinutes > 30 ? formatMinutes(earlyMinutes) : emptyValue;
           }
           return emptyValue;
+        }
         case 'status':
           return '正常'; // 仮の値
         case 'approval_status':

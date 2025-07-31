@@ -22,7 +22,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import type { Group } from '@/types/groups';
+import type { Group } from '@/schemas/group';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 import GroupCreateDialog from './GroupCreateDialog';
@@ -275,18 +275,18 @@ export default function GroupListTable({
       {/* ダイアログ */}
       <GroupCreateDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        onOpenChangeAction={setCreateDialogOpen}
         onSuccess={onDataChange}
       />
       <GroupEditDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        onOpenChangeAction={setEditDialogOpen}
         group={editTarget}
         onSuccess={onDataChange}
       />
       <GroupDeleteDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
+        onOpenChangeAction={setDeleteDialogOpen}
         group={deleteTarget}
         onSuccess={onDataChange}
       />

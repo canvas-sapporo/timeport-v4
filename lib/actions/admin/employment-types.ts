@@ -1,30 +1,33 @@
 'use server';
 
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
-import type {
-  CreateEmploymentTypeFormData,
-  EditEmploymentTypeFormData,
-  CreateEmploymentTypeResult,
-  UpdateEmploymentTypeResult,
-  DeleteEmploymentTypeResult,
-  EmploymentTypeListResponse,
-  EmploymentTypeSearchParams,
-  EmploymentTypeStats,
-  EmploymentTypeValidationResult,
-  EmploymentType,
-} from '@/types/employment_type';
-import {
-  AppError,
-  withErrorHandling,
-  createSuccessResponse,
-  createFailureResponse,
-  validateRequired,
-} from '@/lib/utils/error-handling';
+import { AppError, withErrorHandling } from '@/lib/utils/error-handling';
 import type { ValidationError } from '@/types/common';
+import {
+  CreateEmploymentTypeFormSchema,
+  EditEmploymentTypeFormSchema,
+  EmploymentTypeSearchParamsSchema,
+  EmploymentTypeSchema,
+  CreateEmploymentTypeResultSchema,
+  UpdateEmploymentTypeResultSchema,
+  DeleteEmploymentTypeResultSchema,
+  EmploymentTypeListResponseSchema,
+  EmploymentTypeStatsSchema,
+  ToggleEmploymentTypeStatusResultSchema,
+  type CreateEmploymentTypeFormData,
+  type EditEmploymentTypeFormData,
+  type EmploymentTypeSearchParams,
+  type EmploymentType,
+  type CreateEmploymentTypeResult,
+  type UpdateEmploymentTypeResult,
+  type DeleteEmploymentTypeResult,
+  type EmploymentTypeListResponse,
+  type EmploymentTypeStats,
+  type ToggleEmploymentTypeStatusResult,
+} from '@/schemas/employment-type';
 
 // 環境変数の確認
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -47,50 +50,69 @@ const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
 /**
  * 雇用形態作成フォームのバリデーション
  */
-const validateCreateEmploymentTypeForm = (
-  form: CreateEmploymentTypeFormData
-): EmploymentTypeValidationResult => {
-  const errors: ValidationError[] = [];
+function validateCreateEmploymentTypeForm(form: z.infer<typeof CreateEmploymentTypeFormSchema>): {
+  isValid: boolean;
+  errors: ValidationError[];
+} {
+  const result = CreateEmploymentTypeFormSchema.safeParse(form);
 
-  const nameError = validateRequired(form.name, '雇用形態名');
-  if (nameError) errors.push(nameError);
+  if (result.success) {
+    return { isValid: true, errors: [] };
+  }
 
-  const codeError = validateRequired(form.code, '雇用形態コード');
-  if (codeError) errors.push(codeError);
+  const errors: ValidationError[] = result.error.errors.map((error) => ({
+    field: error.path.join('.') as keyof z.infer<typeof CreateEmploymentTypeFormSchema>,
+    message: error.message,
+    code: 'VALIDATION_ERROR',
+  }));
 
-  return {
-    isValid: errors.length === 0,
-    errors: errors.map((error) => ({
-      field: error.field as keyof CreateEmploymentTypeFormData,
-      message: error.message,
-      code: error.code || 'VALIDATION_ERROR',
-    })),
-  };
-};
+  return { isValid: false, errors };
+}
 
 /**
  * 雇用形態編集フォームのバリデーション
  */
-const validateEditEmploymentTypeForm = (
-  form: EditEmploymentTypeFormData
-): EmploymentTypeValidationResult => {
-  const errors: ValidationError[] = [];
+function validateEditEmploymentTypeForm(form: z.infer<typeof EditEmploymentTypeFormSchema>): {
+  isValid: boolean;
+  errors: ValidationError[];
+} {
+  const result = EditEmploymentTypeFormSchema.safeParse(form);
 
-  const nameError = validateRequired(form.name, '雇用形態名');
-  if (nameError) errors.push(nameError);
+  if (result.success) {
+    return { isValid: true, errors: [] };
+  }
 
-  const codeError = validateRequired(form.code, '雇用形態コード');
-  if (codeError) errors.push(codeError);
+  const errors: ValidationError[] = result.error.errors.map((error) => ({
+    field: error.path.join('.') as keyof z.infer<typeof EditEmploymentTypeFormSchema>,
+    message: error.message,
+    code: 'VALIDATION_ERROR',
+  }));
 
+  return { isValid: false, errors };
+}
+
+/**
+ * 雇用形態検索パラメータのバリデーション
+ */
+function validateSearchParams(
+  params: Partial<z.infer<typeof EmploymentTypeSearchParamsSchema>>
+): z.infer<typeof EmploymentTypeSearchParamsSchema> {
+  const result = EmploymentTypeSearchParamsSchema.safeParse(params);
+
+  if (result.success) {
+    return result.data;
+  }
+
+  // デフォルト値を返す
   return {
-    isValid: errors.length === 0,
-    errors: errors.map((error) => ({
-      field: error.field as keyof EditEmploymentTypeFormData,
-      message: error.message,
-      code: error.code || 'VALIDATION_ERROR',
-    })),
+    search: '',
+    status: 'all',
+    page: 1,
+    limit: 10,
+    orderBy: undefined,
+    ascending: true,
   };
-};
+}
 
 // ================================
 // ヘルパー関数
@@ -99,11 +121,11 @@ const validateEditEmploymentTypeForm = (
 /**
  * 雇用形態コードの重複チェック
  */
-const checkEmploymentTypeCodeExists = async (
+async function checkEmploymentTypeCodeExists(
   code: string,
   companyId: string,
   excludeId?: string
-): Promise<boolean> => {
+): Promise<boolean> {
   let query = supabaseAdmin
     .from('employment_types')
     .select('id')
@@ -123,12 +145,12 @@ const checkEmploymentTypeCodeExists = async (
   }
 
   return (data && data.length > 0) || false;
-};
+}
 
 /**
  * 雇用形態の使用状況チェック
  */
-const checkEmploymentTypeUsage = async (id: string): Promise<boolean> => {
+async function checkEmploymentTypeUsage(id: string): Promise<boolean> {
   const { data, error } = await supabaseAdmin
     .from('user_profiles')
     .select('id')
@@ -142,7 +164,35 @@ const checkEmploymentTypeUsage = async (id: string): Promise<boolean> => {
   }
 
   return (data && data.length > 0) || false;
-};
+}
+
+/**
+ * データベース結果をZodスキーマで検証
+ */
+function validateEmploymentTypeData(data: unknown): z.infer<typeof EmploymentTypeSchema> {
+  const result = EmploymentTypeSchema.safeParse(data);
+
+  if (!result.success) {
+    console.error('雇用形態データ検証エラー:', result.error);
+    throw new AppError('雇用形態データの形式が正しくありません', 'DATA_VALIDATION_ERROR', 500);
+  }
+
+  return result.data;
+}
+
+/**
+ * データベース結果をZodスキーマで検証（配列）
+ */
+function validateEmploymentTypeArray(data: unknown): z.infer<typeof EmploymentTypeSchema>[] {
+  const result = z.array(EmploymentTypeSchema).safeParse(data);
+
+  if (!result.success) {
+    console.error('雇用形態配列データ検証エラー:', result.error);
+    throw new AppError('雇用形態データの形式が正しくありません', 'DATA_VALIDATION_ERROR', 500);
+  }
+
+  return result.data;
+}
 
 // ================================
 // Server Actions
@@ -151,12 +201,13 @@ const checkEmploymentTypeUsage = async (id: string): Promise<boolean> => {
 /**
  * 雇用形態作成
  */
-export const createEmploymentType = async (
-  form: CreateEmploymentTypeFormData,
+export async function createEmploymentType(
+  form: z.infer<typeof CreateEmploymentTypeFormSchema>,
   companyId: string
 ): Promise<
-  { success: true; data: CreateEmploymentTypeResult } | { success: false; error: AppError }
-> => {
+  | { success: true; data: z.infer<typeof CreateEmploymentTypeResultSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('createEmploymentType called with form:', form);
 
   // 環境変数の確認
@@ -169,7 +220,7 @@ export const createEmploymentType = async (
   }
 
   return withErrorHandling(async () => {
-    // バリデーション
+    // Zodバリデーション
     const validation = validateCreateEmploymentTypeForm(form);
     if (!validation.isValid) {
       throw AppError.fromValidationErrors(validation.errors, '雇用形態作成');
@@ -225,33 +276,41 @@ export const createEmploymentType = async (
       throw AppError.fromSupabaseError(employmentTypeError, '雇用形態作成');
     }
 
-    console.log('Employment type created successfully:', employmentType);
+    // データ検証
+    const validatedData = validateEmploymentTypeData(employmentType);
+
+    console.log('Employment type created successfully:', validatedData);
 
     revalidatePath('/admin/settings');
-    return {
-      id: employmentType.id,
-      code: employmentType.code,
-      name: employmentType.name,
-      description: employmentType.description,
-      created_at: employmentType.created_at,
-    };
+
+    // 結果をZodスキーマで検証
+    const result = CreateEmploymentTypeResultSchema.parse({
+      id: validatedData.id,
+      code: validatedData.code || '',
+      name: validatedData.name,
+      description: validatedData.description || '',
+      created_at: validatedData.created_at,
+    });
+
+    return result;
   }, '雇用形態作成');
-};
+}
 
 /**
  * 雇用形態更新
  */
-export const updateEmploymentType = async (
+export async function updateEmploymentType(
   id: string,
-  form: EditEmploymentTypeFormData,
+  form: z.infer<typeof EditEmploymentTypeFormSchema>,
   companyId: string
 ): Promise<
-  { success: true; data: UpdateEmploymentTypeResult } | { success: false; error: AppError }
-> => {
+  | { success: true; data: z.infer<typeof UpdateEmploymentTypeResultSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('updateEmploymentType called with form:', form);
 
   return withErrorHandling(async () => {
-    // バリデーション
+    // Zodバリデーション
     const validation = validateEditEmploymentTypeForm(form);
     if (!validation.isValid) {
       throw AppError.fromValidationErrors(validation.errors, '雇用形態更新');
@@ -281,26 +340,34 @@ export const updateEmploymentType = async (
       throw AppError.fromSupabaseError(employmentTypeError, '雇用形態更新');
     }
 
+    // データ検証
+    const validatedData = validateEmploymentTypeData(employmentType);
+
     revalidatePath('/admin/settings');
-    return {
-      id: employmentType.id,
-      code: employmentType.code,
-      name: employmentType.name,
-      description: employmentType.description,
-      updated_at: employmentType.updated_at,
-    };
+
+    // 結果をZodスキーマで検証
+    const result = UpdateEmploymentTypeResultSchema.parse({
+      id: validatedData.id,
+      code: validatedData.code || '',
+      name: validatedData.name,
+      description: validatedData.description || '',
+      updated_at: validatedData.updated_at || new Date().toISOString(),
+    });
+
+    return result;
   }, '雇用形態更新');
-};
+}
 
 /**
  * 雇用形態削除
  */
-export const deleteEmploymentType = async (
+export async function deleteEmploymentType(
   id: string,
   companyId: string
 ): Promise<
-  { success: true; data: DeleteEmploymentTypeResult } | { success: false; error: AppError }
-> => {
+  | { success: true; data: z.infer<typeof DeleteEmploymentTypeResultSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('deleteEmploymentType called with id:', id);
 
   return withErrorHandling(async () => {
@@ -351,27 +418,37 @@ export const deleteEmploymentType = async (
       throw AppError.fromSupabaseError(employmentTypeError, '雇用形態削除');
     }
 
+    // データ検証
+    const validatedData = validateEmploymentTypeData(deletedEmploymentType);
+
     revalidatePath('/admin/settings');
-    return {
-      id: deletedEmploymentType.id,
-      deleted_at: deletedEmploymentType.deleted_at!,
-    };
+
+    // 結果をZodスキーマで検証
+    const result = DeleteEmploymentTypeResultSchema.parse({
+      id: validatedData.id,
+      deleted_at: validatedData.deleted_at || new Date().toISOString(),
+    });
+
+    return result;
   }, '雇用形態削除');
-};
+}
 
 /**
  * 雇用形態一覧取得
  */
-export const getEmploymentTypes = async (
+export async function getEmploymentTypes(
   companyId: string,
-  params: EmploymentTypeSearchParams = {}
+  params: Partial<z.infer<typeof EmploymentTypeSearchParamsSchema>> = {}
 ): Promise<
-  { success: true; data: EmploymentTypeListResponse } | { success: false; error: AppError }
-> => {
+  | { success: true; data: z.infer<typeof EmploymentTypeListResponseSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('getEmploymentTypes called with params:', params);
 
   return withErrorHandling(async () => {
-    const { page = 1, limit = 10, search = '', status = 'all' } = params;
+    // 検索パラメータのバリデーション
+    const validatedParams = validateSearchParams(params);
+    const { page, limit, search, status } = validatedParams;
     const offset = (page - 1) * limit;
 
     let query = supabaseAdmin
@@ -403,21 +480,30 @@ export const getEmploymentTypes = async (
       throw AppError.fromSupabaseError(employmentTypesError, '雇用形態一覧取得');
     }
 
-    return {
-      employment_types: employmentTypes || [],
+    // データ検証
+    const validatedEmploymentTypes = validateEmploymentTypeArray(employmentTypes || []);
+
+    // 結果をZodスキーマで検証
+    const result = EmploymentTypeListResponseSchema.parse({
+      employment_types: validatedEmploymentTypes,
       total: count || 0,
       page,
       limit,
-    };
+    });
+
+    return result;
   }, '雇用形態一覧取得');
-};
+}
 
 /**
  * 雇用形態統計取得
  */
-export const getEmploymentTypeStats = async (
+export async function getEmploymentTypeStats(
   companyId: string
-): Promise<{ success: true; data: EmploymentTypeStats } | { success: false; error: AppError }> => {
+): Promise<
+  | { success: true; data: z.infer<typeof EmploymentTypeStatsSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('getEmploymentTypeStats called with companyId:', companyId);
 
   return withErrorHandling(async () => {
@@ -431,27 +517,34 @@ export const getEmploymentTypeStats = async (
       throw AppError.fromSupabaseError(error, '雇用形態統計取得');
     }
 
-    const total = employmentTypes?.length || 0;
-    const active = employmentTypes?.filter((et) => et.is_active).length || 0;
+    // データ検証
+    const validatedEmploymentTypes = validateEmploymentTypeArray(employmentTypes || []);
+
+    const total = validatedEmploymentTypes.length;
+    const active = validatedEmploymentTypes.filter((et) => et.is_active).length;
     const inactive = total - active;
 
-    return {
+    // 結果をZodスキーマで検証
+    const result = EmploymentTypeStatsSchema.parse({
       total,
       active,
       inactive,
-    };
+    });
+
+    return result;
   }, '雇用形態統計取得');
-};
+}
 
 /**
  * 雇用形態の有効/無効を切り替え
  */
-export const toggleEmploymentTypeStatus = async (
+export async function toggleEmploymentTypeStatus(
   id: string,
   companyId: string
 ): Promise<
-  { success: true; data: { id: string; is_active: boolean } } | { success: false; error: AppError }
-> => {
+  | { success: true; data: z.infer<typeof ToggleEmploymentTypeStatusResultSchema> }
+  | { success: false; error: AppError }
+> {
   console.log('toggleEmploymentTypeStatus called with id:', id, 'companyId:', companyId);
 
   return withErrorHandling(async () => {
@@ -493,10 +586,17 @@ export const toggleEmploymentTypeStatus = async (
       throw AppError.fromSupabaseError(updateError, '雇用形態ステータス更新');
     }
 
+    // データ検証
+    const validatedData = validateEmploymentTypeData(employmentType);
+
     revalidatePath('/admin/settings');
-    return {
-      id: employmentType.id,
-      is_active: employmentType.is_active,
-    };
+
+    // 結果をZodスキーマで検証
+    const result = ToggleEmploymentTypeStatusResultSchema.parse({
+      id: validatedData.id,
+      is_active: validatedData.is_active,
+    });
+
+    return result;
   }, '雇用形態ステータス切り替え');
-};
+}

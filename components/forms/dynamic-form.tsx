@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import { RequestForm, FormFieldConfig } from '@/types/request';
+import { RequestForm, FormFieldConfig } from '@/schemas/request';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +24,7 @@ import ClockRecordsInput from './clock-records-input';
 
 interface DynamicFormProps {
   requestType: RequestForm;
-  onSubmitAction: (data: Record<string, any>) => void;
+  onSubmitAction: (data: Record<string, unknown>) => void;
   isLoading?: boolean;
 }
 
@@ -43,7 +42,6 @@ const createValidationSchema = (fields: FormFieldConfig[]) => {
     const minValueRule = field.validation_rules.find((r) => r.type === 'min');
     const maxValueRule = field.validation_rules.find((r) => r.type === 'max');
     const emailRule = field.validation_rules.find((r) => r.type === 'email');
-    const telRule = field.validation_rules.find((r) => r.type === 'tel');
 
     switch (field.type) {
       case 'email':
@@ -114,10 +112,10 @@ const DynamicFormField = ({
   watch,
 }: {
   field: FormFieldConfig;
-  register: any;
-  errors: any;
-  setValue: any;
-  watch: any;
+  register: (name: string) => Record<string, unknown>;
+  errors: Record<string, any>;
+  setValue: (name: string, value: unknown) => void;
+  watch: (name: string) => unknown;
 }) => {
   const error = errors[field.name];
   const value = watch(field.name);
@@ -136,7 +134,7 @@ const DynamicFormField = ({
 
       case 'select':
         return (
-          <Select value={value || ''} onValueChange={(val) => setValue(field.name, val)}>
+          <Select value={String(value || '')} onValueChange={(val) => setValue(field.name, val)}>
             <SelectTrigger className={error ? 'border-red-500' : ''}>
               <SelectValue placeholder={field.placeholder || `${field.label}を選択`} />
             </SelectTrigger>
@@ -153,7 +151,7 @@ const DynamicFormField = ({
       case 'radio':
         return (
           <RadioGroup
-            value={value || ''}
+            value={String(value || '')}
             onValueChange={(val) => setValue(field.name, val)}
             className="flex flex-col space-y-2"
           >
@@ -170,7 +168,7 @@ const DynamicFormField = ({
         return (
           <div className="flex items-center space-x-2">
             <Checkbox
-              checked={value || false}
+              checked={Boolean(value)}
               onCheckedChange={(checked) => setValue(field.name, checked)}
               id={field.name}
             />
@@ -190,8 +188,8 @@ const DynamicFormField = ({
           if (metadata.object_type === 'attendance' && metadata.field_type === 'clock_records') {
             return (
               <ClockRecordsInput
-                value={value || []}
-                onChange={(newValue) => setValue(field.name, newValue)}
+                value={Array.isArray(value) ? value : []}
+                onChangeAction={(newValue) => setValue(field.name, newValue)}
                 error={error?.message}
                 disabled={false}
               />
@@ -253,7 +251,7 @@ export default function DynamicForm({ requestType, onSubmitAction, isLoading }: 
     resolver: zodResolver(validationSchema),
   });
 
-  const handleFormSubmit = (data: Record<string, any>) => {
+  const handleFormSubmit = (data: Record<string, unknown>) => {
     onSubmitAction(data);
   };
 

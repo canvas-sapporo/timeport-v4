@@ -7,7 +7,7 @@
 
 import { createServerClient } from '@/lib/supabase';
 import type { UUID } from '@/types/common';
-import type { GetUserCompanyResult, UserCompanyInfo } from '@/types/user_profiles';
+import type { GetUserCompanyResult, UserCompanyInfo } from '@/schemas/user_profile';
 
 /**
  * ユーザーIDから会社IDを取得
@@ -57,8 +57,12 @@ export async function getUserCompany(userId: UUID): Promise<GetUserCompanyResult
       };
     }
 
-    const group = data.groups as any;
-    const company = group.companies as any;
+    const group = data.groups as unknown as {
+      id: string;
+      name: string;
+      companies: { id: string; name: string; code: string };
+    };
+    const company = group.companies;
 
     if (!company) {
       return {
@@ -131,8 +135,8 @@ export async function getUserCompanyIds(userIds: UUID[]): Promise<Map<UUID, UUID
 
     if (data) {
       data.forEach((item) => {
-        if ((item.groups as any)?.company_id) {
-          result.set(item.user_id, (item.groups as any).company_id);
+        if ((item.groups as unknown as { company_id: string })?.company_id) {
+          result.set(item.user_id, (item.groups as unknown as { company_id: string }).company_id);
         }
       });
     }

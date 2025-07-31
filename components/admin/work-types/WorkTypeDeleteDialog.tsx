@@ -33,7 +33,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { deleteWorkType, getWorkTypes } from '@/lib/actions/admin/work-types';
 import { useToast } from '@/hooks/use-toast';
-import type { WorkType } from '@/types/employment_type';
+import type { WorkType } from '@/schemas/employment-type';
 
 // 時刻フォーマット関数を追加
 const formatTime = (time: string) => {
@@ -47,18 +47,18 @@ const deleteWorkTypeSchema = z.object({
 
 interface WorkTypeDeleteDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   workType: WorkType | null;
   companyId: string;
-  onSuccess: () => void;
+  onSuccessAction: () => void;
 }
 
 export default function WorkTypeDeleteDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   workType,
   companyId,
-  onSuccess,
+  onSuccessAction,
 }: WorkTypeDeleteDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [availableWorkTypes, setAvailableWorkTypes] = useState<WorkType[]>([]);
@@ -124,8 +124,8 @@ export default function WorkTypeDeleteDialog({
           description: `${workType.name} が正常に削除されました`,
         });
         form.reset();
-        onOpenChange(false);
-        onSuccess();
+        onOpenChangeAction(false);
+        onSuccessAction();
       } else {
         toast({
           title: 'エラーが発生しました',
@@ -148,7 +148,7 @@ export default function WorkTypeDeleteDialog({
   if (!workType) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -222,7 +222,7 @@ export default function WorkTypeDeleteDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => onOpenChangeAction(false)}
                   disabled={isLoading}
                 >
                   キャンセル

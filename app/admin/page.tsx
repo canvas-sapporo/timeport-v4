@@ -2,15 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Users,
-  Clock,
-  FileText,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle,
-  Briefcase,
-} from 'lucide-react';
+import { Users, Clock, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
@@ -31,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 export default function AdminDashboard() {
   const { user } = useAuth();
   const router = useRouter();
-  const { users, requests, attendanceRecords, notifications } = useData();
+  const { users, requests, attendanceRecords } = useData();
   const { toast } = useToast();
   const [hasCheckedWorkTypes, setHasCheckedWorkTypes] = useState(false);
 

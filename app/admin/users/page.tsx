@@ -9,8 +9,8 @@ import { getUsers, getUserStats, debugDatabaseState } from '@/lib/actions/admin/
 import { getGroups } from '@/lib/actions/admin/groups';
 import UserListTable from '@/components/admin/users/UserListTable';
 import { Button } from '@/components/ui/button';
-import type { UserProfile } from '@/types/user_profiles';
-import type { Group } from '@/types/groups';
+import type { UserProfile } from '@/schemas/user_profile';
+import type { Group } from '@/schemas/group';
 
 export default function AdminUsersPage() {
   const { user } = useAuth();
@@ -27,7 +27,7 @@ export default function AdminUsersPage() {
   });
 
   // データ取得関数
-  const fetchData = async () => {
+  async function fetchData() {
     if (!user?.company_id) return;
 
     try {
@@ -46,8 +46,8 @@ export default function AdminUsersPage() {
       });
 
       if (usersResult.success) {
-        setUsers(usersResult.data.users as unknown as (UserProfile & { groups: Group[] })[]);
-        console.log('ユーザー一覧更新:', usersResult.data.users);
+        setUsers((usersResult.data as any).users as (UserProfile & { groups: Group[] })[]);
+        console.log('ユーザー一覧更新:', (usersResult.data as any).users);
       } else {
         console.error('ユーザー取得失敗:', usersResult.error);
       }
@@ -68,10 +68,10 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   // デバッグ関数
-  const handleDebug = async () => {
+  async function handleDebug() {
     if (!user?.company_id) return;
 
     try {
@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
     } catch (error) {
       console.error('デバッグ実行エラー:', error);
     }
-  };
+  }
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -129,7 +129,7 @@ export default function AdminUsersPage() {
         groups={groups}
         companyId={user.company_id!}
         stats={stats}
-        onRefresh={fetchData}
+        onRefreshAction={fetchData}
       />
     </div>
   );

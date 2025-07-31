@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import type { ClockRecord, ClockBreakRecord } from '@/types/attendance';
+import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
 import {
   createDefaultClockRecord,
   createDefaultBreakRecord,
@@ -16,14 +15,14 @@ import {
 
 interface ClockRecordsInputProps {
   value: ClockRecord[];
-  onChange: (value: ClockRecord[]) => void;
+  onChangeAction: (value: ClockRecord[]) => void;
   error?: string;
   disabled?: boolean;
 }
 
 export default function ClockRecordsInput({
   value,
-  onChange,
+  onChangeAction,
   error,
   disabled = false,
 }: ClockRecordsInputProps) {
@@ -35,7 +34,7 @@ export default function ClockRecordsInput({
 
   const updateClockRecords = (newRecords: ClockRecord[]) => {
     setClockRecords(newRecords);
-    onChange(newRecords);
+    onChangeAction(newRecords);
   };
 
   const addSession = () => {
@@ -154,7 +153,7 @@ export default function ClockRecordsInput({
                 <Input
                   id={`out_time_${sessionIndex}`}
                   type="datetime-local"
-                  value={formatDateTimeForInput(session.out_time)}
+                  value={formatDateTimeForInput(session.out_time || '')}
                   onChange={(e) => updateSession(sessionIndex, 'out_time', e.target.value)}
                   disabled={disabled}
                   required={sessionIndex === clockRecords.length - 1}

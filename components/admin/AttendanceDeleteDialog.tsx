@@ -15,23 +15,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAttendanceDetail, deleteAttendance } from '@/lib/actions/attendance';
 import { formatDate, formatTime } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import type { Attendance } from '@/types/attendance';
+import type { AttendanceData } from '@/schemas/attendance';
 
 interface AttendanceDeleteDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   attendanceId: string | null;
   onSuccess?: () => void;
 }
 
 export default function AttendanceDeleteDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   attendanceId,
   onSuccess,
 }: AttendanceDeleteDialogProps) {
   const { toast } = useToast();
-  const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +83,7 @@ export default function AttendanceDeleteDialog({
           description: result.message,
         });
         onSuccess?.();
-        onOpenChange(false);
+        onOpenChangeAction(false);
       } else {
         toast({
           title: '削除失敗',
@@ -104,7 +104,7 @@ export default function AttendanceDeleteDialog({
 
   if (isLoading) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChangeAction}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>勤怠記録削除</DialogTitle>
@@ -120,7 +120,7 @@ export default function AttendanceDeleteDialog({
 
   if (error) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChangeAction}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>勤怠記録削除</DialogTitle>
@@ -143,7 +143,7 @@ export default function AttendanceDeleteDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -226,7 +226,7 @@ export default function AttendanceDeleteDialog({
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isDeleting}>
+          <Button variant="outline" onClick={() => onOpenChangeAction(false)} disabled={isDeleting}>
             <X className="w-4 h-4 mr-2" />
             キャンセル
           </Button>

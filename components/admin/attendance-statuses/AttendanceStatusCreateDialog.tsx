@@ -26,14 +26,14 @@ import { createAttendanceStatus } from '@/lib/actions/attendance';
 
 interface AttendanceStatusCreateDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   companyId: string;
   onSuccess?: () => void;
 }
 
 export default function AttendanceStatusCreateDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   companyId,
   onSuccess,
 }: AttendanceStatusCreateDialogProps) {
@@ -82,7 +82,7 @@ export default function AttendanceStatusCreateDialog({
           description: '勤怠ステータスが正常に作成されました',
         });
         onSuccess?.();
-        onOpenChange(false);
+        onOpenChangeAction(false);
         resetForm();
       } else {
         toast({
@@ -116,7 +116,7 @@ export default function AttendanceStatusCreateDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export default function AttendanceStatusCreateDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
               disabled={isSaving}
             >
               キャンセル

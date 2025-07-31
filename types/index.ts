@@ -1,85 +1,121 @@
-// 個別エクスポートに変更して重複を回避
-export type { LoginResponse } from './api';
-export type { ApiResponse } from './api';
-
-// 基本型
-export type {
-  BaseEntity,
-  DateString,
-  TimeString,
-  Timestamp,
-  UUID,
-  QueryOptions,
-  SelectOption,
-  ValidationError,
-} from './common';
-
 // 認証関連
-export type { UserProfile, AuthUser, LoginCredentials } from './auth';
+export type { AuthUser, LoginCredentials } from '@/schemas/auth';
 
 // 会社・雇用関連
-export type { Company } from './company';
-export type { EmploymentType, LeaveType, WorkType } from './employment_type';
+export type { Company } from '@/schemas/company';
+export type { EmploymentType, WorkType } from '@/schemas/employment-type';
 
 // グループ関連
-export type { Group } from './groups';
+export type { Group } from '@/schemas/group';
 
 // フォーム関連
 export type {
   FormField,
-  ApprovalStep,
-  ConditionalLogic,
-  CustomFieldDefinition,
-  CustomFieldRegistry,
-  DynamicFormProps,
-  FieldOption,
-  FieldType,
-  FormAnalytics,
-  FormBuilderConfiguration,
-  FormBuilderField,
-  FormBuilderProps,
-  FormBuilderSection,
-  FormConfiguration,
-  FormExportOptions,
-  FormFieldProps,
-  FormImportOptions,
-  FormNotificationRule,
-  FormPermission,
   FormSection,
+  FormConfiguration,
   FormSettings,
   FormSubmission,
+  ValidationRule,
+  FieldOption,
+  ConditionalLogic,
+  DynamicFormProps,
+  FormFieldProps,
+  FormBuilderField,
+  FormBuilderSection,
+  FormBuilderConfiguration,
+  FormBuilderProps,
+  RequestFormField,
+  ApprovalStep,
+  RequestFormConfiguration,
   FormTemplate,
   FormTemplateCategory,
-  FormValidationResult,
-  RequestFormConfiguration,
-  RequestFormField,
-  ValidationRule,
-} from './form';
+  FormAnalytics,
+  FormExportOptions,
+  FormImportOptions,
+  CustomFieldDefinition,
+  CustomFieldRegistry,
+  FormPermission,
+  FormNotificationRule,
+  FormData,
+  FormErrors,
+  FormState,
+  FormChangeEvent,
+  FormSubmitEvent,
+  FormErrorEvent,
+} from '@/schemas/form';
 
 // リクエスト関連
-export type { Request, RequestForm, RequestStatus, RequestStatistics } from './request';
+export type { RequestForm, RequestStatus } from '@/schemas/request';
 
 // システム関連
 export type {
-  AuditLog,
-  Feature,
+  SystemStatus,
+  SystemAlert,
+  SystemBackup,
+  NotificationTemplate,
+  NotificationType,
+  NotificationPriority,
+  FeatureTargetType,
+  NotificationSearchCriteria,
+  FeatureSearchCriteria,
   FeatureSettings,
-  NotificationSettings,
-  SystemSettings,
-  Notification,
-} from './system';
+  CreateFeatureInput,
+  UpdateFeatureInput,
+  CreateNotificationInput,
+  UpdateNotificationInput,
+  CreateAuditLogInput,
+  AuditLogSearchCriteria,
+} from '@/schemas/system';
 
 // UI関連
 export type {} from './ui';
 
 // ユーザーグループ関連
-export type { UserGroup } from './user_groups';
+export type { UserGroup } from '@/schemas/user_group';
 
 // ビュー関連
-export type { AttendanceDetailView, RequestDetailView, UserDetailView } from './views';
+export type {
+  UserDetailView,
+  AttendanceDetailView,
+  RequestDetailView,
+  GroupHierarchyView,
+  UserGroupDetailView,
+  RequestTypeFormDetailView,
+  ActiveUserView,
+  ActiveAttendanceView,
+  ActiveRequestView,
+} from '@/schemas/database/view';
+
+// 統計関連
+export type { MonthlyAttendanceStatsView, RequestStatisticsView } from '@/schemas/database/stats';
+
+// 動的データ関連
+export type {
+  DynamicData,
+  DynamicFormData,
+  SettingsData,
+  Metadata,
+  FormConfigItem,
+  ApprovalFlowItem,
+  ErrorData,
+  ValidationErrorData,
+  ApiResponseData,
+  ListResponseData,
+} from './dynamic-data';
+
+// データベース関連
+export type {
+  DatabaseTable,
+  DatabaseView,
+  DatabaseRow,
+  DatabaseInsert,
+  DatabaseUpdate,
+  StatisticsData,
+  StatisticsResult,
+} from './database-types';
 
 // 出席関連
-export type { Attendance, MonthlyAttendanceStats } from './attendance';
+export type { AttendanceData } from '@/schemas/attendance';
 
 // レポート関連
 export type {
@@ -100,4 +136,4 @@ export type {
   ReportListItem,
   ReportDetail,
   ReportStatistics,
-} from './report';
+} from '@/schemas/report';

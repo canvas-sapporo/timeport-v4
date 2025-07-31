@@ -2,7 +2,8 @@
 
 import type { ReactNode } from 'react';
 
-import type { UUID } from './database';
+// UUID型は現在使用されていないため、コメントアウト
+// import type { UUID } from './database';
 
 // ================================
 // 基本UI型
@@ -60,7 +61,7 @@ export interface TabItem {
 // テーブル関連型
 // ================================
 
-export interface TableColumn<T = any> {
+export interface TableColumn<T = Record<string, unknown>> {
   key: string;
   title: string;
   dataIndex?: keyof T;
@@ -68,11 +69,11 @@ export interface TableColumn<T = any> {
   align?: 'left' | 'center' | 'right';
   sortable?: boolean;
   filterable?: boolean;
-  render?: (value: any, record: T, index: number) => ReactNode;
+  render?: (value: unknown, record: T, index: number) => ReactNode;
   className?: string;
 }
 
-export interface TableProps<T = any> {
+export interface TableProps<T = Record<string, unknown>> {
   columns: TableColumn<T>[];
   data: T[];
   loading?: boolean;
@@ -85,7 +86,7 @@ export interface TableProps<T = any> {
   onRowClick?: (record: T, index: number) => void;
 }
 
-export interface TableSelectionProps<T = any> {
+export interface TableSelectionProps<T = Record<string, unknown>> {
   type: 'checkbox' | 'radio';
   selectedRowKeys: string[];
   onChange: (selectedRowKeys: string[], selectedRows: T[]) => void;
@@ -99,8 +100,8 @@ export interface TableSortingProps {
 }
 
 export interface TableFilteringProps {
-  filters: Record<string, any>;
-  onChange: (filters: Record<string, any>) => void;
+  filters: Record<string, unknown>;
+  onChange: (filters: Record<string, unknown>) => void;
 }
 
 // ================================
@@ -340,13 +341,13 @@ export interface FilterItem {
   type: 'text' | 'select' | 'date' | 'dateRange' | 'number' | 'numberRange';
   options?: SelectOption[];
   placeholder?: string;
-  defaultValue?: any;
+  defaultValue?: unknown;
 }
 
 export interface FilterBarProps {
   filters: FilterItem[];
-  values: Record<string, any>;
-  onChange: (values: Record<string, any>) => void;
+  values: Record<string, unknown>;
+  onChange: (values: Record<string, unknown>) => void;
   onReset: () => void;
   className?: string;
 }
@@ -371,7 +372,7 @@ export interface SearchResult {
   description?: string;
   type: string;
   url?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SearchResultsProps {
@@ -388,7 +389,7 @@ export interface SearchResultsProps {
 export interface DragItem {
   id: string;
   type: string;
-  data: any;
+  data: unknown;
 }
 
 export interface DropZoneProps {

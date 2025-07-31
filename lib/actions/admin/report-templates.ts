@@ -5,97 +5,26 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { createServerClient } from '@/lib/supabase';
-import type {
-  ReportTemplate,
-  ReportFieldConfig,
-  ApprovalFlowConfig,
-  StatusFlowConfig,
-} from '@/types/report';
+import {
+  ReportFieldConfigSchema,
+  ApprovalFlowConfigSchema,
+  StatusFlowConfigSchema,
+  ReportTemplateSchema,
+  type ReportFieldConfig,
+  type ApprovalFlowConfig,
+  type StatusFlowConfig,
+} from '@/schemas/report';
+import { type ReportTemplateData } from '@/schemas/report-templates';
 
 // ================================
 // バリデーションスキーマ
 // ================================
 
-const ReportFieldConfigSchema = z.object({
-  id: z.string().min(1, 'フィールドIDは必須です'),
-  type: z.enum([
-    'text',
-    'textarea',
-    'number',
-    'date',
-    'time',
-    'datetime',
-    'email',
-    'phone',
-    'url',
-    'select',
-    'radio',
-    'checkbox',
-    'file',
-    'hidden',
-  ]),
-  label: z.string().min(1, 'ラベルは必須です'),
-  required: z.boolean().optional(),
-  placeholder: z.string().optional(),
-  default_value: z.union([z.string(), z.number(), z.boolean()]).optional(),
-  options: z
-    .object({
-      markdown: z.boolean().optional(),
-      preview: z.boolean().optional(),
-      rows: z.number().optional(),
-      min: z.number().optional(),
-      max: z.number().optional(),
-      step: z.number().optional(),
-      multiple: z.boolean().optional(),
-      accept: z.string().optional(),
-      options: z
-        .array(
-          z.object({
-            label: z.string(),
-            value: z.union([z.string(), z.number()]),
-          })
-        )
-        .optional(),
-    })
-    .optional(),
-});
-
-const ApprovalFlowConfigSchema = z.object({
-  type: z.enum(['static', 'dynamic']),
-  approvers: z.array(
-    z.object({
-      type: z.enum(['user', 'group']),
-      user_id: z.string().uuid().optional(),
-      group_id: z.string().uuid().optional(),
-    })
-  ),
-});
-
-const StatusFlowConfigSchema = z.object({
-  transitions: z.array(
-    z.object({
-      from: z.string(),
-      to: z.string(),
-      action: z.string(),
-    })
-  ),
-});
-
-const ReportTemplateSchema = z.object({
-  name: z.string().min(1, 'テンプレート名は必須です'),
-  description: z.string().optional(),
-  group_id: z.string().uuid().optional(),
-  form_config: z.array(ReportFieldConfigSchema),
-  approval_flow: ApprovalFlowConfigSchema,
-  status_flow: StatusFlowConfigSchema,
-  is_active: z.boolean().default(true),
-});
-
 // ================================
 // レポートテンプレート作成
 // ================================
 
-export const createReportTemplate = async (formData: FormData) => {
+export async function createReportTemplate(formData: FormData) {
   const supabase = createServerClient();
 
   try {
@@ -182,11 +111,12 @@ export const createReportTemplate = async (formData: FormData) => {
     const validatedData = ReportTemplateSchema.parse(rawData);
 
     // レポートテンプレートを作成
+    const { company_id, ...rest } = validatedData;
     const { data, error } = await supabaseClient
       .from('report_templates')
       .insert({
         company_id: profile.company_id,
-        ...validatedData,
+        ...rest,
       })
       .select()
       .single();
@@ -206,13 +136,13 @@ export const createReportTemplate = async (formData: FormData) => {
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポートテンプレート更新
 // ================================
 
-export const updateReportTemplate = async (id: string, formData: FormData) => {
+export async function updateReportTemplate(id: string, formData: FormData) {
   const supabase = createServerClient();
 
   try {
@@ -340,13 +270,13 @@ export const updateReportTemplate = async (id: string, formData: FormData) => {
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポートテンプレート削除
 // ================================
 
-export const deleteReportTemplate = async (id: string) => {
+export async function deleteReportTemplate(id: string) {
   const supabase = createServerClient();
 
   try {
@@ -455,13 +385,13 @@ export const deleteReportTemplate = async (id: string) => {
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポートテンプレート一覧取得
 // ================================
 
-export const getReportTemplates = async () => {
+export async function getReportTemplates() {
   const supabase = createServerClient();
 
   try {
@@ -545,7 +475,7 @@ export const getReportTemplates = async () => {
     }
 
     console.log('レポートテンプレート一覧取得成功:', data.length);
-    return { success: true, data: data as unknown as ReportTemplate[] };
+    return { success: true, data: data as unknown as ReportTemplateData[] };
   } catch (error) {
     console.error('getReportTemplates エラー:', error);
     return {
@@ -553,13 +483,13 @@ export const getReportTemplates = async () => {
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}
 
 // ================================
 // レポートテンプレート詳細取得
 // ================================
 
-export const getReportTemplate = async (id: string) => {
+export async function getReportTemplate(id: string) {
   const supabase = createServerClient();
 
   try {
@@ -644,7 +574,7 @@ export const getReportTemplate = async (id: string) => {
     }
 
     console.log('レポートテンプレート詳細取得成功');
-    return { success: true, data: data as unknown as ReportTemplate };
+    return { success: true, data: data as unknown as ReportTemplateData };
   } catch (error) {
     console.error('getReportTemplate エラー:', error);
     return {
@@ -652,4 +582,4 @@ export const getReportTemplate = async (id: string) => {
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
-};
+}

@@ -26,7 +26,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import type { Company } from '@/types/company';
+import type { Company } from '@/schemas/company';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { getAllCompanyFeatures, toggleFeature } from '@/lib/actions/system-admin/features';
 import { useToast } from '@/hooks/use-toast';
@@ -239,8 +239,8 @@ export default function CompanyListTable({
 
     // 並び替え
     return [...result].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number;
+      let bValue: string | number;
 
       switch (sortField) {
         case 'created_at':
@@ -586,17 +586,17 @@ export default function CompanyListTable({
       </div>
 
       {/* 分割済みダイアログコンポーネント */}
-      <CompanyCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <CompanyCreateDialog open={createDialogOpen} onOpenChangeAction={setCreateDialogOpen} />
 
       <CompanyEditDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        onOpenChangeAction={setEditDialogOpen}
         company={editTarget}
       />
 
       <CompanyDeleteDialog
         open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
+        onOpenChangeAction={setDeleteDialogOpen}
         company={deleteTarget}
       />
     </div>

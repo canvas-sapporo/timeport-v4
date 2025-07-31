@@ -16,26 +16,26 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ClockRecord, ClockBreakRecord, Attendance } from '@/types/attendance';
+import { ClockRecord, ClockBreakRecord, AttendanceData } from '@/schemas/attendance';
 import { getAttendanceDetail, editAttendanceTime } from '@/lib/actions/attendance';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 
 interface AttendanceTimeEditDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   attendanceId: string | null;
-  onSuccess: () => void;
+  onSuccessAction: () => void;
 }
 
-export function AttendanceTimeEditDialog({
+export const AttendanceTimeEditDialog = ({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   attendanceId,
-  onSuccess,
-}: AttendanceTimeEditDialogProps) {
+  onSuccessAction,
+}: AttendanceTimeEditDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [editData, setEditData] = useState<{
     clockRecords: ClockRecord[];
     editReason: string;
@@ -82,7 +82,7 @@ export function AttendanceTimeEditDialog({
           description: result.error || '勤怠記録の取得に失敗しました',
           variant: 'destructive',
         });
-        onOpenChange(false);
+        onOpenChangeAction(false);
       }
     } catch (error) {
       console.error('勤怠記録取得エラー:', error);
@@ -91,7 +91,7 @@ export function AttendanceTimeEditDialog({
         description: '勤怠記録の取得に失敗しました',
         variant: 'destructive',
       });
-      onOpenChange(false);
+      onOpenChangeAction(false);
     } finally {
       setLoading(false);
     }
@@ -140,8 +140,8 @@ export function AttendanceTimeEditDialog({
           title: '成功',
           description: '勤怠記録を編集しました',
         });
-        onSuccess();
-        onOpenChange(false);
+        onSuccessAction();
+        onOpenChangeAction(false);
       } else {
         toast({
           title: 'エラー',
@@ -275,7 +275,7 @@ export function AttendanceTimeEditDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>勤怠時刻編集</DialogTitle>
@@ -363,7 +363,7 @@ export function AttendanceTimeEditDialog({
                         <Input
                           id={`out-time-${sessionIndex}`}
                           type="datetime-local"
-                          value={formatDateTimeForInput(session.out_time)}
+                          value={formatDateTimeForInput(session.out_time || '')}
                           onChange={(e) =>
                             updateClockRecord(sessionIndex, 'out_time', e.target.value)
                           }
@@ -449,7 +449,7 @@ export function AttendanceTimeEditDialog({
                         <Input
                           id={`out-time-${sessionIndex}`}
                           type="datetime-local"
-                          value={formatDateTimeForInput(session.out_time)}
+                          value={formatDateTimeForInput(session.out_time || '')}
                           onChange={(e) =>
                             updateClockRecord(sessionIndex, 'out_time', e.target.value)
                           }
@@ -543,7 +543,7 @@ export function AttendanceTimeEditDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChangeAction(false)}>
             キャンセル
           </Button>
           <Button type="button" onClick={handleSave} disabled={loading}>
@@ -553,4 +553,4 @@ export function AttendanceTimeEditDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

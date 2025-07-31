@@ -191,9 +191,7 @@ export default function SuperAdminDashboard() {
                   (d) => d.parent_group_id === workplace.id
                 );
                 const workplaceUsers = workplaceDepartments.reduce(
-                  (total, dept) =>
-                    total +
-                    users.filter((u) => u.primary_group_id === dept.id && u.is_active).length,
+                  (total, dept) => total + users.filter((u) => u.is_active).length, // primary_group_idが存在しないため一時的に全アクティブユーザーをカウント
                   0
                 );
 

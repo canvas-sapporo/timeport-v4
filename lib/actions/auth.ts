@@ -1,10 +1,12 @@
 'use server';
 
+import { z } from 'zod';
 import { redirect } from 'next/navigation';
 
 import { loginUser } from '@/lib/auth';
+import { type LoginActionResult, type AuthUser } from '@/schemas/auth';
 
-export const loginAction = async (formData: FormData) => {
+export async function loginAction(formData: FormData): Promise<LoginActionResult | never> {
   console.log('Server Action開始');
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
@@ -34,4 +36,4 @@ export const loginAction = async (formData: FormData) => {
 
   // リダイレクト（try-catchの外に移動）
   redirect(redirectPath);
-};
+}

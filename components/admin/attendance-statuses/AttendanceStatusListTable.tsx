@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Edit, Trash2, Plus, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -13,26 +12,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { AttendanceStatusEntity } from '@/types/attendance';
+import type { AttendanceStatusData } from '@/schemas/attendance';
 
 interface AttendanceStatusListTableProps {
-  statuses: AttendanceStatusEntity[];
-  onEdit: (status: AttendanceStatusEntity) => void;
-  onDelete: (status: AttendanceStatusEntity) => void;
-  onCreate: () => void;
+  statuses: AttendanceStatusData[];
+  onEditAction: (status: AttendanceStatusData) => void;
+  onDeleteAction: (status: AttendanceStatusData) => void;
+  onCreateAction: () => void;
 }
 
 export default function AttendanceStatusListTable({
   statuses,
-  onEdit,
-  onDelete,
-  onCreate,
+  onEditAction,
+  onDeleteAction,
+  onCreateAction,
 }: AttendanceStatusListTableProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">勤怠ステータス一覧</h3>
-        <Button onClick={onCreate} size="sm">
+        <Button onClick={onCreateAction} size="sm">
           <Plus className="w-4 h-4 mr-2" />
           新規作成
         </Button>
@@ -64,7 +63,15 @@ export default function AttendanceStatusListTable({
                 <TableRow key={status.id}>
                   <TableCell>
                     <Badge
-                      variant={status.color as any}
+                      variant={
+                        status.color as
+                          | 'default'
+                          | 'destructive'
+                          | 'outline'
+                          | 'secondary'
+                          | null
+                          | undefined
+                      }
                       style={{
                         color: status.font_color,
                         backgroundColor: status.background_color,
@@ -104,14 +111,19 @@ export default function AttendanceStatusListTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(status)} title="編集">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditAction(status)}
+                        title="編集"
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
                       {!status.is_required && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onDelete(status)}
+                          onClick={() => onDeleteAction(status)}
                           title="削除"
                           className="text-red-600 hover:text-red-800"
                         >

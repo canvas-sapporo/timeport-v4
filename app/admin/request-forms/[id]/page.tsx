@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
-import { RequestForm } from '@/types/request';
+import { RequestForm } from '@/schemas/request';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -81,8 +81,8 @@ export default function RequestTypeDetailPage() {
     file: 'ファイルアップロード',
   };
 
-  const formatDate = (date?: string) =>
-    typeof date === 'string'
+  function formatDate(date?: string) {
+    return typeof date === 'string'
       ? new Date(date).toLocaleDateString('ja-JP', {
           year: 'numeric',
           month: 'long',
@@ -91,6 +91,7 @@ export default function RequestTypeDetailPage() {
           minute: '2-digit',
         })
       : '-';
+  }
 
   return (
     <div className="space-y-6">

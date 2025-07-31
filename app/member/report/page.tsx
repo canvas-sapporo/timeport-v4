@@ -46,7 +46,7 @@ import {
   getAvailableReportTemplates,
   getReportTemplateForMember,
 } from '@/lib/actions/report-templates';
-import type { ReportListItem, ReportTemplate, ReportFieldConfig } from '@/types/report';
+import type { ReportListItem, ReportTemplate, ReportFieldConfig } from '@/schemas/report';
 
 // Markdownエディタを動的インポート
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
@@ -84,7 +84,7 @@ export default function MemberReportPage() {
   }, [features, featuresLoading, router]);
 
   useEffect(() => {
-    const loadData = async () => {
+    async function loadData() {
       if (user) {
         try {
           setIsLoading(true);
@@ -111,12 +111,12 @@ export default function MemberReportPage() {
           setIsLoading(false);
         }
       }
-    };
+    }
 
     loadData();
   }, [user, toast]);
 
-  const handleTemplateSelect = async (template: ReportTemplate) => {
+  async function handleTemplateSelect(template: ReportTemplate) {
     try {
       // テンプレートの詳細を取得
       const result = await getReportTemplateForMember(template.id);
@@ -164,9 +164,9 @@ export default function MemberReportPage() {
         variant: 'destructive',
       });
     }
-  };
+  }
 
-  const handleCreateReport = async (action: 'draft' | 'submit') => {
+  async function handleCreateReport(action: 'draft' | 'submit') {
     if (!selectedTemplate) return;
 
     try {
@@ -221,9 +221,9 @@ export default function MemberReportPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
-  const handleDeleteReport = async (reportId: string) => {
+  async function handleDeleteReport(reportId: string) {
     try {
       const result = await deleteReport(reportId);
       if (result.success) {
@@ -251,9 +251,9 @@ export default function MemberReportPage() {
         variant: 'destructive',
       });
     }
-  };
+  }
 
-  const renderFormField = (field: ReportFieldConfig) => {
+  function renderFormField(field: ReportFieldConfig) {
     const value = formData[field.id];
 
     switch (field.type) {
@@ -427,7 +427,7 @@ export default function MemberReportPage() {
           />
         );
     }
-  };
+  }
 
   if (isLoading) {
     return (

@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -13,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -25,21 +22,21 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import type { ObjectMetadata } from '@/types/request';
+import type { ObjectMetadata } from '@/schemas/request';
 import { getObjectTypeOptions, getAttendanceObjectFields } from '@/lib/utils/request-type-utils';
 
 interface ObjectTypeSettingsDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   metadata: ObjectMetadata | null;
-  onMetadataChange: (metadata: ObjectMetadata | null) => void;
+  onMetadataChangeAction: (metadata: ObjectMetadata | null) => void;
 }
 
 export default function ObjectTypeSettingsDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   metadata,
-  onMetadataChange,
+  onMetadataChangeAction,
 }: ObjectTypeSettingsDialogProps) {
   const [objectType, setObjectType] = useState<string>('');
   const [editableFields, setEditableFields] = useState<string[]>([]);
@@ -139,8 +136,8 @@ export default function ObjectTypeSettingsDialog({
         return;
     }
 
-    onMetadataChange(newMetadata);
-    onOpenChange(false);
+    onMetadataChangeAction(newMetadata);
+    onOpenChangeAction(false);
   };
 
   const getFieldSettings = () => {
@@ -155,7 +152,7 @@ export default function ObjectTypeSettingsDialog({
   const fieldSettings = getFieldSettings();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>オブジェクトタイプ設定</DialogTitle>
@@ -173,14 +170,16 @@ export default function ObjectTypeSettingsDialog({
                 <SelectValue placeholder="オブジェクトタイプを選択" />
               </SelectTrigger>
               <SelectContent>
-                {objectTypeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <div className="flex flex-col">
-                      <span>{option.label}</span>
-                      <span className="text-xs text-muted-foreground">{option.description}</span>
-                    </div>
-                  </SelectItem>
-                ))}
+                {objectTypeOptions.map(
+                  (option: { value: string; label: string; description: string }) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex flex-col">
+                        <span>{option.label}</span>
+                        <span className="text-xs text-muted-foreground">{option.description}</span>
+                      </div>
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -282,7 +281,7 @@ export default function ObjectTypeSettingsDialog({
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChangeAction(false)}>
             キャンセル
           </Button>
           <Button onClick={handleSave} disabled={!objectType}>

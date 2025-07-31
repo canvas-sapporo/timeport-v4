@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { getSchedules, getTodos, createSchedule, createTodo } from '@/lib/mock';
-import { Schedule, Todo, CreateScheduleInput, CreateTodoInput } from '@/types/schedule';
+import { Schedule, Todo, CreateScheduleInput, CreateTodoInput } from '@/schemas/schedule';
 
 export default function MemberSchedulePage() {
   // const { user, isLoading } = useAuth();
@@ -56,7 +56,6 @@ export default function MemberSchedulePage() {
   const [isCreateScheduleOpen, setIsCreateScheduleOpen] = useState(false);
   const [isCreateTodoOpen, setIsCreateTodoOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [isDataLoading, setIsDataLoading] = useState(true);
 
   const [scheduleForm, setScheduleForm] = useState<CreateScheduleInput>({
     title: '',
@@ -96,8 +95,6 @@ export default function MemberSchedulePage() {
           setTodos(todosData);
         } catch (error) {
           console.error('Error loading data:', error);
-        } finally {
-          setIsDataLoading(false);
         }
       }
     };
@@ -131,7 +128,7 @@ export default function MemberSchedulePage() {
     return null;
   }
 
-  const handleCreateSchedule = async () => {
+  async function handleCreateSchedule() {
     try {
       const result = await createSchedule(scheduleForm);
       if (result.success) {
@@ -153,7 +150,7 @@ export default function MemberSchedulePage() {
     } catch (error) {
       console.error('Error creating schedule:', error);
     }
-  };
+  }
 
   const handleCreateTodo = async () => {
     try {

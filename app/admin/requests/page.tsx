@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Check, X, Eye, FormInput, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { FileText, Eye, FormInput, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
@@ -18,25 +18,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRequestForms, deleteRequestForm } from '@/lib/actions/admin/request-forms';
 import { getAdminRequests } from '@/lib/actions/requests';
-import type { RequestForm } from '@/types/request';
+import type { RequestForm } from '@/schemas/request';
 import RequestFormEditDialog from '@/components/admin/request-forms/RequestFormEditDialog';
 import RequestFormCreateDialog from '@/components/admin/request-forms/RequestFormCreateDialog';
 import RequestFormPreviewDialog from '@/components/admin/request-forms/RequestFormPreviewDialog';
 import {
   AlertDialog,
-  AlertDialogTrigger,
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -46,13 +36,6 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
 
 export default function AdminRequestsPage() {
   const { user } = useAuth();
@@ -61,7 +44,6 @@ export default function AdminRequestsPage() {
   const { toast } = useToast();
   const [requests, setRequests] = useState<any[]>([]);
   const [isRequestsLoading, setIsRequestsLoading] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [activeTab, setActiveTab] = useState('requests');
 
@@ -80,7 +62,7 @@ export default function AdminRequestsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
 
   // 申請フォーム取得関数
-  const fetchRequestForms = async () => {
+  async function fetchRequestForms() {
     setIsRequestFormsLoading(true);
     try {
       const result = await getRequestForms();
@@ -94,10 +76,10 @@ export default function AdminRequestsPage() {
     } finally {
       setIsRequestFormsLoading(false);
     }
-  };
+  }
 
   // 管理者用申請データ取得関数
-  const fetchAdminRequests = async () => {
+  async function fetchAdminRequests() {
     setIsRequestsLoading(true);
     try {
       const result = await getAdminRequests();
@@ -111,7 +93,7 @@ export default function AdminRequestsPage() {
     } finally {
       setIsRequestsLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -138,49 +120,46 @@ export default function AdminRequestsPage() {
     return null;
   }
 
-  const handleApprove = (requestId: string) => {
+  function handleApprove(requestId: string) {
     updateRequest(requestId, {
       status_id: 'approved',
       // approved_by, approved_atはRequest型に含まれていない場合は省略
     });
-  };
+  }
 
-  const handleReject = (requestId: string) => {
+  function handleReject(requestId: string) {
     updateRequest(requestId, {
       status_id: 'rejected',
       rejection_reason: rejectionReason || '管理者により却下されました',
     });
     setRejectionReason('');
-  };
+  }
 
-  const getStatusBadge = (status: any) => {
+  function getStatusBadge(status: any) {
     if (!status) return <Badge variant="outline">-</Badge>;
-
     // statusesオブジェクトから情報を取得
     const statusName = status.name || '不明';
-    const statusColor = status.color || '#6B7280';
-
+    // const statusColor = status.color || '#6B7280';
     let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'outline';
-
     if (status.code === 'pending') variant = 'secondary';
     else if (status.code === 'approved') variant = 'default';
     else if (status.code === 'rejected') variant = 'destructive';
-
     return <Badge variant={variant}>{statusName}</Badge>;
-  };
+  }
 
-  const formatDate = (date?: string) =>
-    typeof date === 'string' ? new Date(date).toLocaleDateString('ja-JP') : '-';
+  function formatDate(date?: string) {
+    return typeof date === 'string' ? new Date(date).toLocaleDateString('ja-JP') : '-';
+  }
 
   // 申請フォーム統計情報を計算
-  const getRequestFormStats = () => {
+  function getRequestFormStats() {
     const total = requestForms.length;
     const active = requestForms.filter((form) => form.is_active).length;
     const inactive = total - active;
     return { total, active, inactive };
-  };
+  }
 
-  const pendingRequests = requests.filter((a) => a.status_id === 'pending');
+  // const pendingRequests = requests.filter((a) => a.status_id === 'pending');
   // 「自分が承認者の申請」だけ抽出
   const myApprovalRequests = requests
     .map((req) => {
@@ -458,9 +437,9 @@ export default function AdminRequestsPage() {
       {selectedForm && (
         <RequestFormEditDialog
           open={editFormDialogOpen}
-          onOpenChange={setEditFormDialogOpen}
+          onOpenChangeAction={setEditFormDialogOpen}
           requestForm={selectedForm}
-          onSuccess={() => {
+          onSuccessAction={() => {
             setEditFormDialogOpen(false);
             setSelectedForm(null);
             fetchRequestForms(); // データを再取得
@@ -471,8 +450,8 @@ export default function AdminRequestsPage() {
       {/* 申請フォーム新規作成ダイアログ */}
       <RequestFormCreateDialog
         open={createFormDialogOpen}
-        onOpenChange={setCreateFormDialogOpen}
-        onSuccess={() => {
+        onOpenChangeAction={setCreateFormDialogOpen}
+        onSuccessAction={() => {
           setCreateFormDialogOpen(false);
           fetchRequestForms(); // データを再取得
         }}
@@ -481,7 +460,7 @@ export default function AdminRequestsPage() {
       {/* 申請フォームプレビューダイアログ */}
       <RequestFormPreviewDialog
         open={previewFormDialogOpen}
-        onOpenChange={setPreviewFormDialogOpen}
+        onOpenChangeAction={setPreviewFormDialogOpen}
         requestForm={selectedForm}
       />
 

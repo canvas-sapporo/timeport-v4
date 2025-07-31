@@ -55,7 +55,7 @@ export default function MemberRequestsPage() {
   const [formData, setFormData] = useState<
     Record<string, string | number | boolean | Date | string[]>
   >({});
-  const [filter, setFilter] = useState('all');
+  // const [filter, setFilter] = useState('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -95,18 +95,15 @@ export default function MemberRequestsPage() {
 
   const activeRequestForms = requestForms.filter((rf) => rf.is_active && !rf.deleted_at);
 
-  const getStatusBadge = (status: any) => {
+  function getStatusBadge(status: any) {
     if (!status) {
       return <Badge variant="outline">-</Badge>;
     }
-
     // ステータスオブジェクトから情報を取得
     const statusName = status.name || '不明';
     const statusColor = status.color || '#6B7280';
-
     // 色に基づいてBadgeのvariantを決定
     let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'outline';
-
     if (statusColor === '#10B981') {
       variant = 'default'; // 緑色（承認済み）
     } else if (statusColor === '#F59E0B') {
@@ -114,32 +111,28 @@ export default function MemberRequestsPage() {
     } else if (statusColor === '#EF4444') {
       variant = 'destructive'; // 赤色（却下）
     }
-
     return (
       <Badge variant={variant} style={{ backgroundColor: statusColor, color: 'white' }}>
         {statusName}
       </Badge>
     );
-  };
+  }
 
-  const handleCreateRequest = async (statusCode: 'draft' | 'pending' = 'draft') => {
-    console.log('handleCreateRequest: 開始', { statusCode });
+  async function handleCreateRequest(statusCode: 'draft' | 'pending' = 'draft') {
+    if (!user) return;
 
+    console.log('handleCreateRequest: 開始', { statusCode, selectedRequestType, formData });
     if (!selectedRequestType) {
       console.log('handleCreateRequest: selectedRequestTypeが未選択');
       return;
     }
-
     console.log('handleCreateRequest: selectedRequestType:', selectedRequestType);
-
     const requestForm = requestForms.find((rf) => rf.id === selectedRequestType);
     if (!requestForm) {
       console.log('handleCreateRequest: requestFormが見つかりません');
       return;
     }
-
     console.log('handleCreateRequest: requestForm:', requestForm);
-
     // 指定されたステータスを取得
     let statusId = null;
     try {
@@ -148,112 +141,91 @@ export default function MemberRequestsPage() {
     } catch (error) {
       console.warn('ステータスの取得に失敗:', error);
     }
-
     // 日付データのバリデーションとクリーンアップ
-    const validateAndCleanDate = (dateValue: any): string | null => {
+    function validateAndCleanDate(dateValue: any): string | null {
       if (!dateValue) return null;
-
       const dateStr = String(dateValue);
-
       // 空文字列や無効な文字列の場合はnullを返す
       if (!dateStr.trim() || dateStr === 'aaa' || dateStr === 'undefined' || dateStr === 'null') {
         return null;
       }
-
-      // 日付として有効かチェック
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) {
+      // 日付として解析可能かチェック
+      const parsedDate = new Date(dateStr);
+      if (isNaN(parsedDate.getTime())) {
         return null;
       }
-
       // YYYY-MM-DD形式で返す
-      return date.toISOString().split('T')[0];
-    };
-
-    const today = new Date().toISOString().split('T')[0];
-
-    // フォームデータから無効な日付値を除去
-    const cleanedFormData = { ...formData };
-    Object.keys(cleanedFormData).forEach((key) => {
-      const value = cleanedFormData[key];
-      if (value === 'aaa' || value === 'undefined' || value === 'null' || value === '') {
-        delete cleanedFormData[key];
+      return parsedDate.toISOString().split('T')[0];
+    }
+    // フォームデータのバリデーションとクリーンアップ
+    const cleanedFormData: Record<string, any> = {};
+    Object.keys(formData).forEach((key) => {
+      const value = formData[key];
+      if (value !== null && value !== undefined && value !== '') {
+        // 日付フィールドの場合は特別な処理
+        if (key.includes('date') || key.includes('Date')) {
+          const cleanedDate = validateAndCleanDate(value);
+          if (cleanedDate) {
+            cleanedFormData[key] = cleanedDate;
+          }
+        } else {
+          cleanedFormData[key] = value;
+        }
       }
     });
-
-    const requestData = {
-      user_id: user.id,
-      request_form_id: selectedRequestType,
-      title: requestForm.name,
-      form_data: cleanedFormData,
-      target_date: validateAndCleanDate(formData.target_date) || today,
-      start_date: validateAndCleanDate(formData.start_date) || today,
-      end_date: validateAndCleanDate(formData.end_date) || today,
-      status_id: statusId,
-      submission_comment: '',
-      current_approval_step: 1,
-      comments: [],
-      attachments: [],
-    };
-
-    console.log('handleCreateRequest: 送信データ:', requestData);
-
+    console.log('handleCreateRequest: クリーンアップ後のフォームデータ:', cleanedFormData);
     try {
-      await createRequest(requestData);
-      console.log('handleCreateRequest: 申請作成成功');
-
-      // ステータスに応じたトーストメッセージを表示
-      if (statusCode === 'draft') {
-        toast({
-          title: '下書き保存完了',
-          description: '申請が下書きとして保存されました。',
-        });
-      } else if (statusCode === 'pending') {
-        toast({
-          title: '申請完了',
-          description: '申請が正常に送信されました。',
-        });
-      }
-
-      // 申請履歴を最新データに更新
+      const newRequest = await createRequest({
+        user_id: user.id,
+        request_form_id: selectedRequestType,
+        title: requestForm.name,
+        form_data: cleanedFormData,
+        target_date: new Date().toISOString().split('T')[0],
+        start_date: cleanedFormData.start_date || new Date().toISOString().split('T')[0],
+        end_date: cleanedFormData.end_date || new Date().toISOString().split('T')[0],
+        submission_comment: '',
+        current_approval_step: 1,
+        comments: [],
+        attachments: [],
+      });
+      console.log('handleCreateRequest: リクエスト作成成功:', newRequest);
+      // フォームをリセット
+      setFormData({});
+      setSelectedRequestType('');
+      setIsCreateDialogOpen(false);
+      // リクエストリストを更新
       await refreshRequests();
     } catch (error) {
-      console.error('handleCreateRequest: 申請作成エラー:', error);
+      console.error('handleCreateRequest: エラー:', error);
       toast({
         title: 'エラー',
-        description: '申請の作成に失敗しました。',
+        description: 'リクエストの作成に失敗しました。',
         variant: 'destructive',
       });
     }
+  }
 
-    setIsCreateDialogOpen(false);
-    setSelectedRequestType('');
-    setFormData({});
-  };
-
-  const handleViewRequest = (request: any) => {
+  function handleViewRequest(request: any) {
     console.log('handleViewRequest: 開始', request);
     setSelectedRequest(request);
     setIsDetailDialogOpen(true);
-  };
+  }
 
-  const handleSubmitRequest = (request: any) => {
+  function handleSubmitRequest(request: any) {
     console.log('handleSubmitRequest: 開始', request);
     setRequestToSubmit(request);
     setIsSubmitDialogOpen(true);
-  };
+  }
 
-  const handleEditRequest = (request: any) => {
+  function handleEditRequest(request: any) {
     console.log('handleEditRequest: 開始', request);
     setRequestToEdit(request);
     setIsEditDialogOpen(true);
-  };
+  }
 
-  const confirmSubmitRequest = async () => {
+  async function confirmSubmitRequest() {
     if (!requestToSubmit) return;
-
     console.log('confirmSubmitRequest: 開始', requestToSubmit);
-
     try {
       // 「承認待ち」ステータスコードを渡す
       const result = await updateRequestStatus(requestToSubmit.id, 'pending');
@@ -282,36 +254,53 @@ export default function MemberRequestsPage() {
         variant: 'destructive',
       });
     }
-  };
+  }
 
-  const renderFormField = (field: any) => {
-    const value = formData[field.name];
-    const inputValue = formData[field.name];
-    const selectValue = formData[field.name];
-
-    switch (field.type) {
+  function renderFormField(field: any) {
+    const fieldType = field.type || 'text';
+    const fieldValue = formData[field.name] || '';
+    switch (fieldType) {
+      case 'text':
+        return (
+          <Input
+            key={field.name}
+            placeholder={field.label}
+            value={String(fieldValue)}
+            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+          />
+        );
       case 'textarea':
         return (
           <Textarea
-            value={typeof value === 'string' || typeof value === 'number' ? value : ''}
-            onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
-            placeholder={field.placeholder}
-            rows={3}
+            key={field.name}
+            placeholder={field.label}
+            value={String(fieldValue)}
+            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+          />
+        );
+      case 'date':
+        return (
+          <Input
+            key={field.name}
+            type="date"
+            value={String(fieldValue)}
+            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
           />
         );
       case 'select':
         return (
           <Select
-            value={typeof selectValue === 'string' ? selectValue : ''}
-            onValueChange={(value) => setFormData((prev) => ({ ...prev, [field.name]: value }))}
+            key={field.name}
+            value={String(fieldValue)}
+            onValueChange={(value) => setFormData({ ...formData, [field.name]: value })}
           >
             <SelectTrigger>
-              <SelectValue placeholder={field.placeholder || `${field.label}を選択`} />
+              <SelectValue placeholder={field.label} />
             </SelectTrigger>
             <SelectContent>
-              {field.options?.map((option: string) => (
-                <SelectItem key={option} value={option}>
-                  {option}
+              {field.options?.map((option: any) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -329,8 +318,8 @@ export default function MemberRequestsPage() {
           if (metadata.object_type === 'attendance' && metadata.field_type === 'clock_records') {
             return (
               <ClockRecordsInput
-                value={(value as any) || []}
-                onChange={(newValue) =>
+                value={(fieldValue as any) || []}
+                onChangeAction={(newValue) =>
                   setFormData((prev) => ({ ...prev, [field.name]: newValue }))
                 }
                 error={undefined}
@@ -350,14 +339,14 @@ export default function MemberRequestsPage() {
       default:
         return (
           <Input
-            type={field.type}
-            value={typeof inputValue === 'string' ? inputValue : ''}
-            onChange={(e) => setFormData((prev) => ({ ...prev, [field.name]: e.target.value }))}
-            placeholder={field.placeholder}
+            key={field.name}
+            placeholder={field.label}
+            value={String(fieldValue)}
+            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
           />
         );
     }
-  };
+  }
 
   const selectedType = requestForms.find((rf) => rf.id === selectedRequestType);
 
@@ -618,13 +607,13 @@ export default function MemberRequestsPage() {
       {/* 申請編集ダイアログ */}
       <RequestEditDialog
         isOpen={isEditDialogOpen}
-        onClose={() => {
+        onCloseAction={() => {
           setIsEditDialogOpen(false);
           setRequestToEdit(null);
         }}
         request={requestToEdit}
         requestForms={requestForms}
-        onSuccess={() => {
+        onSuccessAction={() => {
           refreshRequests();
         }}
       />

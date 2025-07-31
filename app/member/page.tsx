@@ -1,25 +1,23 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Clock,
   Calendar,
   FileText,
   TrendingUp,
-  Plus,
   LogIn,
   LogOut,
   Coffee,
   Loader2,
   MessageSquare,
 } from 'lucide-react';
-import Link from 'next/link';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
-import { formatDateTime, formatTime } from '@/lib/utils';
+import { formatTime } from '@/lib/utils';
 import StatsCard from '@/components/ui/stats-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,8 +34,7 @@ import {
   getMemberAttendance,
   getUserWorkType,
 } from '@/lib/actions/attendance';
-import type { Attendance, ClockBreakRecord, ClockRecord } from '@/types/attendance';
-import { refreshSchemaCache, supabase } from '@/lib/supabase';
+import type { AttendanceData } from '@/schemas/attendance';
 
 export default function MemberDashboard() {
   const { user } = useAuth();
@@ -49,18 +46,19 @@ export default function MemberDashboard() {
   const { features } = useCompanyFeatures(user?.company_id);
 
   // 状態管理
-  const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
-  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
+  const [todayAttendance, setTodayAttendance] = useState<AttendanceData | null>(null);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentTime, setCurrentTime] = useState<string>('');
+
   const [isClient, setIsClient] = useState(false);
+  const [currentTime, setCurrentTime] = useState('');
   const [csvExportOpen, setCsvExportOpen] = useState(false);
   const [loadingAction, setLoadingAction] = useState<
     'clockIn' | 'clockOut' | 'startBreak' | 'endBreak' | null
   >(null);
 
   // データ取得関数
-  const fetchAttendanceData = async (userId: string, forceRefresh = false) => {
+  async function fetchAttendanceData(userId: string, forceRefresh = false) {
     const startTime = performance.now();
     console.log('fetchAttendanceData 開始:', { userId, forceRefresh });
 
@@ -69,7 +67,7 @@ export default function MemberDashboard() {
       console.log('スキーマキャッシュリフレッシュをスキップして直接データ取得を実行');
 
       // 今日の日付を取得
-      const today = new Date().toISOString().split('T')[0];
+      // const today = new Date().toISOString().split('T')[0];
 
       // 今日の勤怠データを取得
       const todayResult = await getTodayAttendance(userId);
@@ -102,7 +100,7 @@ export default function MemberDashboard() {
       setTodayAttendance(null);
       setAttendanceRecords([]);
     }
-  };
+  }
 
   // 初期データ取得
   useEffect(() => {
@@ -142,21 +140,21 @@ export default function MemberDashboard() {
     : [];
 
   // 前月のデータを取得
-  const getPreviousMonth = () => {
+  function getPreviousMonth() {
     const date = new Date();
     date.setMonth(date.getMonth() - 1);
     return date.toISOString().slice(0, 7);
-  };
+  }
   const previousMonth = isClient ? getPreviousMonth() : '';
   const previousMonthRecords = isClient
     ? attendanceRecords.filter((r) => r.work_date?.startsWith(previousMonth))
     : [];
 
   // 変化率計算関数
-  const calculateChangeRate = (current: number, previous: number): number => {
+  function calculateChangeRate(current: number, previous: number): number {
     if (previous === 0) return current > 0 ? 100 : 0;
     return Math.round(((current - previous) / previous) * 100 * 10) / 10;
-  };
+  }
 
   // 出勤日数：1日2回以上出勤している場合は1日としてカウント
   const uniqueWorkDays = new Set(thisMonthRecords.map((r) => r.work_date)).size;
@@ -211,32 +209,32 @@ export default function MemberDashboard() {
   const pendingRequests = userRequests.filter((a) => a.status_id === 'pending');
   const userNotifications = notifications.filter((n) => n.user_id === user.id && !n.is_read);
 
-  const stats = [
-    {
-      title: '出勤日数',
-      value: `${uniqueWorkDays}日`,
-      change: workDaysChange,
-      icon: <Calendar className="w-6 h-6" />,
-    },
-    {
-      title: '残業時間',
-      value: totalOvertimeMinutes > 0 ? `${totalOvertimeMinutes}分` : '0分',
-      change: overtimeChange,
-      icon: <Clock className="w-6 h-6" />,
-    },
-    {
-      title: '申請中',
-      value: `${pendingRequests.length}件`,
-      change: 0, // 申請中は前月比較が困難なため0で固定
-      icon: <FileText className="w-6 h-6" />,
-    },
-    {
-      title: '勤務時間',
-      value: `${workHours}時間`,
-      change: workHoursChange,
-      icon: <TrendingUp className="w-6 h-6" />,
-    },
-  ];
+  // const stats = [
+  //   {
+  //     title: '出勤日数',
+  //     value: `${uniqueWorkDays}日`,
+  //     change: workDaysChange,
+  //     icon: <Calendar className="w-6 h-6" />,
+  //   },
+  //   {
+  //     title: '残業時間',
+  //     value: totalOvertimeMinutes > 0 ? `${totalOvertimeMinutes}分` : '0分',
+  //     change: overtimeChange,
+  //     icon: <Clock className="w-6 h-6" />,
+  //   },
+  //   {
+  //     title: '申請中',
+  //     value: `${pendingRequests.length}件`,
+  //     change: 0, // 申請中は前月比較が困難なため0で固定
+  //     icon: <FileText className="w-6 h-6" />,
+  //   },
+  //   {
+  //     title: '勤務時間',
+  //     value: `${workHours}時間`,
+  //     change: workHoursChange,
+  //     icon: <TrendingUp className="w-6 h-6" />,
+  //   },
+  // ];
 
   // 複数回出退勤対応の状態管理
   const today = new Date().toISOString().split('T')[0];
@@ -310,7 +308,7 @@ export default function MemberDashboard() {
   });
 
   // 打刻処理関数
-  const handleClockIn = async () => {
+  async function handleClockIn() {
     const startTime = performance.now();
     console.log('handleClockIn 開始');
     if (isLoading) {
@@ -383,9 +381,9 @@ export default function MemberDashboard() {
       setIsLoading(false);
       setLoadingAction(null);
     }
-  };
+  }
 
-  const handleClockOut = async () => {
+  async function handleClockOut() {
     console.log('handleClockOut 開始');
     if (isLoading) {
       console.log('既に処理中です');
@@ -444,9 +442,9 @@ export default function MemberDashboard() {
       setIsLoading(false);
       setLoadingAction(null);
     }
-  };
+  }
 
-  const handleStartBreak = async () => {
+  async function handleStartBreak() {
     console.log('handleStartBreak 開始');
     if (isLoading) {
       console.log('既に処理中です');
@@ -502,9 +500,9 @@ export default function MemberDashboard() {
       setIsLoading(false);
       setLoadingAction(null);
     }
-  };
+  }
 
-  const handleEndBreak = async () => {
+  async function handleEndBreak() {
     console.log('handleEndBreak 開始');
     if (isLoading) {
       console.log('既に処理中です');
@@ -560,7 +558,7 @@ export default function MemberDashboard() {
       setIsLoading(false);
       setLoadingAction(null);
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -719,10 +717,9 @@ export default function MemberDashboard() {
 
         {/* Clock History */}
         <ClockHistory
-          userId={user.id}
           todayAttendance={todayAttendance}
           attendanceRecords={attendanceRecords}
-          onRefresh={() => fetchAttendanceData(user.id)}
+          onRefreshAction={() => fetchAttendanceData(user.id)}
           onCsvExport={() => setCsvExportOpen(true)}
         />
 
@@ -863,10 +860,9 @@ export default function MemberDashboard() {
 
         {/* Clock History */}
         <ClockHistory
-          userId={user.id}
           todayAttendance={todayAttendance}
           attendanceRecords={attendanceRecords}
-          onRefresh={() => fetchAttendanceData(user.id)}
+          onRefreshAction={() => fetchAttendanceData(user.id)}
           onCsvExport={() => setCsvExportOpen(true)}
         />
       </div>
@@ -976,7 +972,7 @@ export default function MemberDashboard() {
       {/* CSV出力ダイアログ */}
       <AdminCsvExportDialog
         open={csvExportOpen}
-        onOpenChange={setCsvExportOpen}
+        onOpenChangeAction={setCsvExportOpen}
         attendanceRecords={attendanceRecords}
         users={[]}
         groups={[]}

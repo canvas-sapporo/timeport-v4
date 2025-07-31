@@ -21,18 +21,18 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { updateGroup, toggleGroupStatus } from '@/lib/actions/admin/groups';
-import type { Group, EditGroupFormData } from '@/types/groups';
+import type { Group, EditGroupFormData } from '@/schemas/group';
 
 interface GroupEditDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   group: Group | null;
   onSuccess?: () => void;
 }
 
 export default function GroupEditDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   group,
   onSuccess,
 }: GroupEditDialogProps) {
@@ -83,7 +83,7 @@ export default function GroupEditDialog({
           title: '成功',
           description: 'グループが正常に更新されました',
         });
-        onOpenChange(false);
+        onOpenChangeAction(false);
         onSuccess?.();
       } else {
         toast({
@@ -139,7 +139,7 @@ export default function GroupEditDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="sm:max-w-[425px] dialog-scrollbar">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -203,7 +203,7 @@ export default function GroupEditDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
               disabled={isLoading}
             >
               キャンセル

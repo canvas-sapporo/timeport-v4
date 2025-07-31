@@ -32,11 +32,11 @@ import type {
   ValidationRule,
   ConditionalLogic,
   CalculationConfig,
-} from '@/types/request';
+} from '@/schemas/request';
 
 interface FormBuilderProps {
   formConfig: FormFieldConfig[];
-  onFormConfigChange: (config: FormFieldConfig[]) => void;
+  onFormConfigChangeAction: (config: FormFieldConfig[]) => void;
 }
 
 const FIELD_TYPES: { value: FormFieldType; label: string; icon: string }[] = [
@@ -77,7 +77,7 @@ const WIDTH_OPTIONS = [
   { value: 'quarter', label: '1/4幅' },
 ];
 
-export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuilderProps) {
+export default function FormBuilder({ formConfig, onFormConfigChangeAction }: FormBuilderProps) {
   const [selectedField, setSelectedField] = useState<FormFieldConfig | null>(null);
   const [fieldSettingsOpen, setFieldSettingsOpen] = useState(false);
   const [calculationSettingsOpen, setCalculationSettingsOpen] = useState(false);
@@ -97,14 +97,14 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
       };
 
       const newConfig = [...formConfig, newField];
-      onFormConfigChange(newConfig);
+      onFormConfigChangeAction(newConfig);
       setSelectedField(newField);
       // 少し遅延を入れてダイアログを開く
       setTimeout(() => {
         setFieldSettingsOpen(true);
       }, 10);
     },
-    [formConfig.length, onFormConfigChange]
+    [formConfig.length, onFormConfigChangeAction]
   );
 
   // フィールドを削除
@@ -114,13 +114,13 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
       newConfig.forEach((field, index) => {
         field.order = index + 1;
       });
-      onFormConfigChange(newConfig);
+      onFormConfigChangeAction(newConfig);
       if (selectedField && selectedField.id === fieldId) {
         setSelectedField(null);
         setFieldSettingsOpen(false);
       }
     },
-    [formConfig, selectedField, onFormConfigChange]
+    [formConfig, selectedField, onFormConfigChangeAction]
   );
 
   // フィールドを複製
@@ -134,9 +134,9 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
         order: formConfig.length + 1,
       };
       const newConfig = [...formConfig, newField];
-      onFormConfigChange(newConfig);
+      onFormConfigChangeAction(newConfig);
     },
-    [formConfig.length, onFormConfigChange]
+    [formConfig.length, onFormConfigChangeAction]
   );
 
   // フィールド設定を更新
@@ -145,9 +145,9 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
       const newConfig = formConfig.map((field) =>
         field.id === fieldId ? { ...field, ...updates } : field
       );
-      onFormConfigChange(newConfig);
+      onFormConfigChangeAction(newConfig);
     },
-    [formConfig, onFormConfigChange]
+    [formConfig, onFormConfigChangeAction]
   );
 
   // ドラッグ&ドロップで順序を変更
@@ -164,9 +164,9 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
         item.order = index + 1;
       });
 
-      onFormConfigChange(items);
+      onFormConfigChangeAction(items);
     },
-    [onFormConfigChange]
+    [onFormConfigChangeAction]
   );
 
   // バリデーションルールを追加
@@ -184,10 +184,10 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
         const newConfig = formConfig.map((f) =>
           f.id === fieldId ? { ...f, validation_rules: newRules } : f
         );
-        onFormConfigChange(newConfig);
+        onFormConfigChangeAction(newConfig);
       }
     },
-    [formConfig, onFormConfigChange]
+    [formConfig, onFormConfigChangeAction]
   );
 
   // バリデーションルールを削除
@@ -199,10 +199,10 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
         const newConfig = formConfig.map((f) =>
           f.id === fieldId ? { ...f, validation_rules: newRules } : f
         );
-        onFormConfigChange(newConfig);
+        onFormConfigChangeAction(newConfig);
       }
     },
-    [formConfig, onFormConfigChange]
+    [formConfig, onFormConfigChangeAction]
   );
 
   // 条件表示ロジックを追加
@@ -221,10 +221,10 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
         const newConfig = formConfig.map((f) =>
           f.id === fieldId ? { ...f, conditional_logic: newLogicList } : f
         );
-        onFormConfigChange(newConfig);
+        onFormConfigChangeAction(newConfig);
       }
     },
-    [formConfig, onFormConfigChange]
+    [formConfig, onFormConfigChangeAction]
   );
 
   // 条件表示ロジックを削除
@@ -236,10 +236,10 @@ export default function FormBuilder({ formConfig, onFormConfigChange }: FormBuil
         const newConfig = formConfig.map((f) =>
           f.id === fieldId ? { ...f, conditional_logic: newLogicList } : f
         );
-        onFormConfigChange(newConfig);
+        onFormConfigChangeAction(newConfig);
       }
     },
-    [formConfig, onFormConfigChange]
+    [formConfig, onFormConfigChangeAction]
   );
 
   return (

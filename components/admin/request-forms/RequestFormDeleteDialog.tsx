@@ -13,20 +13,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { deleteRequestForm } from '@/lib/actions/admin/request-forms';
-import type { RequestForm } from '@/types/request';
+import type { RequestForm } from '@/schemas/request';
 
 interface RequestFormDeleteDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   requestForm: RequestForm | null;
-  onSuccess: () => void;
+  onSuccessAction: () => void;
 }
 
 export default function RequestFormDeleteDialog({
   open,
-  onOpenChange,
+  onOpenChangeAction,
   requestForm,
-  onSuccess,
+  onSuccessAction,
 }: RequestFormDeleteDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -48,8 +48,8 @@ export default function RequestFormDeleteDialog({
         });
         // トーストが表示されるまで少し待ってからダイアログを閉じる
         setTimeout(() => {
-          onOpenChange(false);
-          onSuccess();
+          onOpenChangeAction(false);
+          onSuccessAction();
         }, 100);
       } else {
         console.log('エラートースト呼び出し:', result.error);
@@ -73,13 +73,13 @@ export default function RequestFormDeleteDialog({
   };
 
   const handleCancel = () => {
-    onOpenChange(false);
+    onOpenChangeAction(false);
   };
 
   if (!requestForm) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">

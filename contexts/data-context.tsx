@@ -2,11 +2,11 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-import { Attendance, ClockBreakRecord } from '@/types/attendance';
-import { Request, RequestForm } from '@/types/request';
-import { UserProfile } from '@/types/auth';
-import { Notification } from '@/types/system';
-import { Group } from '@/types/groups';
+import { AttendanceData, ClockBreakRecord } from '@/schemas/attendance';
+import { RequestData, RequestForm } from '@/schemas/request';
+import { UserProfile } from '@/schemas/user_profile';
+import { Notification } from '@/schemas/database/feature';
+import { Group } from '@/schemas/group';
 import { users, requests, notifications, groups, generateAttendanceRecords } from '@/lib/mock';
 import { getRequestForms } from '@/lib/actions/admin/request-forms';
 import { getRequests } from '@/lib/actions/requests';
@@ -15,18 +15,21 @@ import * as provider from '@/lib/provider';
 import { useAuth } from './auth-context';
 
 interface DataContextType {
-  attendanceRecords: Attendance[];
-  requests: Request[];
+  attendanceRecords: AttendanceData[];
+  requests: RequestData[];
   requestForms: RequestForm[];
   notifications: Notification[];
   users: UserProfile[];
   groups: Group[];
-  updateAttendance: (record: Attendance) => void;
-  createRequest: (request: Omit<Request, 'id' | 'created_at' | 'updated_at'>) => void;
-  updateRequest: (id: string, updates: Partial<Request> & { rejection_reason?: string }) => void;
+  updateAttendance: (record: AttendanceData) => void;
+  createRequest: (request: Omit<RequestData, 'id' | 'created_at' | 'updated_at'>) => void;
+  updateRequest: (
+    id: string,
+    updates: Partial<RequestData> & { rejection_reason?: string }
+  ) => void;
   markNotificationAsRead: (id: string) => void;
-  getTodayAttendance: (userId: string) => Attendance | null;
-  getUserAttendance: (userId: string) => Attendance[];
+  getTodayAttendance: (userId: string) => AttendanceData | null;
+  getUserAttendance: (userId: string) => AttendanceData[];
   clockIn: (userId: string, time: string) => void;
   clockOut: (userId: string, time: string) => void;
   startBreak: (userId: string, time: string) => void;
@@ -40,8 +43,8 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
-  const [requestsState, setRequests] = useState<Request[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceData[]>([]);
+  const [requestsState, setRequests] = useState<RequestData[]>([]);
   const [notificationsState, setNotifications] = useState<Notification[]>(notifications);
   const [requestFormsState, setRequestForms] = useState<RequestForm[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -62,7 +65,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Generate attendance records for all users
-    const allRecords: Attendance[] = [];
+    const allRecords: AttendanceData[] = [];
     users.forEach((user) => {
       const userRecords = generateAttendanceRecords(user.id);
       allRecords.push(...userRecords);
@@ -121,7 +124,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [currentUserId]);
 
-  const updateAttendance = (record: Attendance) => {
+  const updateAttendance = (record: AttendanceData) => {
     setAttendanceRecords((prev) => {
       const existing = prev.findIndex((r) => r.id === record.id);
       if (existing >= 0) {
@@ -133,7 +136,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const createRequest = async (request: Omit<Request, 'id' | 'created_at' | 'updated_at'>) => {
+  const createRequest = async (request: Omit<RequestData, 'id' | 'created_at' | 'updated_at'>) => {
     console.log('data-context createRequest: 開始', request);
     try {
       const result = await provider.createRequest(request);
@@ -162,7 +165,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateRequest = (id: string, updates: Partial<Request> & { rejection_reason?: string }) => {
+  const updateRequest = (
+    id: string,
+    updates: Partial<RequestData> & { rejection_reason?: string }
+  ) => {
     setRequests((prev) =>
       prev.map((app) =>
         app.id === id ? { ...app, ...updates, updatedAt: new Date().toISOString() } : app
@@ -176,12 +182,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
-  const getTodayAttendance = (userId: string): Attendance | null => {
+  const getTodayAttendance = (userId: string): AttendanceData | null => {
     const today = new Date().toISOString().split('T')[0];
     return attendanceRecords.find((r) => r.user_id === userId && r.work_date === today) || null;
   };
 
-  const getUserAttendance = (userId: string): Attendance[] => {
+  const getUserAttendance = (userId: string): AttendanceData[] => {
     return attendanceRecords.filter((r) => r.user_id === userId);
   };
 
@@ -197,7 +203,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         updated_at: new Date().toISOString(),
       });
     } else {
-      const newRecord: Attendance = {
+      const newRecord: AttendanceData = {
         id: recordId,
         user_id: userId,
         work_date: today,

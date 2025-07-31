@@ -1,28 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  MessageSquare,
-  Send,
-  Smile,
-  Paperclip,
-  Users,
-  Search,
-  Plus,
-  Check,
-  ChevronsUpDown,
-} from 'lucide-react';
+import { MessageSquare, Send, Smile, Paperclip, Users, Search, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -47,9 +35,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { Chat, ChatMessage, ChatUser, ChatListView } from '@/types/chat';
+import { ChatMessageData, ChatUserData, ChatListView } from '@/schemas/chat';
 import {
   getChats,
   getChatDetail,
@@ -86,14 +72,14 @@ interface User {
 }
 
 export default function MemberChatPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const [chats, setChats] = useState<ChatListView[]>([]);
   const [selectedChat, setSelectedChat] = useState<ChatListView | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [chatUsers, setChatUsers] = useState<ChatUser[]>([]);
+  const [chatUsers, setChatUsers] = useState<ChatUserData[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newChatType, setNewChatType] = useState<'direct' | 'group'>('direct');
   const [newChatName, setNewChatName] = useState('');
@@ -144,9 +130,10 @@ export default function MemberChatPage() {
   useEffect(() => {
     if (!user?.id) return;
 
-    const loadData = async () => {
+    async function loadData() {
       setIsLoading(true);
       try {
+        if (!user) return;
         console.log('Loading chats for user:', user.id);
         const chatList = await getChats(user.id);
         console.log('Chats loaded:', chatList);
@@ -160,7 +147,7 @@ export default function MemberChatPage() {
       } finally {
         setIsLoading(false);
       }
-    };
+    }
 
     loadData();
   }, [user]);
@@ -169,8 +156,9 @@ export default function MemberChatPage() {
   useEffect(() => {
     if (!selectedChat || !user?.id) return;
 
-    const loadMessages = async () => {
+    async function loadMessages() {
       try {
+        if (!selectedChat) return;
         const messageList = await getMessages(selectedChat.id);
         setMessages(messageList);
 
@@ -194,6 +182,7 @@ export default function MemberChatPage() {
 
         // 既読マーク
         if (selectedChat.id) {
+          if (!user) return;
           await markAsRead({
             chat_id: selectedChat.id,
             user_id: user.id,
@@ -202,7 +191,7 @@ export default function MemberChatPage() {
       } catch (error) {
         console.error('Error loading messages:', error);
       }
-    };
+    }
 
     loadMessages();
   }, [selectedChat, user]);
@@ -228,7 +217,7 @@ export default function MemberChatPage() {
 
   // チャット送信キー設定を読み込み
   useEffect(() => {
-    const loadChatSettings = async () => {
+    async function loadChatSettings() {
       if (!user?.id) return;
 
       try {
@@ -237,7 +226,7 @@ export default function MemberChatPage() {
       } catch (error) {
         console.error('Error loading chat settings:', error);
       }
-    };
+    }
 
     loadChatSettings();
   }, [user?.id]);
@@ -294,13 +283,13 @@ export default function MemberChatPage() {
               new: payload.new,
               old: payload.old,
               selectedChatId: selectedChat?.id,
-              messageChatId: (payload.new as ChatMessage)?.chat_id,
+              messageChatId: (payload.new as ChatMessageData)?.chat_id,
               currentUserId: user.id,
             });
 
             // INSERTイベントの場合のみ処理
             if (payload.eventType === 'INSERT') {
-              const newMessage = payload.new as ChatMessage;
+              const newMessage = payload.new as ChatMessageData;
 
               // 自分のメッセージは除外（既にUIに追加済み）
               if (newMessage.user_id === user.id) {
@@ -344,7 +333,7 @@ export default function MemberChatPage() {
           },
           (payload) => {
             console.log('メッセージ更新を受信:', payload);
-            const updatedMessage = payload.new as ChatMessage;
+            const updatedMessage = payload.new as ChatMessageData;
 
             // 現在選択されているチャットのメッセージの場合のみ更新
             if (selectedChat && updatedMessage.chat_id === selectedChat.id) {
@@ -459,7 +448,7 @@ export default function MemberChatPage() {
   );
 
   // 参加者追加
-  const handleAddParticipant = (selectedUser: User) => {
+  function handleAddParticipant(selectedUser: User) {
     console.log('Adding participant:', selectedUser);
     console.log('Current participants:', newChatParticipants);
     console.log('Chat type:', newChatType);
@@ -479,12 +468,12 @@ export default function MemberChatPage() {
     }
     setSearchQuery('');
     setSearchResults([]);
-  };
+  }
 
   // 参加者削除
-  const handleRemoveParticipant = (userId: string) => {
+  function handleRemoveParticipant(userId: string) {
     setNewChatParticipants((prev) => prev.filter((p) => p.id !== userId));
-  };
+  }
 
   if (!user || (user.role !== 'member' && user.role !== 'admin')) {
     return null;
@@ -502,7 +491,7 @@ export default function MemberChatPage() {
     );
   }
 
-  const handleCreateChat = async () => {
+  async function handleCreateChat() {
     if (!user?.id) {
       console.error('User ID not found');
       return;
@@ -566,9 +555,9 @@ export default function MemberChatPage() {
       console.error('Error creating chat:', error);
       alert('チャットの作成に失敗しました');
     }
-  };
+  }
 
-  const handleSendMessage = async () => {
+  async function handleSendMessage() {
     if (!newMessage.trim() || !selectedChat || !user?.id) return;
 
     console.log('メッセージ送信開始:', {
@@ -609,17 +598,17 @@ export default function MemberChatPage() {
     } catch (error) {
       console.error('Error sending message:', error);
     }
-  };
+  }
 
   // textareaの高さを自動調整
-  const adjustTextareaHeight = () => {
+  function adjustTextareaHeight() {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
-  };
+  }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  function handleKeyPress(e: React.KeyboardEvent) {
     if (chatSendKeyShiftEnter) {
       // Shift + Enter で送信の場合
       if (e.key === 'Enter' && e.shiftKey) {
@@ -633,7 +622,7 @@ export default function MemberChatPage() {
         handleSendMessage();
       }
     }
-  };
+  }
 
   const getChatDisplayName = (chat: ChatListView) => {
     if (chat.chat_type === 'group') {
@@ -647,7 +636,7 @@ export default function MemberChatPage() {
     }
   };
 
-  const getMessageSender = (message: ChatMessage) => {
+  const getMessageSender = (message: ChatMessageData) => {
     // メッセージに送信者情報が含まれている場合はそれを使用
     if (message.user_profiles) {
       return {
@@ -665,7 +654,7 @@ export default function MemberChatPage() {
     };
   };
 
-  const getReadStatus = (message: ChatMessage) => {
+  const getReadStatus = (message: ChatMessageData) => {
     if (message.user_id === user.id) {
       // 自分のメッセージの場合、他の参加者の既読状況を確認
       const chatParticipants = chatUsers.filter(

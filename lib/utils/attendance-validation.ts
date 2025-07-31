@@ -2,8 +2,8 @@
  * attendanceオブジェクトのバリデーション用ユーティリティ
  */
 
-import type { ClockRecord, ClockBreakRecord } from '@/types/attendance';
-import type { ObjectValidationRule } from '@/types/request';
+import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
+import type { ObjectValidationRule } from '@/schemas/request';
 
 // ================================
 // 日付バリデーション
@@ -12,7 +12,7 @@ import type { ObjectValidationRule } from '@/types/request';
 /**
  * 過去日付のみ許可するバリデーション
  */
-export const validatePastDateOnly = (dateString: string): { isValid: boolean; error?: string } => {
+export function validatePastDateOnly(dateString: string): { isValid: boolean; error?: string } {
   const inputDate = new Date(dateString);
   const today = new Date();
   today.setHours(23, 59, 59, 999); // 今日の終了時刻
@@ -25,7 +25,7 @@ export const validatePastDateOnly = (dateString: string): { isValid: boolean; er
   }
 
   return { isValid: true };
-};
+}
 
 // ================================
 // clock_recordsバリデーション
@@ -34,9 +34,10 @@ export const validatePastDateOnly = (dateString: string): { isValid: boolean; er
 /**
  * clock_recordsの基本構造バリデーション
  */
-export const validateClockRecordsStructure = (
-  clockRecords: unknown
-): { isValid: boolean; error?: string } => {
+export function validateClockRecordsStructure(clockRecords: unknown): {
+  isValid: boolean;
+  error?: string;
+} {
   if (!Array.isArray(clockRecords)) {
     return {
       isValid: false,
@@ -151,7 +152,7 @@ export const validateClockRecordsStructure = (
   }
 
   return { isValid: true };
-};
+}
 
 // ================================
 // 統合バリデーション
@@ -160,10 +161,10 @@ export const validateClockRecordsStructure = (
 /**
  * attendanceオブジェクトの統合バリデーション
  */
-export const validateAttendanceObject = (
+export function validateAttendanceObject(
   data: Record<string, unknown>,
   validationRules: ObjectValidationRule[]
-): { isValid: boolean; errors: string[] } => {
+): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   for (const rule of validationRules) {
@@ -198,7 +199,7 @@ export const validateAttendanceObject = (
     isValid: errors.length === 0,
     errors,
   };
-};
+}
 
 // ================================
 // ヘルパー関数
@@ -207,40 +208,44 @@ export const validateAttendanceObject = (
 /**
  * clock_recordsのデフォルト構造を生成
  */
-export const createDefaultClockRecord = (): ClockRecord => ({
-  in_time: '',
-  out_time: '',
-  breaks: [],
-});
+export function createDefaultClockRecord(): ClockRecord {
+  return {
+    in_time: '',
+    out_time: '',
+    breaks: [],
+  };
+}
 
 /**
  * 休憩記録のデフォルト構造を生成
  */
-export const createDefaultBreakRecord = (): ClockBreakRecord => ({
-  break_start: '',
-  break_end: '',
-});
+export function createDefaultBreakRecord(): ClockBreakRecord {
+  return {
+    break_start: '',
+    break_end: '',
+  };
+}
 
 /**
  * 日付文字列をフォーマット
  */
-export const formatDateForInput = (dateString: string): string => {
+export function formatDateForInput(dateString: string): string {
   try {
     const date = new Date(dateString);
     return date.toISOString().split('T')[0];
   } catch {
     return '';
   }
-};
+}
 
 /**
  * 日時文字列をフォーマット
  */
-export const formatDateTimeForInput = (dateTimeString: string): string => {
+export function formatDateTimeForInput(dateTimeString: string): string {
   try {
     const date = new Date(dateTimeString);
     return date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
   } catch {
     return '';
   }
-};
+}
