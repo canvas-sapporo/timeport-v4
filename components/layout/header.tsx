@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Menu } from 'lucide-react';
+import { Search, Menu, Users, Settings } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -20,6 +20,22 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
   const pathname = usePathname();
+
+  // 画面切り替えボタンの表示条件をチェック
+  const showMemberButton = pathname.startsWith('/admin'); // 一時的に条件を緩和
+  const showAdminButton = pathname.startsWith('/member'); // 一時的に条件を緩和
+
+  const handleMemberView = () => {
+    router.push('/member');
+  };
+
+  const handleAdminView = () => {
+    if (user?.role === 'system-admin') {
+      router.push('/system-admin');
+    } else {
+      router.push('/admin');
+    }
+  };
 
   return (
     <header className="h-16 timeport-header text-white flex items-center justify-between px-6 shadow-lg relative z-20">
@@ -45,6 +61,31 @@ export default function Header({ onMenuClick }: HeaderProps) {
       </div>
 
       <div className="flex items-center space-x-4">
+        {/* 画面切り替えボタン - 通知マークの左側に配置 */}
+        {showMemberButton && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMemberView}
+            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/40 backdrop-blur-sm"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            メンバー画面
+          </Button>
+        )}
+
+        {showAdminButton && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAdminView}
+            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/40 backdrop-blur-sm"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            管理者画面
+          </Button>
+        )}
+
         <NotificationSystem
           onNotificationClick={(notification) => {
             if (notification.related_request_id) {
@@ -62,13 +103,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <div className="hidden md:block">
             <div className="text-sm font-medium text-white">{user?.full_name}</div>
             <div className="text-xs text-white/70">
-              {pathname.startsWith('/member')
-                ? 'メンバー'
-                : user?.role === 'system-admin'
-                  ? 'システム管理者'
-                  : user?.role === 'admin'
-                    ? '管理者'
-                    : 'メンバー'}
+              {user?.role === 'system-admin'
+                ? 'システム管理者'
+                : user?.role === 'admin'
+                  ? '管理者'
+                  : 'メンバー'}
             </div>
           </div>
         </div>

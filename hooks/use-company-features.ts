@@ -4,9 +4,9 @@ import { supabase } from '@/lib/supabase';
 
 // 機能のデフォルト値（ローディング中やエラー時のフォールバック）
 const DEFAULT_FEATURES = {
-  chat: false,
-  report: false,
-  schedule: false,
+  chat: true,
+  report: true,
+  schedule: true,
 };
 
 // メモリキャッシュ
@@ -59,9 +59,9 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     try {
       console.log('機能取得開始:', companyId);
 
-      // タイムアウトを設定（5秒）
+      // タイムアウトを設定（10秒に延長）
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('機能取得タイムアウト')), 5000);
+        setTimeout(() => reject(new Error('機能取得タイムアウト')), 10000);
       });
 
       const fetchPromise = supabase
@@ -77,7 +77,8 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
       if (error) {
         console.error('機能取得エラー:', error);
         setError(error.message);
-        setFeatures(null);
+        // エラー時はデフォルト値を使用（メニュー表示を維持）
+        setFeatures(DEFAULT_FEATURES);
         // エラー時もキャッシュに保存して、再試行を防ぐ
         featureCache.set(companyId, {
           features: DEFAULT_FEATURES,
@@ -103,7 +104,13 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     } catch (err) {
       console.error('機能取得エラー:', err);
       setError(err instanceof Error ? err.message : '不明なエラー');
-      setFeatures(null);
+      // エラー時はデフォルト値を使用（メニュー表示を維持）
+      setFeatures(DEFAULT_FEATURES);
+      // エラー時もキャッシュに保存して、再試行を防ぐ
+      featureCache.set(companyId, {
+        features: DEFAULT_FEATURES,
+        timestamp: Date.now(),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +128,7 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     fetchFeatures();
   }, [companyId]);
 
-  // 定期的なポーリングで機能の変更を監視（10秒間隔）
+  // 定期的なポーリングで機能の変更を監視（60秒間隔に延長）
   useEffect(() => {
     if (!companyId) return;
 
@@ -129,16 +136,21 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
 
     const interval = setInterval(() => {
       console.log('機能ポーリング実行:', companyId);
+      // エラーが発生している場合はポーリングをスキップ
+      if (error) {
+        console.log('エラーが発生中のため、ポーリングをスキップ:', companyId);
+        return;
+      }
       // キャッシュをクリアして最新データを取得
       clearFeatureCache(companyId);
       fetchFeatures();
-    }, 10000); // 10秒間隔
+    }, 60000); // 60秒間隔に延長
 
     return () => {
       console.log('機能ポーリング監視を停止:', companyId);
       clearInterval(interval);
     };
-  }, [companyId]);
+  }, [companyId, error]);
 
   // ページフォーカス時に機能を再取得
   useEffect(() => {

@@ -96,8 +96,10 @@ export default function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
     if (user?.role === 'system-admin') return true;
     // ローディング中は一時的に全ての機能を表示（UX向上のため）
     if (isLoadingFeatures) return true;
+    // エラー時はデフォルトで機能を有効にする（メニュー表示を維持）
+    if (error) return true;
     // デフォルト値を使用して、未定義の場合も適切に処理
-    return features?.[feature] ?? false;
+    return features?.[feature] ?? true; // デフォルトをtrueに変更
   };
 
   // ログアウト中またはユーザーが存在しない場合は何も表示しない
