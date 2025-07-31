@@ -38,36 +38,36 @@ export default function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 timeport-header text-white flex items-center justify-between px-6 shadow-lg relative z-20">
-      <div className="flex items-center space-x-4">
+    <header className="h-16 timeport-header text-white flex items-center justify-between px-4 lg:px-6 shadow-lg relative z-20 overflow-hidden">
+      <div className="flex items-center space-x-2 lg:space-x-4 min-w-0">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden text-white hover:bg-white/10"
+          className="lg:hidden text-white hover:bg-white/10 flex-shrink-0"
           onClick={onMenuClick}
         >
           <Menu className="w-5 h-5" />
         </Button>
 
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60" />
           <Input
             placeholder="検索..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 w-64 bg-white/10 border-white/20 text-white placeholder:text-white/70 focus:bg-white/20 focus:border-white/40 backdrop-blur-sm"
+            className="pl-10 w-48 lg:w-64 bg-white/10 border-white/20 text-white placeholder:text-white/70 focus:bg-white/20 focus:border-white/40 backdrop-blur-sm"
           />
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
-        {/* 画面切り替えボタン - 通知マークの左側に配置 */}
+      <div className="flex items-center space-x-1 lg:space-x-2 min-w-0">
+        {/* 画面切り替えボタン - 通知マークの左側に配置（スマホでは非表示） */}
         {showMemberButton && (
           <Button
             variant="outline"
             size="sm"
             onClick={handleMemberView}
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/40 backdrop-blur-sm"
+            className="hidden lg:flex bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/40 backdrop-blur-sm flex-shrink-0"
           >
             <Users className="w-4 h-4 mr-2" />
             メンバー画面
@@ -79,30 +79,34 @@ export default function Header({ onMenuClick }: HeaderProps) {
             variant="outline"
             size="sm"
             onClick={handleAdminView}
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/40 backdrop-blur-sm"
+            className="hidden lg:flex bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/40 backdrop-blur-sm flex-shrink-0"
           >
             <Settings className="w-4 h-4 mr-2" />
             管理者画面
           </Button>
         )}
 
-        <NotificationSystem
-          onNotificationClick={(notification) => {
-            if (notification.related_request_id) {
-              router.push(`/member/requests/${notification.related_request_id}`);
-            }
-          }}
-        />
+        <div className="flex-shrink-0">
+          <NotificationSystem
+            onNotificationClick={(notification) => {
+              if (notification.related_request_id) {
+                router.push(`/member/requests/${notification.related_request_id}`);
+              }
+            }}
+          />
+        </div>
 
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
-            <span className="text-sm font-medium text-white">
+        <div className="flex items-center space-x-1 lg:space-x-2 min-w-0">
+          <div className="w-7 h-7 lg:w-8 lg:h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30 flex-shrink-0">
+            <span className="text-xs font-medium text-white">
               {user?.full_name?.charAt(0) || 'U'}
             </span>
           </div>
-          <div className="hidden md:block">
-            <div className="text-sm font-medium text-white">{user?.full_name}</div>
-            <div className="text-xs text-white/70">
+          <div className="hidden sm:block min-w-0">
+            <div className="text-xs lg:text-sm font-medium text-white truncate">
+              {user?.full_name}
+            </div>
+            <div className="text-xs text-white/70 truncate">
               {user?.role === 'system-admin'
                 ? 'システム管理者'
                 : user?.role === 'admin'

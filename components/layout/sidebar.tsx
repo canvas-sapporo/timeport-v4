@@ -199,13 +199,11 @@ export default function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user.full_name}</p>
                 <p className="text-xs text-white/80 truncate">
-                  {pathname.startsWith('/member')
-                    ? 'メンバー'
-                    : user.role === 'system-admin'
-                      ? 'システム管理者'
-                      : user.role === 'admin'
-                        ? '管理者'
-                        : 'メンバー'}
+                  {user.role === 'system-admin'
+                    ? 'システム管理者'
+                    : user.role === 'admin'
+                      ? '管理者'
+                      : 'メンバー'}
                 </p>
               </div>
             )}
