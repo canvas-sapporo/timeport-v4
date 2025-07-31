@@ -3,19 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
-import { createAdminClient, createServerClient } from '@/lib/supabase';
+import { createAdminClient } from '@/lib/supabase';
 import { withErrorHandling, AppError } from '@/lib/utils/error-handling';
 import { getUserCompanyId } from '@/lib/actions/user';
-import type { UserProfile } from '@/schemas/user_profile';
 import type { UUID } from '@/types/common';
 import {
-  ApproverListResponseSchema,
-  UserListResponseSchema,
-  UserDetailResponseSchema,
-  CreateUserResultSchema,
-  UpdateUserResultSchema,
-  DeleteUserResultSchema,
-  UserStatsSchema,
   UserProfileSchema,
   type CreateUserProfileInput,
   type UpdateUserProfileInput,
@@ -23,10 +15,6 @@ import {
   type ApproverListResponse,
   type UserListResponse,
   type UserDetailResponse,
-  type CreateUserResult,
-  type UpdateUserResult,
-  type DeleteUserResult,
-  type UserStats,
 } from '@/schemas/users';
 import { Group } from '@/schemas/group';
 
@@ -166,7 +154,8 @@ export async function getUsers(
 
         return {
           ...user,
-          groups: userGroups?.map((ug: any) => ug.groups).filter(Boolean) || [],
+          groups:
+            userGroups?.map((ug: { groups: unknown }) => ug.groups as Group).filter(Boolean) || [],
         };
       })
     );
@@ -205,7 +194,7 @@ export async function getUsers(
 
     if (params.group_id) {
       filteredUsers = filteredUsers.filter((user) =>
-        user.groups.some((group: any) => group.id === params.group_id)
+        user.groups.some((group: Group) => group.id === params.group_id)
       );
     }
 
@@ -277,7 +266,8 @@ export async function getUser(userId: UUID): Promise<UserDetailResponse> {
     // データを整形
     const user = {
       ...data,
-      groups: (data.user_groups as any)?.map((ug: any) => ug.groups) || [],
+      groups:
+        (data.user_groups as unknown as Array<{ groups: Group }>)?.map((ug) => ug.groups) || [],
     };
 
     console.log('ユーザー詳細取得完了:', user);
@@ -289,7 +279,7 @@ export async function getUser(userId: UUID): Promise<UserDetailResponse> {
 /**
  * ユーザーを作成
  */
-export const createUser = async (companyId: UUID, input: CreateUserProfileInput) => {
+export async function createUser(companyId: UUID, input: CreateUserProfileInput) {
   return withErrorHandling(async () => {
     console.log('ユーザー作成開始:', { companyId, input });
 
@@ -390,12 +380,12 @@ export const createUser = async (companyId: UUID, input: CreateUserProfileInput)
 
     return { id: userId };
   });
-};
+}
 
 /**
  * ユーザーを更新
  */
-export const updateUser = async (userId: UUID, input: UpdateUserProfileInput) => {
+export async function updateUser(userId: UUID, input: UpdateUserProfileInput) {
   return withErrorHandling(async () => {
     console.log('ユーザー更新開始:', { userId, input });
 
@@ -502,12 +492,12 @@ export const updateUser = async (userId: UUID, input: UpdateUserProfileInput) =>
 
     return { id: userId };
   });
-};
+}
 
 /**
  * ユーザーを削除（論理削除）
  */
-export const deleteUser = async (userId: UUID) => {
+export async function deleteUser(userId: UUID) {
   return withErrorHandling(async () => {
     console.log('ユーザー削除開始:', userId);
 
@@ -566,12 +556,12 @@ export const deleteUser = async (userId: UUID) => {
 
     return { id: userId };
   });
-};
+}
 
 /**
  * ユーザー統計を取得
  */
-export const getUserStats = async (companyId: UUID) => {
+export async function getUserStats(companyId: UUID) {
   return withErrorHandling(async () => {
     console.log('ユーザー統計取得開始:', companyId);
 
@@ -613,22 +603,28 @@ export const getUserStats = async (companyId: UUID) => {
 
     const stats = {
       total: users?.length || 0,
-      active: users?.filter((u: any) => u.is_active).length || 0,
-      inactive: users?.filter((u: any) => !u.is_active).length || 0,
-      admin: users?.filter((u: any) => u.role === 'admin' && u.is_active).length || 0,
-      member: users?.filter((u: any) => u.role === 'member' && u.is_active).length || 0,
+      active: users?.filter((u: { is_active: boolean }) => u.is_active).length || 0,
+      inactive: users?.filter((u: { is_active: boolean }) => !u.is_active).length || 0,
+      admin:
+        users?.filter(
+          (u: { role: string; is_active: boolean }) => u.role === 'admin' && u.is_active
+        ).length || 0,
+      member:
+        users?.filter(
+          (u: { role: string; is_active: boolean }) => u.role === 'member' && u.is_active
+        ).length || 0,
     };
 
     console.log('ユーザー統計取得完了:', stats);
 
     return stats;
   });
-};
+}
 
 /**
  * デバッグ用: データベースの状態を確認
  */
-export const debugDatabaseState = async (companyId: UUID) => {
+export async function debugDatabaseState(companyId: UUID) {
   return withErrorHandling(async () => {
     console.log('=== データベース状態デバッグ開始 ===');
 
@@ -728,4 +724,4 @@ export const debugDatabaseState = async (companyId: UUID) => {
       companyUserGroups: companyUserGroups || [],
     };
   });
-};
+}

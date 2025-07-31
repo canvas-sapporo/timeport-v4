@@ -27,6 +27,24 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [hasCheckedWorkTypes, setHasCheckedWorkTypes] = useState(false);
 
+  async function checkWorkTypes() {
+    if (!user?.company_id) return;
+    try {
+      const result = await getWorkTypes(user.company_id, { page: 1, limit: 1 });
+      if (result.success && result.data.work_types.length === 0) {
+        toast({
+          title: '勤務形態が未設定です',
+          description: '勤務形態を設定してください。設定画面から勤務形態を追加できます。',
+          variant: 'destructive',
+        });
+      }
+      setHasCheckedWorkTypes(true);
+    } catch (error) {
+      console.error('勤務形態確認エラー:', error);
+      setHasCheckedWorkTypes(true);
+    }
+  }
+
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       router.push('/login');
@@ -35,26 +53,9 @@ export default function AdminDashboard() {
 
     // 勤務形態の確認（一度だけ実行）
     if (user?.company_id && !hasCheckedWorkTypes) {
-      const checkWorkTypes = async () => {
-        try {
-          const result = await getWorkTypes(user.company_id!, { page: 1, limit: 1 });
-          if (result.success && result.data.work_types.length === 0) {
-            toast({
-              title: '勤務形態が未設定です',
-              description: '勤務形態を設定してください。設定画面から勤務形態を追加できます。',
-              variant: 'destructive',
-            });
-          }
-          setHasCheckedWorkTypes(true);
-        } catch (error) {
-          console.error('勤務形態確認エラー:', error);
-          setHasCheckedWorkTypes(true);
-        }
-      };
-
       checkWorkTypes();
     }
-  }, [user, router, hasCheckedWorkTypes, toast]);
+  }, [user, router, hasCheckedWorkTypes, toast, checkWorkTypes]);
 
   if (!user || user.role !== 'admin') {
     return null;

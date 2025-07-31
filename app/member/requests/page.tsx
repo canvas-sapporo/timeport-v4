@@ -49,9 +49,37 @@ export default function MemberRequestsPage() {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [requestToSubmit, setRequestToSubmit] = useState<any>(null);
-  const [requestToEdit, setRequestToEdit] = useState<any>(null);
+  const [selectedRequest, setSelectedRequest] = useState<{
+    id: string;
+    title?: string;
+    created_at?: string;
+    target_date?: string;
+    statuses?: { name?: string; color?: string; code?: string };
+    form_data?: Record<string, unknown>;
+    submission_comment?: string;
+    request_form_id?: string;
+    current_approval_step?: number;
+  } | null>(null);
+  const [requestToSubmit, setRequestToSubmit] = useState<{
+    id: string;
+    title?: string;
+  } | null>(null);
+  const [requestToEdit, setRequestToEdit] = useState<{
+    id: string;
+    created_at: string;
+    updated_at: string;
+    request_form_id: string;
+    user_id: string;
+    form_data: Record<string, string | number | boolean | Date | string[]>;
+    target_date: string;
+    start_date: string;
+    end_date: string;
+    submission_comment: string;
+    current_approval_step: number;
+    comments: unknown[];
+    attachments: unknown[];
+    status_id?: string;
+  } | null>(null);
   const [formData, setFormData] = useState<
     Record<string, string | number | boolean | Date | string[]>
   >({});
@@ -95,7 +123,9 @@ export default function MemberRequestsPage() {
 
   const activeRequestForms = requestForms.filter((rf) => rf.is_active && !rf.deleted_at);
 
-  function getStatusBadge(status: any) {
+  function getStatusBadge(
+    status: { name?: string; color?: string; code?: string } | null | undefined
+  ) {
     if (!status) {
       return <Badge variant="outline">-</Badge>;
     }
@@ -142,7 +172,7 @@ export default function MemberRequestsPage() {
       console.warn('ステータスの取得に失敗:', error);
     }
     // 日付データのバリデーションとクリーンアップ
-    function validateAndCleanDate(dateValue: any): string | null {
+    function validateAndCleanDate(dateValue: unknown): string | null {
       if (!dateValue) return null;
       const dateStr = String(dateValue);
       // 空文字列や無効な文字列の場合はnullを返す
@@ -158,7 +188,7 @@ export default function MemberRequestsPage() {
       return parsedDate.toISOString().split('T')[0];
     }
     // フォームデータのバリデーションとクリーンアップ
-    const cleanedFormData: Record<string, any> = {};
+    const cleanedFormData: Record<string, string | number | boolean | Date | string[]> = {};
     Object.keys(formData).forEach((key) => {
       const value = formData[key];
       if (value !== null && value !== undefined && value !== '') {
@@ -169,7 +199,7 @@ export default function MemberRequestsPage() {
             cleanedFormData[key] = cleanedDate;
           }
         } else {
-          cleanedFormData[key] = value;
+          cleanedFormData[key] = value as string | number | boolean | Date | string[];
         }
       }
     });
@@ -181,8 +211,9 @@ export default function MemberRequestsPage() {
         title: requestForm.name,
         form_data: cleanedFormData,
         target_date: new Date().toISOString().split('T')[0],
-        start_date: cleanedFormData.start_date || new Date().toISOString().split('T')[0],
-        end_date: cleanedFormData.end_date || new Date().toISOString().split('T')[0],
+        start_date:
+          (cleanedFormData.start_date as string) || new Date().toISOString().split('T')[0],
+        end_date: (cleanedFormData.end_date as string) || new Date().toISOString().split('T')[0],
         submission_comment: '',
         current_approval_step: 1,
         comments: [],
@@ -205,21 +236,63 @@ export default function MemberRequestsPage() {
     }
   }
 
-  function handleViewRequest(request: any) {
+  function handleViewRequest(request: {
+    id: string;
+    title?: string;
+    created_at?: string;
+    target_date?: string;
+    statuses?: { name?: string; color?: string; code?: string };
+    form_data?: Record<string, unknown>;
+    submission_comment?: string;
+    request_form_id?: string;
+    current_approval_step?: number;
+  }) {
     console.log('handleViewRequest: 開始', request);
     setSelectedRequest(request);
     setIsDetailDialogOpen(true);
   }
 
-  function handleSubmitRequest(request: any) {
+  function handleSubmitRequest(request: { id: string; title?: string }) {
     console.log('handleSubmitRequest: 開始', request);
     setRequestToSubmit(request);
     setIsSubmitDialogOpen(true);
   }
 
-  function handleEditRequest(request: any) {
+  function handleEditRequest(request: {
+    id: string;
+    created_at: string;
+    updated_at: string;
+    request_form_id: string;
+    user_id: string;
+    form_data: Record<string, string | number | boolean | Date | string[]>;
+    target_date: string;
+    start_date?: string;
+    end_date?: string;
+    submission_comment?: string;
+    current_approval_step: number;
+    comments: unknown[];
+    attachments: unknown[];
+    status_id?: string;
+  }) {
     console.log('handleEditRequest: 開始', request);
-    setRequestToEdit(request);
+    setRequestToEdit(
+      request as {
+        id: string;
+        created_at: string;
+        updated_at: string;
+        request_form_id: string;
+        user_id: string;
+        form_data: Record<string, string | number | boolean | Date | string[]>;
+        target_date: string;
+        start_date: string;
+        end_date: string;
+        submission_comment: string;
+        current_approval_step: number;
+        comments: Array<unknown>;
+        attachments: Array<unknown>;
+        status_id?: string;
+      }
+    );
     setIsEditDialogOpen(true);
   }
 
@@ -256,7 +329,15 @@ export default function MemberRequestsPage() {
     }
   }
 
-  function renderFormField(field: any) {
+  function renderFormField(field: {
+    name: string;
+    type?: string;
+    label: string;
+    required?: boolean;
+    placeholder?: string;
+    options?: Array<{ value: string; label: string }>;
+    metadata?: { object_type?: string; field_type?: string };
+  }) {
     const fieldType = field.type || 'text';
     const fieldValue = formData[field.name] || '';
     switch (fieldType) {
@@ -298,7 +379,7 @@ export default function MemberRequestsPage() {
               <SelectValue placeholder={field.label} />
             </SelectTrigger>
             <SelectContent>
-              {field.options?.map((option: any) => (
+              {field.options?.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
@@ -318,9 +399,21 @@ export default function MemberRequestsPage() {
           if (metadata.object_type === 'attendance' && metadata.field_type === 'clock_records') {
             return (
               <ClockRecordsInput
-                value={(fieldValue as any) || []}
+                value={
+                  (fieldValue as unknown as Array<{
+                    in_time: string;
+                    breaks: { break_start: string; break_end: string }[];
+                    out_time?: string;
+                  }>) || []
+                }
                 onChangeAction={(newValue) =>
-                  setFormData((prev) => ({ ...prev, [field.name]: newValue }))
+                  setFormData(
+                    (prev) =>
+                      ({ ...prev, [field.name]: newValue }) as Record<
+                        string,
+                        string | number | boolean | Date | string[]
+                      >
+                  )
                 }
                 error={undefined}
                 disabled={false}
@@ -392,14 +485,25 @@ export default function MemberRequestsPage() {
                 <div className="space-y-4">
                   <h3 className="font-medium">{selectedType.name}</h3>
                   {selectedType.form_config
-                    .sort((a: any, b: any) => a.order - b.order)
-                    .map((field: any) => (
+                    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
+                    .map((field) => (
                       <div key={field.id}>
                         <Label htmlFor={field.name}>
                           {field.label}
                           {field.required && <span className="text-red-500 ml-1">*</span>}
                         </Label>
-                        {renderFormField(field)}
+                        {renderFormField(
+                          field as {
+                            id: string;
+                            name: string;
+                            type?: string;
+                            label: string;
+                            required?: boolean;
+                            placeholder?: string;
+                            options?: Array<{ value: string; label: string }>;
+                            metadata?: { object_type?: string; field_type?: string };
+                          }
+                        )}
                       </div>
                     ))}
                 </div>
@@ -503,10 +607,10 @@ export default function MemberRequestsPage() {
                         );
                       }
 
-                      return requestForm.approval_flow.map((step, index) => {
-                        const isCurrentStep = step.step === selectedRequest.current_approval_step;
-                        const isCompleted = selectedRequest.current_approval_step > step.step;
-                        const isPending = selectedRequest.current_approval_step === step.step;
+                      return requestForm.approval_flow.map((step, _index) => {
+                        const currentStep = selectedRequest.current_approval_step || 0;
+                        const isCurrentStep = step.step === currentStep;
+                        const isCompleted = currentStep > step.step;
 
                         return (
                           <div
@@ -611,7 +715,54 @@ export default function MemberRequestsPage() {
           setIsEditDialogOpen(false);
           setRequestToEdit(null);
         }}
-        request={requestToEdit}
+        request={
+          requestToEdit! as {
+            id: string;
+            created_at: string;
+            updated_at: string;
+            request_form_id: string;
+            user_id: string;
+            form_data: Record<string, string | number | boolean | Date | string[]>;
+            target_date: string;
+            start_date: string;
+            end_date: string;
+            submission_comment: string;
+            current_approval_step: number;
+            comments: Array<{
+              id: string;
+              user_id: string;
+              type:
+                | 'submission'
+                | 'approval'
+                | 'rejection'
+                | 'modification'
+                | 'withdrawal'
+                | 'reply';
+              user_name: string;
+              content: string;
+              created_at: string;
+              parent_id?: string;
+              updated_at?: string;
+              attachments?: Array<{
+                id: string;
+                name: string;
+                url: string;
+                size: number;
+              }>;
+              replies?: Array<unknown>;
+            }>;
+            attachments: Array<{
+              path: string;
+              id: string;
+              name: string;
+              size: number;
+              mime_type: string;
+              uploaded_by: string;
+              uploaded_at: string;
+            }>;
+            status_id?: string;
+          }
+        }
         requestForms={requestForms}
         onSuccessAction={() => {
           refreshRequests();
@@ -655,20 +806,41 @@ export default function MemberRequestsPage() {
                           ? new Date(request.start_date).toLocaleDateString('ja-JP')
                           : '-'}
                   </TableCell>
-                  <TableCell>{getStatusBadge((request as any).statuses)}</TableCell>
+                  <TableCell>
+                    {getStatusBadge(
+                      (request as { statuses?: { name?: string; color?: string; code?: string } })
+                        .statuses
+                    )}
+                  </TableCell>
                   <TableCell>
                     {(() => {
                       // 承認フローから現在の承認者を取得
                       if (
-                        (request as any).request_forms?.approval_flow &&
+                        (
+                          request as {
+                            request_forms?: {
+                              approval_flow?: Array<{ step: number; approver_id: string }>;
+                            };
+                          }
+                        ).request_forms?.approval_flow &&
                         request.current_approval_step
                       ) {
-                        const currentStep = (request as any).request_forms.approval_flow.find(
-                          (step: any) => step.step === request.current_approval_step
+                        const currentStep = (
+                          request as {
+                            request_forms?: {
+                              approval_flow?: Array<{ step: number; approver_id: string }>;
+                            };
+                          }
+                        ).request_forms?.approval_flow?.find(
+                          (step: { step: number; approver_id: string }) =>
+                            step.step === request.current_approval_step
                         );
                         if (currentStep) {
                           // 承認者IDからユーザー情報を取得
-                          const approver = users.find((u: any) => u.id === currentStep.approver_id);
+                          const approver = users.find(
+                            (u: { id: string; family_name: string; first_name: string }) =>
+                              u.id === currentStep.approver_id
+                          );
                           if (approver) {
                             return `${approver.family_name} ${approver.first_name}`;
                           }
@@ -683,7 +855,7 @@ export default function MemberRequestsPage() {
                         <Eye className="w-4 h-4" />
                       </Button>
                       {/* 下書き状態の場合のみ編集ボタンと申請ボタンを表示 */}
-                      {(request as any).statuses?.code === 'draft' && (
+                      {(request as { statuses?: { code?: string } }).statuses?.code === 'draft' && (
                         <>
                           <Button
                             variant="outline"

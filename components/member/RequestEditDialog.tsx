@@ -16,25 +16,28 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { updateRequest } from '@/lib/actions/requests';
 import ClockRecordsInput from '@/components/forms/clock-records-input';
+import { RequestData, FormFieldConfig } from '@/schemas/request';
+import { RequestFormData } from '@/schemas/request-forms';
+import { DynamicFormData } from '@/types/dynamic-data';
 
 interface RequestEditDialogProps {
   isOpen: boolean;
   onCloseAction: () => void;
-  request: any;
-  requestForms: any[];
+  request: RequestData;
+  requestForms: RequestFormData[];
   onSuccessAction: () => void;
 }
 
-export function RequestEditDialog({
+const RequestEditDialog = ({
   isOpen,
   onCloseAction,
   request,
   requestForms,
   onSuccessAction,
-}: RequestEditDialogProps) {
+}: RequestEditDialogProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<DynamicFormData>({});
   const [targetDate, setTargetDate] = useState<Date | undefined>(
     request?.target_date ? new Date(request.target_date) : undefined
   );
@@ -45,11 +48,13 @@ export function RequestEditDialog({
     request?.end_date ? new Date(request.end_date) : undefined
   );
 
-  const requestForm = requestForms.find((form: any) => form.id === request?.request_form_id);
+  const requestForm = requestForms.find(
+    (form: RequestFormData) => (form as unknown as { id: string }).id === request?.request_form_id
+  );
 
   useEffect(() => {
     if (request) {
-      setFormData(request.form_data || {});
+      setFormData((request.form_data as DynamicFormData) || {});
       setTargetDate(request.target_date ? new Date(request.target_date) : undefined);
       setStartDate(request.start_date ? new Date(request.start_date) : undefined);
       setEndDate(request.end_date ? new Date(request.end_date) : undefined);
@@ -62,7 +67,7 @@ export function RequestEditDialog({
     setIsLoading(true);
     try {
       // 日付の検証とクリーンアップ
-      const validateAndCleanDate = (dateValue: any): string | null => {
+      const validateAndCleanDate = (dateValue: Date | undefined): string | null => {
         if (!dateValue) return null;
         const date = new Date(dateValue);
         return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
@@ -110,11 +115,14 @@ export function RequestEditDialog({
     }
   };
 
-  const handleFormDataChange = (fieldName: string, value: any) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      [fieldName]: value,
-    }));
+  const handleFormDataChange = (fieldName: string, value: unknown) => {
+    setFormData(
+      (prev: DynamicFormData) =>
+        ({
+          ...prev,
+          [fieldName]: value,
+        }) as DynamicFormData
+    );
   };
 
   return (
@@ -217,7 +225,7 @@ export function RequestEditDialog({
             <div>
               <Label>申請内容</Label>
               <div className="space-y-4">
-                {requestForm.form_config?.map((field: any) => (
+                {requestForm.form_config?.map((field: FormFieldConfig) => (
                   <div key={field.id} className="space-y-2">
                     <Label htmlFor={field.name}>
                       {field.label}
@@ -225,20 +233,26 @@ export function RequestEditDialog({
                     </Label>
                     {field.type === 'object' && field.metadata?.object_type === 'attendance' ? (
                       <ClockRecordsInput
-                        value={formData[field.name] || []}
+                        value={
+                          (formData[field.name] as unknown as {
+                            in_time: string;
+                            breaks: { break_start: string; break_end: string }[];
+                            out_time?: string | undefined;
+                          }[]) || []
+                        }
                         onChangeAction={(value) => handleFormDataChange(field.name, value)}
                       />
                     ) : field.type === 'text' ? (
                       <Input
                         id={field.name}
-                        value={formData[field.name] || ''}
+                        value={String(formData[field.name] || '')}
                         onChange={(e) => handleFormDataChange(field.name, e.target.value)}
                         placeholder={field.placeholder}
                       />
                     ) : field.type === 'textarea' ? (
                       <Textarea
                         id={field.name}
-                        value={formData[field.name] || ''}
+                        value={String(formData[field.name] || '')}
                         onChange={(e) => handleFormDataChange(field.name, e.target.value)}
                         placeholder={field.placeholder}
                       />
@@ -246,14 +260,14 @@ export function RequestEditDialog({
                       <Input
                         id={field.name}
                         type="number"
-                        value={formData[field.name] || ''}
+                        value={String(formData[field.name] || '')}
                         onChange={(e) => handleFormDataChange(field.name, e.target.value)}
                         placeholder={field.placeholder}
                       />
                     ) : (
                       <Input
                         id={field.name}
-                        value={formData[field.name] || ''}
+                        value={String(formData[field.name] || '')}
                         onChange={(e) => handleFormDataChange(field.name, e.target.value)}
                         placeholder={field.placeholder}
                       />
@@ -277,4 +291,6 @@ export function RequestEditDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export { RequestEditDialog };

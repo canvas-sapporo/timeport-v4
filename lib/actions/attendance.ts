@@ -1,27 +1,18 @@
 'use server';
 
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 
 import type {
   AttendanceStatusData,
   ClockType,
   StatusLogic,
-  ClockOperation,
   ClockResult,
   AttendanceData as Attendance,
   ClockBreakRecord,
   ClockRecord,
 } from '@/schemas/attendance';
-import {
-  AppError,
-  withErrorHandling,
-  createSuccessResponse,
-  createFailureResponse,
-} from '@/lib/utils/error-handling';
+import { AppError } from '@/lib/utils/error-handling';
 
 // 環境変数の確認
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

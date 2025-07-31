@@ -39,7 +39,6 @@ export default function AdminAttendanceFilters({
   users,
   groups,
   workTypes,
-  isLoading = false,
   onResetFilters,
 }: AdminAttendanceFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);

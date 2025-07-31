@@ -66,7 +66,7 @@ export default function SuperAdminSystemPage() {
     }
   }
 
-  function handleSettingChange(key: string, value: any) {
+  function handleSettingChange(key: string, value: unknown) {
     setSystemSettings((prev) => ({
       ...prev,
       [key]: value,

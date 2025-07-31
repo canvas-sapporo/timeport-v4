@@ -624,7 +624,7 @@ export default function MemberChatPage() {
     }
   }
 
-  const getChatDisplayName = (chat: ChatListView) => {
+  function getChatDisplayName(chat: ChatListView) {
     if (chat.chat_type === 'group') {
       return chat.name || 'グループチャット';
     } else {
@@ -634,9 +634,9 @@ export default function MemberChatPage() {
         .filter((name) => name !== user?.full_name);
       return otherParticipants[0] || '1対1チャット';
     }
-  };
+  }
 
-  const getMessageSender = (message: ChatMessageData) => {
+  function getMessageSender(message: ChatMessageData) {
     // メッセージに送信者情報が含まれている場合はそれを使用
     if (message.user_profiles) {
       return {
@@ -652,9 +652,11 @@ export default function MemberChatPage() {
       family_name: '送信者',
       first_name: '名前',
     };
-  };
+  }
 
-  const getReadStatus = (message: ChatMessageData) => {
+  function getReadStatus(message: ChatMessageData) {
+    if (!user) return null;
+
     if (message.user_id === user.id) {
       // 自分のメッセージの場合、他の参加者の既読状況を確認
       const chatParticipants = chatUsers.filter(
@@ -672,16 +674,16 @@ export default function MemberChatPage() {
       return `${readCount}人が既読`;
     }
     return null;
-  };
+  }
 
-  const formatMessageTime = (timestamp: string) => {
+  function formatMessageTime(timestamp: string) {
     return new Date(timestamp).toLocaleTimeString('ja-JP', {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }
 
-  const formatLastMessageTime = (timestamp: string | null) => {
+  function formatLastMessageTime(timestamp: string | null) {
     if (!timestamp) return '';
 
     const date = new Date(timestamp);
@@ -699,7 +701,7 @@ export default function MemberChatPage() {
         day: 'numeric',
       });
     }
-  };
+  }
 
   return (
     <div className="h-[calc(100vh-8rem)] flex">

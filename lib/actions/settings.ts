@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 
 import { createServerClient } from '@/lib/supabase';
 import type {
@@ -10,10 +9,8 @@ import type {
   AttendanceSetting,
   NotificationSetting,
   SettingType,
-  GetSettingResult,
   SaveSettingResult,
   DeleteSettingResult,
-  GetUserSettingsResult,
 } from '@/schemas/setting';
 
 /**

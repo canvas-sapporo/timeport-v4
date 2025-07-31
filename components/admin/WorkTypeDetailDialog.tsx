@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Info, Clock, Coffee, Calendar, AlertCircle } from 'lucide-react';
 
 import {
@@ -45,13 +45,7 @@ export default function WorkTypeDetailDialog({
   const [workTypeDetail, setWorkTypeDetail] = useState<WorkTypeDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (open && workTypeId) {
-      fetchWorkTypeDetail();
-    }
-  }, [open, workTypeId]);
-
-  const fetchWorkTypeDetail = async () => {
+  const fetchWorkTypeDetail = useCallback(async () => {
     if (!workTypeId) return;
 
     setIsLoading(true);
@@ -63,7 +57,13 @@ export default function WorkTypeDetailDialog({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [workTypeId]);
+
+  useEffect(() => {
+    if (open && workTypeId) {
+      fetchWorkTypeDetail();
+    }
+  }, [open, workTypeId, fetchWorkTypeDetail]);
 
   const formatTime = (time: string) => {
     if (!time) return '--:--';

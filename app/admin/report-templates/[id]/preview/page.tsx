@@ -27,7 +27,7 @@ export default function PreviewReportTemplatePage({ params }: { params: Promise<
   const [isLoading, setIsLoading] = useState(true);
   const [template, setTemplate] = useState<ReportTemplate | null>(null);
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
-  const [previewData, setPreviewData] = useState<Record<string, any>>({});
+  const [previewData, setPreviewData] = useState<Record<string, unknown>>({});
   // const [templateId, setTemplateId] = useState<string>('');
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function PreviewReportTemplatePage({ params }: { params: Promise<
         setTemplate(templateResult.data);
 
         // プレビューデータを初期化
-        const initialData: Record<string, any> = {};
+        const initialData: Record<string, unknown> = {};
         templateResult.data.form_config.forEach((field) => {
           switch (field.type) {
             case 'checkbox':

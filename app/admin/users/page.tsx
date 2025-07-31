@@ -46,8 +46,13 @@ export default function AdminUsersPage() {
       });
 
       if (usersResult.success) {
-        setUsers((usersResult.data as any).users as (UserProfile & { groups: Group[] })[]);
-        console.log('ユーザー一覧更新:', (usersResult.data as any).users);
+        setUsers(
+          (usersResult.data as unknown as { users: (UserProfile & { groups: Group[] })[] }).users
+        );
+        console.log(
+          'ユーザー一覧更新:',
+          (usersResult.data as unknown as { users: (UserProfile & { groups: Group[] })[] }).users
+        );
       } else {
         console.error('ユーザー取得失敗:', usersResult.error);
       }

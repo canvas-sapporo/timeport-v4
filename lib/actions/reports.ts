@@ -1,14 +1,10 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { createServerClient } from '@/lib/supabase';
 import type {
-  CreateReportInput,
-  UpdateReportInput,
-  ApproveReportInput,
   ReportListItem,
   ReportDetail,
   ReportStatistics,
@@ -473,19 +469,34 @@ export async function getReports(): Promise<GetReportsResult> {
     }
 
     // データを整形
-    const reports: ReportListItem[] = (data as any[]).map((item: any) => ({
-      id: item.id as string,
-      title: item.title as string,
-      template_name: item.report_templates?.name as string,
-      report_date: item.report_date as string,
+    const reports: ReportListItem[] = (
+      data as unknown as Array<{
+        id: string;
+        title: string;
+        report_date: string;
+        submitted_at?: string;
+        completed_at?: string;
+        report_templates?: { name: string };
+        report_statuses?: {
+          name: string;
+          display_name: string;
+          font_color: string;
+          background_color: string;
+        };
+      }>
+    ).map((item) => ({
+      id: item.id,
+      title: item.title,
+      template_name: item.report_templates?.name || '',
+      report_date: item.report_date,
       current_status: {
-        name: item.report_statuses?.name as string,
-        display_name: item.report_statuses?.display_name as string,
-        font_color: item.report_statuses?.font_color as string,
-        background_color: item.report_statuses?.background_color as string,
+        name: item.report_statuses?.name || '',
+        display_name: item.report_statuses?.display_name || '',
+        font_color: item.report_statuses?.font_color || '',
+        background_color: item.report_statuses?.background_color || '',
       },
-      submitted_at: item.submitted_at as string | undefined,
-      completed_at: item.completed_at as string | undefined,
+      submitted_at: item.submitted_at,
+      completed_at: item.completed_at,
     }));
 
     console.log('レポート一覧取得成功:', reports.length);
@@ -552,14 +563,19 @@ export async function getReport(id: string): Promise<GetReportDetailResult> {
     // データを整形
     const reportDetail: ReportDetail = {
       ...data,
-      template: data.report_templates as any,
-      current_status: data.report_statuses as any,
-      approvals: ((data.report_approvals as any[]) || []).map((approval: any) => ({
+      template: data.report_templates as Record<string, unknown>,
+      current_status: data.report_statuses as Record<string, unknown>,
+      approvals: (
+        (data.report_approvals as Array<{
+          user_profiles?: { name: string };
+          report_statuses?: Record<string, unknown>;
+        }>) || []
+      ).map((approval) => ({
         ...approval,
         approver: { name: approval.user_profiles?.name || '' },
         status: approval.report_statuses,
       })),
-      attachments: (data.report_attachments as any[]) || [],
+      attachments: (data.report_attachments as Array<Record<string, unknown>>) || [],
     };
 
     console.log('レポート詳細取得成功');
@@ -612,17 +628,32 @@ export async function getReportStatistics(): Promise<GetReportStatisticsResult> 
 
     // 統計を計算
     const statistics: ReportStatistics = {
-      total_reports: (data as any[]).length,
-      draft_reports: (data as any[]).filter((item: any) => item.report_statuses?.name === 'draft')
-        .length,
-      submitted_reports: (data as any[]).filter(
-        (item: any) => item.report_statuses?.name === 'submitted'
+      total_reports: (
+        data as unknown as Array<{
+          report_statuses?: { name: string };
+        }>
       ).length,
-      completed_reports: (data as any[]).filter(
-        (item: any) => item.report_statuses?.name === 'completed'
-      ).length,
-      pending_approval_reports: (data as any[]).filter((item: any) =>
-        ['submitted', 'unread', 'read', 'review'].includes(item.report_statuses?.name)
+      draft_reports: (
+        data as unknown as Array<{
+          report_statuses?: { name: string };
+        }>
+      ).filter((item) => item.report_statuses?.name === 'draft').length,
+      submitted_reports: (
+        data as unknown as Array<{
+          report_statuses?: { name: string };
+        }>
+      ).filter((item) => item.report_statuses?.name === 'submitted').length,
+      completed_reports: (
+        data as unknown as Array<{
+          report_statuses?: { name: string };
+        }>
+      ).filter((item) => item.report_statuses?.name === 'completed').length,
+      pending_approval_reports: (
+        data as unknown as Array<{
+          report_statuses?: { name: string };
+        }>
+      ).filter((item) =>
+        ['submitted', 'unread', 'read', 'review'].includes(item.report_statuses?.name || '')
       ).length,
     };
 

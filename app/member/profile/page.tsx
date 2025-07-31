@@ -51,7 +51,7 @@ export default function MemberProfilePage() {
 
   // ユーザープロフィールとグループ情報を読み込み
   useEffect(() => {
-    const loadUserData = async () => {
+    async function loadUserData() {
       if (!user?.id) return;
 
       try {
@@ -63,14 +63,14 @@ export default function MemberProfilePage() {
       } catch (error) {
         console.error('Error loading user data:', error);
       }
-    };
+    }
 
     loadUserData();
   }, [user?.id]);
 
   // 企業情報を読み込み
   useEffect(() => {
-    const loadCompanyInfo = async () => {
+    async function loadCompanyInfo() {
       if (!user?.id) return;
 
       try {
@@ -88,7 +88,7 @@ export default function MemberProfilePage() {
       } catch (error) {
         console.error('Error loading company info:', error);
       }
-    };
+    }
 
     loadCompanyInfo();
   }, [user?.id]);
@@ -99,31 +99,31 @@ export default function MemberProfilePage() {
 
   // const userGroup = groups.find((g) => g.id === user.primary_group_id);
 
-  const getGroupPath = (groupId: string) => {
+  function getGroupPath(groupId: string) {
     const group = groups.find((g) => g.id === groupId);
     if (!group) return '';
     return group.name;
-  };
+  }
 
   // ユーザーが所属するグループを取得
   const userGroups = groups.filter((group) => group.id === user?.primary_group_id);
 
-  const handleEdit = () => {
+  function handleEdit() {
     setEditData({
       family_name: userProfile?.family_name || '',
       first_name: userProfile?.first_name || '',
     });
     setIsEditing(true);
-  };
+  }
 
-  const handleSave = () => {
+  function handleSave() {
     // In a real app, this would update the user data
     setIsEditing(false);
-  };
+  }
 
-  const handleCancel = () => {
+  function handleCancel() {
     setIsEditing(false);
-  };
+  }
 
   return (
     <div className="space-y-6">

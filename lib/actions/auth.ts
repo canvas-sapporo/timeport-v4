@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { redirect } from 'next/navigation';
 
 import { loginUser } from '@/lib/auth';
-import { type LoginActionResult, type AuthUser } from '@/schemas/auth';
+import { type LoginActionResult } from '@/schemas/auth';
 
 export async function loginAction(formData: FormData): Promise<LoginActionResult | never> {
   console.log('Server Action開始');

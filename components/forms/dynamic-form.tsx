@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -113,7 +113,7 @@ const DynamicFormField = ({
 }: {
   field: FormFieldConfig;
   register: (name: string) => Record<string, unknown>;
-  errors: Record<string, any>;
+  errors: FieldErrors<Record<string, unknown>>;
   setValue: (name: string, value: unknown) => void;
   watch: (name: string) => unknown;
 }) => {

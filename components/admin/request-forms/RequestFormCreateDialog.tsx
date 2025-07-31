@@ -24,16 +24,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { createRequestForm } from '@/lib/actions/admin/request-forms';
 import { getDefaultFormConfig, getDefaultApprovalFlow } from '@/lib/utils/request-type-defaults';
-import { getObjectTypeDefaults } from '@/lib/utils/request-type-utils';
 import FormBuilder from '@/components/forms/form-builder';
 import ApprovalFlowBuilder from '@/components/admin/request-forms/ApprovalFlowBuilder';
 import ObjectTypeSettingsDialog from '@/components/forms/object-type-settings-dialog';
-import type { RequestForm, FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/schemas/request';
+import type { FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/schemas/request';
 
 const requestTypeSchema = z.object({
   name: z.string().min(1, '申請フォーム名は必須です'),

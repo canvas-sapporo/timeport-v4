@@ -1,30 +1,11 @@
 'use server';
 
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 
-import type { CreateWorkTypeInput, UpdateWorkTypeInput, WorkType } from '@/schemas/employment-type';
-import {
-  AppError,
-  withErrorHandling,
-  createSuccessResponse,
-  createFailureResponse,
-  validateRequired,
-} from '@/lib/utils/error-handling';
+import { AppError, withErrorHandling, validateRequired } from '@/lib/utils/error-handling';
 import type { ValidationError } from '@/types/common';
 import {
-  CreateWorkTypeFormDataSchema,
-  EditWorkTypeFormDataSchema,
-  WorkTypeSearchParamsSchema,
-  WorkTypeValidationResultSchema,
-  CreateWorkTypeResultSchema,
-  UpdateWorkTypeResultSchema,
-  DeleteWorkTypeResultSchema,
-  WorkTypeListResponseSchema,
-  WorkTypeStatsSchema,
   type CreateWorkTypeFormData,
   type EditWorkTypeFormData,
   type WorkTypeSearchParams,

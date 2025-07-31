@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Calendar, Download, Info, Clock, CheckCircle, XCircle, Settings } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
-
 import { getUserAttendance, getUserWorkTypes } from '@/lib/actions/attendance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -86,43 +85,6 @@ export default function MemberAttendancePage() {
     approver: false,
     updatedAt: false,
   });
-
-  // カレンダー日付生成関数
-  const generateCalendarDays = (yearMonth: string): CalendarDay[] => {
-    const [year, month] = yearMonth.split('-').map(Number);
-    const firstDay = new Date(year, month - 1, 1);
-    const lastDay = new Date(year, month, 0);
-    const days: CalendarDay[] = [];
-
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-      const date = new Date(year, month - 1, day);
-      const dateString = date.toISOString().split('T')[0];
-      const weekday = date.toLocaleDateString('ja-JP', { weekday: 'short' });
-      const dayOfWeek = date.getDay();
-
-      let weekdayColor = 'text-gray-600'; // 平日はグレー
-      let isWeekend = false;
-
-      if (dayOfWeek === 0) {
-        // 日曜日
-        weekdayColor = 'text-red-600';
-        isWeekend = true;
-      } else if (dayOfWeek === 6) {
-        // 土曜日
-        weekdayColor = 'text-blue-600';
-        isWeekend = true;
-      }
-
-      days.push({
-        date: dateString,
-        weekday,
-        weekdayColor,
-        isWeekend,
-      });
-    }
-
-    return days;
-  };
 
   // フィルタリング関数
   function applyFilters(records: AttendanceData[]): AttendanceData[] {
@@ -263,7 +225,7 @@ export default function MemberAttendancePage() {
     return null;
   }
 
-  const formatDateWithWeekday = (date: string, weekday: string, weekdayColor: string) => {
+  function formatDateWithWeekday(date: string, weekday: string, weekdayColor: string) {
     try {
       const dateObj = new Date(date);
       const year = dateObj.getFullYear();
@@ -278,9 +240,9 @@ export default function MemberAttendancePage() {
     } catch {
       return '-';
     }
-  };
+  }
 
-  const getAttendanceStatus = (record?: AttendanceData): AttendanceStatusData | string => {
+  function getAttendanceStatus(record?: AttendanceData): AttendanceStatusData | string {
     if (!record || !record.clock_records || record.clock_records.length === 0) return 'absent';
 
     // 最新のセッションを取得
@@ -288,9 +250,9 @@ export default function MemberAttendancePage() {
     if (!latestSession.in_time) return 'absent';
 
     return 'normal';
-  };
+  }
 
-  const getStatusBadge = (status: AttendanceStatusData | string, isWeekend: boolean) => {
+  function getStatusBadge(status: AttendanceStatusData | string, isWeekend: boolean) {
     const statusString = typeof status === 'string' ? status : status.name;
     if (isWeekend && statusString === 'absent') {
       return <Badge variant="outline">休日</Badge>;
@@ -308,23 +270,23 @@ export default function MemberAttendancePage() {
       default:
         return <Badge variant="outline">-</Badge>;
     }
-  };
+  }
 
   // 最新のセッションから出勤時刻を取得
-  const getClockInTime = (record?: AttendanceData): string | undefined => {
+  function getClockInTime(record?: AttendanceData): string | undefined {
     if (!record?.clock_records || record.clock_records.length === 0) return undefined;
     const latestSession = record.clock_records[record.clock_records.length - 1];
     return latestSession.in_time;
-  };
+  }
 
   // 最新のセッションから退勤時刻を取得
-  const getClockOutTime = (record?: AttendanceData): string | undefined => {
+  function getClockOutTime(record?: AttendanceData): string | undefined {
     if (!record?.clock_records || record.clock_records.length === 0) return undefined;
     const latestSession = record.clock_records[record.clock_records.length - 1];
     return latestSession.out_time;
-  };
+  }
 
-  const formatTime = (time?: string) => {
+  function formatTime(time?: string) {
     if (!time) return '--:--';
 
     // ISO文字列から時刻部分を抽出
@@ -336,9 +298,9 @@ export default function MemberAttendancePage() {
     } catch {
       return '--:--';
     }
-  };
+  }
 
-  const formatMinutes = (minutes?: number) => {
+  function formatMinutes(minutes?: number) {
     if (minutes === undefined || minutes === null || minutes === 0) {
       return '--:--';
     }
@@ -346,9 +308,9 @@ export default function MemberAttendancePage() {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}:${mins.toString().padStart(2, '0')}`;
-  };
+  }
 
-  const formatDateTime = (dateTime?: string) => {
+  function formatDateTime(dateTime?: string) {
     if (!dateTime) return '-';
 
     try {
@@ -363,9 +325,9 @@ export default function MemberAttendancePage() {
     } catch {
       return '-';
     }
-  };
+  }
 
-  const getApprovalStatusBadge = (status?: string) => {
+  function getApprovalStatusBadge(status?: string) {
     switch (status) {
       case 'approved':
         return (
@@ -391,21 +353,21 @@ export default function MemberAttendancePage() {
       default:
         return <Badge variant="outline">-</Badge>;
     }
-  };
+  }
 
-  const handleBreakDetailsClick = (record: AttendanceData) => {
+  function handleBreakDetailsClick(record: AttendanceData) {
     setSelectedBreakDetails(record);
     setIsBreakDetailsDialogOpen(true);
-  };
+  }
 
-  const handleColumnToggle = (columnKey: keyof typeof visibleColumns) => {
+  function handleColumnToggle(columnKey: keyof typeof visibleColumns) {
     setVisibleColumns((prev) => ({
       ...prev,
       [columnKey]: !prev[columnKey],
     }));
-  };
+  }
 
-  const handleResetColumns = () => {
+  function handleResetColumns() {
     setVisibleColumns({
       date: true,
       clockIn: true,
@@ -421,7 +383,7 @@ export default function MemberAttendancePage() {
       approver: false,
       updatedAt: false,
     });
-  };
+  }
 
   // フィルタリングされた勤怠データを取得
   const filteredAttendanceData = getFilteredAttendanceData();

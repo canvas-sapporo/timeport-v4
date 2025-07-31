@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import type { UUID, DateString, Timestamp } from '@/types/common';
-
 // ================================
 // 勤怠関連API型スキーマ
 // ================================

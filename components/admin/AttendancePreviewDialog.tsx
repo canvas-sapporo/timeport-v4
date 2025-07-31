@@ -22,7 +22,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { getAttendanceDetail, getAttendanceStatuses } from '@/lib/actions/attendance';
 import WorkTypeDetailDialog from '@/components/admin/WorkTypeDetailDialog';
 import { formatDate, formatTime } from '@/lib/utils';

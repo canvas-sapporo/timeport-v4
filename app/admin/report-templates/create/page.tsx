@@ -53,7 +53,21 @@ export default function CreateReportTemplatePage() {
   function addField(fieldType: string) {
     const newField: ReportFieldConfig = {
       id: `field_${Date.now()}`,
-      type: fieldType as any,
+      type: fieldType as
+        | 'text'
+        | 'textarea'
+        | 'number'
+        | 'date'
+        | 'time'
+        | 'datetime'
+        | 'email'
+        | 'phone'
+        | 'url'
+        | 'select'
+        | 'radio'
+        | 'checkbox'
+        | 'file'
+        | 'hidden',
       label: '',
       required: false,
       placeholder: '',

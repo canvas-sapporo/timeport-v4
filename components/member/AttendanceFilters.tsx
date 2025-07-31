@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import type { AttendanceFilters, AttendanceStatusData } from '@/schemas/attendance';
+import type { AttendanceFilters } from '@/schemas/attendance';
 
 interface WorkType {
   id: string;

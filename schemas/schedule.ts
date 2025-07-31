@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import type { BaseEntity, UUID, DateString, TimeString, Timestamp } from '@/types/common';
-
 // ================================
 // スケジュール関連スキーマ
 // ================================

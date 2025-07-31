@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 
 import { ChatMessageData, ChatMessageReactionData } from '@/schemas/chat';
 
@@ -7,6 +7,14 @@ interface RealtimePayload {
   eventType: string;
   new: Record<string, unknown> | null;
   old: Record<string, unknown> | null;
+}
+
+// 既読イベント型
+interface ReadEvent {
+  type: 'read_updated';
+  chat_id: string;
+  user_id?: string;
+  last_read_at?: string;
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -45,7 +53,7 @@ console.log('Supabase client configuration:', {
 // ================================
 
 export type MessageEventHandler = (event: ChatMessageData) => void;
-export type ReadEventHandler = (event: any) => void;
+export type ReadEventHandler = (event: ReadEvent) => void;
 export type ReactionEventHandler = (event: ChatMessageReactionData) => void;
 
 // ================================
@@ -57,7 +65,7 @@ class ChatRealtimeManager {
   private readHandlers: Map<string, ReadEventHandler[]> = new Map();
   private reactionHandlers: Map<string, ReactionEventHandler[]> = new Map();
   private isConnected = false;
-  private channel: any = null;
+  private channel: RealtimeChannel | null = null;
 
   /**
    * リアルタイム接続を開始
@@ -112,21 +120,23 @@ class ChatRealtimeManager {
         );
 
       // 接続状態を監視
-      this.channel.on('system', { event: 'disconnect' }, () => {
-        console.log('Realtime connection disconnected');
-        this.isConnected = false;
-      });
+      if (this.channel) {
+        this.channel.on('system', { event: 'disconnect' }, () => {
+          console.log('Realtime connection disconnected');
+          this.isConnected = false;
+        });
 
-      this.channel.on('system', { event: 'reconnect' }, () => {
-        console.log('Realtime connection reconnected');
-        this.isConnected = true;
-      });
+        this.channel.on('system', { event: 'reconnect' }, () => {
+          console.log('Realtime connection reconnected');
+          this.isConnected = true;
+        });
 
-      this.channel.on('system', { event: 'error' }, (error: any) => {
-        console.error('Realtime connection error:', error);
-      });
+        this.channel.on('system', { event: 'error' }, (error: unknown) => {
+          console.error('Realtime connection error:', error);
+        });
+      }
 
-      const status = await this.channel.subscribe();
+      const status = await this.channel?.subscribe();
       console.log('Channel subscription status:', status);
 
       this.isConnected = true;
@@ -182,20 +192,20 @@ class ChatRealtimeManager {
   /**
    * 既読変更イベントを処理
    */
-  private handleReadChange(payload: any) {
-    const { eventType, new: newRecord, old: oldRecord } = payload;
+  private handleReadChange(payload: unknown) {
+    const { eventType, new: newRecord, old: oldRecord } = payload as RealtimePayload;
     const chatId = newRecord?.chat_id || oldRecord?.chat_id;
 
     if (!chatId) return;
 
-    const handlers = this.readHandlers.get(chatId);
+    const handlers = this.readHandlers.get(chatId as string);
     if (!handlers) return;
 
-    const event: any = {
+    const event: ReadEvent = {
       type: 'read_updated',
-      chat_id: chatId,
-      user_id: newRecord?.user_id,
-      last_read_at: newRecord?.last_read_at,
+      chat_id: chatId as string,
+      user_id: newRecord?.user_id as string,
+      last_read_at: newRecord?.last_read_at as string,
     };
 
     handlers.forEach((handler) => handler(event));
@@ -204,18 +214,18 @@ class ChatRealtimeManager {
   /**
    * リアクション変更イベントを処理
    */
-  private handleReactionChange(payload: any) {
-    const { eventType, new: newRecord, old: oldRecord } = payload;
+  private handleReactionChange(payload: unknown) {
+    const { eventType, new: newRecord, old: oldRecord } = payload as RealtimePayload;
     const messageId = newRecord?.message_id || oldRecord?.message_id;
 
     if (!messageId) return;
 
-    const handlers = this.reactionHandlers.get(messageId);
+    const handlers = this.reactionHandlers.get(messageId as string);
     if (!handlers) return;
 
     const event: ChatMessageReactionData = {
       ...newRecord,
-      message_id: messageId,
+      message_id: messageId as string,
     } as ChatMessageReactionData;
 
     handlers.forEach((handler) => handler(event));
@@ -346,29 +356,29 @@ export function useChatRealtime(chatId: string) {
   /**
    * メッセージイベントを購読
    */
-  const subscribeToMessages = (handler: MessageEventHandler) => {
+  function subscribeToMessages(handler: MessageEventHandler) {
     messageHandlers.current.push(handler);
     return chatRealtimeManager.subscribeToMessages(chatId, handler);
-  };
+  }
 
   /**
    * 既読イベントを購読
    */
-  const subscribeToReadUpdates = (handler: ReadEventHandler) => {
+  function subscribeToReadUpdates(handler: ReadEventHandler) {
     readHandlers.current.push(handler);
     return chatRealtimeManager.subscribeToReadUpdates(chatId, handler);
-  };
+  }
 
   /**
    * リアクションイベントを購読
    */
-  const subscribeToReactions = (messageId: string, handler: ReactionEventHandler) => {
+  function subscribeToReactions(messageId: string, handler: ReactionEventHandler) {
     if (!reactionHandlers.current.has(messageId)) {
       reactionHandlers.current.set(messageId, []);
     }
     reactionHandlers.current.get(messageId)!.push(handler);
     return chatRealtimeManager.subscribeToReactions(messageId, handler);
-  };
+  }
 
   return {
     subscribeToMessages,

@@ -82,7 +82,7 @@ export default function MemberSchedulePage() {
   });
 
   useEffect(() => {
-    const loadData = async () => {
+    async function loadData() {
       if (user) {
         try {
           const [schedulesData, todosData] = await Promise.all([
@@ -97,7 +97,7 @@ export default function MemberSchedulePage() {
           console.error('Error loading data:', error);
         }
       }
-    };
+    }
 
     loadData();
   }, [user]);
@@ -152,7 +152,7 @@ export default function MemberSchedulePage() {
     }
   }
 
-  const handleCreateTodo = async () => {
+  async function handleCreateTodo() {
     try {
       const result = await createTodo(todoForm);
       if (result.success) {
@@ -172,9 +172,9 @@ export default function MemberSchedulePage() {
     } catch (error) {
       console.error('Error creating todo:', error);
     }
-  };
+  }
 
-  const getPriorityBadge = (priority: string) => {
+  function getPriorityBadge(priority: string) {
     const colors = {
       low: 'bg-gray-500',
       medium: 'bg-blue-500',
@@ -192,9 +192,9 @@ export default function MemberSchedulePage() {
         {labels[priority as keyof typeof labels]}
       </Badge>
     );
-  };
+  }
 
-  const getStatusBadge = (status: string) => {
+  function getStatusBadge(status: string) {
     const colors = {
       pending: 'bg-gray-500',
       in_progress: 'bg-blue-500',
@@ -212,10 +212,10 @@ export default function MemberSchedulePage() {
         {labels[status as keyof typeof labels]}
       </Badge>
     );
-  };
+  }
 
   // 日付ナビゲーション関数
-  const navigateDate = (direction: 'prev' | 'next') => {
+  function navigateDate(direction: 'prev' | 'next') {
     const currentDate = new Date(selectedDate);
     let newDate: Date;
 
@@ -241,10 +241,10 @@ export default function MemberSchedulePage() {
     }
 
     setSelectedDate(newDate.toISOString().split('T')[0]);
-  };
+  }
 
   // 今日/今週/今月/今年に戻る関数
-  const goToToday = () => {
+  function goToToday() {
     const today = new Date();
 
     switch (calendarView) {
@@ -269,10 +269,10 @@ export default function MemberSchedulePage() {
         break;
       }
     }
-  };
+  }
 
   // ボタンテキストを取得
-  const getTodayButtonText = () => {
+  function getTodayButtonText() {
     switch (calendarView) {
       case 'day':
         return '今日';
@@ -285,10 +285,10 @@ export default function MemberSchedulePage() {
       default:
         return '今日';
     }
-  };
+  }
 
   // 表示タイトルを取得
-  const getDisplayTitle = () => {
+  function getDisplayTitle() {
     const date = new Date(selectedDate);
 
     switch (calendarView) {
@@ -316,10 +316,10 @@ export default function MemberSchedulePage() {
       default:
         return date.toLocaleDateString('ja-JP');
     }
-  };
+  }
 
   // 週の日付範囲を取得
-  const getWeekDates = () => {
+  function getWeekDates() {
     const date = new Date(selectedDate);
     const weekStart = new Date(date);
     weekStart.setDate(date.getDate() - date.getDay());
@@ -331,10 +331,10 @@ export default function MemberSchedulePage() {
       weekDates.push(dayDate);
     }
     return weekDates;
-  };
+  }
 
   // 月の日付範囲を取得
-  const getMonthDates = () => {
+  function getMonthDates() {
     const date = new Date(selectedDate);
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -352,7 +352,7 @@ export default function MemberSchedulePage() {
       dates.push(dayDate);
     }
     return dates;
-  };
+  }
 
   // Filter events for selected date
   const selectedDateEvents = schedules.filter(
@@ -364,20 +364,20 @@ export default function MemberSchedulePage() {
   const selectedDateTodos = todos.filter((t) => t.due_date === selectedDate);
 
   // 指定日のイベントを取得
-  const getEventsForDate = (date: Date) => {
+  function getEventsForDate(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     return schedules.filter(
       (s) =>
         s.start_datetime.startsWith(dateStr) ||
         (s.is_all_day && s.start_datetime.split('T')[0] === dateStr)
     );
-  };
+  }
 
   // 指定日のTodoを取得
-  const getTodosForDate = (date: Date) => {
+  function getTodosForDate(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     return todos.filter((t) => t.due_date && t.due_date === dateStr);
-  };
+  }
 
   return (
     <div className="space-y-6">

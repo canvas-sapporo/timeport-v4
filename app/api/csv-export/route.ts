@@ -158,7 +158,20 @@ export async function POST(request: NextRequest) {
 }
 
 // CSVデータを生成する関数
-function generateCsvData(attendances: any[], setting: CsvExportSetting): string {
+function generateCsvData(
+  attendances: Array<{
+    work_date: string;
+    clock_in_time?: string;
+    clock_out_time?: string;
+    actual_work_minutes?: number;
+    break_records?: Array<{ start?: string; end?: string }>;
+    work_types?: { name?: string };
+    approved_by?: string;
+    updated_at?: string;
+    description?: string;
+  }>,
+  setting: CsvExportSetting
+): string {
   const delimiter = setting.format.delimiter === 'comma' ? ',' : '\t';
   const emptyValue = setting.format.empty_value === 'blank' ? '' : '--';
 
@@ -212,7 +225,12 @@ function generateCsvData(attendances: any[], setting: CsvExportSetting): string 
           const breakRecords = attendance.break_records || [];
           const totalBreakMinutes = breakRecords.reduce(
             (total: number, br: Record<string, unknown>) => {
-              if (br.start && br.end && typeof br.start === 'string' && typeof br.end === 'string') {
+              if (
+                br.start &&
+                br.end &&
+                typeof br.start === 'string' &&
+                typeof br.end === 'string'
+              ) {
                 const start = new Date(br.start);
                 const end = new Date(br.end);
                 return total + Math.floor((end.getTime() - start.getTime()) / (1000 * 60));

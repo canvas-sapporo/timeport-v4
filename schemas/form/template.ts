@@ -1,9 +1,6 @@
 import { z } from 'zod';
 
-import {
-  FormFieldSchema,
-  ConditionalLogicSchema,
-} from '@/schemas/form/field';
+import { FormFieldSchema, ConditionalLogicSchema } from '@/schemas/form/field';
 
 // ================================
 // フォーム設定型

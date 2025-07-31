@@ -42,7 +42,7 @@ export default function AdminRequestsPage() {
   const router = useRouter();
   const { users, updateRequest } = useData();
   const { toast } = useToast();
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<unknown[]>([]);
   const [isRequestsLoading, setIsRequestsLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [activeTab, setActiveTab] = useState('requests');
@@ -135,7 +135,7 @@ export default function AdminRequestsPage() {
     setRejectionReason('');
   }
 
-  function getStatusBadge(status: any) {
+  function getStatusBadge(status: { name?: string; code?: string } | null | undefined) {
     if (!status) return <Badge variant="outline">-</Badge>;
     // statusesオブジェクトから情報を取得
     const statusName = status.name || '不明';
@@ -163,11 +163,25 @@ export default function AdminRequestsPage() {
   // 「自分が承認者の申請」だけ抽出
   const myApprovalRequests = requests
     .map((req) => {
-      const form = requestForms.find((f) => f.id === req.request_form_id);
+      const request = req as {
+        id: string;
+        request_form_id: string;
+        current_approval_step: number;
+        user_id: string;
+        title?: string;
+        status_id: string;
+        statuses?: { name?: string; code?: string };
+        created_at?: string;
+        target_date?: string;
+        start_date?: string;
+        end_date?: string;
+        updated_at?: string;
+      };
+      const form = requestForms.find((f) => f.id === request.request_form_id);
       if (!form) return null;
-      const step = form.approval_flow.find((s) => s.step === req.current_approval_step);
+      const step = form.approval_flow.find((s) => s.step === request.current_approval_step);
       if (!step) return null;
-      return { ...req, approver_id: step.approver_id, form };
+      return { ...request, approver_id: step.approver_id, form };
     })
     .filter(
       (req) =>

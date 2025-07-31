@@ -1,8 +1,6 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 
 import { createServerClient, createAdminClient } from '@/lib/supabase';
 import { validateAttendanceObject } from '@/lib/utils/attendance-validation';
@@ -14,7 +12,6 @@ import type {
   UpdateRequestResult,
   ApproveRequestResult,
 } from '@/schemas/request';
-import type { ClockRecord } from '@/schemas/attendance';
 
 /**
  * 申請データを取得する（メンバー用）
@@ -459,7 +456,7 @@ export async function updateRequest(
       };
     }
 
-    if ((request.statuses as any)?.code !== 'draft') {
+    if ((request.statuses as unknown as { code: string })?.code !== 'draft') {
       return {
         success: false,
         message: '下書き状態の申請のみ編集可能です',
