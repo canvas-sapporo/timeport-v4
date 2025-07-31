@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Bug } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
-import { getUsers, getUserStats, debugDatabaseState } from '@/lib/actions/admin/users';
+import { getAdminUsers, getUserStats, debugDatabaseState } from '@/lib/actions/admin/users';
 import { getGroups } from '@/lib/actions/admin/groups';
 import UserListTable from '@/components/admin/users/UserListTable';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ export default function AdminUsersPage() {
       console.log('データ取得開始:', user.company_id);
       setIsLoading(true);
       const [usersResult, groupsResult, statsResult] = await Promise.all([
-        getUsers(user.company_id),
+        getAdminUsers(user.company_id),
         getGroups(user.company_id),
         getUserStats(user.company_id),
       ]);

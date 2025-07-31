@@ -108,7 +108,7 @@ export async function getApprovers(userId?: string): Promise<ApproverListRespons
 /**
  * 企業内のユーザー一覧を取得
  */
-export async function getUsers(
+export async function getAdminUsers(
   companyId: UUID,
   params: UserSearchParams = {}
 ): Promise<UserListResponse> {

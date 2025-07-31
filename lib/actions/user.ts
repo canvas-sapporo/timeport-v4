@@ -14,6 +14,79 @@ import type {
   GetUserCompanyResult,
   GetCompanyInfoResult,
 } from '@/schemas/user_profile';
+import type { UserProfile } from '@/schemas/user_profile';
+
+/**
+ * メンバー用のユーザー一覧を取得
+ * 現在のユーザーが所属する会社のユーザーのみを取得
+ */
+export async function getUsers(): Promise<{
+  success: boolean;
+  data?: UserProfile[];
+  error?: string;
+}> {
+  const supabase = createServerClient();
+
+  try {
+    // 現在のユーザーを取得
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return {
+        success: false,
+        error: '認証エラー',
+      };
+    }
+
+    // ユーザーの会社IDを取得
+    const userCompanyId = await getUserCompanyId(user.id);
+    if (!userCompanyId) {
+      return {
+        success: false,
+        error: 'ユーザーの会社情報が見つかりません',
+      };
+    }
+
+    // 会社内のユーザーを取得
+    const { data: users, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .is('deleted_at', null)
+      .order('code', { ascending: true });
+
+    if (error) {
+      console.error('ユーザー取得エラー:', error);
+      return {
+        success: false,
+        error: 'ユーザーの取得に失敗しました',
+      };
+    }
+
+    // 会社内のユーザーのみをフィルタリング
+    const companyUsers = await Promise.all(
+      (users || []).map(async (userProfile) => {
+        const isInCompany = await isUserInCompany(userProfile.id, userCompanyId);
+        return isInCompany ? userProfile : null;
+      })
+    );
+
+    const filteredUsers = companyUsers.filter(Boolean) as UserProfile[];
+
+    return {
+      success: true,
+      data: filteredUsers,
+    };
+  } catch (error) {
+    console.error('getUsers エラー:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
 
 /**
  * ユーザーIDから会社IDを取得（サーバーアクション）

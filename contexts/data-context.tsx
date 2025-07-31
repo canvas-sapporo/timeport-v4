@@ -7,9 +7,11 @@ import { RequestData, RequestForm } from '@/schemas/request';
 import { UserProfile } from '@/schemas/user_profile';
 import { Notification } from '@/schemas/database/feature';
 import { Group } from '@/schemas/group';
-import { users, requests, notifications, groups, generateAttendanceRecords } from '@/lib/mock';
+import { notifications, groups, generateAttendanceRecords } from '@/lib/mock';
 import { getRequestForms } from '@/lib/actions/admin/request-forms';
 import { getRequests } from '@/lib/actions/requests';
+import { getUsers } from '@/lib/actions/user';
+import { getAdminUsers } from '@/lib/actions/admin/users';
 import * as provider from '@/lib/provider';
 
 import { useAuth } from './auth-context';
@@ -47,6 +49,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [requestsState, setRequests] = useState<RequestData[]>([]);
   const [notificationsState, setNotifications] = useState<Notification[]>(notifications);
   const [requestFormsState, setRequestForms] = useState<RequestForm[]>([]);
+  const [usersState, setUsers] = useState<UserProfile[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // AuthContextからユーザー情報を取得
@@ -66,12 +69,38 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Generate attendance records for all users
     const allRecords: AttendanceData[] = [];
-    users.forEach((user) => {
+    usersState.forEach((user) => {
       const userRecords = generateAttendanceRecords(user.id);
       allRecords.push(...userRecords);
     });
     setAttendanceRecords(allRecords);
-  }, []);
+  }, [usersState]);
+
+  // ユーザーデータを取得（全ページで実行）
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        console.log('DataProvider: ユーザーデータ取得開始');
+
+        const result = await getUsers();
+        console.log('DataProvider: ユーザーデータ取得結果:', result);
+
+        if (result.success && result.data) {
+          console.log('DataProvider: ユーザーデータ設定:', result.data);
+          setUsers(result.data);
+        } else {
+          console.error('ユーザーデータ取得失敗:', result.error);
+        }
+      } catch (error) {
+        console.error('ユーザーデータ取得エラー:', error);
+      }
+    };
+
+    // ユーザー情報が利用可能になったら実行
+    if (user) {
+      fetchUsers();
+    }
+  }, [user]);
 
   // 申請フォームを取得（全ページで実行）
   useEffect(() => {
@@ -81,7 +110,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (result.success && result.data) {
           // deleted_atが設定されているフォームを除外
           const activeForms = result.data.filter((form: RequestForm) => !form.deleted_at);
-          setRequestForms(activeForms);
+
+          // 重複を除去（IDでフィルタリング）
+          const uniqueForms = activeForms.filter(
+            (form, index, self) => index === self.findIndex((f) => f.id === form.id)
+          );
+
+          console.log('申請フォーム取得結果:', {
+            total: result.data.length,
+            active: activeForms.length,
+            unique: uniqueForms.length,
+          });
+
+          setRequestForms(uniqueForms);
         }
       } catch (error) {
         console.error('申請フォーム取得エラー:', error);
@@ -104,7 +145,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         if (result.success && result.data) {
           console.log('DataProvider: 申請データ設定:', result.data);
-          setRequests(result.data);
+
+          // 重複を除去（IDでフィルタリング）
+          const uniqueRequests = result.data.filter(
+            (request, index, self) => index === self.findIndex((r) => r.id === request.id)
+          );
+
+          console.log('申請データ重複除去結果:', {
+            total: result.data.length,
+            unique: uniqueRequests.length,
+          });
+
+          setRequests(uniqueRequests);
         } else {
           console.error('申請データ取得失敗:', result.error);
         }
@@ -287,7 +339,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         requests: requestsState,
         requestForms: requestFormsState,
         notifications: notificationsState,
-        users,
+        users: usersState,
         groups,
         // 後方互換性のため
         departments: groups.filter((g) => g.id.includes('dept')),

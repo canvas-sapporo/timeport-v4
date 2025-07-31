@@ -65,8 +65,24 @@ export default function AdminRequestsPage() {
   async function fetchRequestForms() {
     setIsRequestFormsLoading(true);
     try {
+      console.log('fetchRequestForms: 開始');
       const result = await getRequestForms();
+      console.log('fetchRequestForms: 結果', result);
+
       if (result.success && result.data) {
+        console.log('fetchRequestForms: データ設定', result.data);
+
+        // 重複チェック
+        const formIds = result.data.map((form) => form.id);
+        const uniqueIds = new Set(formIds);
+        if (formIds.length !== uniqueIds.size) {
+          console.warn('申請フォームに重複があります:', {
+            total: formIds.length,
+            unique: uniqueIds.size,
+            duplicates: formIds.filter((id, index) => formIds.indexOf(id) !== index),
+          });
+        }
+
         setRequestForms(result.data);
       } else {
         console.error('申請フォーム取得失敗:', result.error);
@@ -82,9 +98,24 @@ export default function AdminRequestsPage() {
   async function fetchAdminRequests() {
     setIsRequestsLoading(true);
     try {
+      console.log('fetchAdminRequests: 開始');
       const result = await getAdminRequests();
+      console.log('fetchAdminRequests: 結果', result);
+
       if (result.success && result.data) {
-        setRequests(result.data);
+        console.log('fetchAdminRequests: データ設定', result.data);
+
+        // 重複を除去（IDでフィルタリング）
+        const uniqueRequests = result.data.filter(
+          (request, index, self) => index === self.findIndex((r) => r.id === request.id)
+        );
+
+        console.log('管理者申請データ重複除去結果:', {
+          total: result.data.length,
+          unique: uniqueRequests.length,
+        });
+
+        setRequests(uniqueRequests);
       } else {
         console.error('管理者申請データ取得失敗:', result.error);
       }
@@ -105,7 +136,9 @@ export default function AdminRequestsPage() {
   // 管理者用申請データを取得
   useEffect(() => {
     if (user && user.role === 'admin') {
+      console.log('AdminRequestsPage: 管理者ユーザー確認、データ取得開始');
       fetchAdminRequests();
+      fetchRequestForms(); // 申請フォームも取得
     }
   }, [user]);
 
@@ -159,7 +192,23 @@ export default function AdminRequestsPage() {
     return { total, active, inactive };
   }
 
-  // const pendingRequests = requests.filter((a) => a.status_id === 'pending');
+  // デバッグ: データの状態をログ出力
+  console.log('AdminRequestsPage: 現在の状態', {
+    requestsCount: requests.length,
+    requests: requests,
+    usersCount: users.length,
+    requestFormsCount: requestForms.length,
+    isRequestsLoading,
+    user: user?.id,
+  });
+
+  // 申請データのrequest_form_idを確認
+  const missingRequestFormIds = requests
+    .map((req) => (req as { request_form_id: string }).request_form_id)
+    .filter((formId) => !requestForms.find((form) => form.id === formId));
+
+  console.log('AdminRequestsPage: 不足している申請フォームID', missingRequestFormIds);
+
   // 「自分が承認者の申請」だけ抽出
   const myApprovalRequests = requests
     .map((req) => {
@@ -177,10 +226,30 @@ export default function AdminRequestsPage() {
         end_date?: string;
         updated_at?: string;
       };
+
+      console.log('AdminRequestsPage: 申請データ処理', {
+        requestId: request.id,
+        requestFormId: request.request_form_id,
+        currentStep: request.current_approval_step,
+        userId: request.user_id,
+        title: request.title,
+      });
+
       const form = requestForms.find((f) => f.id === request.request_form_id);
-      if (!form) return null;
+      if (!form) {
+        console.log('AdminRequestsPage: 申請フォームが見つかりません', request.request_form_id);
+        return null;
+      }
+
       const step = form.approval_flow.find((s) => s.step === request.current_approval_step);
-      if (!step) return null;
+      if (!step) {
+        console.log('AdminRequestsPage: 承認ステップが見つかりません', {
+          step: request.current_approval_step,
+          approvalFlow: form.approval_flow,
+        });
+        return null;
+      }
+
       return { ...request, approver_id: step.approver_id, form };
     })
     .filter(
@@ -197,6 +266,11 @@ export default function AdminRequestsPage() {
       if (!a || !b) return 0;
       return new Date(b.updated_at ?? '').getTime() - new Date(a.updated_at ?? '').getTime();
     });
+
+  console.log('AdminRequestsPage: フィルタリング後の申請', {
+    myApprovalRequestsCount: myApprovalRequests.length,
+    myApprovalRequests: myApprovalRequests,
+  });
 
   return (
     <div className="space-y-6">
@@ -231,6 +305,47 @@ export default function AdminRequestsPage() {
               <option value="rejected">却下</option>
             </select>
           </div>
+
+          {/* デバッグ情報 */}
+          <div className="bg-gray-100 p-4 rounded text-sm">
+            <p>デバッグ情報:</p>
+            <p>申請データ数: {requests.length}</p>
+            <p>ユーザーデータ数: {users.length}</p>
+            <p>申請フォーム数: {requestForms.length}</p>
+            <p>フィルタリング後: {myApprovalRequests.length}</p>
+            <p>ローディング中: {isRequestsLoading ? 'はい' : 'いいえ'}</p>
+            <p>不足している申請フォームID: {missingRequestFormIds.join(', ') || 'なし'}</p>
+
+            {requestForms.length === 0 && (
+              <div className="mt-4 p-4 bg-yellow-100 rounded">
+                <p className="font-bold text-yellow-800">申請フォームが存在しません</p>
+                <p className="text-yellow-700">
+                  申請フォームを作成してから申請データを確認してください。
+                </p>
+                <Button
+                  onClick={() => setCreateFormDialogOpen(true)}
+                  className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white"
+                >
+                  申請フォームを作成
+                </Button>
+              </div>
+            )}
+
+            {missingRequestFormIds.length > 0 && (
+              <div className="mt-4 p-4 bg-red-100 rounded">
+                <p className="font-bold text-red-800">不足している申請フォームがあります</p>
+                <p className="text-red-700">以下のIDの申請フォームが存在しません:</p>
+                <ul className="list-disc list-inside mt-2">
+                  {missingRequestFormIds.map((id) => (
+                    <li key={id} className="text-red-600">
+                      {id}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
           {/* 自分が承認者の申請一覧 */}
           <Card>
             <CardHeader>
@@ -240,70 +355,81 @@ export default function AdminRequestsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>申請者</TableHead>
-                    <TableHead>種別</TableHead>
-                    <TableHead>申請日</TableHead>
-                    <TableHead>対象日</TableHead>
-                    <TableHead>ステータス</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {myApprovalRequests.length === 0 && (
+              {isRequestsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>データを読み込み中...</span>
+                  </div>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-gray-400">
-                        該当する申請はありません
-                      </TableCell>
+                      <TableHead>申請者</TableHead>
+                      <TableHead>種別</TableHead>
+                      <TableHead>申請日</TableHead>
+                      <TableHead>対象日</TableHead>
+                      <TableHead>ステータス</TableHead>
+                      <TableHead>操作</TableHead>
                     </TableRow>
-                  )}
-                  {myApprovalRequests.map((request) => {
-                    if (!request) return null;
-                    const requestant = users.find((u) => u.id === request.user_id);
-                    return (
-                      <TableRow key={request.id}>
-                        <TableCell>
-                          {requestant ? `${requestant.family_name} ${requestant.first_name}` : '-'}
-                        </TableCell>
-                        <TableCell>{request.title}</TableCell>
-                        <TableCell>{formatDate(request.created_at)}</TableCell>
-                        <TableCell>
-                          {request.target_date
-                            ? formatDate(request.target_date)
-                            : request.start_date && request.end_date
-                              ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
-                              : request.start_date
-                                ? formatDate(request.start_date)
-                                : '-'}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(request.statuses)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                              onClick={() => handleApprove(request.id)}
-                              disabled={request?.status_id === 'approved'}
-                            >
-                              承認
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleReject(request.id)}
-                              disabled={request?.status_id === 'rejected'}
-                            >
-                              却下
-                            </Button>
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {myApprovalRequests.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-gray-400">
+                          該当する申請はありません
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                    )}
+                    {myApprovalRequests.map((request, index) => {
+                      if (!request) return null;
+                      const requestant = users.find((u) => u.id === request.user_id);
+                      return (
+                        <TableRow key={`${request.id}-${index}`}>
+                          <TableCell>
+                            {requestant
+                              ? `${requestant.family_name} ${requestant.first_name}`
+                              : '-'}
+                          </TableCell>
+                          <TableCell>{request.title}</TableCell>
+                          <TableCell>{formatDate(request.created_at)}</TableCell>
+                          <TableCell>
+                            {request.target_date
+                              ? formatDate(request.target_date)
+                              : request.start_date && request.end_date
+                                ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
+                                : request.start_date
+                                  ? formatDate(request.start_date)
+                                  : '-'}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(request.statuses)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                onClick={() => handleApprove(request.id)}
+                                disabled={request?.status_id === 'approved'}
+                              >
+                                承認
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleReject(request.id)}
+                                disabled={request?.status_id === 'rejected'}
+                              >
+                                却下
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -379,8 +505,8 @@ export default function AdminRequestsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {requestForms.map((form) => (
-                      <TableRow key={form.id}>
+                    {requestForms.map((form, index) => (
+                      <TableRow key={`${form.id}-${index}`}>
                         <TableCell className="font-medium">{form.name}</TableCell>
                         <TableCell>
                           {form.code ? (
