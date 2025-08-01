@@ -1330,7 +1330,7 @@ export default function AdminAttendancePage() {
 
       {/* 休憩詳細ダイアログ */}
       <Dialog open={isBreakDetailsDialogOpen} onOpenChange={setIsBreakDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Clock className="w-5 h-5 text-blue-600" />
@@ -1382,47 +1382,56 @@ export default function AdminAttendancePage() {
                   </div>
                 </div>
 
-                {selectedBreakDetails.clock_records &&
-                  selectedBreakDetails.clock_records.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2">勤務セッション</h4>
-                      <div className="space-y-2">
-                        {selectedBreakDetails.clock_records.map((session, sessionIndex) => (
-                          <div key={sessionIndex} className="p-3 bg-white border rounded">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium">
-                                セッション {sessionIndex + 1}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {session.in_time ? formatTime(session.in_time) : '--:--'} -{' '}
-                                {session.out_time ? formatTime(session.out_time) : '--:--'}
-                              </span>
-                            </div>
-                            {session.breaks && session.breaks.length > 0 && (
-                              <div className="space-y-1">
-                                {session.breaks.map((breakRecord, breakIndex) => (
-                                  <div
-                                    key={breakIndex}
-                                    className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
-                                  >
-                                    <div className="flex items-center space-x-2">
-                                      <span className="font-medium">{breakIndex + 1}回目</span>
-                                    </div>
-                                    <div className="text-sm">
-                                      {formatTime(breakRecord.break_start)} -{' '}
-                                      {breakRecord.break_end
-                                        ? formatTime(breakRecord.break_end)
-                                        : '終了未定'}
-                                    </div>
-                                  </div>
-                                ))}
+                {/* 休憩記録の一覧 */}
+                {(() => {
+                  const clockRecords = selectedBreakDetails.clock_records || [];
+                  const allBreaks: Array<{
+                    break_start: string;
+                    break_end?: string;
+                    sessionIndex: number;
+                    breakIndex: number;
+                  }> = [];
+
+                  clockRecords.forEach((session, sessionIndex) => {
+                    if (session.breaks) {
+                      session.breaks.forEach((breakRecord, breakIndex) => {
+                        allBreaks.push({
+                          break_start: breakRecord.break_start,
+                          break_end: breakRecord.break_end,
+                          sessionIndex,
+                          breakIndex,
+                        });
+                      });
+                    }
+                  });
+
+                  if (allBreaks.length > 0) {
+                    return (
+                      <div>
+                        <h4 className="font-medium mb-2">休憩記録</h4>
+                        <div className="space-y-2">
+                          {allBreaks.map((breakRecord, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-white border rounded"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <span className="font-medium">{index + 1}回目</span>
                               </div>
-                            )}
-                          </div>
-                        ))}
+                              <div className="text-sm">
+                                {formatTime(breakRecord.break_start)} -{' '}
+                                {breakRecord.break_end
+                                  ? formatTime(breakRecord.break_end)
+                                  : '終了未定'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
           </div>
