@@ -21,7 +21,16 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRequestForms, deleteRequestForm } from '@/lib/actions/admin/request-forms';
 import { getAdminRequests, updateRequestStatus } from '@/lib/actions/requests';
-import type { RequestForm } from '@/schemas/request';
+import type { RequestForm, RequestData } from '@/schemas/request';
+
+// 管理者画面用の拡張された申請データ型
+interface AdminRequestData extends RequestData {
+  statuses?: {
+    name?: string;
+    code?: string;
+    color?: string;
+  };
+}
 import RequestFormEditDialog from '@/components/admin/request-forms/RequestFormEditDialog';
 import RequestFormCreateDialog from '@/components/admin/request-forms/RequestFormCreateDialog';
 import RequestFormPreviewDialog from '@/components/admin/request-forms/RequestFormPreviewDialog';
@@ -53,7 +62,7 @@ export default function AdminRequestsPage() {
   const router = useRouter();
   const { users, updateRequest } = useData();
   const { toast } = useToast();
-  const [requests, setRequests] = useState<unknown[]>([]);
+  const [requests, setRequests] = useState<AdminRequestData[]>([]);
   const [isRequestsLoading, setIsRequestsLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [activeTab, setActiveTab] = useState('requests');
@@ -132,7 +141,7 @@ export default function AdminRequestsPage() {
           unique: uniqueRequests.length,
         });
 
-        setRequests(uniqueRequests);
+        setRequests(uniqueRequests as AdminRequestData[]);
       } else {
         console.error('管理者申請データ取得失敗:', result.error);
       }
@@ -245,14 +254,14 @@ export default function AdminRequestsPage() {
   }
 
   // statusesテーブルのsettingsフィールドを活用してボタンの表示制御を行う
-  function canApprove(request: any): boolean {
+  function canApprove(request: AdminRequestData): boolean {
     if (!request?.statuses?.code) return false;
 
     // 承認待ち状態または取り下げ状態のみ承認可能
     return request.statuses.code === 'pending' || request.statuses.code === 'withdrawn';
   }
 
-  function canReject(request: any): boolean {
+  function canReject(request: AdminRequestData): boolean {
     if (!request?.statuses?.code) return false;
 
     // 承認待ち状態または取り下げ状態のみ却下可能
@@ -313,7 +322,7 @@ export default function AdminRequestsPage() {
 
     // 各申請のステータス情報を詳細にログ出力
     const statusDetails = requests.map((req) => {
-      const request = req as any;
+      const request = req as AdminRequestData;
       return {
         id: request.id,
         status_id: request.status_id,
@@ -326,32 +335,32 @@ export default function AdminRequestsPage() {
 
     // statusesテーブルのcodeフィールドを活用して統計を計算
     const approved = requests.filter((req) => {
-      const request = req as any;
+      const request = req as AdminRequestData;
       return request.statuses?.code === 'approved';
     }).length;
 
     const rejected = requests.filter((req) => {
-      const request = req as any;
+      const request = req as AdminRequestData;
       return request.statuses?.code === 'rejected';
     }).length;
 
     const pending = requests.filter((req) => {
-      const request = req as any;
+      const request = req as AdminRequestData;
       return request.statuses?.code === 'pending';
     }).length;
 
     const draft = requests.filter((req) => {
-      const request = req as any;
+      const request = req as AdminRequestData;
       return request.statuses?.code === 'draft';
     }).length;
 
     const withdrawn = requests.filter((req) => {
-      const request = req as any;
+      const request = req as AdminRequestData;
       return request.statuses?.code === 'withdrawn';
     }).length;
 
     const expired = requests.filter((req) => {
-      const request = req as any;
+      const request = req as AdminRequestData;
       return request.statuses?.code === 'expired';
     }).length;
 
@@ -367,27 +376,27 @@ export default function AdminRequestsPage() {
       statusDetails,
       statusBreakdown: {
         approved: requests.filter((req) => {
-          const request = req as any;
+          const request = req as AdminRequestData;
           return request.statuses?.code === 'approved';
         }),
         rejected: requests.filter((req) => {
-          const request = req as any;
+          const request = req as AdminRequestData;
           return request.statuses?.code === 'rejected';
         }),
         pending: requests.filter((req) => {
-          const request = req as any;
+          const request = req as AdminRequestData;
           return request.statuses?.code === 'pending';
         }),
         draft: requests.filter((req) => {
-          const request = req as any;
+          const request = req as AdminRequestData;
           return request.statuses?.code === 'draft';
         }),
         withdrawn: requests.filter((req) => {
-          const request = req as any;
+          const request = req as AdminRequestData;
           return request.statuses?.code === 'withdrawn';
         }),
         expired: requests.filter((req) => {
-          const request = req as any;
+          const request = req as AdminRequestData;
           return request.statuses?.code === 'expired';
         }),
       },
