@@ -428,17 +428,6 @@ export default function AdminAttendancePage() {
     fetchAttendanceData(attendanceStatuses);
   }, [user, selectedMonth, attendanceStatuses]);
 
-  // ページフォーカス時にデータを再取得（キャッシュ対策）
-  useEffect(() => {
-    function handleFocus() {
-      console.log('ページフォーカス検出、データを再取得');
-      fetchAttendanceData(attendanceStatuses);
-    }
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [attendanceStatuses]);
-
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       router.push('/login');
