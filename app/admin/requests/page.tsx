@@ -583,35 +583,6 @@ export default function AdminRequestsPage() {
             </Card>
           </div>
 
-          {requestForms.length === 0 && (
-            <div className="mt-4 p-4 bg-yellow-100 rounded">
-              <p className="font-bold text-yellow-800">申請フォームが存在しません</p>
-              <p className="text-yellow-700">
-                申請フォームを作成してから申請データを確認してください。
-              </p>
-              <Button
-                onClick={() => setCreateFormDialogOpen(true)}
-                className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white"
-              >
-                申請フォームを作成
-              </Button>
-            </div>
-          )}
-
-          {missingRequestFormIds.length > 0 && (
-            <div className="mt-4 p-4 bg-red-100 rounded">
-              <p className="font-bold text-red-800">不足している申請フォームがあります</p>
-              <p className="text-red-700">以下のIDの申請フォームが存在しません:</p>
-              <ul className="list-disc list-inside mt-2">
-                {missingRequestFormIds.map((id, index) => (
-                  <li key={`missing-form-${id}-${index}`} className="text-red-600">
-                    {id}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {/* 自分が承認者の申請一覧 */}
           <Card>
             <CardHeader>
