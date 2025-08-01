@@ -91,9 +91,9 @@ export const EmploymentTypeSchema = z.object({
   description: z.string().optional(),
   is_active: z.boolean(),
   display_order: z.number().int().min(0),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime().optional(),
-  deleted_at: z.string().datetime().optional(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable().optional(),
+  deleted_at: z.string().nullable().optional(),
 });
 
 /**
@@ -104,7 +104,7 @@ export const CreateEmploymentTypeResultSchema = z.object({
   code: z.string(),
   name: z.string(),
   description: z.string(),
-  created_at: z.string().datetime(),
+  created_at: z.string(),
 });
 
 /**
@@ -115,7 +115,7 @@ export const UpdateEmploymentTypeResultSchema = z.object({
   code: z.string(),
   name: z.string(),
   description: z.string(),
-  updated_at: z.string().datetime(),
+  updated_at: z.string(),
 });
 
 /**
@@ -123,7 +123,7 @@ export const UpdateEmploymentTypeResultSchema = z.object({
  */
 export const DeleteEmploymentTypeResultSchema = z.object({
   id: z.string().uuid(),
-  deleted_at: z.string().datetime(),
+  deleted_at: z.string(),
 });
 
 /**
@@ -206,9 +206,9 @@ export const WorkTypeSchema = z.object({
   settings: WorkTypeSettingsSchema,
   is_active: z.boolean(),
   display_order: z.number().int().min(0),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime().optional(),
-  deleted_at: z.string().datetime().optional(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable().optional(),
+  deleted_at: z.string().nullable().optional(),
 });
 
 /**

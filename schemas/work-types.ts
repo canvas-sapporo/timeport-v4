@@ -39,9 +39,9 @@ export const WorkTypeSchema = z.object({
   settings: WorkTypeSettingsSchema,
   is_active: z.boolean(),
   display_order: z.number().int().min(0),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
-  deleted_at: z.string().datetime().optional(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+  deleted_at: z.string().nullable().optional(),
 });
 
 /**
@@ -106,7 +106,7 @@ export const CreateWorkTypeResultSchema = z.object({
   work_end_time: z.string(),
   break_duration_minutes: z.number().int().min(0),
   is_flexible: z.boolean(),
-  created_at: z.string().datetime(),
+  created_at: z.string().nullable(),
 });
 
 /**
@@ -120,7 +120,7 @@ export const UpdateWorkTypeResultSchema = z.object({
   work_end_time: z.string(),
   break_duration_minutes: z.number().int().min(0),
   is_flexible: z.boolean(),
-  updated_at: z.string().datetime(),
+  updated_at: z.string().nullable(),
 });
 
 /**
