@@ -10,9 +10,10 @@ import { Group } from '@/schemas/group';
 import { notifications, groups, generateAttendanceRecords } from '@/lib/mock';
 import { getRequestForms } from '@/lib/actions/admin/request-forms';
 import { getRequests } from '@/lib/actions/requests';
-import { getUsers } from '@/lib/actions/user';
+
 import { getAdminUsers } from '@/lib/actions/admin/users';
 import * as provider from '@/lib/provider';
+import { supabase } from '@/lib/supabase';
 
 import { useAuth } from './auth-context';
 
@@ -76,21 +77,136 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setAttendanceRecords(allRecords);
   }, [usersState]);
 
-  // ユーザーデータを取得（全ページで実行）
+  // ユーザー情報を取得
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        console.log('DataProvider: ユーザーデータ取得開始');
+        // クライアントサイドでは直接Supabaseクライアントを使用
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-        const result = await getUsers();
-        console.log('DataProvider: ユーザーデータ取得結果:', result);
-
-        if (result.success && result.data) {
-          console.log('DataProvider: ユーザーデータ設定:', result.data);
-          setUsers(result.data);
-        } else {
-          console.error('ユーザーデータ取得失敗:', result.error);
+        if (userError || !user) {
+          console.error('認証エラー:', userError);
+          return;
         }
+
+        console.log('デバッグ: 現在のユーザーID:', user.id);
+
+        // 現在のユーザーの会社IDを取得
+        const { data: userGroups, error: groupsError } = await supabase
+          .from('user_groups')
+          .select(
+            `
+            group_id,
+            groups!inner (
+              company_id
+            )
+          `
+          )
+          .eq('user_id', user.id)
+          .is('deleted_at', null)
+          .limit(1)
+          .single();
+
+        console.log('デバッグ: userGroups結果:', { userGroups, groupsError });
+        console.log('デバッグ: userGroups.groups:', userGroups?.groups);
+        console.log('デバッグ: userGroups.groups型:', typeof userGroups?.groups);
+
+        if (groupsError || !userGroups?.groups) {
+          console.error('ユーザーの会社情報が見つかりません');
+          console.error('デバッグ: groupsError:', groupsError);
+          console.error('デバッグ: userGroups:', userGroups);
+
+          // ユーザーがグループに所属していない場合の処理
+          // 管理者の場合は全てのユーザーを表示
+          // 現在のユーザーのプロフィール情報を取得
+          const { data: userProfile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (profileError) {
+            console.error('ユーザープロフィール取得エラー:', profileError);
+            return;
+          }
+
+          if (userProfile?.role === 'admin' || userProfile?.role === 'system-admin') {
+            console.log('管理者ユーザーのため、全てのユーザーを取得します');
+            const { data: allUsers, error: allUsersError } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .is('deleted_at', null)
+              .order('code', { ascending: true });
+
+            if (allUsersError) {
+              console.error('全ユーザー取得エラー:', allUsersError);
+              return;
+            }
+
+            setUsers(allUsers || []);
+            return;
+          }
+
+          return;
+        }
+
+        // 会社IDを安全に取得
+        const groupsData = userGroups.groups as unknown as { company_id: string };
+        const companyId = groupsData?.company_id;
+
+        if (!companyId) {
+          console.error('会社IDが見つかりません');
+          return;
+        }
+        console.log('デバッグ: 会社ID:', companyId);
+
+        // 会社内のユーザーを取得
+        const { data: users, error: usersError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .is('deleted_at', null)
+          .order('code', { ascending: true });
+
+        if (usersError) {
+          console.error('ユーザー取得エラー:', usersError);
+          return;
+        }
+
+        // より効率的な方法：一度に全てのユーザーとグループ情報を取得
+        const { data: allUserGroups, error: allUserGroupsError } = await supabase
+          .from('user_groups')
+          .select(
+            `
+            user_id,
+            groups!inner (
+              company_id
+            )
+          `
+          )
+          .is('deleted_at', null);
+
+        if (allUserGroupsError) {
+          console.error('全ユーザーグループ取得エラー:', allUserGroupsError);
+          return;
+        }
+
+        // 会社IDでフィルタリング
+        const companyUserIds =
+          allUserGroups
+            ?.filter(
+              (ug) => (ug.groups as unknown as { company_id: string })?.company_id === companyId
+            )
+            .map((ug) => ug.user_id) || [];
+
+        const filteredUsers = (users || []).filter((userProfile) =>
+          companyUserIds.includes(userProfile.id)
+        );
+
+        console.log('デバッグ: フィルタリング後のユーザー数:', filteredUsers.length);
+        setUsers(filteredUsers);
       } catch (error) {
         console.error('ユーザーデータ取得エラー:', error);
       }
@@ -134,27 +250,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // 申請データを取得（全ページで実行）
   useEffect(() => {
-    console.log('DataProvider: fetchRequests useEffect 開始');
-
     const fetchRequests = async () => {
-      console.log('DataProvider: fetchRequests 関数開始');
       try {
-        console.log('DataProvider: getRequests 呼び出し前');
         const result = await getRequests(currentUserId || undefined);
-        console.log('DataProvider: getRequests 結果:', result);
 
         if (result.success && result.data) {
-          console.log('DataProvider: 申請データ設定:', result.data);
-
           // 重複を除去（IDでフィルタリング）
           const uniqueRequests = result.data.filter(
             (request, index, self) => index === self.findIndex((r) => r.id === request.id)
           );
-
-          console.log('申請データ重複除去結果:', {
-            total: result.data.length,
-            unique: uniqueRequests.length,
-          });
 
           setRequests(uniqueRequests);
         } else {

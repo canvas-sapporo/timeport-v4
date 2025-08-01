@@ -68,9 +68,6 @@ export default function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
   const { user, logout, isLoggingOut } = useAuth();
   const router = useRouter();
 
-  // デバッグログ
-  console.log('Sidebar props:', { isOpen, onToggle: !!onToggle });
-
   // ログアウト中またはユーザーが存在しない場合は機能取得をスキップ
   const shouldFetchFeatures = !isLoggingOut && user && user.company_id;
   const {
@@ -78,17 +75,6 @@ export default function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
     isLoading: isLoadingFeatures,
     error,
   } = useCompanyFeatures(shouldFetchFeatures ? user.company_id : undefined);
-
-  // デバッグログ
-  console.log('Sidebar 機能状態:', {
-    userRole: user?.role,
-    companyId: user?.company_id,
-    features,
-    isLoadingFeatures,
-    error,
-    isLoggingOut,
-    shouldFetchFeatures,
-  });
 
   const isFeatureEnabled = (feature: 'chat' | 'report' | 'schedule') => {
     // ログアウト中は機能チェックをスキップ
@@ -139,16 +125,12 @@ export default function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
 
   const menuItems = getMenuItems();
 
-  // デバッグ用：実際のクラス名を出力
   const sidebarClasses = cn(
     'fixed left-0 top-0 z-50 h-full min-h-screen timeport-sidebar text-white transition-all duration-300 shadow-2xl flex flex-col',
     'lg:relative lg:z-0 lg:translate-x-0',
     isOpen && 'mobile-open',
     isCollapsed ? 'w-16' : 'w-64'
   );
-
-  console.log('サイドバークラス名:', sidebarClasses);
-  console.log('isOpen状態:', isOpen);
 
   return (
     <>

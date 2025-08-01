@@ -17,10 +17,8 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5分
 export const clearFeatureCache = (companyId?: string) => {
   if (companyId) {
     featureCache.delete(companyId);
-    console.log('機能キャッシュをクリア:', companyId);
   } else {
     featureCache.clear();
-    console.log('全機能キャッシュをクリア');
   }
 };
 
@@ -31,8 +29,8 @@ export const triggerFeatureUpdate = (companyId: string) => {
 };
 
 export const useCompanyFeatures = (companyId: string | undefined) => {
-  const [features, setFeatures] = useState<{ [key: string]: boolean } | null>(null); // nullに変更
-  const [isLoading, setIsLoading] = useState(true); // 初期状態をtrueに変更
+  const [features, setFeatures] = useState<{ [key: string]: boolean } | null>(null);
+  const [isLoading, setIsLoading] = useState(false); // 初期状態をfalseに変更
   const [error, setError] = useState<string | null>(null);
 
   const fetchFeatures = async () => {
@@ -46,7 +44,6 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     // キャッシュをチェック
     const cached = featureCache.get(companyId);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log('機能キャッシュを使用:', companyId);
       setFeatures(cached.features);
       setIsLoading(false);
       setError(null);
@@ -57,7 +54,6 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     setError(null);
 
     try {
-      console.log('機能取得開始:', companyId);
 
       // タイムアウトを設定（10秒に延長）
       const timeoutPromise = new Promise((_, reject) => {
@@ -92,7 +88,6 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
           }
         });
 
-        console.log('機能取得成功:', companyId, map);
         setFeatures(map);
 
         // キャッシュに保存
@@ -132,13 +127,9 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
   useEffect(() => {
     if (!companyId) return;
 
-    console.log('機能ポーリング監視を開始:', companyId);
-
     const interval = setInterval(() => {
-      console.log('機能ポーリング実行:', companyId);
       // エラーが発生している場合はポーリングをスキップ
       if (error) {
-        console.log('エラーが発生中のため、ポーリングをスキップ:', companyId);
         return;
       }
       // キャッシュをクリアして最新データを取得
@@ -147,7 +138,6 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     }, 60000); // 60秒間隔に延長
 
     return () => {
-      console.log('機能ポーリング監視を停止:', companyId);
       clearInterval(interval);
     };
   }, [companyId, error]);
@@ -157,7 +147,6 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     if (!companyId) return;
 
     const handleFocus = () => {
-      console.log('ページフォーカス時に機能を再取得:', companyId);
       clearFeatureCache(companyId);
       fetchFeatures();
     };
@@ -173,7 +162,6 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
   useEffect(() => {
     const handleFeatureUpdate = (event: CustomEvent) => {
       if (event.detail.companyId === companyId) {
-        console.log('機能更新イベントを受信:', companyId);
         // キャッシュをクリアして再取得
         clearFeatureCache(companyId);
         fetchFeatures();
