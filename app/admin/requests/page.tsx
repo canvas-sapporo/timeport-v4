@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Eye, FormInput, Plus, Edit, Trash2, Loader2 } from 'lucide-react';
+import { FileText, Eye, FormInput, Plus, Edit, Trash2, Loader2, Check, X } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
@@ -20,7 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRequestForms, deleteRequestForm } from '@/lib/actions/admin/request-forms';
-import { getAdminRequests } from '@/lib/actions/requests';
+import { getAdminRequests, updateRequestStatus } from '@/lib/actions/requests';
 import type { RequestForm } from '@/schemas/request';
 import RequestFormEditDialog from '@/components/admin/request-forms/RequestFormEditDialog';
 import RequestFormCreateDialog from '@/components/admin/request-forms/RequestFormCreateDialog';
@@ -36,6 +36,17 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AdminRequestsPage() {
   const { user } = useAuth();
@@ -46,6 +57,12 @@ export default function AdminRequestsPage() {
   const [isRequestsLoading, setIsRequestsLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [activeTab, setActiveTab] = useState('requests');
+
+  // 承認・却下ダイアログ用の状態
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [rejectionAction, setRejectionAction] = useState<'reject' | 'withdraw'>('reject');
 
   // 申請フォーム管理用の状態
   const [requestForms, setRequestForms] = useState<RequestForm[]>([]);
@@ -153,30 +170,128 @@ export default function AdminRequestsPage() {
     return null;
   }
 
-  function handleApprove(requestId: string) {
-    updateRequest(requestId, {
-      status_id: 'approved',
-      // approved_by, approved_atはRequest型に含まれていない場合は省略
-    });
+  async function handleApprove(requestId: string) {
+    try {
+      const result = await updateRequestStatus(requestId, 'approved', '管理者により承認されました');
+      if (result.success) {
+        toast({
+          title: '承認完了',
+          description: '申請が承認されました',
+        });
+        fetchAdminRequests(); // データを再取得
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.error || '承認に失敗しました',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('承認エラー:', error);
+      toast({
+        title: 'エラー',
+        description: '承認処理中にエラーが発生しました',
+        variant: 'destructive',
+      });
+    }
+    setApprovalDialogOpen(false);
+    setSelectedRequestId(null);
   }
 
-  function handleReject(requestId: string) {
-    updateRequest(requestId, {
-      status_id: 'rejected',
-      rejection_reason: rejectionReason || '管理者により却下されました',
-    });
+  async function handleReject(requestId: string, action: 'reject' | 'withdraw') {
+    try {
+      const statusCode = action === 'reject' ? 'rejected' : 'withdrawn';
+      const reason =
+        action === 'reject'
+          ? rejectionReason || '管理者により却下されました'
+          : rejectionReason || '管理者により取り下げられました';
+
+      const result = await updateRequestStatus(requestId, statusCode, reason);
+      if (result.success) {
+        toast({
+          title: action === 'reject' ? '却下完了' : '取り下げ完了',
+          description: action === 'reject' ? '申請が却下されました' : '申請が取り下げられました',
+        });
+        fetchAdminRequests(); // データを再取得
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.error || `${action === 'reject' ? '却下' : '取り下げ'}に失敗しました`,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error(`${action === 'reject' ? '却下' : '取り下げ'}エラー:`, error);
+      toast({
+        title: 'エラー',
+        description: `${action === 'reject' ? '却下' : '取り下げ'}処理中にエラーが発生しました`,
+        variant: 'destructive',
+      });
+    }
     setRejectionReason('');
+    setRejectionDialogOpen(false);
+    setSelectedRequestId(null);
+    setRejectionAction('reject');
   }
 
-  function getStatusBadge(status: { name?: string; code?: string } | null | undefined) {
+  function openApprovalDialog(requestId: string) {
+    setSelectedRequestId(requestId);
+    setApprovalDialogOpen(true);
+  }
+
+  function openRejectionDialog(requestId: string) {
+    setSelectedRequestId(requestId);
+    setRejectionDialogOpen(true);
+  }
+
+  // statusesテーブルのsettingsフィールドを活用してボタンの表示制御を行う
+  function canApprove(request: any): boolean {
+    if (!request?.statuses?.code) return false;
+
+    // 承認待ち状態または取り下げ状態のみ承認可能
+    return request.statuses.code === 'pending' || request.statuses.code === 'withdrawn';
+  }
+
+  function canReject(request: any): boolean {
+    if (!request?.statuses?.code) return false;
+
+    // 承認待ち状態または取り下げ状態のみ却下可能
+    return request.statuses.code === 'pending' || request.statuses.code === 'withdrawn';
+  }
+
+  function getStatusBadge(
+    status: { name?: string; code?: string; color?: string } | null | undefined
+  ) {
     if (!status) return <Badge variant="outline">-</Badge>;
-    // statusesオブジェクトから情報を取得
+
     const statusName = status.name || '不明';
-    // const statusColor = status.color || '#6B7280';
+    const statusColor = status.color || '#6B7280';
+
+    // statusesテーブルのcodeフィールドに基づいてvariantを決定
     let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'outline';
     if (status.code === 'pending') variant = 'secondary';
     else if (status.code === 'approved') variant = 'default';
     else if (status.code === 'rejected') variant = 'destructive';
+    else if (status.code === 'draft') variant = 'outline';
+    else if (status.code === 'withdrawn') variant = 'outline';
+    else if (status.code === 'expired') variant = 'outline';
+
+    // カスタムカラーを使用する場合は、styleで直接指定
+    if (statusColor && statusColor !== '#6B7280') {
+      return (
+        <Badge
+          variant="outline"
+          style={{
+            backgroundColor: statusColor + '20', // 透明度20%の背景色
+            color: statusColor,
+            borderColor: statusColor + '40', // 透明度40%のボーダー色
+          }}
+        >
+          {statusName}
+        </Badge>
+      );
+    }
+
     return <Badge variant={variant}>{statusName}</Badge>;
   }
 
@@ -190,6 +305,95 @@ export default function AdminRequestsPage() {
     const active = requestForms.filter((form) => form.is_active).length;
     const inactive = total - active;
     return { total, active, inactive };
+  }
+
+  // 申請データ統計情報を計算
+  function getRequestStats() {
+    const total = requests.length;
+
+    // 各申請のステータス情報を詳細にログ出力
+    const statusDetails = requests.map((req) => {
+      const request = req as any;
+      return {
+        id: request.id,
+        status_id: request.status_id,
+        statuses: request.statuses,
+        status_name: request.statuses?.name,
+        status_code: request.statuses?.code,
+      };
+    });
+    console.log('AdminRequestsPage: ステータス詳細', statusDetails);
+
+    // statusesテーブルのcodeフィールドを活用して統計を計算
+    const approved = requests.filter((req) => {
+      const request = req as any;
+      return request.statuses?.code === 'approved';
+    }).length;
+
+    const rejected = requests.filter((req) => {
+      const request = req as any;
+      return request.statuses?.code === 'rejected';
+    }).length;
+
+    const pending = requests.filter((req) => {
+      const request = req as any;
+      return request.statuses?.code === 'pending';
+    }).length;
+
+    const draft = requests.filter((req) => {
+      const request = req as any;
+      return request.statuses?.code === 'draft';
+    }).length;
+
+    const withdrawn = requests.filter((req) => {
+      const request = req as any;
+      return request.statuses?.code === 'withdrawn';
+    }).length;
+
+    const expired = requests.filter((req) => {
+      const request = req as any;
+      return request.statuses?.code === 'expired';
+    }).length;
+
+    // デバッグ: 統計情報をログ出力
+    console.log('AdminRequestsPage: 申請統計', {
+      total,
+      approved,
+      rejected,
+      pending,
+      draft,
+      withdrawn,
+      expired,
+      statusDetails,
+      statusBreakdown: {
+        approved: requests.filter((req) => {
+          const request = req as any;
+          return request.statuses?.code === 'approved';
+        }),
+        rejected: requests.filter((req) => {
+          const request = req as any;
+          return request.statuses?.code === 'rejected';
+        }),
+        pending: requests.filter((req) => {
+          const request = req as any;
+          return request.statuses?.code === 'pending';
+        }),
+        draft: requests.filter((req) => {
+          const request = req as any;
+          return request.statuses?.code === 'draft';
+        }),
+        withdrawn: requests.filter((req) => {
+          const request = req as any;
+          return request.statuses?.code === 'withdrawn';
+        }),
+        expired: requests.filter((req) => {
+          const request = req as any;
+          return request.statuses?.code === 'expired';
+        }),
+      },
+    });
+
+    return { total, approved, rejected, pending, draft, withdrawn, expired };
   }
 
   // デバッグ: データの状態をログ出力
@@ -306,45 +510,107 @@ export default function AdminRequestsPage() {
             </select>
           </div>
 
-          {/* デバッグ情報 */}
-          <div className="bg-gray-100 p-4 rounded text-sm">
-            <p>デバッグ情報:</p>
-            <p>申請データ数: {requests.length}</p>
-            <p>ユーザーデータ数: {users.length}</p>
-            <p>申請フォーム数: {requestForms.length}</p>
-            <p>フィルタリング後: {myApprovalRequests.length}</p>
-            <p>ローディング中: {isRequestsLoading ? 'はい' : 'いいえ'}</p>
-            <p>不足している申請フォームID: {missingRequestFormIds.join(', ') || 'なし'}</p>
-
-            {requestForms.length === 0 && (
-              <div className="mt-4 p-4 bg-yellow-100 rounded">
-                <p className="font-bold text-yellow-800">申請フォームが存在しません</p>
-                <p className="text-yellow-700">
-                  申請フォームを作成してから申請データを確認してください。
-                </p>
-                <Button
-                  onClick={() => setCreateFormDialogOpen(true)}
-                  className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white"
-                >
-                  申請フォームを作成
-                </Button>
-              </div>
-            )}
-
-            {missingRequestFormIds.length > 0 && (
-              <div className="mt-4 p-4 bg-red-100 rounded">
-                <p className="font-bold text-red-800">不足している申請フォームがあります</p>
-                <p className="text-red-700">以下のIDの申請フォームが存在しません:</p>
-                <ul className="list-disc list-inside mt-2">
-                  {missingRequestFormIds.map((id) => (
-                    <li key={id} className="text-red-600">
-                      {id}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+          {/* 申請データ統計情報カード */}
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">総申請数</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{getRequestStats().total}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">下書き</CardTitle>
+                <div className="h-4 w-4 rounded-full bg-gray-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-600">{getRequestStats().draft}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">承認待ち</CardTitle>
+                <div className="h-4 w-4 rounded-full bg-yellow-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {getRequestStats().pending}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">承認済み</CardTitle>
+                <div className="h-4 w-4 rounded-full bg-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {getRequestStats().approved}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">却下</CardTitle>
+                <div className="h-4 w-4 rounded-full bg-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{getRequestStats().rejected}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">取り下げ</CardTitle>
+                <div className="h-4 w-4 rounded-full bg-gray-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-500">
+                  {getRequestStats().withdrawn}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">期限切れ</CardTitle>
+                <div className="h-4 w-4 rounded-full bg-gray-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-700">{getRequestStats().expired}</div>
+              </CardContent>
+            </Card>
           </div>
+
+          {requestForms.length === 0 && (
+            <div className="mt-4 p-4 bg-yellow-100 rounded">
+              <p className="font-bold text-yellow-800">申請フォームが存在しません</p>
+              <p className="text-yellow-700">
+                申請フォームを作成してから申請データを確認してください。
+              </p>
+              <Button
+                onClick={() => setCreateFormDialogOpen(true)}
+                className="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white"
+              >
+                申請フォームを作成
+              </Button>
+            </div>
+          )}
+
+          {missingRequestFormIds.length > 0 && (
+            <div className="mt-4 p-4 bg-red-100 rounded">
+              <p className="font-bold text-red-800">不足している申請フォームがあります</p>
+              <p className="text-red-700">以下のIDの申請フォームが存在しません:</p>
+              <ul className="list-disc list-inside mt-2">
+                {missingRequestFormIds.map((id, index) => (
+                  <li key={`missing-form-${id}-${index}`} className="text-red-600">
+                    {id}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* 自分が承認者の申請一覧 */}
           <Card>
@@ -386,7 +652,7 @@ export default function AdminRequestsPage() {
                       if (!request) return null;
                       const requestant = users.find((u) => u.id === request.user_id);
                       return (
-                        <TableRow key={`${request.id}-${index}`}>
+                        <TableRow key={`request-${request.id}-${index}`}>
                           <TableCell>
                             {requestant
                               ? `${requestant.family_name} ${requestant.first_name}`
@@ -406,22 +672,42 @@ export default function AdminRequestsPage() {
                           <TableCell>{getStatusBadge(request.statuses)}</TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
-                              <Button
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                                onClick={() => handleApprove(request.id)}
-                                disabled={request?.status_id === 'approved'}
-                              >
-                                承認
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleReject(request.id)}
-                                disabled={request?.status_id === 'rejected'}
-                              >
-                                却下
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                      onClick={() => openApprovalDialog(request.id)}
+                                      disabled={!canApprove(request)}
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>承認</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      onClick={() => openRejectionDialog(request.id)}
+                                      disabled={!canReject(request)}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>却下</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -492,76 +778,79 @@ export default function AdminRequestsPage() {
                   </div>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>申請名</TableHead>
-                      <TableHead>コード</TableHead>
-                      <TableHead>説明</TableHead>
-                      <TableHead>項目数</TableHead>
-                      <TableHead>ステータス</TableHead>
-                      <TableHead>編集日</TableHead>
-                      <TableHead>操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {requestForms.map((form, index) => (
-                      <TableRow key={`${form.id}-${index}`}>
-                        <TableCell className="font-medium">{form.name}</TableCell>
-                        <TableCell>
-                          {form.code ? (
-                            <Badge variant="outline">{form.code}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">{form.description}</TableCell>
-                        <TableCell>{form.form_config.length}項目</TableCell>
-                        <TableCell>
-                          <Badge variant={form.is_active ? 'default' : 'secondary'}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {requestForms.map((form, index) => (
+                    <Card
+                      key={`form-${form.id}-${index}`}
+                      className="hover:shadow-md transition-shadow"
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg font-semibold line-clamp-2">
+                              {form.name}
+                            </CardTitle>
+                            {form.code && (
+                              <Badge variant="outline" className="mt-2">
+                                {form.code}
+                              </Badge>
+                            )}
+                          </div>
+                          <Badge
+                            variant={form.is_active ? 'default' : 'secondary'}
+                            className="ml-2"
+                          >
                             {form.is_active ? '有効' : '無効'}
                           </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(form.updated_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedForm(form);
-                                setPreviewFormDialogOpen(true);
-                              }}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedForm(form);
-                                setEditFormDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600"
-                              onClick={() => {
-                                setDeleteTargetForm(form);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        {form.description && (
+                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                            {form.description}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                          <span>{form.form_config.length}項目</span>
+                          <span>{new Date(form.updated_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedForm(form);
+                              setPreviewFormDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedForm(form);
+                              setEditFormDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600"
+                            onClick={() => {
+                              setDeleteTargetForm(form);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               )}
               {!isRequestFormsLoading && requestForms.length === 0 && (
                 <div className="text-center py-8">
@@ -657,6 +946,100 @@ export default function AdminRequestsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 承認確認ダイアログ */}
+      <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>申請を承認しますか？</DialogTitle>
+            <DialogDescription>
+              この申請を承認します。承認後は取り消すことができません。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApprovalDialogOpen(false)}>
+              キャンセル
+            </Button>
+            <Button
+              onClick={async () => selectedRequestId && (await handleApprove(selectedRequestId))}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              承認する
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 却下・取り下げ確認ダイアログ */}
+      <Dialog open={rejectionDialogOpen} onOpenChange={setRejectionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>申請の処理</DialogTitle>
+            <DialogDescription>この申請を却下または取り下げします。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>処理内容</Label>
+              <div className="flex space-x-4 mt-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="reject"
+                    checked={rejectionAction === 'reject'}
+                    onChange={(e) => setRejectionAction(e.target.value as 'reject' | 'withdraw')}
+                    className="text-red-600"
+                  />
+                  <span>却下</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    value="withdraw"
+                    checked={rejectionAction === 'withdraw'}
+                    onChange={(e) => setRejectionAction(e.target.value as 'reject' | 'withdraw')}
+                    className="text-gray-600"
+                  />
+                  <span>取り下げ（再申請可能）</span>
+                </label>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="rejection-reason">
+                {rejectionAction === 'reject' ? '却下理由' : '取り下げ理由'}
+              </Label>
+              <Textarea
+                id="rejection-reason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder={
+                  rejectionAction === 'reject'
+                    ? '却下理由を入力してください'
+                    : '取り下げ理由を入力してください'
+                }
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectionDialogOpen(false)}>
+              キャンセル
+            </Button>
+            <Button
+              onClick={async () =>
+                selectedRequestId && (await handleReject(selectedRequestId, rejectionAction))
+              }
+              className={
+                rejectionAction === 'reject'
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-gray-600 hover:bg-gray-700 text-white'
+              }
+            >
+              {rejectionAction === 'reject' ? '却下する' : '取り下げる'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
