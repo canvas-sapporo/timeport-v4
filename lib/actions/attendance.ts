@@ -13,6 +13,7 @@ import type {
   ClockRecord,
 } from '@/schemas/attendance';
 import { AppError } from '@/lib/utils/error-handling';
+import { getJSTDate } from '@/lib/utils';
 
 // 環境変数の確認
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -57,8 +58,8 @@ async function validateClockOperation(
   timestamp: string
 ): Promise<{ isValid: boolean; error?: string }> {
   console.log('validateClockOperation 開始:', { userId, type, timestamp });
-  const today = new Date().toISOString().split('T')[0];
-  console.log('今日の日付:', today);
+  const today = getJSTDate();
+  console.log('今日の日付（JST）:', today);
 
   // 今日の勤怠記録を取得（複数回出退勤対応）
   console.log('バリデーション用勤怠記録取得開始');
@@ -248,9 +249,9 @@ export async function clockIn(
   try {
     console.log('clockIn: 環境変数確認完了');
 
-    // 簡略化されたバージョンでテスト
-    const today = new Date().toISOString().split('T')[0];
-    console.log('clockIn: 今日の日付:', today);
+    // 日本時間での今日の日付を取得
+    const today = getJSTDate();
+    console.log('clockIn: 今日の日付（JST）:', today);
 
     // 基本的なupsert操作のみ実行
     const upsertData = {
@@ -342,8 +343,8 @@ export async function clockOut(userId: string, timestamp: string): Promise<Clock
       };
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    console.log('今日の日付:', today);
+    const today = getJSTDate();
+    console.log('今日の日付（JST）:', today);
 
     // 勤怠レコード取得（複数レコードがある場合は最新のものを取得）
     const { data: existingRecords, error: fetchError } = await supabaseAdmin
@@ -514,7 +515,7 @@ export async function startBreak(userId: string, timestamp: string): Promise<Clo
         error: 'VALIDATION_ERROR',
       };
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = getJSTDate();
     // 勤怠レコード取得（複数レコードがある場合は最新のものを取得）
     const { data: existingRecords, error: fetchError } = await supabaseAdmin
       .from('attendances')
@@ -610,7 +611,7 @@ export async function endBreak(userId: string, timestamp: string): Promise<Clock
         error: 'VALIDATION_ERROR',
       };
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = getJSTDate();
     // 勤怠レコード取得（複数レコードがある場合は最新のものを取得）
     const { data: existingRecords, error: fetchError } = await supabaseAdmin
       .from('attendances')
@@ -697,7 +698,7 @@ export async function endBreak(userId: string, timestamp: string): Promise<Clock
  */
 export async function getTodayAttendance(userId: string): Promise<Attendance | null> {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getJSTDate();
 
     // 今日の勤怠記録を取得（複数レコードがある場合は最新のものを取得）
     const { data: records, error } = await supabaseAdmin

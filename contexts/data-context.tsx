@@ -16,6 +16,7 @@ import * as provider from '@/lib/provider';
 import { supabase } from '@/lib/supabase';
 
 import { useAuth } from './auth-context';
+import { getJSTDate } from '@/lib/utils';
 
 interface DataContextType {
   attendanceRecords: AttendanceData[];
@@ -348,7 +349,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clockIn = (userId: string, time: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getJSTDate();
     const recordId = `${userId}-${today}`;
 
     const existingRecord = attendanceRecords.find((r) => r.id === recordId);
@@ -379,7 +380,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clockOut = (userId: string, time: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getJSTDate();
     const recordId = `${userId}-${today}`;
 
     const existingRecord = attendanceRecords.find((r) => r.id === recordId);
@@ -400,7 +401,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const startBreak = (userId: string, time: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getJSTDate();
     const recordId = `${userId}-${today}`;
 
     const existingRecord = attendanceRecords.find((r) => r.id === recordId);
@@ -418,7 +419,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const endBreak = (userId: string, time: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getJSTDate();
     const recordId = `${userId}-${today}`;
 
     const existingRecord = attendanceRecords.find((r) => r.id === recordId);

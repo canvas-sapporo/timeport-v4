@@ -86,3 +86,24 @@ export function hiraganaToKatakana(text: string): string {
     return String.fromCharCode(char.charCodeAt(0) + 0x60);
   });
 }
+
+/**
+ * 日本時間での日付を取得する関数
+ * @param date 基準日時（デフォルト: 現在時刻）
+ * @returns YYYY-MM-DD形式の日本時間での日付文字列
+ */
+export function getJSTDate(date: Date = new Date()): string {
+  const jstOffset = 9 * 60; // JSTはUTC+9
+  const jstTime = new Date(date.getTime() + (jstOffset * 60 * 1000));
+  return jstTime.toISOString().split('T')[0];
+}
+
+/**
+ * 指定された日時を日本時間の日付に変換する関数
+ * @param dateString ISO形式の日時文字列
+ * @returns YYYY-MM-DD形式の日本時間での日付文字列
+ */
+export function getJSTDateFromString(dateString: string): string {
+  const date = new Date(dateString);
+  return getJSTDate(date);
+}

@@ -6,6 +6,7 @@ import { Users, Clock, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lu
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
+import { getJSTDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getWorkTypes } from '@/lib/actions/admin/work-types';
 import StatsCard from '@/components/ui/stats-card';
@@ -63,9 +64,7 @@ export default function AdminDashboard() {
 
   const activeUsers = users.filter((u) => u.is_active).length;
   const pendingRequests = requests.filter((a) => a.status_id === 'pending').length;
-  const todayAttendance = attendanceRecords.filter(
-    (r) => r.work_date === new Date().toISOString().split('T')[0]
-  ).length;
+  const todayAttendance = attendanceRecords.filter((r) => r.work_date === getJSTDate()).length;
   const thisMonth = new Date().toISOString().slice(0, 7);
   const monthlyAttendance = attendanceRecords.filter((r) => r.work_date.startsWith(thisMonth));
   const totalOvertimeHours =

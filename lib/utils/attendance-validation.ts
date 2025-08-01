@@ -4,6 +4,7 @@
 
 import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
 import type { ObjectValidationRule } from '@/schemas/request';
+import { getJSTDate } from '@/lib/utils';
 
 // ================================
 // 日付バリデーション
@@ -232,7 +233,7 @@ export function createDefaultBreakRecord(): ClockBreakRecord {
 export function formatDateForInput(dateString: string): string {
   try {
     const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
+    return getJSTDate(date);
   } catch {
     return '';
   }

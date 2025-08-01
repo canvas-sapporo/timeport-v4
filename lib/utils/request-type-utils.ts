@@ -6,6 +6,7 @@ import type { FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/schemas/re
 import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
 
 import { createDefaultClockRecord, createDefaultBreakRecord } from './attendance-validation';
+import { getJSTDate } from '@/lib/utils';
 
 // ================================
 // フォーム設定関連
@@ -429,7 +430,7 @@ export function getObjectTypeDefaults(objectType: string) {
   switch (objectType) {
     case 'attendance':
       return {
-        work_date: new Date().toISOString().split('T')[0],
+        work_date: getJSTDate(),
         clock_records: {
           in_time: '',
           out_time: '',

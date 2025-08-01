@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
+import { getJSTDate } from '@/lib/utils';
 // import GlobalLoading from '@/components/ui/global-loading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,7 @@ export default function MemberSchedulePage() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isCreateScheduleOpen, setIsCreateScheduleOpen] = useState(false);
   const [isCreateTodoOpen, setIsCreateTodoOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getJSTDate());
 
   const [scheduleForm, setScheduleForm] = useState<CreateScheduleInput>({
     title: '',
@@ -113,7 +114,7 @@ export default function MemberSchedulePage() {
   // 日ビューが選択された時に当日の日付にリセット
   useEffect(() => {
     if (calendarView === 'day') {
-      setSelectedDate(new Date().toISOString().split('T')[0]);
+      setSelectedDate(getJSTDate());
     }
   }, [calendarView]);
 
@@ -240,7 +241,7 @@ export default function MemberSchedulePage() {
         newDate = currentDate;
     }
 
-    setSelectedDate(newDate.toISOString().split('T')[0]);
+    setSelectedDate(getJSTDate(newDate));
   }
 
   // 今日/今週/今月/今年に戻る関数
@@ -249,23 +250,23 @@ export default function MemberSchedulePage() {
 
     switch (calendarView) {
       case 'day':
-        setSelectedDate(today.toISOString().split('T')[0]);
+        setSelectedDate(getJSTDate(today));
         break;
       case 'week': {
         // 今週の開始日（日曜日）を計算
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay());
-        setSelectedDate(weekStart.toISOString().split('T')[0]);
+        setSelectedDate(getJSTDate(weekStart));
         break;
       }
       case 'month': {
         // 今月の現在の日付を設定
-        setSelectedDate(today.toISOString().split('T')[0]);
+        setSelectedDate(getJSTDate(today));
         break;
       }
       case 'year': {
         // 今年の現在の日付を設定
-        setSelectedDate(today.toISOString().split('T')[0]);
+        setSelectedDate(getJSTDate(today));
         break;
       }
     }
@@ -365,7 +366,7 @@ export default function MemberSchedulePage() {
 
   // 指定日のイベントを取得
   function getEventsForDate(date: Date) {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = getJSTDate(date);
     return schedules.filter(
       (s) =>
         s.start_datetime.startsWith(dateStr) ||
@@ -375,7 +376,7 @@ export default function MemberSchedulePage() {
 
   // 指定日のTodoを取得
   function getTodosForDate(date: Date) {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = getJSTDate(date);
     return todos.filter((t) => t.due_date && t.due_date === dateStr);
   }
 

@@ -9,6 +9,7 @@ import { ArrowLeft, X, FileText } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
+import { getJSTDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -127,9 +128,9 @@ export default function CreateRequestPage() {
         request_form_id: selectedRequestForm!.id,
         title: data.title,
         form_data: formData as Record<string, string | number | boolean | Date | string[]>,
-        target_date: new Date().toISOString().split('T')[0],
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date().toISOString().split('T')[0],
+        target_date: getJSTDate(),
+        start_date: getJSTDate(),
+        end_date: getJSTDate(),
         submission_comment: data.description || '',
         current_approval_step: 1,
         comments: [],

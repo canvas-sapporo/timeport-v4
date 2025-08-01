@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
+import { getJSTDate } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -175,7 +176,7 @@ export default function MemberReportPage() {
       formDataObj.append('template_id', selectedTemplate.id as string);
       formDataObj.append('title', `レポート - ${new Date().toLocaleDateString('ja-JP')}`);
       formDataObj.append('content', JSON.stringify(formData));
-      formDataObj.append('report_date', new Date().toISOString().split('T')[0] || '');
+      formDataObj.append('report_date', getJSTDate() || '');
 
       const result = await createReport(formDataObj);
       if (result.success && result.data) {

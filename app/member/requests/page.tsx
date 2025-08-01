@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { updateRequestStatus } from '@/lib/actions/requests';
 import { useToast } from '@/hooks/use-toast';
+import { getJSTDate } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -184,8 +185,8 @@ export default function MemberRequestsPage() {
       if (isNaN(parsedDate.getTime())) {
         return null;
       }
-      // YYYY-MM-DD形式で返す
-      return parsedDate.toISOString().split('T')[0];
+      // YYYY-MM-DD形式で返す（JST）
+      return getJSTDate(parsedDate);
     }
     // フォームデータのバリデーションとクリーンアップ
     const cleanedFormData: Record<string, string | number | boolean | Date | string[]> = {};
@@ -210,10 +211,9 @@ export default function MemberRequestsPage() {
         request_form_id: selectedRequestType,
         title: requestForm.name,
         form_data: cleanedFormData,
-        target_date: new Date().toISOString().split('T')[0],
-        start_date:
-          (cleanedFormData.start_date as string) || new Date().toISOString().split('T')[0],
-        end_date: (cleanedFormData.end_date as string) || new Date().toISOString().split('T')[0],
+        target_date: getJSTDate(),
+        start_date: (cleanedFormData.start_date as string) || getJSTDate(),
+        end_date: (cleanedFormData.end_date as string) || getJSTDate(),
         submission_comment: '',
         current_approval_step: 1,
         comments: [],

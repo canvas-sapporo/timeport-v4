@@ -4,6 +4,7 @@
 import { AttendanceData } from '@/schemas/attendance';
 import { RequestData, RequestForm, FormFieldConfig, ApprovalStep } from '@/schemas/request';
 import { UserProfile } from '@/schemas/user_profile';
+import { getJSTDate } from '@/lib/utils';
 import { Notification } from '@/schemas/database/feature';
 import { Group } from '@/schemas/group';
 import { ChatMessageData } from '@/schemas/chat';
@@ -469,14 +470,14 @@ export async function getAttendanceData(userId?: string) {
 export async function getTodayAttendance(userId: string) {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
   const record = mockAttendanceRecords.find((r) => r.user_id === userId && r.work_date === today);
 
   return record || null;
 }
 
 export async function clockIn(userId: string, time: string) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
   const existingRecord = mockAttendanceRecords.find(
     (r) => r.user_id === userId && r.work_date === today
   );
@@ -509,7 +510,7 @@ export async function clockIn(userId: string, time: string) {
 }
 
 export async function clockOut(userId: string, time: string) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
   const record = mockAttendanceRecords.find((r) => r.user_id === userId && r.work_date === today);
 
   if (!record || !record.clock_in_time) {
@@ -532,7 +533,7 @@ export async function clockOut(userId: string, time: string) {
 }
 
 export async function startBreak(userId: string, time: string) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
   const record = mockAttendanceRecords.find((r) => r.user_id === userId && r.work_date === today);
 
   if (!record) {
@@ -546,7 +547,7 @@ export async function startBreak(userId: string, time: string) {
 }
 
 export async function endBreak(userId: string, time: string) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
   const record = mockAttendanceRecords.find((r) => r.user_id === userId && r.work_date === today);
 
   if (!record) {
@@ -748,7 +749,7 @@ export async function getAdminDashboardData() {
   const pendingRequests = requestsResult.data.filter(
     (a: RequestData) => a.status_id === 'pending'
   ).length;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
   const todayAttendance = attendanceResult.records.filter(
     (r: AttendanceData) => r.work_date === today
   ).length;
@@ -1474,7 +1475,7 @@ export async function createReport(templateId: string, data: Record<string, unkn
     title: data.title as string,
     content: data.content as Record<string, string | number | boolean | string[]>,
     current_status_id: 'draft',
-    report_date: new Date().toISOString().split('T')[0],
+    report_date: getJSTDate(),
     submitted_at: undefined,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

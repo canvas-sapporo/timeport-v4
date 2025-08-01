@@ -2,6 +2,7 @@
 // 本番環境用のSupabase接続実装
 
 import { supabase } from './supabase';
+import { getJSTDate } from '@/lib/utils';
 
 // 型定義
 interface AttendanceRecord {
@@ -80,7 +81,7 @@ export async function getAttendanceData(userId?: string) {
 export async function getTodayAttendance(userId: string) {
   if (!supabase) throw new Error('Supabase not configured');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
 
   const { data, error } = await supabase
     .from('attendances')
@@ -96,7 +97,7 @@ export async function getTodayAttendance(userId: string) {
 export async function clockIn(userId: string, time: string) {
   if (!supabase) throw new Error('Supabase not configured');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
 
   const { data, error } = await supabase
     .from('attendances')
@@ -118,7 +119,7 @@ export async function clockIn(userId: string, time: string) {
 export async function clockOut(userId: string, time: string) {
   if (!supabase) throw new Error('Supabase not configured');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
 
   const existingRecord = (await getTodayAttendance(userId)) as AttendanceRecord | null;
   if (!existingRecord || !existingRecord.clockInTime) {
@@ -434,7 +435,7 @@ export async function getAdminDashboardData() {
   const activeUsers = users.filter((u) => u.isActive).length;
   const requestData = requestsResult.data as RequestRecord[];
   const pendingRequests = requestData.filter((a) => a.status === 'pending').length;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
   const records = attendanceResult.records as AttendanceRecord[];
   const todayAttendance = records.filter((r) => r.workDate === today).length;
 

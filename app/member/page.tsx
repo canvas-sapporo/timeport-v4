@@ -17,7 +17,7 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { useCompanyFeatures } from '@/hooks/use-company-features';
-import { formatTime } from '@/lib/utils';
+import { formatTime, getJSTDate } from '@/lib/utils';
 import StatsCard from '@/components/ui/stats-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -237,7 +237,7 @@ export default function MemberDashboard() {
   // ];
 
   // 複数回出退勤対応の状態管理
-  const today = new Date().toISOString().split('T')[0];
+  const today = getJSTDate();
   const todayRecords = attendanceRecords.filter((r) => r.work_date === today);
 
   // 日付でソートして最新のレコードを正確に取得
@@ -351,7 +351,7 @@ export default function MemberDashboard() {
           setTodayAttendance(result.attendance);
           // 既存の記録を更新
           setAttendanceRecords((prev) => {
-            const today = new Date().toISOString().slice(0, 10);
+            const today = getJSTDate();
             const filtered = prev.filter(
               (r) => r.work_date !== today || r.id !== result.attendance!.id
             );

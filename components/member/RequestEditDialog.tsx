@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { cn, getJSTDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { updateRequest } from '@/lib/actions/requests';
 import ClockRecordsInput from '@/components/forms/clock-records-input';
@@ -70,7 +70,7 @@ const RequestEditDialog = ({
       const validateAndCleanDate = (dateValue: Date | undefined): string | null => {
         if (!dateValue) return null;
         const date = new Date(dateValue);
-        return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
+        return isNaN(date.getTime()) ? null : getJSTDate(date);
       };
 
       const cleanedFormData = { ...formData };
