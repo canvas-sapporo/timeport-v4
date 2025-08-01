@@ -117,29 +117,68 @@ export async function getAdminUsers(
 
     const supabaseAdmin = createAdminClient();
 
-    // 一時的に全てのユーザーを取得
-    const { data: allUsers, error: allUsersError } = await supabaseAdmin
-      .from('user_profiles')
-      .select('*')
+    // 企業内のユーザーを取得（2段階クエリ）
+    // 1. 企業内のユーザーIDを取得
+    const { data: companyUserIds, error: userIdsError } = await supabaseAdmin
+      .from('user_groups')
+      .select(`
+        user_id,
+        groups!inner(
+          id,
+          name,
+          code,
+          company_id
+        )
+      `)
+      .eq('groups.company_id', companyId)
       .is('deleted_at', null);
 
-    if (allUsersError) {
-      console.error('全ユーザー取得エラー:', allUsersError);
+    if (userIdsError) {
+      console.error('ユーザーID取得エラー:', userIdsError);
       return {
         success: false,
         data: [],
         total: 0,
-        error: '全ユーザー取得に失敗しました',
+        error: `ユーザーID取得に失敗しました: ${userIdsError.message}`,
       };
     }
 
+    if (!companyUserIds || companyUserIds.length === 0) {
+      console.log('企業内にユーザーが見つかりません');
+      return {
+        success: true,
+        data: [],
+        total: 0,
+      };
+    }
+
+    // 2. ユーザー詳細情報を取得
+    const userIds = companyUserIds.map((item: any) => item.user_id);
+    const { data: usersWithGroups, error: usersError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('*')
+      .in('id', userIds)
+      .is('deleted_at', null);
+
+    if (usersError) {
+      console.error('ユーザー取得エラー:', usersError);
+      return {
+        success: false,
+        data: [],
+        total: 0,
+        error: `ユーザー取得に失敗しました: ${usersError.message}`,
+      };
+    }
+
+    console.log('取得したユーザー数:', usersWithGroups?.length || 0);
+    console.log('取得したユーザーデータ:', usersWithGroups);
+
     // 各ユーザーのグループ情報を取得
-    const usersWithGroups = await Promise.all(
-      (allUsers || []).map(async (user: z.infer<typeof UserProfileSchema>) => {
+    const usersWithGroupsData = await Promise.all(
+      (usersWithGroups || []).map(async (user: any) => {
         const { data: userGroups } = await supabaseAdmin
           .from('user_groups')
-          .select(
-            `
+          .select(`
             group_id,
             groups(
               id,
@@ -147,28 +186,28 @@ export async function getAdminUsers(
               code,
               company_id
             )
-          `
-          )
+          `)
           .eq('user_id', user.id)
           .is('deleted_at', null);
 
         return {
           ...user,
-          groups:
-            userGroups?.map((ug: { groups: unknown }) => ug.groups as Group).filter(Boolean) || [],
+          groups: userGroups?.map((ug: any) => ug.groups).filter(Boolean) || [],
         };
       })
     );
 
     // 企業内のユーザーのみをフィルタリング
-    const companyUsers = usersWithGroups.filter((user) =>
-      user.groups.some((group: Group) => group.company_id === companyId)
+    const companyUsers = usersWithGroupsData.filter((user) =>
+      user.groups.some((group: any) => group.company_id === companyId)
     );
 
     console.log('企業内ユーザー:', companyUsers);
+    console.log('企業内ユーザー数:', companyUsers.length);
 
     // 検索条件を適用
     let filteredUsers = companyUsers;
+    console.log('フィルタリング前のユーザー数:', filteredUsers.length);
 
     if (params.search) {
       filteredUsers = filteredUsers.filter((user) => {
@@ -200,6 +239,7 @@ export async function getAdminUsers(
 
     // ソート
     filteredUsers.sort((a, b) => a.code.localeCompare(b.code));
+    console.log('ソート後のユーザー数:', filteredUsers.length);
 
     // ページネーション
     const page = params.page || 1;
@@ -214,6 +254,7 @@ export async function getAdminUsers(
       limit,
       returned: paginatedUsers.length,
     });
+    console.log('返却するユーザー:', paginatedUsers);
 
     return {
       success: true,

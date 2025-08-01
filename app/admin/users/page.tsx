@@ -46,19 +46,14 @@ export default function AdminUsersPage() {
       });
 
       if (usersResult.success) {
-        setUsers(
-          (usersResult.data as unknown as { users: (UserProfile & { groups: Group[] })[] }).users
-        );
-        console.log(
-          'ユーザー一覧更新:',
-          (usersResult.data as unknown as { users: (UserProfile & { groups: Group[] })[] }).users
-        );
+        setUsers(usersResult.data as (UserProfile & { groups: Group[] })[]);
+        console.log('ユーザー一覧更新:', usersResult.data);
       } else {
         console.error('ユーザー取得失敗:', usersResult.error);
       }
 
       if (groupsResult.success) {
-        setGroups(groupsResult.data.groups);
+        setGroups((groupsResult.data as { groups: Group[] }).groups);
       } else {
         console.error('グループ取得失敗:', groupsResult.error);
       }

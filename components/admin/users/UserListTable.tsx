@@ -51,13 +51,15 @@ export default function UserListTable({
   stats,
   onRefreshAction,
 }: UserListTableProps) {
+  // usersが配列でない場合の安全な処理
+  const safeUsers = Array.isArray(users) ? users : [];
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedRole, setSelectedRole] = useState('all');
 
   // フィルタリング
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = safeUsers.filter((user) => {
     const fullName = `${user.family_name} ${user.first_name}`;
     const fullNameKana = `${user.family_name_kana} ${user.first_name_kana}`;
     const matchesSearch =
