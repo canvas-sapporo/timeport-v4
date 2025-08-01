@@ -22,8 +22,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname();
 
   // 画面切り替えボタンの表示条件をチェック
-  const showMemberButton = pathname.startsWith('/admin'); // 一時的に条件を緩和
-  const showAdminButton = pathname.startsWith('/member'); // 一時的に条件を緩和
+  const showMemberButton = pathname.startsWith('/admin') && user?.role !== 'member';
+  const showAdminButton = pathname.startsWith('/member') && user?.role !== 'member';
 
   const handleMemberView = () => {
     router.push('/member');

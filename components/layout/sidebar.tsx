@@ -209,7 +209,7 @@ export default function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
             )}
 
             {/* Navigation Buttons - Mobile Only, Icon Only */}
-            {(user?.role === 'admin' || user?.role === 'system-admin') && (
+            {user?.role !== 'member' && (
               <div className="lg:hidden flex space-x-1">
                 {/* Show "メンバー画面" button when on admin pages (but not for system-admin) */}
                 {pathname.startsWith('/admin') && user?.role !== 'system-admin' && (
