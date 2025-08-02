@@ -22,7 +22,7 @@ export async function loginAction(email: string, password: string): Promise<Logi
   const forwarded = headersList.get('x-forwarded-for');
   const realIp = headersList.get('x-real-ip');
   const userAgent = headersList.get('user-agent');
-  
+
   let ipAddress = forwarded || realIp;
   if (ipAddress && ipAddress.includes(',')) {
     ipAddress = ipAddress.split(',')[0].trim();
@@ -34,7 +34,7 @@ export async function loginAction(email: string, password: string): Promise<Logi
 
   if (!user) {
     console.log('認証失敗: ユーザーがnull');
-    
+
     // ログイン失敗時の監査ログを記録
     try {
       await logAudit('user_login_failed', {
@@ -57,7 +57,7 @@ export async function loginAction(email: string, password: string): Promise<Logi
     } catch (error) {
       console.error('ログイン失敗監査ログ記録エラー:', error);
     }
-    
+
     return { error: 'メールアドレスまたはパスワードが正しくありません' };
   }
 
@@ -107,7 +107,7 @@ export async function logoutAction(userId?: string): Promise<void> {
   const forwarded = headersList.get('x-forwarded-for');
   const realIp = headersList.get('x-real-ip');
   const userAgent = headersList.get('user-agent');
-  
+
   let ipAddress = forwarded || realIp;
   if (ipAddress && ipAddress.includes(',')) {
     ipAddress = ipAddress.split(',')[0].trim();
@@ -150,7 +150,7 @@ export async function sessionExpiredLogoutAction(userId?: string): Promise<void>
   const forwarded = headersList.get('x-forwarded-for');
   const realIp = headersList.get('x-real-ip');
   const userAgent = headersList.get('user-agent');
-  
+
   let ipAddress = forwarded || realIp;
   if (ipAddress && ipAddress.includes(',')) {
     ipAddress = ipAddress.split(',')[0].trim();

@@ -4,9 +4,9 @@
 
 import type { FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/schemas/request';
 import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
+import { getJSTDate } from '@/lib/utils';
 
 import { createDefaultClockRecord, createDefaultBreakRecord } from './attendance-validation';
-import { getJSTDate } from '@/lib/utils';
 
 // ================================
 // フォーム設定関連

@@ -94,7 +94,7 @@ export function hiraganaToKatakana(text: string): string {
  */
 export function getJSTDate(date: Date = new Date()): string {
   const jstOffset = 9 * 60; // JSTはUTC+9
-  const jstTime = new Date(date.getTime() + (jstOffset * 60 * 1000));
+  const jstTime = new Date(date.getTime() + jstOffset * 60 * 1000);
   return jstTime.toISOString().split('T')[0];
 }
 

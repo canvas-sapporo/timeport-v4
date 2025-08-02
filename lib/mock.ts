@@ -614,7 +614,7 @@ export async function createRequest(requestData: Record<string, unknown>, curren
   };
 
   mockRequests.push(newRequest);
-  
+
   // 監査ログを記録（モック環境ではコンソールに出力）
   if (currentUserId) {
     console.log('監査ログ記録（モック）: request_created', {
@@ -623,7 +623,7 @@ export async function createRequest(requestData: Record<string, unknown>, curren
       target_id: newRequest.id,
       before_data: undefined,
       after_data: newRequest,
-      details: { 
+      details: {
         request_form_id: newRequest.request_form_id,
         user_id: newRequest.user_id,
       },
@@ -659,7 +659,7 @@ export async function updateRequestStatus(
       target_id: requestId,
       before_data: beforeData,
       after_data: request,
-      details: { 
+      details: {
         action_type: 'status_update',
         status: status,
         updated_fields: Object.keys(updates),

@@ -1,8 +1,7 @@
 'use server';
 
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -64,14 +63,14 @@ async function getClientInfo() {
     const forwarded = headersList.get('x-forwarded-for');
     const realIp = headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
-    
+
     // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
     let ipAddress = forwarded || realIp;
     if (ipAddress && ipAddress.includes(',')) {
       // 複数のIPが含まれている場合は最初のものを使用
       ipAddress = ipAddress.split(',')[0].trim();
     }
-    
+
     return {
       ip_address: ipAddress || undefined,
       user_agent: userAgent || undefined,
@@ -419,7 +418,7 @@ export async function createCompany(
             admin_user_id: adminUserId,
             group_id: group.id,
           },
-          details: { 
+          details: {
             admin_email: form.admin_email,
             admin_code: form.admin_code,
             group_name: form.group_name,

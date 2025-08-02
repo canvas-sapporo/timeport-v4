@@ -24,14 +24,14 @@ async function getClientInfo() {
     const forwarded = headersList.get('x-forwarded-for');
     const realIp = headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
-    
+
     // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
     let ipAddress = forwarded || realIp;
     if (ipAddress && ipAddress.includes(',')) {
       // 複数のIPが含まれている場合は最初のものを使用
       ipAddress = ipAddress.split(',')[0].trim();
     }
-    
+
     return {
       ip_address: ipAddress || undefined,
       user_agent: userAgent || undefined,
@@ -152,7 +152,7 @@ export async function createRequest(
             start_date: data.start_date,
             end_date: data.end_date,
           },
-          details: { 
+          details: {
             request_form_id: data.request_form_id,
             status_id: data.status_id,
           },
@@ -428,7 +428,7 @@ export async function updateRequestStatus(
           target_id: requestId,
           before_data: currentRequest,
           after_data: updateData[0],
-          details: { 
+          details: {
             action_type: newStatusCode === 'approved' ? 'approve' : 'reject',
             status_code: newStatusCode,
             comment: comment,
@@ -577,7 +577,7 @@ export async function approveRequest(
         target_id: requestId,
         before_data: request,
         after_data: { ...request, status_id: 'approved' },
-        details: { 
+        details: {
           action_type: 'approve',
           approver_id: approverId,
           comment: comment,
@@ -788,7 +788,7 @@ export async function updateRequest(
           target_id: requestId,
           before_data: request,
           after_data: { ...request, ...updateData },
-          details: { 
+          details: {
             action_type: 'edit',
             updated_fields: Object.keys(updateData),
           },
@@ -910,7 +910,7 @@ export async function deleteRequest(
           target_id: requestId,
           before_data: request,
           after_data: undefined,
-          details: { 
+          details: {
             action_type: 'logical_delete',
             deleted_at: new Date().toISOString(),
             user_id: request.user_id,

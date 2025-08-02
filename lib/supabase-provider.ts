@@ -15,14 +15,14 @@ async function getClientInfo() {
     const forwarded = headersList.get('x-forwarded-for');
     const realIp = headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
-    
+
     // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
     let ipAddress = forwarded || realIp;
     if (ipAddress && ipAddress.includes(',')) {
       // 複数のIPが含まれている場合は最初のものを使用
       ipAddress = ipAddress.split(',')[0].trim();
     }
-    
+
     return {
       ip_address: ipAddress || undefined,
       user_agent: userAgent || undefined,
@@ -288,10 +288,7 @@ export async function getRequestData(userId?: string) {
   return { data: toCamelCase(data || []) };
 }
 
-export async function createRequest(
-  requestData: Record<string, unknown>,
-  currentUserId?: string
-) {
+export async function createRequest(requestData: Record<string, unknown>, currentUserId?: string) {
   console.log('supabase-provider createRequest: 開始', requestData);
 
   if (!supabase) throw new Error('Supabase not configured');
@@ -372,7 +369,7 @@ export async function createRequest(
           start_date: data.start_date,
           end_date: data.end_date,
         },
-        details: { 
+        details: {
           request_form_id: data.request_form_id,
           status_id: data.status_id,
         },
@@ -454,7 +451,7 @@ export async function updateRequestStatus(
           approved_by: data.approved_by,
           approved_at: data.approved_at,
         },
-        details: { 
+        details: {
           action_type: status === 'approved' ? 'approve' : 'reject',
           status: status,
           updates: updates,

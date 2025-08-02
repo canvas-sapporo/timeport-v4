@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { createAdminClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
 
     const supabase = createAdminClient();
-    
+
     let query = supabase
       .from('system_logs')
       .select('*', { count: 'exact' })
@@ -27,35 +28,35 @@ export async function GET(request: NextRequest) {
     if (startDate) {
       query = query.gte('created_date', startDate);
     }
-    
+
     if (endDate) {
       query = query.lte('created_date', endDate);
     }
-    
+
     if (levels && levels.length > 0) {
       query = query.in('level', levels);
     }
-    
+
     if (userId) {
       query = query.eq('user_id', userId);
     }
-    
+
     if (companyId) {
       query = query.eq('company_id', companyId);
     }
-    
+
     if (path) {
       query = query.ilike('path', `%${path}%`);
     }
-    
+
     if (featureName) {
       query = query.ilike('feature_name', `%${featureName}%`);
     }
-    
+
     if (errorsOnly) {
       query = query.not('error_message', 'is', null);
     }
-    
+
     if (search) {
       query = query.or(`error_message.ilike.%${search}%,metadata->>'message'.ilike.%${search}%`);
     }
@@ -82,9 +83,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching system logs:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

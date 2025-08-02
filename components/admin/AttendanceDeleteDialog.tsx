@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Trash2, X, User, Calendar, Clock } from 'lucide-react';
-import { useAuth } from '@/contexts/auth-context';
 
+import { useAuth } from '@/contexts/auth-context';
 import {
   Dialog,
   DialogContent,

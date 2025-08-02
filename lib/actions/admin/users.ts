@@ -34,14 +34,14 @@ async function getClientInfo() {
     const forwarded = headersList.get('x-forwarded-for');
     const realIp = headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
-    
+
     // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
     let ipAddress = forwarded || realIp;
     if (ipAddress && ipAddress.includes(',')) {
       // 複数のIPが含まれている場合は最初のものを使用
       ipAddress = ipAddress.split(',')[0].trim();
     }
-    
+
     return {
       ip_address: ipAddress || undefined,
       user_agent: userAgent || undefined,
@@ -155,7 +155,8 @@ export async function getAdminUsers(
     // 1. 企業内のユーザーIDを取得
     const { data: companyUserIds, error: userIdsError } = await supabaseAdmin
       .from('user_groups')
-      .select(`
+      .select(
+        `
         user_id,
         groups!inner(
           id,
@@ -163,7 +164,8 @@ export async function getAdminUsers(
           code,
           company_id
         )
-      `)
+      `
+      )
       .eq('groups.company_id', companyId)
       .is('deleted_at', null);
 
@@ -212,7 +214,8 @@ export async function getAdminUsers(
       (usersWithGroups || []).map(async (user: { id: string; [key: string]: unknown }) => {
         const { data: userGroups } = await supabaseAdmin
           .from('user_groups')
-          .select(`
+          .select(
+            `
             group_id,
             groups(
               id,
@@ -220,7 +223,8 @@ export async function getAdminUsers(
               code,
               company_id
             )
-          `)
+          `
+          )
           .eq('user_id', user.id)
           .is('deleted_at', null);
 
@@ -354,7 +358,11 @@ export async function getUser(userId: UUID): Promise<UserDetailResponse> {
 /**
  * ユーザーを作成
  */
-export async function createUser(companyId: UUID, input: CreateUserProfileInput, currentUserId?: string) {
+export async function createUser(
+  companyId: UUID,
+  input: CreateUserProfileInput,
+  currentUserId?: string
+) {
   return withErrorHandling(async () => {
     console.log('ユーザー作成開始:', { companyId, input });
 
@@ -494,7 +502,11 @@ export async function createUser(companyId: UUID, input: CreateUserProfileInput,
 /**
  * ユーザーを更新
  */
-export async function updateUser(userId: UUID, input: UpdateUserProfileInput, currentUserId?: string) {
+export async function updateUser(
+  userId: UUID,
+  input: UpdateUserProfileInput,
+  currentUserId?: string
+) {
   return withErrorHandling(async () => {
     console.log('ユーザー更新開始:', { userId, input });
 
@@ -604,13 +616,13 @@ export async function updateUser(userId: UUID, input: UpdateUserProfileInput, cu
 
     // 監査ログを記録
     console.log('監査ログ記録開始');
-    
+
     if (currentUserId) {
       const companyId = await getUserCompanyId(currentUserId);
       const clientInfo = await getClientInfo();
       console.log('企業ID取得結果:', { companyId });
       console.log('クライアント情報:', clientInfo);
-      
+
       try {
         await logAudit('user_updated', {
           user_id: currentUserId,

@@ -1,4 +1,5 @@
 import { AuthUser } from '@/schemas/auth';
+
 import { supabase } from './supabase';
 
 export async function loginUser(

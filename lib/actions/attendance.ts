@@ -44,14 +44,14 @@ async function getClientInfo() {
     const forwarded = headersList.get('x-forwarded-for');
     const realIp = headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
-    
+
     // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
     let ipAddress = forwarded || realIp;
     if (ipAddress && ipAddress.includes(',')) {
       // 複数のIPが含まれている場合は最初のものを使用
       ipAddress = ipAddress.split(',')[0].trim();
     }
-    
+
     return {
       ip_address: ipAddress || undefined,
       user_agent: userAgent || undefined,
@@ -359,7 +359,7 @@ export async function clockIn(
             clock_records: data.clock_records,
             actual_work_minutes: 0,
           },
-          details: { 
+          details: {
             action_type: 'clock_in',
             timestamp,
             work_type_id: workTypeId,
@@ -397,7 +397,7 @@ export async function clockIn(
  * 退勤打刻
  */
 export async function clockOut(
-  userId: string, 
+  userId: string,
   timestamp: string,
   currentUserId?: string
 ): Promise<ClockResult> {
@@ -568,7 +568,7 @@ export async function clockOut(
             target_id: data.id,
             before_data: existingRecord,
             after_data: data,
-            details: { 
+            details: {
               action_type: 'clock_out',
               timestamp,
               actual_work_minutes: data.actual_work_minutes,
@@ -638,7 +638,11 @@ export async function clockOut(
 /**
  * 休憩開始
  */
-export async function startBreak(userId: string, timestamp: string, currentUserId?: string): Promise<ClockResult> {
+export async function startBreak(
+  userId: string,
+  timestamp: string,
+  currentUserId?: string
+): Promise<ClockResult> {
   try {
     if (!validateClockTime(timestamp)) {
       return {
@@ -746,7 +750,7 @@ export async function startBreak(userId: string, timestamp: string, currentUserI
           target_id: data.id,
           before_data: existingRecord,
           after_data: data,
-          details: { 
+          details: {
             action_type: 'break_start',
             timestamp,
             break_count: newClockRecords[lastIdx].breaks?.length || 0,
@@ -779,7 +783,11 @@ export async function startBreak(userId: string, timestamp: string, currentUserI
 /**
  * 休憩終了
  */
-export async function endBreak(userId: string, timestamp: string, currentUserId?: string): Promise<ClockResult> {
+export async function endBreak(
+  userId: string,
+  timestamp: string,
+  currentUserId?: string
+): Promise<ClockResult> {
   try {
     if (!validateClockTime(timestamp)) {
       return {
@@ -893,11 +901,14 @@ export async function endBreak(userId: string, timestamp: string, currentUserId?
           target_id: data.id,
           before_data: existingRecord,
           after_data: data,
-          details: { 
+          details: {
             action_type: 'break_end',
             timestamp,
-            break_duration: breaks[breaks.length - 1].break_start && breaks[breaks.length - 1].break_end ? 
-              new Date(breaks[breaks.length - 1].break_end).getTime() - new Date(breaks[breaks.length - 1].break_start).getTime() : 0,
+            break_duration:
+              breaks[breaks.length - 1].break_start && breaks[breaks.length - 1].break_end
+                ? new Date(breaks[breaks.length - 1].break_end).getTime() -
+                  new Date(breaks[breaks.length - 1].break_start).getTime()
+                : 0,
           },
           ip_address: clientInfo.ip_address,
           user_agent: clientInfo.user_agent,
@@ -1772,7 +1783,7 @@ export async function updateAttendance(
           target_id: attendanceId,
           before_data: existingRecord,
           after_data: updatedRecord,
-          details: { 
+          details: {
             action_type: 'manual_update',
             updated_fields: Object.keys(updateData),
             approved_by: updateData.approved_by,
@@ -1897,7 +1908,7 @@ export async function deleteAttendance(
           target_id: attendanceId,
           before_data: existingRecord,
           after_data: undefined,
-          details: { 
+          details: {
             action_type: 'logical_delete',
             deleted_at: new Date().toISOString(),
             user_id: existingRecord.user_id,
@@ -2242,7 +2253,7 @@ export async function editAttendanceTime(
           target_id: newRecord.id,
           before_data: originalRecord,
           after_data: newRecord,
-          details: { 
+          details: {
             action_type: 'time_edit',
             edit_reason: editReason,
             edited_by: editedBy,

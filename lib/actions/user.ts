@@ -13,8 +13,8 @@ import type {
   UserCompanyInfo,
   GetUserCompanyResult,
   GetCompanyInfoResult,
+  UserProfile,
 } from '@/schemas/user_profile';
-import type { UserProfile } from '@/schemas/user_profile';
 
 /**
  * メンバー用のユーザー一覧を取得
@@ -87,8 +87,6 @@ export async function getUsers(): Promise<{
     };
   }
 }
-
-
 
 /**
  * ユーザーIDから会社IDを取得（サーバーアクション）

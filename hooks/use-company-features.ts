@@ -54,7 +54,6 @@ export const useCompanyFeatures = (companyId: string | undefined) => {
     setError(null);
 
     try {
-
       // タイムアウトを設定（10秒に延長）
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('機能取得タイムアウト')), 10000);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { createAdminClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
-    
+
     // システムログ統計
     const { data: systemLogs, error: systemError } = await supabase
       .from('system_logs')
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     // 統計計算
     const totalCount = (systemLogs?.length || 0) + (auditLogs?.length || 0);
-    
+
     const levelCounts: Record<string, number> = {};
     const dailyCounts: Record<string, number> = {};
     let errorCount = 0;
@@ -46,28 +47,28 @@ export async function GET(request: NextRequest) {
     let responseTimeCount = 0;
 
     // システムログ統計
-    systemLogs?.forEach(log => {
+    systemLogs?.forEach((log) => {
       // レベル別カウント
       levelCounts[log.level] = (levelCounts[log.level] || 0) + 1;
-      
+
       // エラーカウント
       if (log.level === 'error' || log.level === 'fatal') {
         errorCount++;
       }
-      
+
       // レスポンス時間
       if (log.response_time_ms) {
         totalResponseTime += log.response_time_ms;
         responseTimeCount++;
       }
-      
+
       // 日別カウント
       const date = log.created_date;
       dailyCounts[date] = (dailyCounts[date] || 0) + 1;
     });
 
     // 監査ログ統計
-    auditLogs?.forEach(log => {
+    auditLogs?.forEach((log) => {
       const date = log.created_date;
       dailyCounts[date] = (dailyCounts[date] || 0) + 1;
     });
@@ -86,9 +87,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching log stats:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

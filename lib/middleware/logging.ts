@@ -1,24 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  logSystem, 
-  logAudit, 
-  getMemoryUsage, 
-  generateTraceId 
-} from '@/lib/utils/log-system';
+
+import { logSystem, logAudit, getMemoryUsage, generateTraceId } from '@/lib/utils/log-system';
 import { createAdminClient } from '@/lib/supabase';
 
 // ================================
 // ログミドルウェア
 // ================================
 
-export async function loggingMiddleware(
-  request: NextRequest,
-  next: () => Promise<NextResponse>
-) {
+export async function loggingMiddleware(request: NextRequest, next: () => Promise<NextResponse>) {
   const startTime = Date.now();
   const startMemory = getMemoryUsage();
   const traceId = generateTraceId();
-  
+
   // リクエスト情報を取得
   const url = new URL(request.url);
   const method = request.method;
@@ -27,15 +20,17 @@ export async function loggingMiddleware(
   const userAgent = request.headers.get('user-agent') || '';
   const referer = request.headers.get('referer') || '';
   const ipAddress = getClientIP(request);
-  
+
   // リクエストサイズを取得
   const requestSize = await getRequestSize(request);
-  
+
   try {
     // ユーザー情報を取得
     const supabase = createAdminClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     // リクエスト開始ログ
     await logSystem('info', 'API Request Started', {
       trace_id: traceId,
@@ -58,14 +53,14 @@ export async function loggingMiddleware(
 
     // 次のミドルウェアまたはハンドラーを実行
     const response = await next();
-    
+
     // レスポンス情報を取得
     const endTime = Date.now();
     const endMemory = getMemoryUsage();
     const responseTime = endTime - startTime;
     const statusCode = response.status;
     const responseSize = await getResponseSize(response);
-    
+
     // レスポンス終了ログ
     await logSystem('info', 'API Request Completed', {
       trace_id: traceId,
@@ -104,12 +99,11 @@ export async function loggingMiddleware(
     }
 
     return response;
-    
   } catch (error) {
     // エラーが発生した場合
     const endTime = Date.now();
     const responseTime = endTime - startTime;
-    
+
     await logSystem('error', 'API Request Error', {
       trace_id: traceId,
       host,
@@ -143,13 +137,13 @@ function getClientIP(request: NextRequest): string {
   if (forwardedFor) {
     return forwardedFor.split(',')[0].trim();
   }
-  
+
   // X-Real-IPヘッダーから取得
   const realIP = request.headers.get('x-real-ip');
   if (realIP) {
     return realIP;
   }
-  
+
   // デフォルト
   return 'unknown';
 }
@@ -163,7 +157,7 @@ async function getRequestSize(request: NextRequest): Promise<number> {
     if (contentLength) {
       return parseInt(contentLength, 10);
     }
-    
+
     // ボディサイズを計算
     const body = await request.text();
     return new TextEncoder().encode(body).length;
@@ -181,7 +175,7 @@ async function getResponseSize(response: NextResponse): Promise<number> {
     if (contentLength) {
       return parseInt(contentLength, 10);
     }
-    
+
     // ボディサイズを計算
     const body = await response.text();
     return new TextEncoder().encode(body).length;
@@ -207,17 +201,19 @@ export async function logUserAction(
 ) {
   try {
     const supabase = createAdminClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) return;
-    
+
     // ユーザープロファイルを取得
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('company_id')
       .eq('id', user.id)
       .single();
-    
+
     await logAudit(action, {
       user_id: user.id,
       company_id: profile?.company_id,
@@ -243,12 +239,8 @@ export async function logDatabaseOperation(
   beforeData?: any,
   afterData?: any
 ) {
-  await logUserAction(
-    `database_${operation}`,
+  await logUserAction(`database_${operation}`, table, recordId, beforeData, afterData, {
+    operation,
     table,
-    recordId,
-    beforeData,
-    afterData,
-    { operation, table }
-  );
-} 
+  });
+}

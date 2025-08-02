@@ -22,15 +22,16 @@ class LogBuffer {
   private async loadSettings() {
     try {
       const supabase = createClientAdminClient();
-      const { data } = await supabase
-        .from('log_settings')
-        .select('setting_key, setting_value');
+      const { data } = await supabase.from('log_settings').select('setting_key, setting_value');
 
       if (data) {
-        this.settings = data.reduce((acc, setting) => {
-          acc[setting.setting_key] = setting.setting_value;
-          return acc;
-        }, {} as Record<string, any>);
+        this.settings = data.reduce(
+          (acc, setting) => {
+            acc[setting.setting_key] = setting.setting_value;
+            return acc;
+          },
+          {} as Record<string, any>
+        );
       }
       this.settingsLoaded = true;
     } catch (error) {
@@ -69,8 +70,10 @@ class LogBuffer {
     }
 
     // エラーログの即座書き込み
-    if (this.getSetting('error_log_immediate', true) && 
-        (log.level === 'error' || log.level === 'fatal')) {
+    if (
+      this.getSetting('error_log_immediate', true) &&
+      (log.level === 'error' || log.level === 'fatal')
+    ) {
       await this.flushSystemLogs([log]);
       return;
     }
@@ -148,9 +151,7 @@ class LogBuffer {
 
     try {
       const supabase = createClientAdminClient();
-      const { error } = await supabase
-        .from('system_logs')
-        .insert(logs);
+      const { error } = await supabase.from('system_logs').insert(logs);
 
       if (error) {
         console.error('Failed to flush system logs:', error);
@@ -174,9 +175,7 @@ class LogBuffer {
 
     try {
       const supabase = createClientAdminClient();
-      const { error } = await supabase
-        .from('audit_logs')
-        .insert(logs);
+      const { error } = await supabase.from('audit_logs').insert(logs);
 
       if (error) {
         console.error('Failed to flush audit logs:', error);
@@ -222,13 +221,9 @@ function getLogBuffer(): LogBuffer {
 /**
  * システムログを記録
  */
-export async function logSystem(
-  level: LogLevel,
-  message: string,
-  data: Partial<SystemLog> = {}
-) {
+export async function logSystem(level: LogLevel, message: string, data: Partial<SystemLog> = {}) {
   const buffer = getLogBuffer();
-  
+
   const log: Partial<SystemLog> = {
     level,
     ...data,
@@ -244,12 +239,9 @@ export async function logSystem(
 /**
  * 監査ログを記録
  */
-export async function logAudit(
-  action: string,
-  data: Partial<AuditLog> = {}
-) {
+export async function logAudit(action: string, data: Partial<AuditLog> = {}) {
   const buffer = getLogBuffer();
-  
+
   const log: Partial<AuditLog> = {
     action,
     ...data,
@@ -330,4 +322,4 @@ export function getMemoryUsage(): number {
  */
 export function generateTraceId(): string {
   return crypto.randomUUID();
-} 
+}

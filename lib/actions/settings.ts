@@ -24,14 +24,14 @@ async function getClientInfo() {
     const forwarded = headersList.get('x-forwarded-for');
     const realIp = headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
-    
+
     // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
     let ipAddress = forwarded || realIp;
     if (ipAddress && ipAddress.includes(',')) {
       // 複数のIPが含まれている場合は最初のものを使用
       ipAddress = ipAddress.split(',')[0].trim();
     }
-    
+
     return {
       ip_address: ipAddress || undefined,
       user_agent: userAgent || undefined,
@@ -199,7 +199,7 @@ export async function saveSetting(
             setting_value: settingValue,
             is_default: isDefault,
           },
-          details: { 
+          details: {
             action_type: existingSetting ? 'update' : 'create',
             setting_type: settingType,
             setting_key: settingKey,
@@ -268,7 +268,7 @@ export async function deleteSetting(
           target_id: settingId,
           before_data: beforeData,
           after_data: undefined,
-          details: { 
+          details: {
             action_type: 'logical_delete',
             deleted_at: new Date().toISOString(),
           },

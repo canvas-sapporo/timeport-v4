@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
 import { loggingMiddleware } from '@/lib/middleware/logging';
 
 export async function middleware(request: NextRequest) {
@@ -25,4 +26,4 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
-}; 
+};

@@ -3,10 +3,9 @@
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { logAudit } from '@/lib/utils/log-system';
 
-import { createServerClient } from '@/lib/supabase';
-import { createAdminClient } from '@/lib/supabase';
+import { logAudit } from '@/lib/utils/log-system';
+import { createServerClient, createAdminClient } from '@/lib/supabase';
 import { getUserCompanyId } from '@/lib/actions/user';
 import type {
   UserProfile,
@@ -31,14 +30,14 @@ async function getClientInfo() {
     const forwarded = headersList.get('x-forwarded-for');
     const realIp = headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
-    
+
     // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
     let ipAddress = forwarded || realIp;
     if (ipAddress && ipAddress.includes(',')) {
       // 複数のIPが含まれている場合は最初のものを使用
       ipAddress = ipAddress.split(',')[0].trim();
     }
-    
+
     return {
       ip_address: ipAddress || undefined,
       user_agent: userAgent || undefined,
@@ -274,7 +273,7 @@ export async function updateCompanyInfo(
           target_id: companyId,
           before_data: beforeData,
           after_data: data,
-          details: { 
+          details: {
             updated_fields: Object.keys(companyData),
           },
           ip_address: clientInfo.ip_address,

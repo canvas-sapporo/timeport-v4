@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { logSystem, logAudit, logInfo, logError } from '@/lib/utils/log-system';
 
 export async function POST(request: NextRequest) {
@@ -36,4 +37,4 @@ export async function POST(request: NextRequest) {
     console.error('Test log error:', error);
     return NextResponse.json({ error: 'ログ記録に失敗しました' }, { status: 500 });
   }
-} 
+}

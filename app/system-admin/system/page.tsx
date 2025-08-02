@@ -14,6 +14,8 @@ import {
   Activity,
   Database,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
 
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -72,8 +74,6 @@ import {
   getLogSettings,
   updateLogSetting,
 } from '@/lib/actions/system-admin/logs';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
 
 export default function SuperAdminSystemPage() {
   const { user } = useAuth();

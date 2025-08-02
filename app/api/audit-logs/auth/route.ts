@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { createAdminClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
@@ -46,10 +47,13 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('監査ログ取得エラー:', error);
-      return NextResponse.json({ 
-        error: '監査ログの取得に失敗しました',
-        details: error.message 
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: '監査ログの取得に失敗しました',
+          details: error.message,
+        },
+        { status: 500 }
+      );
     }
 
     // 統計情報を取得
@@ -82,12 +86,14 @@ export async function GET(request: NextRequest) {
       },
       stats: actionStats,
     });
-
   } catch (error) {
     console.error('認証監査ログ取得エラー:', error);
-    return NextResponse.json({ 
-      error: '認証監査ログの取得に失敗しました',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: '認証監査ログの取得に失敗しました',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
-} 
+}

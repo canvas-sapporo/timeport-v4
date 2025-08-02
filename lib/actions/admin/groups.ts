@@ -1,13 +1,12 @@
 'use server';
 
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { logAudit } from '@/lib/utils/log-system';
 
+import { logAudit } from '@/lib/utils/log-system';
 import {
   AppError,
   withErrorHandling,
@@ -63,14 +62,14 @@ async function getClientInfo() {
     const forwarded = headersList.get('x-forwarded-for');
     const realIp = headersList.get('x-real-ip');
     const userAgent = headersList.get('user-agent');
-    
+
     // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
     let ipAddress = forwarded || realIp;
     if (ipAddress && ipAddress.includes(',')) {
       // 複数のIPが含まれている場合は最初のものを使用
       ipAddress = ipAddress.split(',')[0].trim();
     }
-    
+
     return {
       ip_address: ipAddress || undefined,
       user_agent: userAgent || undefined,
@@ -408,7 +407,7 @@ export async function deleteGroup(
           target_id: id,
           before_data: beforeData,
           after_data: undefined,
-          details: { 
+          details: {
             action_type: 'logical_delete',
             deleted_at: group.deleted_at,
           },
@@ -576,7 +575,7 @@ export async function toggleGroupStatus(
           target_id: id,
           before_data: currentGroup,
           after_data: group,
-          details: { 
+          details: {
             action_type: 'toggle_status',
             old_status: currentGroup.is_active,
             new_status: group.is_active,
