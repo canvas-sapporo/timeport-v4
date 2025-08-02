@@ -71,6 +71,7 @@ export default function AdminRequestsPage() {
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<AdminRequestData | null>(null);
   const [rejectionAction, setRejectionAction] = useState<'reject' | 'withdraw'>('reject');
 
   // 申請フォーム管理用の状態
@@ -205,6 +206,7 @@ export default function AdminRequestsPage() {
     }
     setApprovalDialogOpen(false);
     setSelectedRequestId(null);
+    setSelectedRequest(null);
   }
 
   async function handleReject(requestId: string, action: 'reject' | 'withdraw') {
@@ -240,16 +242,21 @@ export default function AdminRequestsPage() {
     setRejectionReason('');
     setRejectionDialogOpen(false);
     setSelectedRequestId(null);
+    setSelectedRequest(null);
     setRejectionAction('reject');
   }
 
   function openApprovalDialog(requestId: string) {
+    const request = requests.find((r) => r.id === requestId) as AdminRequestData | undefined;
     setSelectedRequestId(requestId);
+    setSelectedRequest(request || null);
     setApprovalDialogOpen(true);
   }
 
   function openRejectionDialog(requestId: string) {
+    const request = requests.find((r) => r.id === requestId) as AdminRequestData | undefined;
     setSelectedRequestId(requestId);
+    setSelectedRequest(request || null);
     setRejectionDialogOpen(true);
   }
 
@@ -929,13 +936,78 @@ export default function AdminRequestsPage() {
 
       {/* 承認確認ダイアログ */}
       <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>申請を承認しますか？</DialogTitle>
             <DialogDescription>
               この申請を承認します。承認後は取り消すことができません。
             </DialogDescription>
           </DialogHeader>
+
+          {selectedRequest && (
+            <div className="space-y-4 py-4">
+              <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50/30">
+                <h4 className="font-medium text-blue-800 mb-3">申請詳細</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="font-medium">申請者</Label>
+                    <p className="text-gray-700">{selectedRequest?.user_id || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">申請種別</Label>
+                    <p className="text-gray-700">
+                      {(selectedRequest as any)?.request_forms?.name || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">申請日</Label>
+                    <p className="text-gray-700">{formatDate(selectedRequest.created_at)}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">対象日</Label>
+                    <p className="text-gray-700">{formatDate(selectedRequest.target_date)}</p>
+                  </div>
+                  {selectedRequest.form_data &&
+                    Object.keys(selectedRequest.form_data).length > 0 && (
+                      <div className="col-span-2">
+                        <Label className="font-medium">申請内容</Label>
+                        <div className="mt-1 space-y-2">
+                          {Object.entries(selectedRequest.form_data).map(([key, value]) => {
+                            // フォーム設定からフィールドのラベルを取得
+                            const formConfig = (selectedRequest as any)?.form?.form_config;
+                            const fieldConfig = formConfig?.find(
+                              (field: any) => field.name === key
+                            );
+                            const fieldLabel = fieldConfig?.label || key;
+
+                            return (
+                              <div
+                                key={key}
+                                className="flex justify-between items-start p-2 bg-gray-50 rounded border"
+                              >
+                                <span className="font-medium text-gray-700 min-w-0 flex-1">
+                                  {fieldLabel}
+                                </span>
+                                <span className="text-gray-600 ml-4 text-right break-words">
+                                  {value ? String(value) : '-'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  {selectedRequest.submission_comment && (
+                    <div className="col-span-2">
+                      <Label className="font-medium">コメント</Label>
+                      <p className="text-gray-700 mt-1">{selectedRequest.submission_comment}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setApprovalDialogOpen(false)}>
               キャンセル
@@ -952,11 +1024,76 @@ export default function AdminRequestsPage() {
 
       {/* 却下・取り下げ確認ダイアログ */}
       <Dialog open={rejectionDialogOpen} onOpenChange={setRejectionDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>申請の処理</DialogTitle>
             <DialogDescription>この申請を却下または取り下げします。</DialogDescription>
           </DialogHeader>
+
+          {selectedRequest && (
+            <div className="space-y-4 py-4">
+              <div className="border-2 border-red-200 rounded-lg p-4 bg-red-50/30">
+                <h4 className="font-medium text-red-800 mb-3">申請詳細</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="font-medium">申請者</Label>
+                    <p className="text-gray-700">{selectedRequest?.user_id || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">申請種別</Label>
+                    <p className="text-gray-700">
+                      {(selectedRequest as any)?.request_forms?.name || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">申請日</Label>
+                    <p className="text-gray-700">{formatDate(selectedRequest.created_at)}</p>
+                  </div>
+                  <div>
+                    <Label className="font-medium">対象日</Label>
+                    <p className="text-gray-700">{formatDate(selectedRequest.target_date)}</p>
+                  </div>
+                  {selectedRequest.form_data &&
+                    Object.keys(selectedRequest.form_data).length > 0 && (
+                      <div className="col-span-2">
+                        <Label className="font-medium">申請内容</Label>
+                        <div className="mt-1 space-y-2">
+                          {Object.entries(selectedRequest.form_data).map(([key, value]) => {
+                            // フォーム設定からフィールドのラベルを取得
+                            const formConfig = (selectedRequest as any)?.form?.form_config;
+                            const fieldConfig = formConfig?.find(
+                              (field: any) => field.name === key
+                            );
+                            const fieldLabel = fieldConfig?.label || key;
+
+                            return (
+                              <div
+                                key={key}
+                                className="flex justify-between items-start p-2 bg-gray-50 rounded border"
+                              >
+                                <span className="font-medium text-gray-700 min-w-0 flex-1">
+                                  {fieldLabel}
+                                </span>
+                                <span className="text-gray-600 ml-4 text-right break-words">
+                                  {value ? String(value) : '-'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  {selectedRequest.submission_comment && (
+                    <div className="col-span-2">
+                      <Label className="font-medium">コメント</Label>
+                      <p className="text-gray-700 mt-1">{selectedRequest.submission_comment}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div>
               <Label>処理内容</Label>

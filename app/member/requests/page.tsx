@@ -332,12 +332,13 @@ export default function MemberRequestsPage() {
   }
 
   function renderFormField(field: {
+    id: string;
     name: string;
     type?: string;
     label: string;
     required?: boolean;
     placeholder?: string;
-    options?: Array<{ value: string; label: string }>;
+    options?: Array<{ value: string; label: string } | string>;
     metadata?: { object_type?: string; field_type?: string };
   }) {
     const fieldType = field.type || 'text';
@@ -373,19 +374,31 @@ export default function MemberRequestsPage() {
       case 'select':
         return (
           <Select
-            key={field.name}
             value={String(fieldValue)}
             onValueChange={(value) => setFormData({ ...formData, [field.name]: value })}
           >
             <SelectTrigger>
-              <SelectValue placeholder={field.label} />
+              <SelectValue placeholder={`${field.label}を選択してください`} />
             </SelectTrigger>
             <SelectContent>
-              {field.options?.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
+              {(() => {
+                // 選択肢のデータ形式を統一
+                const normalizedOptions =
+                  field.options?.map((option, index) => {
+                    if (typeof option === 'string') {
+                      return { value: option, label: option };
+                    }
+                    return option;
+                  }) || [];
+
+                return normalizedOptions
+                  .filter((option) => option.value && option.value.trim() !== '')
+                  .map((option, index) => (
+                    <SelectItem key={`${field.id}-${option.value}`} value={option.value}>
+                      {option.label || `選択肢${index + 1}`}
+                    </SelectItem>
+                  ));
+              })()}
             </SelectContent>
           </Select>
         );
@@ -473,7 +486,7 @@ export default function MemberRequestsPage() {
                   <SelectTrigger>
                     <SelectValue placeholder="申請種別を選択してください" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent key="request-type-select-content">
                     {activeRequestForms.map((form) => (
                       <SelectItem key={form.id} value={form.id}>
                         {form.name}
@@ -484,30 +497,32 @@ export default function MemberRequestsPage() {
               </div>
 
               {selectedType && (
-                <div className="space-y-4">
-                  <h3 className="font-medium">{selectedType.name}</h3>
-                  {selectedType.form_config
-                    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
-                    .map((field) => (
-                      <div key={field.id}>
-                        <Label htmlFor={field.name}>
-                          {field.label}
-                          {field.required && <span className="text-red-500 ml-1">*</span>}
-                        </Label>
-                        {renderFormField(
-                          field as {
-                            id: string;
-                            name: string;
-                            type?: string;
-                            label: string;
-                            required?: boolean;
-                            placeholder?: string;
-                            options?: Array<{ value: string; label: string }>;
-                            metadata?: { object_type?: string; field_type?: string };
-                          }
-                        )}
-                      </div>
-                    ))}
+                <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50/30">
+                  <h3 className="font-medium text-blue-800 mb-4">{selectedType.name}</h3>
+                  <div className="space-y-4">
+                    {selectedType.form_config
+                      .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
+                      .map((field) => (
+                        <div key={field.id}>
+                          <Label htmlFor={field.name}>
+                            {field.label}
+                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                          </Label>
+                          {renderFormField(
+                            field as {
+                              id: string;
+                              name: string;
+                              type?: string;
+                              label: string;
+                              required?: boolean;
+                              placeholder?: string;
+                              options?: Array<{ value: string; label: string }>;
+                              metadata?: { object_type?: string; field_type?: string };
+                            }
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 </div>
               )}
 

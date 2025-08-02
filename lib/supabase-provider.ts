@@ -279,8 +279,10 @@ export async function createRequest(requestData: Record<string, unknown>) {
     }
   }
 
+  // status_codeを除外して、status_idのみを使用
+  const { status_code: _, ...requestDataWithoutStatusCode } = requestData;
   const snakeCaseData = toSnakeCase({
-    ...requestData,
+    ...requestDataWithoutStatusCode,
     status_id: statusId,
   });
   console.log('supabase-provider createRequest: snakeCaseData', snakeCaseData);

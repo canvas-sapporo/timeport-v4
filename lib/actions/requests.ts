@@ -48,7 +48,10 @@ export async function getRequests(userId?: string): Promise<GetRequestsResult> {
         request_forms!requests_request_form_id_fkey(
           id,
           name,
-          approval_flow
+          description,
+          form_config,
+          approval_flow,
+          category
         )
       `
       )
@@ -118,7 +121,10 @@ export async function getAdminRequests(): Promise<GetRequestsResult> {
         request_forms!requests_request_form_id_fkey(
           id,
           name,
-          approval_flow
+          description,
+          form_config,
+          approval_flow,
+          category
         )
       `
       )
