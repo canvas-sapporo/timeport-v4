@@ -1,8 +1,10 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
 import { createServerClient } from '@/lib/supabase';
+import { logAudit } from '@/lib/utils/log-system';
 import type {
   SettingData as Setting,
   CsvExportSetting,
@@ -12,6 +14,38 @@ import type {
   SaveSettingResult,
   DeleteSettingResult,
 } from '@/schemas/setting';
+
+/**
+ * クライアント情報を取得
+ */
+async function getClientInfo() {
+  try {
+    const headersList = await headers();
+    const forwarded = headersList.get('x-forwarded-for');
+    const realIp = headersList.get('x-real-ip');
+    const userAgent = headersList.get('user-agent');
+    
+    // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
+    let ipAddress = forwarded || realIp;
+    if (ipAddress && ipAddress.includes(',')) {
+      // 複数のIPが含まれている場合は最初のものを使用
+      ipAddress = ipAddress.split(',')[0].trim();
+    }
+    
+    return {
+      ip_address: ipAddress || undefined,
+      user_agent: userAgent || undefined,
+      session_id: undefined, // セッションIDは別途取得が必要
+    };
+  } catch (error) {
+    console.error('クライアント情報取得エラー:', error);
+    return {
+      ip_address: undefined,
+      user_agent: undefined,
+      session_id: undefined,
+    };
+  }
+}
 
 /**
  * 設定を取得する
@@ -99,7 +133,8 @@ export async function saveSetting(
   settingType: SettingType,
   settingKey: string,
   settingValue: CsvExportSetting | AttendanceSetting | NotificationSetting,
-  isDefault: boolean = false
+  isDefault: boolean = false,
+  currentUserId?: string
 ): Promise<SaveSettingResult> {
   const supabase = createServerClient();
 
@@ -146,6 +181,41 @@ export async function saveSetting(
       }
     }
 
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('setting_updated', {
+          user_id: currentUserId,
+          company_id: undefined, // 設定は企業に依存しない
+          target_type: 'settings',
+          target_id: existingSetting?.id || 'new',
+          before_data: existingSetting,
+          after_data: {
+            role,
+            user_id: role === 'system-admin' ? null : userId,
+            setting_type: settingType,
+            setting_key: settingKey,
+            setting_value: settingValue,
+            is_default: isDefault,
+          },
+          details: { 
+            action_type: existingSetting ? 'update' : 'create',
+            setting_type: settingType,
+            setting_key: settingKey,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: setting_updated');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     revalidatePath('/admin/settings');
     return { success: true, message: '設定が正常に保存されました' };
   } catch (error) {
@@ -163,10 +233,20 @@ export async function saveSetting(
  * @param settingId 設定ID
  * @returns 成功/失敗の結果
  */
-export async function deleteSetting(settingId: string): Promise<DeleteSettingResult> {
+export async function deleteSetting(
+  settingId: string,
+  currentUserId?: string
+): Promise<DeleteSettingResult> {
   const supabase = createServerClient();
 
   try {
+    // 削除前のデータを取得（監査ログ用）
+    const { data: beforeData } = await supabase
+      .from('settings')
+      .select('*')
+      .eq('id', settingId)
+      .single();
+
     const { error } = await supabase
       .from('settings')
       .update({ deleted_at: new Date().toISOString() })
@@ -175,6 +255,33 @@ export async function deleteSetting(settingId: string): Promise<DeleteSettingRes
     if (error) {
       console.error('Error deleting setting:', error);
       return { success: false, error: '設定の削除に失敗しました' };
+    }
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('setting_deleted', {
+          user_id: currentUserId,
+          company_id: undefined, // 設定は企業に依存しない
+          target_type: 'settings',
+          target_id: settingId,
+          before_data: beforeData,
+          after_data: undefined,
+          details: { 
+            action_type: 'logical_delete',
+            deleted_at: new Date().toISOString(),
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: setting_deleted');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
     }
 
     revalidatePath('/admin/settings');

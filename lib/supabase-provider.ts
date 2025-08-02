@@ -2,8 +2,41 @@
 // 本番環境用のSupabase接続実装
 
 import { getJSTDate } from '@/lib/utils';
+import { logAudit } from '@/lib/utils/log-system';
 
 import { supabase } from './supabase';
+
+/**
+ * クライアント情報を取得
+ */
+async function getClientInfo() {
+  try {
+    const headersList = await headers();
+    const forwarded = headersList.get('x-forwarded-for');
+    const realIp = headersList.get('x-real-ip');
+    const userAgent = headersList.get('user-agent');
+    
+    // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
+    let ipAddress = forwarded || realIp;
+    if (ipAddress && ipAddress.includes(',')) {
+      // 複数のIPが含まれている場合は最初のものを使用
+      ipAddress = ipAddress.split(',')[0].trim();
+    }
+    
+    return {
+      ip_address: ipAddress || undefined,
+      user_agent: userAgent || undefined,
+      session_id: undefined, // セッションIDは別途取得が必要
+    };
+  } catch (error) {
+    console.error('クライアント情報取得エラー:', error);
+    return {
+      ip_address: undefined,
+      user_agent: undefined,
+      session_id: undefined,
+    };
+  }
+}
 
 // 型定義
 interface AttendanceRecord {
@@ -255,7 +288,10 @@ export async function getRequestData(userId?: string) {
   return { data: toCamelCase(data || []) };
 }
 
-export async function createRequest(requestData: Record<string, unknown>) {
+export async function createRequest(
+  requestData: Record<string, unknown>,
+  currentUserId?: string
+) {
   console.log('supabase-provider createRequest: 開始', requestData);
 
   if (!supabase) throw new Error('Supabase not configured');
@@ -297,13 +333,73 @@ export async function createRequest(requestData: Record<string, unknown>) {
   }
 
   console.log('supabase-provider createRequest: 成功', data);
+
+  // 監査ログを記録（サーバーサイドでのみ）
+  if (currentUserId && typeof window === 'undefined') {
+    const clientInfo = await getClientInfo();
+    try {
+      // ユーザーの企業IDを取得
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', requestData.user_id as string)
+        .single();
+
+      let companyId: string | undefined;
+      if (userProfile) {
+        const { data: userGroup } = await supabase
+          .from('user_groups')
+          .select('groups(company_id)')
+          .eq('user_id', requestData.user_id as string)
+          .is('deleted_at', null)
+          .single();
+        companyId = userGroup?.groups?.company_id;
+      }
+
+      await logAudit('request_created', {
+        user_id: currentUserId,
+        company_id: companyId,
+        target_type: 'requests',
+        target_id: data.id,
+        before_data: undefined,
+        after_data: {
+          id: data.id,
+          user_id: data.user_id,
+          request_form_id: data.request_form_id,
+          status_id: data.status_id,
+          form_data: data.form_data,
+          target_date: data.target_date,
+          start_date: data.start_date,
+          end_date: data.end_date,
+        },
+        details: { 
+          request_form_id: data.request_form_id,
+          status_id: data.status_id,
+        },
+        ip_address: clientInfo.ip_address,
+        user_agent: clientInfo.user_agent,
+        session_id: clientInfo.session_id,
+      });
+      console.log('監査ログ記録完了: request_created');
+    } catch (error) {
+      console.error('監査ログ記録エラー:', error);
+    }
+  } else {
+    if (typeof window !== 'undefined') {
+      console.log('クライアントサイドでは監査ログを記録しません');
+    } else if (!currentUserId) {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+  }
+
   return { success: true, message: '申請を提出しました', data: toCamelCase(data) };
 }
 
 export async function updateRequestStatus(
   requestId: string,
   status: string,
-  updates: Record<string, unknown> = {}
+  updates: Record<string, unknown> = {},
+  currentUserId?: string
 ) {
   if (!supabase) throw new Error('Supabase not configured');
 
@@ -321,6 +417,64 @@ export async function updateRequestStatus(
     .single();
 
   if (error) throw error;
+
+  // 監査ログを記録（サーバーサイドでのみ）
+  if (currentUserId && typeof window === 'undefined') {
+    const clientInfo = await getClientInfo();
+    try {
+      // ユーザーの企業IDを取得
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', data.user_id)
+        .single();
+
+      let companyId: string | undefined;
+      if (userProfile) {
+        const { data: userGroup } = await supabase
+          .from('user_groups')
+          .select('groups(company_id)')
+          .eq('user_id', data.user_id)
+          .is('deleted_at', null)
+          .single();
+        companyId = userGroup?.groups?.company_id;
+      }
+
+      await logAudit('request_status_updated', {
+        user_id: currentUserId,
+        company_id: companyId,
+        target_type: 'requests',
+        target_id: requestId,
+        before_data: undefined, // 更新前のデータは取得していないため
+        after_data: {
+          id: data.id,
+          user_id: data.user_id,
+          status_id: data.status_id,
+          current_approval_step: data.current_approval_step,
+          approved_by: data.approved_by,
+          approved_at: data.approved_at,
+        },
+        details: { 
+          action_type: status === 'approved' ? 'approve' : 'reject',
+          status: status,
+          updates: updates,
+        },
+        ip_address: clientInfo.ip_address,
+        user_agent: clientInfo.user_agent,
+        session_id: clientInfo.session_id,
+      });
+      console.log('監査ログ記録完了: request_status_updated');
+    } catch (error) {
+      console.error('監査ログ記録エラー:', error);
+    }
+  } else {
+    if (typeof window !== 'undefined') {
+      console.log('クライアントサイドでは監査ログを記録しません');
+    } else if (!currentUserId) {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+  }
+
   return {
     success: true,
     message: `申請を${status === 'approved' ? '承認' : '却下'}しました`,

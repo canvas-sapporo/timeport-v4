@@ -34,6 +34,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 import { createUser } from '@/lib/actions/admin/users';
 import { getEmploymentTypes } from '@/lib/actions/admin/employment-types';
 import { getWorkTypes } from '@/lib/actions/admin/work-types';
@@ -84,6 +85,7 @@ export default function UserCreateDialog({ companyId, groups, onSuccess }: UserC
   const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
   const [isLoadingWorkTypes, setIsLoadingWorkTypes] = useState(false);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const form = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
@@ -168,12 +170,16 @@ export default function UserCreateDialog({ companyId, groups, onSuccess }: UserC
   const onSubmit = async (data: CreateUserFormData) => {
     setIsLoading(true);
     try {
-      await createUser(companyId, {
-        ...data,
-        employment_type_id: data.employment_type_id as UUID,
-        current_work_type_id: data.current_work_type_id as UUID,
-        group_ids: data.group_ids as UUID[],
-      });
+      await createUser(
+        companyId,
+        {
+          ...data,
+          employment_type_id: data.employment_type_id as UUID,
+          current_work_type_id: data.current_work_type_id as UUID,
+          group_ids: data.group_ids as UUID[],
+        },
+        currentUser?.id
+      );
 
       toast({
         title: 'ユーザー作成完了',

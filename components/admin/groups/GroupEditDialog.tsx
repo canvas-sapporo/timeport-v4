@@ -77,7 +77,7 @@ export default function GroupEditDialog({
 
     setIsLoading(true);
     try {
-      const result = await updateGroup(group.id, form, user.company_id);
+      const result = await updateGroup(group.id, form, user.company_id, user.id);
       if (result.success) {
         toast({
           title: '成功',
@@ -112,7 +112,7 @@ export default function GroupEditDialog({
 
     setIsStatusLoading(true);
     try {
-      const result = await toggleGroupStatus(group.id, user.company_id);
+      const result = await toggleGroupStatus(group.id, user.company_id, user.id);
       if (result.success) {
         setLocalIsActive(result.data.is_active);
         toast({

@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
 import type {
@@ -13,6 +14,7 @@ import type {
   ClockRecord,
 } from '@/schemas/attendance';
 import { AppError } from '@/lib/utils/error-handling';
+import { logAudit } from '@/lib/utils/log-system';
 import { getJSTDate } from '@/lib/utils';
 
 // 環境変数の確認
@@ -32,6 +34,38 @@ if (!serviceRoleKey) {
 }
 
 const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
+
+/**
+ * クライアント情報を取得
+ */
+async function getClientInfo() {
+  try {
+    const headersList = await headers();
+    const forwarded = headersList.get('x-forwarded-for');
+    const realIp = headersList.get('x-real-ip');
+    const userAgent = headersList.get('user-agent');
+    
+    // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
+    let ipAddress = forwarded || realIp;
+    if (ipAddress && ipAddress.includes(',')) {
+      // 複数のIPが含まれている場合は最初のものを使用
+      ipAddress = ipAddress.split(',')[0].trim();
+    }
+    
+    return {
+      ip_address: ipAddress || undefined,
+      user_agent: userAgent || undefined,
+      session_id: undefined, // セッションIDは別途取得が必要
+    };
+  } catch (error) {
+    console.error('クライアント情報取得エラー:', error);
+    return {
+      ip_address: undefined,
+      user_agent: undefined,
+      session_id: undefined,
+    };
+  }
+}
 
 // ================================
 // バリデーション関数
@@ -231,7 +265,8 @@ async function calculateWorkTime(
 export async function clockIn(
   userId: string,
   timestamp: string,
-  workTypeId?: string
+  workTypeId?: string,
+  currentUserId?: string
 ): Promise<ClockResult> {
   console.log('=== clockIn Server Action 開始 ===');
   console.log('clockIn 開始:', { userId, timestamp, workTypeId });
@@ -288,6 +323,59 @@ export async function clockIn(
     console.log('Supabase upsert 成功:', data);
     console.log('=== clockIn Server Action 完了 ===');
 
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        // ユーザーの企業IDを取得
+        const { data: userProfile } = await supabaseAdmin
+          .from('user_profiles')
+          .select('id')
+          .eq('id', userId)
+          .single();
+
+        let companyId: string | undefined;
+        if (userProfile) {
+          const { data: userGroup } = await supabaseAdmin
+            .from('user_groups')
+            .select('groups(company_id)')
+            .eq('user_id', userId)
+            .is('deleted_at', null)
+            .single();
+          companyId = userGroup?.groups?.company_id;
+        }
+
+        await logAudit('attendance_created', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'attendances',
+          target_id: data.id,
+          before_data: undefined,
+          after_data: {
+            id: data.id,
+            user_id: userId,
+            work_date: today,
+            work_type_id: workTypeId,
+            clock_records: data.clock_records,
+            actual_work_minutes: 0,
+          },
+          details: { 
+            action_type: 'clock_in',
+            timestamp,
+            work_type_id: workTypeId,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: attendance_created (clock_in)');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     revalidatePath('/member');
 
     return {
@@ -308,7 +396,11 @@ export async function clockIn(
 /**
  * 退勤打刻
  */
-export async function clockOut(userId: string, timestamp: string): Promise<ClockResult> {
+export async function clockOut(
+  userId: string, 
+  timestamp: string,
+  currentUserId?: string
+): Promise<ClockResult> {
   console.log('clockOut 開始:', { userId, timestamp });
 
   // 環境変数の確認
@@ -446,6 +538,54 @@ export async function clockOut(userId: string, timestamp: string): Promise<Clock
         actualWorkMinutes: data?.actual_work_minutes,
         overtimeMinutes: data?.overtime_minutes,
       });
+
+      // 監査ログを記録
+      if (currentUserId) {
+        const clientInfo = await getClientInfo();
+        try {
+          // ユーザーの企業IDを取得
+          const { data: userProfile } = await supabaseAdmin
+            .from('user_profiles')
+            .select('id')
+            .eq('id', userId)
+            .single();
+
+          let companyId: string | undefined;
+          if (userProfile) {
+            const { data: userGroup } = await supabaseAdmin
+              .from('user_groups')
+              .select('groups(company_id)')
+              .eq('user_id', userId)
+              .is('deleted_at', null)
+              .single();
+            companyId = userGroup?.groups?.company_id;
+          }
+
+          await logAudit('attendance_updated', {
+            user_id: currentUserId,
+            company_id: companyId,
+            target_type: 'attendances',
+            target_id: data.id,
+            before_data: existingRecord,
+            after_data: data,
+            details: { 
+              action_type: 'clock_out',
+              timestamp,
+              actual_work_minutes: data.actual_work_minutes,
+              overtime_minutes: data.overtime_minutes,
+            },
+            ip_address: clientInfo.ip_address,
+            user_agent: clientInfo.user_agent,
+            session_id: clientInfo.session_id,
+          });
+          console.log('監査ログ記録完了: attendance_updated (clock_out)');
+        } catch (error) {
+          console.error('監査ログ記録エラー:', error);
+        }
+      } else {
+        console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+      }
+
       revalidatePath('/member');
 
       return {
@@ -498,7 +638,7 @@ export async function clockOut(userId: string, timestamp: string): Promise<Clock
 /**
  * 休憩開始
  */
-export async function startBreak(userId: string, timestamp: string): Promise<ClockResult> {
+export async function startBreak(userId: string, timestamp: string, currentUserId?: string): Promise<ClockResult> {
   try {
     if (!validateClockTime(timestamp)) {
       return {
@@ -576,6 +716,51 @@ export async function startBreak(userId: string, timestamp: string): Promise<Clo
         error: error.message,
       };
     }
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        // ユーザーの企業IDを取得
+        const { data: userProfile } = await supabaseAdmin
+          .from('user_profiles')
+          .select('id')
+          .eq('id', userId)
+          .single();
+
+        let companyId: string | undefined;
+        if (userProfile) {
+          const { data: userGroup } = await supabaseAdmin
+            .from('user_groups')
+            .select('groups(company_id)')
+            .eq('user_id', userId)
+            .is('deleted_at', null)
+            .single();
+          companyId = userGroup?.groups?.company_id;
+        }
+
+        await logAudit('attendance_break_started', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'attendances',
+          target_id: data.id,
+          before_data: existingRecord,
+          after_data: data,
+          details: { 
+            action_type: 'break_start',
+            timestamp,
+            break_count: newClockRecords[lastIdx].breaks?.length || 0,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: attendance_break_started');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    }
+
     revalidatePath('/member');
     return {
       success: true,
@@ -594,7 +779,7 @@ export async function startBreak(userId: string, timestamp: string): Promise<Clo
 /**
  * 休憩終了
  */
-export async function endBreak(userId: string, timestamp: string): Promise<ClockResult> {
+export async function endBreak(userId: string, timestamp: string, currentUserId?: string): Promise<ClockResult> {
   try {
     if (!validateClockTime(timestamp)) {
       return {
@@ -678,6 +863,52 @@ export async function endBreak(userId: string, timestamp: string): Promise<Clock
         error: error.message,
       };
     }
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        // ユーザーの企業IDを取得
+        const { data: userProfile } = await supabaseAdmin
+          .from('user_profiles')
+          .select('id')
+          .eq('id', userId)
+          .single();
+
+        let companyId: string | undefined;
+        if (userProfile) {
+          const { data: userGroup } = await supabaseAdmin
+            .from('user_groups')
+            .select('groups(company_id)')
+            .eq('user_id', userId)
+            .is('deleted_at', null)
+            .single();
+          companyId = userGroup?.groups?.company_id;
+        }
+
+        await logAudit('attendance_break_ended', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'attendances',
+          target_id: data.id,
+          before_data: existingRecord,
+          after_data: data,
+          details: { 
+            action_type: 'break_end',
+            timestamp,
+            break_duration: breaks[breaks.length - 1].break_start && breaks[breaks.length - 1].break_end ? 
+              new Date(breaks[breaks.length - 1].break_end).getTime() - new Date(breaks[breaks.length - 1].break_start).getTime() : 0,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: attendance_break_ended');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    }
+
     revalidatePath('/member');
     return {
       success: true,
@@ -1428,7 +1659,8 @@ export async function updateAttendance(
     description?: string;
     approved_by?: string;
     approved_at?: string;
-  }
+  },
+  currentUserId?: string
 ): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> {
   try {
     console.log('updateAttendance 開始:', { attendanceId, updateData });
@@ -1510,6 +1742,54 @@ export async function updateAttendance(
     }
 
     console.log('勤怠記録更新成功:', updatedRecord);
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        // ユーザーの企業IDを取得
+        const { data: userProfile } = await supabaseAdmin
+          .from('user_profiles')
+          .select('id')
+          .eq('id', existingRecord.user_id)
+          .single();
+
+        let companyId: string | undefined;
+        if (userProfile) {
+          const { data: userGroup } = await supabaseAdmin
+            .from('user_groups')
+            .select('groups(company_id)')
+            .eq('user_id', existingRecord.user_id)
+            .is('deleted_at', null)
+            .single();
+          companyId = userGroup?.groups?.company_id;
+        }
+
+        await logAudit('attendance_updated', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'attendances',
+          target_id: attendanceId,
+          before_data: existingRecord,
+          after_data: updatedRecord,
+          details: { 
+            action_type: 'manual_update',
+            updated_fields: Object.keys(updateData),
+            approved_by: updateData.approved_by,
+            approved_at: updateData.approved_at,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: attendance_updated (manual_update)');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     revalidatePath('/admin/attendance');
 
     return {
@@ -1531,7 +1811,8 @@ export async function updateAttendance(
  * 勤怠記録の論理削除
  */
 export async function deleteAttendance(
-  attendanceId: string
+  attendanceId: string,
+  currentUserId?: string
 ): Promise<{ success: boolean; message: string; error?: string }> {
   try {
     console.log('deleteAttendance 開始:', { attendanceId });
@@ -1586,6 +1867,54 @@ export async function deleteAttendance(
     }
 
     console.log('勤怠記録削除成功:', attendanceId);
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        // ユーザーの企業IDを取得
+        const { data: userProfile } = await supabaseAdmin
+          .from('user_profiles')
+          .select('id')
+          .eq('id', existingRecord.user_id)
+          .single();
+
+        let companyId: string | undefined;
+        if (userProfile) {
+          const { data: userGroup } = await supabaseAdmin
+            .from('user_groups')
+            .select('groups(company_id)')
+            .eq('user_id', existingRecord.user_id)
+            .is('deleted_at', null)
+            .single();
+          companyId = userGroup?.groups?.company_id;
+        }
+
+        await logAudit('attendance_deleted', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'attendances',
+          target_id: attendanceId,
+          before_data: existingRecord,
+          after_data: undefined,
+          details: { 
+            action_type: 'logical_delete',
+            deleted_at: new Date().toISOString(),
+            user_id: existingRecord.user_id,
+            work_date: existingRecord.work_date,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: attendance_deleted');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     revalidatePath('/admin/attendance');
 
     return {
@@ -1790,7 +2119,8 @@ export async function editAttendanceTime(
   attendanceId: string,
   clockRecords: ClockRecord[],
   editReason: string,
-  editedBy: string
+  editedBy: string,
+  currentUserId?: string
 ): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> {
   try {
     console.log('editAttendanceTime 開始:', { attendanceId, editReason, editedBy });
@@ -1882,6 +2212,55 @@ export async function editAttendanceTime(
     }
 
     console.log('勤怠記録編集成功:', newRecord);
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        // ユーザーの企業IDを取得
+        const { data: userProfile } = await supabaseAdmin
+          .from('user_profiles')
+          .select('id')
+          .eq('id', originalRecord.user_id)
+          .single();
+
+        let companyId: string | undefined;
+        if (userProfile) {
+          const { data: userGroup } = await supabaseAdmin
+            .from('user_groups')
+            .select('groups(company_id)')
+            .eq('user_id', originalRecord.user_id)
+            .is('deleted_at', null)
+            .single();
+          companyId = userGroup?.groups?.company_id;
+        }
+
+        await logAudit('attendance_updated', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'attendances',
+          target_id: newRecord.id,
+          before_data: originalRecord,
+          after_data: newRecord,
+          details: { 
+            action_type: 'time_edit',
+            edit_reason: editReason,
+            edited_by: editedBy,
+            original_attendance_id: originalRecord.id,
+            clock_records_changed: true,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: attendance_updated (time_edit)');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     revalidatePath('/admin/attendance');
 
     return {

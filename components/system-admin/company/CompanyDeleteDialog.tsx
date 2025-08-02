@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
 
 import {
   Dialog,
@@ -26,6 +27,7 @@ export default function CompanyDeleteDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { user: currentUser } = useAuth();
 
   const handleDelete = async () => {
     if (!company) return;
@@ -33,7 +35,7 @@ export default function CompanyDeleteDialog({
     setError(null);
 
     try {
-      const result = await deleteCompany(company.id);
+      const result = await deleteCompany(company.id, currentUser?.id);
 
       if (result.success) {
         onOpenChangeAction(false);

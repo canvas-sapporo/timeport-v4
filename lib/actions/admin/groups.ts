@@ -1,10 +1,12 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { logAudit } from '@/lib/utils/log-system';
 
 import {
   AppError,
@@ -51,6 +53,38 @@ if (!serviceRoleKey) {
 }
 
 const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
+
+/**
+ * クライアント情報を取得
+ */
+async function getClientInfo() {
+  try {
+    const headersList = await headers();
+    const forwarded = headersList.get('x-forwarded-for');
+    const realIp = headersList.get('x-real-ip');
+    const userAgent = headersList.get('user-agent');
+    
+    // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
+    let ipAddress = forwarded || realIp;
+    if (ipAddress && ipAddress.includes(',')) {
+      // 複数のIPが含まれている場合は最初のものを使用
+      ipAddress = ipAddress.split(',')[0].trim();
+    }
+    
+    return {
+      ip_address: ipAddress || undefined,
+      user_agent: userAgent || undefined,
+      session_id: undefined, // セッションIDは別途取得が必要
+    };
+  } catch (error) {
+    console.error('クライアント情報取得エラー:', error);
+    return {
+      ip_address: undefined,
+      user_agent: undefined,
+      session_id: undefined,
+    };
+  }
+}
 
 // ================================
 // バリデーション関数
@@ -132,7 +166,8 @@ async function checkGroupCodeExists(
  */
 export async function createGroup(
   form: z.infer<typeof CreateGroupFormSchema>,
-  companyId: string
+  companyId: string,
+  currentUserId?: string
 ): Promise<
   | { success: true; data: z.infer<typeof CreateGroupResultSchema> }
   | { success: false; error: AppError }
@@ -192,6 +227,37 @@ export async function createGroup(
 
     console.log('Group created successfully:', group);
 
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('group_created', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'groups',
+          target_id: group.id,
+          before_data: undefined,
+          after_data: {
+            id: group.id,
+            name: group.name,
+            code: group.code,
+            description: group.description,
+            company_id: group.company_id,
+            is_active: group.is_active,
+          },
+          details: { company_id: companyId },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: group_created');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     revalidatePath('/admin/group');
     return {
       id: group.id,
@@ -210,7 +276,8 @@ export async function createGroup(
 export async function updateGroup(
   id: string,
   form: z.infer<typeof EditGroupFormSchema>,
-  companyId: string
+  companyId: string,
+  currentUserId?: string
 ): Promise<
   | { success: true; data: z.infer<typeof UpdateGroupResultSchema> }
   | { success: false; error: AppError }
@@ -223,6 +290,14 @@ export async function updateGroup(
     if (!validation.isValid) {
       throw AppError.fromValidationErrors(validation.errors, 'グループ更新');
     }
+
+    // 更新前のデータを取得（監査ログ用）
+    const { data: beforeData } = await supabaseAdmin
+      .from('groups')
+      .select('*')
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .single();
 
     // グループコードの重複チェック（コードが指定されている場合）
     if (form.code) {
@@ -250,6 +325,30 @@ export async function updateGroup(
       throw AppError.fromSupabaseError(groupError, 'グループ更新');
     }
 
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('group_updated', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'groups',
+          target_id: id,
+          before_data: beforeData,
+          after_data: { ...beforeData, ...form },
+          details: { updated_fields: Object.keys(form) },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: group_updated');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     revalidatePath('/admin/group');
     return {
       id: group.id,
@@ -266,7 +365,8 @@ export async function updateGroup(
  */
 export async function deleteGroup(
   id: string,
-  companyId: string
+  companyId: string,
+  currentUserId?: string
 ): Promise<
   | { success: true; data: z.infer<typeof DeleteGroupResultSchema> }
   | { success: false; error: AppError }
@@ -274,6 +374,14 @@ export async function deleteGroup(
   console.log('deleteGroup called with id:', id);
 
   return withErrorHandling(async () => {
+    // 削除前のデータを取得（監査ログ用）
+    const { data: beforeData } = await supabaseAdmin
+      .from('groups')
+      .select('*')
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .single();
+
     // グループ削除（論理削除）
     const { data: group, error: groupError } = await supabaseAdmin
       .from('groups')
@@ -287,6 +395,33 @@ export async function deleteGroup(
 
     if (groupError) {
       throw AppError.fromSupabaseError(groupError, 'グループ削除');
+    }
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('group_deleted', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'groups',
+          target_id: id,
+          before_data: beforeData,
+          after_data: undefined,
+          details: { 
+            action_type: 'logical_delete',
+            deleted_at: group.deleted_at,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: group_deleted');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
     }
 
     revalidatePath('/admin/group');
@@ -383,7 +518,8 @@ export async function getGroupStats(
  */
 export async function toggleGroupStatus(
   id: string,
-  companyId: string
+  companyId: string,
+  currentUserId?: string
 ): Promise<
   | { success: true; data: z.infer<typeof ToggleGroupStatusResultSchema> }
   | { success: false; error: AppError }
@@ -427,6 +563,34 @@ export async function toggleGroupStatus(
     if (updateError) {
       console.error('Update error:', updateError);
       throw AppError.fromSupabaseError(updateError, 'グループステータス更新');
+    }
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('group_status_updated', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'groups',
+          target_id: id,
+          before_data: currentGroup,
+          after_data: group,
+          details: { 
+            action_type: 'toggle_status',
+            old_status: currentGroup.is_active,
+            new_status: group.is_active,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: group_status_updated');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
     }
 
     revalidatePath('/admin/group');

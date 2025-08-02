@@ -35,6 +35,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 import { updateUser } from '@/lib/actions/admin/users';
 import { getEmploymentTypes } from '@/lib/actions/admin/employment-types';
 import { getWorkTypes } from '@/lib/actions/admin/work-types';
@@ -93,6 +94,7 @@ export default function UserEditDialog({
   const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
   const [isLoadingWorkTypes, setIsLoadingWorkTypes] = useState(false);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const form = useForm<UpdateUserFormData>({
     resolver: zodResolver(updateUserSchema),
@@ -198,10 +200,14 @@ export default function UserEditDialog({
     try {
       console.log('ユーザー更新開始:', { userId: user.id, data });
 
-      const result = await updateUser(user.id, {
-        ...data,
-        group_ids: data.group_ids as UUID[],
-      });
+      const result = await updateUser(
+        user.id,
+        {
+          ...data,
+          group_ids: data.group_ids as UUID[],
+        },
+        currentUser?.id
+      );
 
       console.log('ユーザー更新結果:', result);
 

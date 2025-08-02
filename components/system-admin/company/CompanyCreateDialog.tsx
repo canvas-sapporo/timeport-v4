@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
 
 import {
   Dialog,
@@ -32,6 +33,7 @@ export default function CompanyCreateDialog({
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const { user: currentUser } = useAuth();
 
   const [form, setForm] = useState<CreateCompanyFormData>({
     name: '',
@@ -58,7 +60,7 @@ export default function CompanyCreateDialog({
     setFieldErrors({});
 
     try {
-      const result = await createCompany(form);
+      const result = await createCompany(form, currentUser?.id);
 
       if (result.success) {
         onOpenChangeAction(false);

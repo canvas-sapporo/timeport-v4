@@ -1,5 +1,4 @@
 import { AuthUser } from '@/schemas/auth';
-
 import { supabase } from './supabase';
 
 export async function loginUser(
@@ -87,6 +86,7 @@ export async function loginUser(
     };
 
     console.log('ログイン成功:', result);
+
     return result;
   } catch (error) {
     console.error('ログインエラー:', error);

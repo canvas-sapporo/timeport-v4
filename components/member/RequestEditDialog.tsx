@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { useAuth } from '@/contexts/auth-context';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ const RequestEditDialog = ({
   onSuccessAction,
 }: RequestEditDialogProps) => {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<DynamicFormData>({});
   const [targetDate, setTargetDate] = useState<Date | undefined>(
@@ -82,12 +84,16 @@ const RequestEditDialog = ({
         }
       });
 
-      const result = await updateRequest(request.id, {
-        form_data: cleanedFormData,
-        target_date: validateAndCleanDate(targetDate),
-        start_date: validateAndCleanDate(startDate),
-        end_date: validateAndCleanDate(endDate),
-      });
+      const result = await updateRequest(
+        request.id,
+        {
+          form_data: cleanedFormData,
+          target_date: validateAndCleanDate(targetDate),
+          start_date: validateAndCleanDate(startDate),
+          end_date: validateAndCleanDate(endDate),
+        },
+        currentUser?.id
+      );
 
       if (result.success) {
         toast({

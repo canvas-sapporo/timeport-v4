@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 import { deleteUser } from '@/lib/actions/admin/users';
 import type { UserProfile } from '@/schemas/user_profile';
 
@@ -26,11 +27,12 @@ export default function UserDeleteDialog({ user, onSuccess }: UserDeleteDialogPr
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const handleDelete = async () => {
     setIsLoading(true);
     try {
-      await deleteUser(user.id);
+      await deleteUser(user.id, currentUser?.id);
 
       toast({
         title: 'ユーザー削除完了',

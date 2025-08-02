@@ -90,7 +90,7 @@ export default function GroupDeleteDialog({
 
     setIsLoading(true);
     try {
-      const result = await deleteGroup(group.id, user.company_id);
+      const result = await deleteGroup(group.id, user.company_id, user.id);
       if (result.success) {
         toast({
           title: '成功',

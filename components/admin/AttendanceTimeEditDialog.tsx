@@ -132,7 +132,8 @@ export const AttendanceTimeEditDialog = ({
         attendanceId,
         editData.clockRecords,
         editData.editReason,
-        user?.id || 'unknown-user'
+        user?.id || 'unknown-user',
+        user?.id
       );
 
       if (result.success) {

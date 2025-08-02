@@ -595,7 +595,7 @@ export async function getRequestData(userId?: string) {
   return { data: requests };
 }
 
-export async function createRequest(requestData: Record<string, unknown>) {
+export async function createRequest(requestData: Record<string, unknown>, currentUserId?: string) {
   const newRequest: RequestData = {
     id: `req_${Date.now()}`,
     request_form_id: requestData.request_form_id as string,
@@ -614,23 +614,58 @@ export async function createRequest(requestData: Record<string, unknown>) {
   };
 
   mockRequests.push(newRequest);
+  
+  // 監査ログを記録（モック環境ではコンソールに出力）
+  if (currentUserId) {
+    console.log('監査ログ記録（モック）: request_created', {
+      user_id: currentUserId,
+      target_type: 'requests',
+      target_id: newRequest.id,
+      before_data: undefined,
+      after_data: newRequest,
+      details: { 
+        request_form_id: newRequest.request_form_id,
+        user_id: newRequest.user_id,
+      },
+    });
+  }
+
   return { success: true, message: '申請を提出しました', data: newRequest };
 }
 
 export async function updateRequestStatus(
   requestId: string,
   status: string,
-  updates: Record<string, unknown> = {}
+  updates: Record<string, unknown> = {},
+  currentUserId?: string
 ) {
   const request = mockRequests.find((r) => r.id === requestId);
   if (!request) {
     throw new Error('申請が見つかりません');
   }
 
+  const beforeData = { ...request };
+
   // status_idを更新
   request.status_id = status;
   Object.assign(request, updates);
   request.updated_at = new Date().toISOString();
+
+  // 監査ログを記録（モック環境ではコンソールに出力）
+  if (currentUserId) {
+    console.log('監査ログ記録（モック）: request_updated', {
+      user_id: currentUserId,
+      target_type: 'requests',
+      target_id: requestId,
+      before_data: beforeData,
+      after_data: request,
+      details: { 
+        action_type: 'status_update',
+        status: status,
+        updated_fields: Object.keys(updates),
+      },
+    });
+  }
 
   return {
     success: true,

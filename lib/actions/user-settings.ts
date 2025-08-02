@@ -1,9 +1,13 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { logAudit } from '@/lib/utils/log-system';
 
 import { createServerClient } from '@/lib/supabase';
+import { createAdminClient } from '@/lib/supabase';
+import { getUserCompanyId } from '@/lib/actions/user';
 import type {
   UserProfile,
   CompanyInfo,
@@ -17,6 +21,38 @@ import type {
   GetUserSettingsResult2,
 } from '@/schemas/user_profile';
 import type { Group } from '@/schemas/group';
+
+/**
+ * クライアント情報を取得
+ */
+async function getClientInfo() {
+  try {
+    const headersList = await headers();
+    const forwarded = headersList.get('x-forwarded-for');
+    const realIp = headersList.get('x-real-ip');
+    const userAgent = headersList.get('user-agent');
+    
+    // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
+    let ipAddress = forwarded || realIp;
+    if (ipAddress && ipAddress.includes(',')) {
+      // 複数のIPが含まれている場合は最初のものを使用
+      ipAddress = ipAddress.split(',')[0].trim();
+    }
+    
+    return {
+      ip_address: ipAddress || undefined,
+      user_agent: userAgent || undefined,
+      session_id: undefined, // セッションIDは別途取得が必要
+    };
+  } catch (error) {
+    console.error('クライアント情報取得エラー:', error);
+    return {
+      ip_address: undefined,
+      user_agent: undefined,
+      session_id: undefined,
+    };
+  }
+}
 
 // ================================
 // ユーザープロフィール関連
@@ -169,6 +205,99 @@ export async function getCompanyInfo(companyId: string): Promise<CompanyInfo | n
   } catch (error) {
     console.error('Error in getCompanyInfo:', error);
     return null;
+  }
+}
+
+/**
+ * 会社情報を更新
+ */
+export async function updateCompanyInfo(
+  companyId: string,
+  companyData: {
+    name?: string;
+    code?: string;
+    address?: string;
+    phone?: string;
+  },
+  currentUserId?: string
+): Promise<{ success: boolean; message: string; error?: string }> {
+  const supabaseAdmin = createAdminClient();
+
+  try {
+    // 現在のユーザーの会社IDを取得して検証
+    if (currentUserId) {
+      const userCompanyId = await getUserCompanyId(currentUserId);
+      if (userCompanyId !== companyId) {
+        return {
+          success: false,
+          message: '自分の会社の情報のみ更新できます',
+          error: '権限エラー',
+        };
+      }
+    }
+
+    // 更新前のデータを取得（監査ログ用）
+    const { data: beforeData } = await supabaseAdmin
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .single();
+
+    // 会社情報を更新
+    const { data, error } = await supabaseAdmin
+      .from('companies')
+      .update({
+        ...companyData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', companyId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating company info:', error);
+      return {
+        success: false,
+        message: '会社情報の更新に失敗しました',
+        error: '会社情報の更新に失敗しました',
+      };
+    }
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('company_info_updated', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'companies',
+          target_id: companyId,
+          before_data: beforeData,
+          after_data: data,
+          details: { 
+            updated_fields: Object.keys(companyData),
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: company_info_updated');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
+    revalidatePath('/admin/settings');
+    return { success: true, message: '会社情報が正常に更新されました' };
+  } catch (error) {
+    console.error('Error in updateCompanyInfo:', error);
+    return {
+      success: false,
+      message: '会社情報の更新に失敗しました',
+      error: '会社情報の更新に失敗しました',
+    };
   }
 }
 

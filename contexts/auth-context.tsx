@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AuthUser, UserRole } from '@/schemas/auth';
 import { supabase } from '@/lib/supabase';
 import { getCurrentUser, setCurrentUser } from '@/lib/auth';
+import { logoutAction, sessionExpiredLogoutAction } from '@/lib/actions/auth';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -295,6 +296,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (event === 'SIGNED_OUT') {
         // ユーザーがサインアウトした場合
         console.log('Supabase認証状態変更: SIGNED_OUT');
+
+        // セッション期限切れによるログアウトの監査ログを記録
+        if (user?.id) {
+          try {
+            await sessionExpiredLogoutAction(user.id);
+          } catch (error) {
+            console.error('セッション期限切れログアウト監査ログ記録エラー:', error);
+          }
+        }
+
         setUser(null);
         if (typeof window !== 'undefined') {
           // アプリケーション固有のユーザー情報を削除
@@ -396,6 +407,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoggingOut(true);
 
     try {
+      // 現在のユーザーIDを保存
+      const currentUserId = user?.id;
+
+      // サーバーサイドでログアウト監査ログを記録
+      if (currentUserId) {
+        try {
+          await logoutAction(currentUserId);
+        } catch (error) {
+          console.error('ログアウト監査ログ記録エラー:', error);
+        }
+      }
+
       // まずSupabaseでサインアウト
       const { error } = await supabase.auth.signOut({ scope: 'global' });
 

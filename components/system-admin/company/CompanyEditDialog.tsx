@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
 
 import {
   Dialog,
@@ -37,6 +38,7 @@ export default function CompanyEditDialog({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const router = useRouter();
+  const { user: currentUser } = useAuth();
 
   // 会社データが変更されたときにフォームを更新
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function CompanyEditDialog({
 
     try {
       if (company) {
-        const result = await updateCompany(company.id, editForm);
+        const result = await updateCompany(company.id, editForm, currentUser?.id);
 
         if (result.success) {
           onOpenChangeAction(false);

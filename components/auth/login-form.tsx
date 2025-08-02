@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PasswordInput } from '@/components/auth/password-input';
+import { loginAction } from '@/lib/actions/auth';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -94,7 +95,7 @@ export const LoginForm = () => {
     try {
       console.log('Supabase認証開始:', email);
 
-      // Supabaseで認証
+      // まずSupabaseで認証
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -111,6 +112,21 @@ export const LoginForm = () => {
         setError('ユーザー情報が取得できませんでした');
         setIsLoading(false);
         return;
+      }
+
+      console.log('Supabase認証成功、サーバーアクションで監査ログ記録中...');
+
+      // サーバーアクションで監査ログを記録
+      try {
+        const result = await loginAction(email, password);
+        if (result.error) {
+          console.error('サーバーアクションエラー:', result.error);
+        } else {
+          console.log('サーバーアクション監査ログ記録完了');
+        }
+      } catch (serverError) {
+        console.error('サーバーアクションエラー:', serverError);
+        // サーバーアクションが失敗しても認証は成功しているので、エラーは表示しない
       }
 
       console.log('認証成功、認証コンテキストで詳細情報を取得中...');

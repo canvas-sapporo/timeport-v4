@@ -182,7 +182,12 @@ export default function AdminRequestsPage() {
 
   async function handleApprove(requestId: string) {
     try {
-      const result = await updateRequestStatus(requestId, 'approved', '管理者により承認されました');
+      const result = await updateRequestStatus(
+        requestId,
+        'approved',
+        '管理者により承認されました',
+        user?.id
+      );
       if (result.success) {
         toast({
           title: '承認完了',
@@ -217,7 +222,7 @@ export default function AdminRequestsPage() {
           ? rejectionReason || '管理者により却下されました'
           : rejectionReason || '管理者により取り下げられました';
 
-      const result = await updateRequestStatus(requestId, statusCode, reason);
+      const result = await updateRequestStatus(requestId, statusCode, reason, user?.id);
       if (result.success) {
         toast({
           title: action === 'reject' ? '却下完了' : '取り下げ完了',

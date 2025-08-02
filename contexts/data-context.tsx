@@ -9,7 +9,7 @@ import { Notification } from '@/schemas/database/feature';
 import { Group } from '@/schemas/group';
 import { notifications, groups, generateAttendanceRecords } from '@/lib/mock';
 import { getRequestForms } from '@/lib/actions/admin/request-forms';
-import { getRequests } from '@/lib/actions/requests';
+import { getRequests, createRequest as createRequestAction } from '@/lib/actions/requests';
 import * as provider from '@/lib/provider';
 import { supabase } from '@/lib/supabase';
 import { getJSTDate } from '@/lib/utils';
@@ -95,7 +95,37 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         console.log('デバッグ: 現在のユーザーID:', user.id);
 
-        // 現在のユーザーの会社IDを取得
+        // まず現在のユーザーのプロフィール情報を取得
+        const { data: userProfile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('ユーザープロフィール取得エラー:', profileError);
+          return;
+        }
+
+        // system-adminの場合はグループ情報を取得せずに全ユーザーを取得
+        if (userProfile?.role === 'system-admin') {
+          console.log('system-adminユーザーのため、全てのユーザーを取得します');
+          const { data: allUsers, error: allUsersError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .is('deleted_at', null)
+            .order('code', { ascending: true });
+
+          if (allUsersError) {
+            console.error('全ユーザー取得エラー:', allUsersError);
+            return;
+          }
+
+          setUsers(allUsers || []);
+          return;
+        }
+
+        // 一般ユーザーとadminの場合はグループ情報を取得
         const { data: userGroups, error: groupsError } = await supabase
           .from('user_groups')
           .select(
@@ -120,22 +150,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           console.error('デバッグ: groupsError:', groupsError);
           console.error('デバッグ: userGroups:', userGroups);
 
-          // ユーザーがグループに所属していない場合の処理
-          // 管理者の場合は全てのユーザーを表示
-          // 現在のユーザーのプロフィール情報を取得
-          const { data: userProfile, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-          if (profileError) {
-            console.error('ユーザープロフィール取得エラー:', profileError);
-            return;
-          }
-
-          if (userProfile?.role === 'admin' || userProfile?.role === 'system-admin') {
-            console.log('管理者ユーザーのため、全てのユーザーを取得します');
+          // adminの場合は全てのユーザーを表示
+          if (userProfile?.role === 'admin') {
+            console.log('adminユーザーのため、全てのユーザーを取得します');
             const { data: allUsers, error: allUsersError } = await supabase
               .from('user_profiles')
               .select('*')
@@ -297,10 +314,35 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     request: Omit<RequestData, 'id' | 'created_at' | 'updated_at'> & { status_code?: string }
   ) => {
     console.log('data-context createRequest: 開始', request);
+
+    if (!currentUserId) {
+      console.error('data-context createRequest: ユーザーIDが取得できません');
+      throw new Error('ユーザーIDが取得できません');
+    }
+
     try {
-      const result = await provider.createRequest(request);
+      // Server Actionを使用して申請を作成
+      const result = await createRequestAction(
+        {
+          user_id: request.user_id!,
+          request_form_id: request.request_form_id!,
+          title: request.title!,
+          form_data: request.form_data!,
+          target_date: request.target_date,
+          start_date: request.start_date,
+          end_date: request.end_date,
+          submission_comment: request.submission_comment,
+        },
+        currentUserId
+      );
       console.log('data-context createRequest: 成功', result);
-      // 必要ならローカルstateにもpush（省略可）
+
+      if (result.success && result.data) {
+        // 成功した場合は申請リストを更新
+        await refreshRequests();
+      }
+
+      return result;
     } catch (error) {
       console.error('data-context createRequest: エラー', error);
       throw error;

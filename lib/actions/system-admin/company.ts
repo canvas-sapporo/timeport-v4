@@ -2,6 +2,7 @@
 
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -37,6 +38,7 @@ import {
   validateEmail,
   validatePassword,
 } from '@/lib/utils/error-handling';
+import { logAudit } from '@/lib/utils/log-system';
 import type { ValidationError } from '@/types/common';
 
 // 環境変数の確認
@@ -52,6 +54,38 @@ if (!serviceRoleKey) {
 }
 
 const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
+
+/**
+ * クライアント情報を取得
+ */
+async function getClientInfo() {
+  try {
+    const headersList = await headers();
+    const forwarded = headersList.get('x-forwarded-for');
+    const realIp = headersList.get('x-real-ip');
+    const userAgent = headersList.get('user-agent');
+    
+    // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
+    let ipAddress = forwarded || realIp;
+    if (ipAddress && ipAddress.includes(',')) {
+      // 複数のIPが含まれている場合は最初のものを使用
+      ipAddress = ipAddress.split(',')[0].trim();
+    }
+    
+    return {
+      ip_address: ipAddress || undefined,
+      user_agent: userAgent || undefined,
+      session_id: undefined, // セッションIDは別途取得が必要
+    };
+  } catch (error) {
+    console.error('クライアント情報取得エラー:', error);
+    return {
+      ip_address: undefined,
+      user_agent: undefined,
+      session_id: undefined,
+    };
+  }
+}
 
 // ================================
 // バリデーション関数
@@ -184,7 +218,8 @@ async function checkUserCodeExists(code: string): Promise<boolean> {
  * 企業作成（管理者ユーザー・グループ同時作成）
  */
 export async function createCompany(
-  form: CreateCompanyFormData
+  form: CreateCompanyFormData,
+  currentUserId?: string
 ): Promise<{ success: true; data: CreateCompanyResult } | { success: false; error: AppError }> {
   console.log('createCompany called with form:', { ...form, admin_password: '[REDACTED]' });
 
@@ -364,6 +399,43 @@ export async function createCompany(
       // 機能作成に失敗しても企業作成は成功とする（後で手動で追加可能）
     }
 
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('company_created', {
+          user_id: currentUserId,
+          company_id: undefined, // system-adminは企業に属さない
+          target_type: 'companies',
+          target_id: company.id,
+          before_data: undefined,
+          after_data: {
+            id: company.id,
+            name: form.name,
+            code: form.code,
+            address: form.address,
+            phone: form.phone,
+            is_active: form.is_active,
+            admin_user_id: adminUserId,
+            group_id: group.id,
+          },
+          details: { 
+            admin_email: form.admin_email,
+            admin_code: form.admin_code,
+            group_name: form.group_name,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: company_created');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     revalidatePath('/system-admin/company');
     return {
       company,
@@ -378,7 +450,8 @@ export async function createCompany(
  */
 export async function updateCompany(
   id: string,
-  form: EditCompanyFormData
+  form: EditCompanyFormData,
+  currentUserId?: string
 ): Promise<{ success: true; data: UpdateCompanyResult } | { success: false; error: AppError }> {
   return withErrorHandling(async () => {
     // バリデーション
@@ -431,6 +504,30 @@ export async function updateCompany(
     if (existingCompany.phone !== form.phone) updatedFields.push('phone');
     if (existingCompany.is_active !== form.is_active) updatedFields.push('is_active');
 
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('company_updated', {
+          user_id: currentUserId,
+          company_id: undefined, // system-adminは企業に属さない
+          target_type: 'companies',
+          target_id: id,
+          before_data: existingCompany,
+          after_data: { ...existingCompany, ...form },
+          details: { updated_fields: updatedFields },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: company_updated');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     revalidatePath('/system-admin/company');
     return {
       company,
@@ -443,7 +540,8 @@ export async function updateCompany(
  * 企業削除（論理削除）
  */
 export async function deleteCompany(
-  id: string
+  id: string,
+  currentUserId?: string
 ): Promise<{ success: true; data: DeleteCompanyResult } | { success: false; error: AppError }> {
   return withErrorHandling(async () => {
     // 企業の存在確認
@@ -477,6 +575,30 @@ export async function deleteCompany(
 
     if (deleteError) {
       throw AppError.fromSupabaseError(deleteError, '企業削除');
+    }
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('company_deleted', {
+          user_id: currentUserId,
+          company_id: undefined, // system-adminは企業に属さない
+          target_type: 'companies',
+          target_id: id,
+          before_data: existingCompany,
+          after_data: undefined,
+          details: { deletion_type: 'logical', deleted_at: company.deleted_at },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: company_deleted');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
     }
 
     revalidatePath('/system-admin/company');

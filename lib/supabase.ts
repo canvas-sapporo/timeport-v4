@@ -98,6 +98,26 @@ export function createAdminClient() {
   });
 }
 
+// クライアントサイドでも使用できるAdmin用のクライアント（Service Role Key使用）
+export function createClientAdminClient() {
+  // 環境変数から正しいAPIキーを取得
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase Admin環境変数が設定されていません');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    db: {},
+  });
+}
+
 // スキーマキャッシュをリフレッシュする関数
 export async function refreshSchemaCache() {
   try {

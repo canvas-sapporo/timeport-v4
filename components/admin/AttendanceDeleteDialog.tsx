@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Trash2, X, User, Calendar, Clock } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
 
 import {
   Dialog,
@@ -31,6 +32,7 @@ export default function AttendanceDeleteDialog({
   onSuccess,
 }: AttendanceDeleteDialogProps) {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -76,7 +78,7 @@ export default function AttendanceDeleteDialog({
     setIsDeleting(true);
 
     try {
-      const result = await deleteAttendance(attendanceId);
+      const result = await deleteAttendance(attendanceId, currentUser?.id);
       if (result.success) {
         toast({
           title: '削除完了',

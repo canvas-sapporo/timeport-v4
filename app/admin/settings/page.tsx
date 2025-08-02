@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ import { Badge } from '@/components/ui/badge';
 import { getEmploymentTypes, getEmploymentTypeStats } from '@/lib/actions/admin/employment-types';
 import { getWorkTypes, getWorkTypeStats } from '@/lib/actions/admin/work-types';
 import { getAttendanceStatuses } from '@/lib/actions/attendance';
-import { getCompanyInfo } from '@/lib/actions/user-settings';
+import { getCompanyInfo, updateCompanyInfo } from '@/lib/actions/user-settings';
 import type { EmploymentType, WorkType } from '@/schemas/employment-type';
 import type { AttendanceStatusData } from '@/schemas/attendance';
 import type { Company } from '@/schemas/company';
@@ -70,6 +71,7 @@ import WorkTypeDeleteDialog from '@/components/admin/work-types/WorkTypeDeleteDi
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('system');
@@ -240,8 +242,41 @@ export default function AdminSettingsPage() {
   async function handleSaveSettings(settingsType: string) {
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log(`Saving ${settingsType} settings...`);
+      if (settingsType === 'company' && company && user?.company_id) {
+        const result = await updateCompanyInfo(
+          user.company_id,
+          {
+            name: company.name,
+            code: company.code,
+            address: company.address,
+            phone: company.phone,
+          },
+          user.id
+        );
+
+        if (result.success) {
+          toast({
+            title: '成功',
+            description: result.message,
+          });
+        } else {
+          toast({
+            title: 'エラー',
+            description: result.error || '会社情報の更新に失敗しました',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        console.log(`Saving ${settingsType} settings...`);
+      }
+    } catch (error) {
+      console.error('設定保存エラー:', error);
+      toast({
+        title: 'エラー',
+        description: '設定の保存に失敗しました',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }

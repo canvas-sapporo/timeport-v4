@@ -9,6 +9,7 @@ const nextConfig = {
       allowedOrigins: ['localhost:3000', '*.vercel.app'],
     },
   },
+
   // パフォーマンス最適化
   compress: true,
   poweredByHeader: false,

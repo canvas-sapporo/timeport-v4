@@ -1,11 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { z } from 'zod';
 
 import { createAdminClient } from '@/lib/supabase';
 import { withErrorHandling, AppError } from '@/lib/utils/error-handling';
 import { getUserCompanyId } from '@/lib/actions/user';
+import { logAudit } from '@/lib/utils/log-system';
 import type { UUID } from '@/types/common';
 import {
   UserProfileSchema,
@@ -22,6 +24,38 @@ import { Group } from '@/schemas/group';
 const DEFAULT_PASSWORD = process.env.NEXT_PUBLIC_DEFAULT_USER_PASSWORD || 'Passw0rd!';
 const REQUIRE_PASSWORD_CHANGE = process.env.NEXT_PUBLIC_REQUIRE_PASSWORD_CHANGE === 'true';
 const EMAIL_UNIQUE_PER_COMPANY = process.env.NEXT_PUBLIC_EMAIL_UNIQUE_PER_COMPANY === 'true';
+
+/**
+ * クライアント情報を取得
+ */
+async function getClientInfo() {
+  try {
+    const headersList = await headers();
+    const forwarded = headersList.get('x-forwarded-for');
+    const realIp = headersList.get('x-real-ip');
+    const userAgent = headersList.get('user-agent');
+    
+    // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
+    let ipAddress = forwarded || realIp;
+    if (ipAddress && ipAddress.includes(',')) {
+      // 複数のIPが含まれている場合は最初のものを使用
+      ipAddress = ipAddress.split(',')[0].trim();
+    }
+    
+    return {
+      ip_address: ipAddress || undefined,
+      user_agent: userAgent || undefined,
+      session_id: undefined, // セッションIDは別途取得が必要
+    };
+  } catch (error) {
+    console.error('クライアント情報取得エラー:', error);
+    return {
+      ip_address: undefined,
+      user_agent: undefined,
+      session_id: undefined,
+    };
+  }
+}
 
 /**
  * 承認者選択用のユーザー一覧を取得（企業内のユーザーのみ）
@@ -153,7 +187,7 @@ export async function getAdminUsers(
     }
 
     // 2. ユーザー詳細情報を取得
-    const userIds = companyUserIds.map((item: any) => item.user_id);
+    const userIds = companyUserIds.map((item: { user_id: string }) => item.user_id);
     const { data: usersWithGroups, error: usersError } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
@@ -175,7 +209,7 @@ export async function getAdminUsers(
 
     // 各ユーザーのグループ情報を取得
     const usersWithGroupsData = await Promise.all(
-      (usersWithGroups || []).map(async (user: any) => {
+      (usersWithGroups || []).map(async (user: { id: string; [key: string]: unknown }) => {
         const { data: userGroups } = await supabaseAdmin
           .from('user_groups')
           .select(`
@@ -320,7 +354,7 @@ export async function getUser(userId: UUID): Promise<UserDetailResponse> {
 /**
  * ユーザーを作成
  */
-export async function createUser(companyId: UUID, input: CreateUserProfileInput) {
+export async function createUser(companyId: UUID, input: CreateUserProfileInput, currentUserId?: string) {
   return withErrorHandling(async () => {
     console.log('ユーザー作成開始:', { companyId, input });
 
@@ -416,6 +450,40 @@ export async function createUser(companyId: UUID, input: CreateUserProfileInput)
 
     console.log('ユーザー作成完了:', userId);
 
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('user_created', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'user_profiles',
+          target_id: userId,
+          before_data: undefined,
+          after_data: {
+            id: userId,
+            code: input.code,
+            family_name: input.family_name,
+            first_name: input.first_name,
+            email: input.email,
+            role: input.role,
+            employment_type_id: input.employment_type_id,
+            current_work_type_id: input.current_work_type_id,
+            group_ids: input.group_ids,
+          },
+          details: { company_id: companyId },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: user_created');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
     // キャッシュを再検証
     revalidatePath('/admin/users');
 
@@ -426,11 +494,18 @@ export async function createUser(companyId: UUID, input: CreateUserProfileInput)
 /**
  * ユーザーを更新
  */
-export async function updateUser(userId: UUID, input: UpdateUserProfileInput) {
+export async function updateUser(userId: UUID, input: UpdateUserProfileInput, currentUserId?: string) {
   return withErrorHandling(async () => {
     console.log('ユーザー更新開始:', { userId, input });
 
     const supabaseAdmin = createAdminClient();
+
+    // 更新前のデータを取得（監査ログ用）
+    const { data: beforeData } = await supabaseAdmin
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
     // 最後の管理者チェック
     if (input.role === 'member' || input.is_active === false) {
@@ -527,6 +602,36 @@ export async function updateUser(userId: UUID, input: UpdateUserProfileInput) {
 
     console.log('ユーザー更新完了:', userId);
 
+    // 監査ログを記録
+    console.log('監査ログ記録開始');
+    
+    if (currentUserId) {
+      const companyId = await getUserCompanyId(currentUserId);
+      const clientInfo = await getClientInfo();
+      console.log('企業ID取得結果:', { companyId });
+      console.log('クライアント情報:', clientInfo);
+      
+      try {
+        await logAudit('user_updated', {
+          user_id: currentUserId,
+          company_id: companyId || undefined,
+          target_type: 'user_profiles',
+          target_id: userId,
+          before_data: beforeData,
+          after_data: { ...beforeData, ...input },
+          details: { updated_fields: Object.keys(input) },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていません');
+    }
+
     // キャッシュを再検証
     revalidatePath('/admin/users');
     console.log('キャッシュ再検証完了');
@@ -538,7 +643,7 @@ export async function updateUser(userId: UUID, input: UpdateUserProfileInput) {
 /**
  * ユーザーを削除（論理削除）
  */
-export async function deleteUser(userId: UUID) {
+export async function deleteUser(userId: UUID, currentUserId?: string) {
   return withErrorHandling(async () => {
     console.log('ユーザー削除開始:', userId);
 
@@ -591,6 +696,31 @@ export async function deleteUser(userId: UUID) {
     }
 
     console.log('ユーザー削除完了:', userId);
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        const companyId = await getUserCompanyId(currentUserId);
+        await logAudit('user_deleted', {
+          user_id: currentUserId,
+          company_id: companyId || undefined,
+          target_type: 'user_profiles',
+          target_id: userId,
+          before_data: user,
+          after_data: undefined,
+          details: { deletion_type: 'logical', deleted_at: new Date().toISOString() },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: user_deleted');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    } else {
+      console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
 
     // キャッシュを再検証
     revalidatePath('/admin/users');
