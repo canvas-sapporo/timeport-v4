@@ -510,8 +510,30 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
                             onChange={(e) => {
                               const options = e.target.value
                                 .split('\n')
-                                .filter((option) => option.trim());
+                                .filter((option) => option !== ''); // 空行のみを削除
                               updateField(currentField.id, { options });
+                            }}
+                            onKeyDown={(e) => {
+                              // Enterキーが押されたときの処理
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const textarea = e.target as HTMLTextAreaElement;
+                                const start = textarea.selectionStart;
+                                const end = textarea.selectionEnd;
+                                const value = textarea.value;
+
+                                // カーソル位置に改行を挿入
+                                const newValue =
+                                  value.substring(0, start) + '\n' + value.substring(end);
+                                textarea.value = newValue;
+
+                                // カーソル位置を更新
+                                textarea.selectionStart = textarea.selectionEnd = start + 1;
+
+                                // onChangeイベントを手動で発火
+                                const event = new Event('input', { bubbles: true });
+                                textarea.dispatchEvent(event);
+                              }
                             }}
                             placeholder="選択肢を1行に1つずつ入力"
                             rows={4}
