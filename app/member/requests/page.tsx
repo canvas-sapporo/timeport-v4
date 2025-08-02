@@ -218,6 +218,8 @@ export default function MemberRequestsPage() {
         current_approval_step: 1,
         comments: [],
         attachments: [],
+        status_code: statusCode,
+        status_id: statusId, // ステータスIDを追加
       });
       console.log('handleCreateRequest: リクエスト作成成功:', newRequest);
       // フォームをリセット
@@ -639,16 +641,26 @@ export default function MemberRequestsPage() {
                                 <div>
                                   <p className="text-sm font-medium">
                                     {(() => {
-                                      const approver = users.find((u) => u.id === step.approver_id);
-                                      return approver
-                                        ? `${approver.family_name} ${approver.first_name}`
-                                        : `承認者 ${step.step}`;
+                                      if (step.approver_id) {
+                                        const approver = users.find(
+                                          (u) => u.id === step.approver_id
+                                        );
+                                        return approver
+                                          ? `${approver.family_name} ${approver.first_name}`
+                                          : step.name || `承認者 ${step.step}`;
+                                      }
+                                      return step.name || `承認者 ${step.step}`;
                                     })()}
                                   </p>
                                   <p className="text-xs text-gray-500">
                                     {(() => {
-                                      const approver = users.find((u) => u.id === step.approver_id);
-                                      return approver?.role === 'admin' ? '管理者' : '承認者';
+                                      if (step.approver_id) {
+                                        const approver = users.find(
+                                          (u) => u.id === step.approver_id
+                                        );
+                                        return approver?.role === 'admin' ? '管理者' : '承認者';
+                                      }
+                                      return step.description || '承認者';
                                     })()}
                                   </p>
                                 </div>
@@ -815,32 +827,21 @@ export default function MemberRequestsPage() {
                   <TableCell>
                     {(() => {
                       // 承認フローから現在の承認者を取得
+                      const requestForm = requestForms.find(
+                        (rf) => rf.id === request.request_form_id
+                      );
+
                       if (
-                        (
-                          request as {
-                            request_forms?: {
-                              approval_flow?: Array<{ step: number; approver_id: string }>;
-                            };
-                          }
-                        ).request_forms?.approval_flow &&
+                        requestForm?.approval_flow &&
+                        requestForm.approval_flow.length > 0 &&
                         request.current_approval_step
                       ) {
-                        const currentStep = (
-                          request as {
-                            request_forms?: {
-                              approval_flow?: Array<{ step: number; approver_id: string }>;
-                            };
-                          }
-                        ).request_forms?.approval_flow?.find(
-                          (step: { step: number; approver_id: string }) =>
-                            step.step === request.current_approval_step
+                        const currentStep = requestForm.approval_flow.find(
+                          (step) => step.step === request.current_approval_step
                         );
-                        if (currentStep) {
+                        if (currentStep && currentStep.approver_id) {
                           // 承認者IDからユーザー情報を取得
-                          const approver = users.find(
-                            (u: { id: string; family_name: string; first_name: string }) =>
-                              u.id === currentStep.approver_id
-                          );
+                          const approver = users.find((u) => u.id === currentStep.approver_id);
                           if (approver) {
                             return `${approver.family_name} ${approver.first_name}`;
                           }

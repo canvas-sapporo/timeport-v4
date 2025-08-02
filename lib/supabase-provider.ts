@@ -1,8 +1,9 @@
 // TimePort Supabase Data Provider
 // 本番環境用のSupabase接続実装
 
-import { supabase } from './supabase';
 import { getJSTDate } from '@/lib/utils';
+
+import { supabase } from './supabase';
 
 // 型定義
 interface AttendanceRecord {
@@ -259,7 +260,29 @@ export async function createRequest(requestData: Record<string, unknown>) {
 
   if (!supabase) throw new Error('Supabase not configured');
 
-  const snakeCaseData = toSnakeCase(requestData);
+  // デフォルトステータスIDを取得
+  let statusId = requestData.status_id;
+  if (!statusId) {
+    // ステータスコードからステータスIDを取得
+    const statusCode = requestData.status_code || 'draft';
+    const { data: statusData, error: statusError } = await supabase
+      .from('statuses')
+      .select('id')
+      .eq('code', statusCode)
+      .eq('category', 'request')
+      .single();
+
+    if (statusError) {
+      console.warn('デフォルトステータスの取得に失敗:', statusError);
+    } else {
+      statusId = statusData?.id;
+    }
+  }
+
+  const snakeCaseData = toSnakeCase({
+    ...requestData,
+    status_id: statusId,
+  });
   console.log('supabase-provider createRequest: snakeCaseData', snakeCaseData);
 
   const { data, error } = await supabase.from('requests').insert([snakeCaseData]).select().single();

@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import type { BaseEntity, UUID, DateString, Timestamp, Settings } from '@/types/common';
-
 // ================================
 // 申請関連スキーマ
 // ================================
@@ -94,6 +92,7 @@ export const CreateRequestInputSchema = z.object({
   start_date: z.string(),
   end_date: z.string(),
   submission_comment: z.string(),
+  status_code: z.string().optional(),
 });
 
 /**

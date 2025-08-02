@@ -10,13 +10,11 @@ import { Group } from '@/schemas/group';
 import { notifications, groups, generateAttendanceRecords } from '@/lib/mock';
 import { getRequestForms } from '@/lib/actions/admin/request-forms';
 import { getRequests } from '@/lib/actions/requests';
-
-import { getAdminUsers } from '@/lib/actions/admin/users';
 import * as provider from '@/lib/provider';
 import { supabase } from '@/lib/supabase';
+import { getJSTDate } from '@/lib/utils';
 
 import { useAuth } from './auth-context';
-import { getJSTDate } from '@/lib/utils';
 
 interface DataContextType {
   attendanceRecords: AttendanceData[];
@@ -26,7 +24,9 @@ interface DataContextType {
   users: UserProfile[];
   groups: Group[];
   updateAttendance: (record: AttendanceData) => void;
-  createRequest: (request: Omit<RequestData, 'id' | 'created_at' | 'updated_at'>) => void;
+  createRequest: (
+    request: Omit<RequestData, 'id' | 'created_at' | 'updated_at'> & { status_code?: string }
+  ) => void;
   updateRequest: (
     id: string,
     updates: Partial<RequestData> & { rejection_reason?: string }
@@ -293,7 +293,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const createRequest = async (request: Omit<RequestData, 'id' | 'created_at' | 'updated_at'>) => {
+  const createRequest = async (
+    request: Omit<RequestData, 'id' | 'created_at' | 'updated_at'> & { status_code?: string }
+  ) => {
     console.log('data-context createRequest: 開始', request);
     try {
       const result = await provider.createRequest(request);

@@ -1,12 +1,6 @@
 import { z } from 'zod';
 
-import {
-  BaseEntitySchema,
-  UUIDSchema,
-  DateStringSchema,
-  TimestampSchema,
-  DynamicDataSchema,
-} from './base';
+import { BaseEntitySchema, UUIDSchema, DateStringSchema, DynamicDataSchema } from './base';
 
 // ================================
 // 申請・承認関連型
@@ -40,12 +34,18 @@ export const RequestStatusSchema = BaseEntitySchema.extend({
 export const ApprovalStepSchema = z.object({
   /** ステップ番号 */
   step: z.number(),
+  /** ステップ名 */
+  name: z.string(),
+  /** 説明 */
+  description: z.string().optional(),
   /** 承認者ロール */
-  approver_role: z.string(),
+  approver_role: z.string().optional(),
   /** 承認者ID */
   approver_id: UUIDSchema.optional(),
   /** 必須フラグ */
   required: z.boolean(),
+  /** 自動承認フラグ */
+  auto_approve: z.boolean().optional(),
 });
 
 /**
