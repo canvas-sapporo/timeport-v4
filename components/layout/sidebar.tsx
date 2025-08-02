@@ -18,6 +18,7 @@ import {
   User,
   MessageSquare,
   ClipboardList,
+  Activity,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -47,6 +48,7 @@ const adminMenuItems = [
   },
   { href: '/admin/users', icon: Users, label: 'ユーザー管理' },
   { href: '/admin/group', icon: Building, label: 'グループ管理' },
+  { href: '/admin/logs', icon: Activity, label: 'ログ' },
   { href: '/admin/settings', icon: Settings, label: '設定' },
 ];
 
@@ -54,6 +56,7 @@ const systemAdminMenuItems = [
   { href: '/system-admin', icon: Home, label: 'ダッシュボード' },
   { href: '/system-admin/company', icon: Building, label: '企業管理' },
   { href: '/system-admin/features', icon: Settings, label: '機能管理' },
+  { href: '/system-admin/logs', icon: Activity, label: 'ログ' },
   { href: '/system-admin/system', icon: BarChart3, label: 'システム管理' },
 ];
 
