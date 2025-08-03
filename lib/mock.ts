@@ -824,7 +824,7 @@ export async function getSettingsData() {
       { code: 'chat', name: 'チャット', enabled: true },
     ],
     system: {
-      companyName: '株式会社TimePort',
+      companyName: '株式企業TimePort',
       timezone: 'Asia/Tokyo',
       workingHours: { start: '09:00', end: '18:00' },
     },

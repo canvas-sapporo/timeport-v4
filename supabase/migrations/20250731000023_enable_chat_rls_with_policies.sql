@@ -6,7 +6,7 @@
 -- ================================
 ALTER TABLE chats ENABLE ROW LEVEL SECURITY;
 
--- 認証済みユーザーは自分の会社のチャットを読み取り可能
+-- 認証済みユーザーは自分の企業のチャットを読み取り可能
 CREATE POLICY "users_can_read_company_chats" ON chats
   FOR SELECT
   TO authenticated
@@ -21,7 +21,7 @@ CREATE POLICY "users_can_read_company_chats" ON chats
     )
   );
 
--- 認証済みユーザーは自分の会社のチャットを作成可能
+-- 認証済みユーザーは自分の企業のチャットを作成可能
 CREATE POLICY "users_can_create_company_chats" ON chats
   FOR INSERT
   TO authenticated

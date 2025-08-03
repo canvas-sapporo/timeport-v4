@@ -118,7 +118,7 @@ export default function UserEditDialog({
   const fetchEmploymentTypes = async () => {
     setIsLoadingEmploymentTypes(true);
     try {
-      // 会社IDを使用して雇用形態を取得
+      // 企業IDを使用して雇用形態を取得
       const result = await getEmploymentTypes(companyId);
       if (result.success) {
         setEmploymentTypes(result.data.employment_types);

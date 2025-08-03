@@ -16,7 +16,7 @@ import {
  * 勤務形態
  */
 export const WorkTypeSchema = BaseEntitySchema.extend({
-  /** 会社ID */
+  /** 企業ID */
   company_id: UUIDSchema,
   /** 勤務形態コード */
   code: z.string().optional(),
@@ -52,7 +52,7 @@ export const WorkTypeSchema = BaseEntitySchema.extend({
  * 休暇種別
  */
 export const LeaveTypeSchema = BaseEntitySchema.extend({
-  /** 会社ID */
+  /** 企業ID */
   company_id: UUIDSchema,
   /** 休暇種別コード */
   code: z.string().optional(),
@@ -136,7 +136,7 @@ export const AttendanceSchema = BaseEntitySchema.extend({
  * 勤怠ステータス
  */
 export const AttendanceStatusSchema = BaseEntitySchema.extend({
-  /** 会社ID */
+  /** 企業ID */
   company_id: UUIDSchema,
   /** ステータス名 */
   name: z.string(),

@@ -10,7 +10,7 @@ import { BaseEntitySchema, UUIDSchema, DateStringSchema, DynamicDataSchema } fro
  * 申請ステータス
  */
 export const RequestStatusSchema = BaseEntitySchema.extend({
-  /** 会社ID */
+  /** 企業ID */
   company_id: UUIDSchema,
   /** ステータスコード */
   code: z.string(),

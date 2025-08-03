@@ -45,7 +45,7 @@ export const UserDetailViewSchema = z.object({
   group_path: z.string().optional(),
   /** 雇用形態名 */
   employment_type_name: z.string().optional(),
-  /** 会社名 */
+  /** 企業名 */
   company_name: z.string().optional(),
   /** 作成日時 */
   created_at: TimestampSchema,
@@ -159,7 +159,7 @@ export const RequestDetailViewSchema = z.object({
 export const GroupHierarchyViewSchema = z.object({
   /** グループID */
   id: UUIDSchema,
-  /** 会社ID */
+  /** 企業ID */
   company_id: UUIDSchema,
   /** 親グループID */
   parent_group_id: UUIDSchema.optional(),
@@ -173,7 +173,7 @@ export const GroupHierarchyViewSchema = z.object({
   level: z.number(),
   /** 階層パス */
   path: z.string(),
-  /** 会社名 */
+  /** 企業名 */
   company_name: z.string(),
   /** 親グループ名 */
   parent_group_name: z.string().optional(),
@@ -211,9 +211,9 @@ export const UserGroupDetailViewSchema = z.object({
   group_path: z.string(),
   /** 階層レベル */
   group_level: z.number(),
-  /** 会社ID */
+  /** 企業ID */
   company_id: UUIDSchema,
-  /** 会社名 */
+  /** 企業名 */
   company_name: z.string(),
   /** 主所属フラグ */
   is_primary: z.boolean(),

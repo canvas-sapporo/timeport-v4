@@ -224,16 +224,35 @@ function getLogBuffer(): LogBuffer {
 export async function logSystem(level: LogLevel, message: string, data: Partial<SystemLog> = {}) {
   const buffer = getLogBuffer();
 
-  const log: Partial<SystemLog> = {
+  // 自動的に追加情報を設定
+  const enhancedData: Partial<SystemLog> = {
+    // 基本情報
     level,
     ...data,
+
+    // 環境情報
+    environment: process.env.NODE_ENV || 'development',
+    app_version: process.env.npm_package_version || '1.0.0',
+
+    // パフォーマンス情報
+    memory_usage_mb: getMemoryUsage(),
+
+    // トレーシング情報
+    trace_id: data.trace_id || generateTraceId(),
+    request_id: data.request_id || generateTraceId(),
+
+    // タイムスタンプ情報
+    created_date: new Date().toISOString().split('T')[0],
+
+    // メタデータ
     metadata: {
       message,
+      timestamp: new Date().toISOString(),
       ...data.metadata,
     },
   };
 
-  await buffer.addSystemLog(log);
+  await buffer.addSystemLog(enhancedData);
 }
 
 /**

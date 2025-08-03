@@ -143,7 +143,7 @@ export default function AdminSettingsPage() {
     backupNotification: false,
   });
 
-  // 会社情報取得
+  // 企業情報取得
   async function fetchCompanyInfo() {
     if (!user?.company_id) return;
 
@@ -153,10 +153,10 @@ export default function AdminSettingsPage() {
       if (companyInfo) {
         setCompany(companyInfo);
       } else {
-        console.error('会社情報取得失敗');
+        console.error('企業情報取得失敗');
       }
     } catch (error) {
-      console.error('会社情報取得エラー:', error);
+      console.error('企業情報取得エラー:', error);
     } finally {
       setIsCompanyLoading(false);
     }
@@ -262,7 +262,7 @@ export default function AdminSettingsPage() {
         } else {
           toast({
             title: 'エラー',
-            description: result.error || '会社情報の更新に失敗しました',
+            description: result.error || '企業情報の更新に失敗しました',
             variant: 'destructive',
           });
         }
@@ -312,7 +312,7 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    // システムタブがアクティブになったときに会社情報を取得
+    // システムタブがアクティブになったときに企業情報を取得
     if (activeTab === 'system') {
       fetchCompanyInfo();
     }
@@ -389,7 +389,7 @@ export default function AdminSettingsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Building className="w-5 h-5" />
-                    <span>会社情報</span>
+                    <span>企業情報</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -397,13 +397,13 @@ export default function AdminSettingsPage() {
                     <div className="flex items-center justify-center py-8">
                       <div className="flex items-center space-x-2">
                         <Loader2 className="w-6 h-6 animate-spin" />
-                        <span>会社情報を読み込み中...</span>
+                        <span>企業情報を読み込み中...</span>
                       </div>
                     </div>
                   ) : company ? (
                     <>
                       <div>
-                        <Label htmlFor="companyName">会社名</Label>
+                        <Label htmlFor="companyName">企業名</Label>
                         <Input
                           id="companyName"
                           value={company.name}
@@ -413,7 +413,7 @@ export default function AdminSettingsPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="companyCode">会社コード</Label>
+                        <Label htmlFor="companyCode">企業コード</Label>
                         <Input
                           id="companyCode"
                           value={company.code}
@@ -456,7 +456,7 @@ export default function AdminSettingsPage() {
                     </>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-gray-500">会社情報を取得できませんでした</p>
+                      <p className="text-gray-500">企業情報を取得できませんでした</p>
                     </div>
                   )}
                 </CardContent>

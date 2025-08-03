@@ -10,7 +10,7 @@ import { TimeStringSchema } from './base';
  * システム設定
  */
 export const SystemSettingsSchema = z.object({
-  /** 会社名 */
+  /** 企業名 */
   company_name: z.string(),
   /** タイムゾーン */
   timezone: z.string(),

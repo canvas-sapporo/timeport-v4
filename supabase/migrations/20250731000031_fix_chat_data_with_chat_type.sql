@@ -22,7 +22,7 @@ SELECT 'chat_message_reactions' as table_name, COUNT(*) as count FROM chat_messa
 INSERT INTO chats (id, company_id, name, chat_type, created_by, created_at, updated_at, deleted_at)
 VALUES (
   gen_random_uuid(),
-  'a61d4ced-1033-44da-b9d3-a5a9ebe14978', -- 米沢さんの会社ID
+  'a61d4ced-1033-44da-b9d3-a5a9ebe14978', -- 米沢さんの企業ID
   'テストチャット',
   'group', -- chat_typeを追加
   '25f05fb9-d2b4-4928-976a-b0b79c456c30', -- 米沢さんのユーザーID

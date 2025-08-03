@@ -3,11 +3,11 @@ import { z } from 'zod';
 import type { BaseEntity, UUID, Timestamp, UpdateInput } from '@/types/common';
 
 // ================================
-// 会社関連スキーマ
+// 企業関連スキーマ
 // ================================
 
 /**
- * 会社スキーマ
+ * 企業スキーマ
  */
 export const CompanySchema = z.object({
   id: z.string().uuid(),
@@ -22,7 +22,7 @@ export const CompanySchema = z.object({
 });
 
 /**
- * 会社作成用入力スキーマ
+ * 企業作成用入力スキーマ
  */
 export const CreateCompanyInputSchema = z.object({
   name: z.string(),
@@ -33,7 +33,7 @@ export const CreateCompanyInputSchema = z.object({
 });
 
 /**
- * 会社更新用入力スキーマ
+ * 企業更新用入力スキーマ
  */
 export const UpdateCompanyInputSchema = z.object({
   name: z.string().optional(),
@@ -44,7 +44,7 @@ export const UpdateCompanyInputSchema = z.object({
 });
 
 /**
- * 会社作成フォームデータスキーマ
+ * 企業作成フォームデータスキーマ
  */
 export const CreateCompanyFormDataSchema = z.object({
   name: z.string().min(1, '企業名は必須です'),
@@ -63,7 +63,7 @@ export const CreateCompanyFormDataSchema = z.object({
 });
 
 /**
- * 会社編集フォームデータスキーマ
+ * 企業編集フォームデータスキーマ
  */
 export const UpdateCompanyFormDataSchema = z.object({
   name: z.string().min(1, '企業名は必須です'),
@@ -74,7 +74,7 @@ export const UpdateCompanyFormDataSchema = z.object({
 });
 
 /**
- * 会社検索パラメータスキーマ
+ * 企業検索パラメータスキーマ
  */
 export const CompanySearchParamsSchema = z.object({
   search: z.string().optional(),
@@ -86,7 +86,7 @@ export const CompanySearchParamsSchema = z.object({
 });
 
 /**
- * 会社作成結果スキーマ
+ * 企業作成結果スキーマ
  */
 export const CreateCompanyResultSchema = z.object({
   company: CompanySchema,
@@ -95,7 +95,7 @@ export const CreateCompanyResultSchema = z.object({
 });
 
 /**
- * 会社更新結果スキーマ
+ * 企業更新結果スキーマ
  */
 export const UpdateCompanyResultSchema = z.object({
   company: CompanySchema,
@@ -103,7 +103,7 @@ export const UpdateCompanyResultSchema = z.object({
 });
 
 /**
- * 会社削除結果スキーマ
+ * 企業削除結果スキーマ
  */
 export const DeleteCompanyResultSchema = z.object({
   companyId: z.string().uuid(),
@@ -111,7 +111,7 @@ export const DeleteCompanyResultSchema = z.object({
 });
 
 /**
- * 会社一覧レスポンススキーマ
+ * 企業一覧レスポンススキーマ
  */
 export const CompanyListResponseSchema = z.object({
   companies: z.array(CompanySchema),
@@ -128,7 +128,7 @@ export const CompanyListResponseSchema = z.object({
 });
 
 /**
- * 会社統計スキーマ
+ * 企業統計スキーマ
  */
 export const CompanyStatsSchema = z.object({
   total: z.number().int().min(0),
@@ -140,7 +140,7 @@ export const CompanyStatsSchema = z.object({
 });
 
 /**
- * 会社バリデーション結果スキーマ
+ * 企業バリデーション結果スキーマ
  */
 export const CompanyValidationResultSchema = z.object({
   isValid: z.boolean(),
@@ -154,7 +154,7 @@ export const CompanyValidationResultSchema = z.object({
 });
 
 /**
- * 会社バリデーションエラースキーマ
+ * 企業バリデーションエラースキーマ
  */
 export const CompanyValidationErrorSchema = z.object({
   field: z.string(),
@@ -162,7 +162,7 @@ export const CompanyValidationErrorSchema = z.object({
   code: z.string(),
 });
 
-// 会社関連
+// 企業関連
 export type Company = z.infer<typeof CompanySchema>;
 export type CreateCompanyInput = z.infer<typeof CreateCompanyInputSchema>;
 export type UpdateCompanyInput = z.infer<typeof UpdateCompanyInputSchema>;

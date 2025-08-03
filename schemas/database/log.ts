@@ -144,7 +144,7 @@ export const LogFilterSchema = z.object({
   /** ユーザー */
   user_id: UUIDSchema.optional(),
 
-  /** 会社 */
+  /** 企業 */
   company_id: UUIDSchema.optional(),
 
   /** パス */

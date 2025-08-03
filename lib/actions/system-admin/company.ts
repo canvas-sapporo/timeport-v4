@@ -91,7 +91,7 @@ async function getClientInfo() {
 // ================================
 
 /**
- * 会社作成フォームのバリデーション
+ * 企業作成フォームのバリデーション
  */
 function validateCreateCompanyForm(form: CreateCompanyFormData): CompanyValidationResult {
   const errors: ValidationError[] = [];
@@ -140,7 +140,7 @@ function validateCreateCompanyForm(form: CreateCompanyFormData): CompanyValidati
 }
 
 /**
- * 会社編集フォームのバリデーション
+ * 企業編集フォームのバリデーション
  */
 function validateEditCompanyForm(form: EditCompanyFormData): CompanyValidationResult {
   const errors: ValidationError[] = [];

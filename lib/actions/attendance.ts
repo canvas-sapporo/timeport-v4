@@ -14,7 +14,7 @@ import type {
   ClockRecord,
 } from '@/schemas/attendance';
 import { AppError } from '@/lib/utils/error-handling';
-import { logAudit } from '@/lib/utils/log-system';
+import { logAudit, logError } from '@/lib/utils/log-system';
 import { getJSTDate } from '@/lib/utils';
 
 // 環境変数の確認
@@ -34,6 +34,45 @@ if (!serviceRoleKey) {
 }
 
 const supabaseAdmin = createClient(supabaseUrl || '', serviceRoleKey || '');
+
+/**
+ * ユーザーIDからcompany_idを取得
+ */
+async function getCompanyIdForUser(userId: string): Promise<string | null> {
+  try {
+    if (!userId) {
+      console.log('getCompanyIdForUser: userIdが空です');
+      return null;
+    }
+
+    console.log('getCompanyIdForUser: 開始', { userId });
+
+    // user_groupsテーブルからcompany_idを取得
+    const { data: userGroup, error: userGroupError } = await supabaseAdmin
+      .from('user_groups')
+      .select(
+        `
+        groups!user_groups_group_id_fkey (
+          company_id
+        )
+      `
+      )
+      .eq('user_id', userId);
+
+    if (userGroupError) {
+      console.error('getCompanyIdForUser: user_groups取得エラー:', userGroupError);
+      return null;
+    }
+
+    const companyId = userGroup?.[0]?.groups?.[0]?.company_id;
+    console.log('getCompanyIdForUser: 取得結果', { userId, companyId });
+
+    return companyId || null;
+  } catch (error) {
+    console.error('getCompanyIdForUser: エラー:', error);
+    return null;
+  }
+}
 
 /**
  * クライアント情報を取得
@@ -111,6 +150,26 @@ async function validateClockOperation(
 
   if (error && error.code !== 'PGRST116') {
     console.error('バリデーション用勤怠記録取得エラー:', error);
+    // システムログを記録
+    await logError('バリデーション用勤怠記録取得エラー', new Error(error.message), {
+      user_id: userId || userId,
+      feature_name: 'attendance_validation',
+      action_type: 'validate_clock_operation',
+      resource_type: 'attendances',
+      method: 'POST',
+      path: '/api/attendance/validate',
+      status_code: 500,
+      response_time_ms: Date.now() - Date.now(),
+      metadata: {
+        error_code: error.code,
+        error_details: error.details,
+        timestamp,
+        clock_type: type,
+        operation: 'validation',
+        table: 'attendances',
+        target_user_id: userId,
+      },
+    });
     throw AppError.fromSupabaseError(error, '勤怠記録取得');
   }
 
@@ -265,8 +324,7 @@ async function calculateWorkTime(
 export async function clockIn(
   userId: string,
   timestamp: string,
-  workTypeId?: string,
-  currentUserId?: string
+  workTypeId?: string
 ): Promise<ClockResult> {
   console.log('=== clockIn Server Action 開始 ===');
   console.log('clockIn 開始:', { userId, timestamp, workTypeId });
@@ -313,6 +371,25 @@ export async function clockIn(
 
     if (error) {
       console.error('Supabase upsert error:', error);
+      // システムログを記録
+      await logError('出勤打刻データベースエラー', new Error(error.message), {
+        user_id: userId || userId,
+        feature_name: 'attendance_clock_in',
+        action_type: 'clock_in',
+        resource_type: 'attendances',
+        method: 'POST',
+        path: '/api/attendance/clock-in',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          error_code: error.code,
+          error_details: error.details,
+          timestamp,
+          work_type_id: workTypeId || null,
+          operation: 'upsert',
+          table: 'attendances',
+        },
+      });
       return {
         success: false,
         message: `出勤打刻に失敗しました: ${error.message}`,
@@ -324,7 +401,7 @@ export async function clockIn(
     console.log('=== clockIn Server Action 完了 ===');
 
     // 監査ログを記録
-    if (currentUserId) {
+    if (userId) {
       const clientInfo = await getClientInfo();
       try {
         // ユーザーの企業IDを取得
@@ -342,11 +419,11 @@ export async function clockIn(
             .eq('user_id', userId)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('attendance_created', {
-          user_id: currentUserId,
+          user_id: userId,
           company_id: companyId,
           target_type: 'attendances',
           target_id: data.id,
@@ -355,14 +432,14 @@ export async function clockIn(
             id: data.id,
             user_id: userId,
             work_date: today,
-            work_type_id: workTypeId,
+            work_type_id: workTypeId ?? null,
             clock_records: data.clock_records,
             actual_work_minutes: 0,
           },
           details: {
             action_type: 'clock_in',
             timestamp,
-            work_type_id: workTypeId,
+            work_type_id: workTypeId ?? null,
           },
           ip_address: clientInfo.ip_address,
           user_agent: clientInfo.user_agent,
@@ -385,6 +462,28 @@ export async function clockIn(
     };
   } catch (error) {
     console.error('clockIn 予期しないエラー:', error);
+    // システムログを記録
+    await logError(
+      '出勤打刻予期しないエラー',
+      error instanceof Error ? error : new Error('Unknown error'),
+      {
+        user_id: userId || userId,
+        feature_name: 'attendance_clock_in',
+        action_type: 'clock_in',
+        resource_type: 'attendances',
+        method: 'POST',
+        path: '/api/attendance/clock-in',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          timestamp,
+          work_type_id: workTypeId || null,
+          error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+          operation: 'clock_in',
+          table: 'attendances',
+        },
+      }
+    );
     return {
       success: false,
       message: `予期しないエラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -396,11 +495,7 @@ export async function clockIn(
 /**
  * 退勤打刻
  */
-export async function clockOut(
-  userId: string,
-  timestamp: string,
-  currentUserId?: string
-): Promise<ClockResult> {
+export async function clockOut(userId: string, timestamp: string): Promise<ClockResult> {
   console.log('clockOut 開始:', { userId, timestamp });
 
   // 環境変数の確認
@@ -526,6 +621,26 @@ export async function clockOut(
 
       if (error) {
         console.error('勤怠記録更新エラー:', error);
+        // システムログを記録
+        await logError('退勤打刻データベース更新エラー', new Error(error.message), {
+          user_id: userId || userId,
+          feature_name: 'attendance_clock_out',
+          action_type: 'clock_out',
+          resource_type: 'attendances',
+          resource_id: existingRecord.id,
+          method: 'POST',
+          path: '/api/attendance/clock-out',
+          status_code: 500,
+          response_time_ms: Date.now() - Date.now(),
+          metadata: {
+            error_code: error.code,
+            error_details: error.details,
+            timestamp,
+            attendance_id: existingRecord.id,
+            operation: 'update',
+            table: 'attendances',
+          },
+        });
         return {
           success: false,
           message: '退勤打刻に失敗しました',
@@ -540,7 +655,7 @@ export async function clockOut(
       });
 
       // 監査ログを記録
-      if (currentUserId) {
+      if (userId) {
         const clientInfo = await getClientInfo();
         try {
           // ユーザーの企業IDを取得
@@ -558,12 +673,12 @@ export async function clockOut(
               .eq('user_id', userId)
               .is('deleted_at', null)
               .single();
-            companyId = userGroup?.groups?.company_id;
+            companyId = userGroup?.groups?.[0]?.company_id;
           }
 
           await logAudit('attendance_updated', {
-            user_id: currentUserId,
-            company_id: companyId,
+            user_id: userId,
+            company_id: companyId || undefined,
             target_type: 'attendances',
             target_id: data.id,
             before_data: existingRecord,
@@ -627,6 +742,27 @@ export async function clockOut(
       };
     }
   } catch (error) {
+    // システムログを記録
+    await logError(
+      '退勤打刻予期しないエラー',
+      error instanceof Error ? error : new Error('Unknown error'),
+      {
+        user_id: userId || userId,
+        feature_name: 'attendance_clock_out',
+        action_type: 'clock_out',
+        resource_type: 'attendances',
+        method: 'POST',
+        path: '/api/attendance/clock-out',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          timestamp,
+          error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+          operation: 'clock_out',
+          table: 'attendances',
+        },
+      }
+    );
     return {
       success: false,
       message: '予期しないエラーが発生しました',
@@ -638,11 +774,7 @@ export async function clockOut(
 /**
  * 休憩開始
  */
-export async function startBreak(
-  userId: string,
-  timestamp: string,
-  currentUserId?: string
-): Promise<ClockResult> {
+export async function startBreak(userId: string, timestamp: string): Promise<ClockResult> {
   try {
     if (!validateClockTime(timestamp)) {
       return {
@@ -702,8 +834,6 @@ export async function startBreak(
       ...(newClockRecords[lastIdx].breaks || []),
       { break_start: timestamp, break_end: '' },
     ];
-    // 互換用: clock_recordsのみ使用
-    const latest = newClockRecords[lastIdx];
     const upsertData = {
       clock_records: newClockRecords,
     };
@@ -722,7 +852,7 @@ export async function startBreak(
     }
 
     // 監査ログを記録
-    if (currentUserId) {
+    if (userId) {
       const clientInfo = await getClientInfo();
       try {
         // ユーザーの企業IDを取得
@@ -740,11 +870,11 @@ export async function startBreak(
             .eq('user_id', userId)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('attendance_break_started', {
-          user_id: currentUserId,
+          user_id: userId,
           company_id: companyId,
           target_type: 'attendances',
           target_id: data.id,
@@ -783,11 +913,7 @@ export async function startBreak(
 /**
  * 休憩終了
  */
-export async function endBreak(
-  userId: string,
-  timestamp: string,
-  currentUserId?: string
-): Promise<ClockResult> {
+export async function endBreak(userId: string, timestamp: string): Promise<ClockResult> {
   try {
     if (!validateClockTime(timestamp)) {
       return {
@@ -853,8 +979,6 @@ export async function endBreak(
     }
     breaks[breaks.length - 1].break_end = timestamp;
     newClockRecords[lastIdx].breaks = breaks;
-    // 互換用: clock_recordsのみ使用
-    const latest = newClockRecords[lastIdx];
     const upsertData = {
       clock_records: newClockRecords,
     };
@@ -873,7 +997,7 @@ export async function endBreak(
     }
 
     // 監査ログを記録
-    if (currentUserId) {
+    if (userId) {
       const clientInfo = await getClientInfo();
       try {
         // ユーザーの企業IDを取得
@@ -891,11 +1015,11 @@ export async function endBreak(
             .eq('user_id', userId)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('attendance_break_ended', {
-          user_id: currentUserId,
+          user_id: userId,
           company_id: companyId,
           target_type: 'attendances',
           target_id: data.id,
@@ -953,6 +1077,23 @@ export async function getTodayAttendance(userId: string): Promise<Attendance | n
 
     if (error) {
       console.error('今日の勤怠記録取得エラー:', error);
+      // システムログを記録
+      await logError('今日の勤怠記録取得エラー', new Error(error.message), {
+        user_id: userId,
+        feature_name: 'attendance_get_today',
+        action_type: 'get_today_attendance',
+        resource_type: 'attendances',
+        method: 'GET',
+        path: '/api/attendance/today',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          error_code: error.code,
+          error_details: error.details,
+          operation: 'select',
+          table: 'attendances',
+        },
+      });
       return null;
     }
 
@@ -976,6 +1117,26 @@ export async function getTodayAttendance(userId: string): Promise<Attendance | n
     return attendance;
   } catch (error) {
     console.error('今日の勤怠記録取得エラー:', error);
+    // システムログを記録
+    await logError(
+      '今日の勤怠記録取得予期しないエラー',
+      error instanceof Error ? error : new Error('Unknown error'),
+      {
+        user_id: userId,
+        feature_name: 'attendance_get_today',
+        action_type: 'get_today_attendance',
+        resource_type: 'attendances',
+        method: 'GET',
+        path: '/api/attendance/today',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+          operation: 'get_today_attendance',
+          table: 'attendances',
+        },
+      }
+    );
     return null;
   }
 }
@@ -1091,11 +1252,10 @@ export async function getUserAttendance(
 
     console.log('基本的な勤怠データ取得成功:', basicData?.length, '件');
 
-    // work_typesとuser_profilesの情報を個別に取得
+    // work_typesの情報を取得
     const workTypeIds = Array.from(
       new Set(basicData?.map((r) => r.work_type_id).filter(Boolean) || [])
     );
-    const userIds = Array.from(new Set(basicData?.map((r) => r.user_id).filter(Boolean) || []));
 
     let workTypesData: { id: string; name: string; overtime_threshold_minutes: number }[] = [];
     if (workTypeIds.length > 0) {
@@ -1110,24 +1270,10 @@ export async function getUserAttendance(
       }
     }
 
-    let userProfilesData: { id: string; family_name: string; first_name: string }[] = [];
-    if (userIds.length > 0) {
-      const { data: upData, error: upError } = await supabaseAdmin
-        .from('user_profiles')
-        .select('id, family_name, first_name')
-        .in('id', userIds)
-        .is('deleted_at', null);
-
-      if (!upError && upData) {
-        userProfilesData = upData;
-      }
-    }
-
     // データを結合して加工（clock_recordsベース）
     const processedData =
       basicData?.map((record) => {
         const workType = workTypesData.find((wt) => wt.id === record.work_type_id);
-        const userProfile = userProfilesData.find((up) => up.id === record.user_id);
 
         // clock_recordsから旧カラムを自動生成
         const attendance = record as Attendance;
@@ -1253,7 +1399,7 @@ export async function getUserWorkTypes(userId: string): Promise<{ id: string; na
       return [];
     }
 
-    // ユーザーが所属する会社の勤務タイプを取得
+    // ユーザーが所属する企業の勤務タイプを取得
     const { data: workTypes, error: workTypesError } = await supabaseAdmin
       .from('work_types')
       .select('id, name')
@@ -1320,10 +1466,11 @@ export async function getUserWorkType(userId: string): Promise<string | undefine
 export async function getAllAttendance(
   companyId: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  currentUserId?: string
 ): Promise<Attendance[]> {
   try {
-    console.log('getAllAttendance 開始:', { companyId, startDate, endDate });
+    console.log('getAllAttendance 開始:', { companyId, startDate, endDate, currentUserId });
 
     let basicQuery = supabaseAdmin
       .from('attendances')
@@ -1552,6 +1699,29 @@ export async function getAllAttendance(
     return sortedData;
   } catch (error) {
     console.error('getAllAttendance エラー:', error);
+    // システムログを記録
+    await logError(
+      '全勤怠データ取得予期しないエラー',
+      error instanceof Error ? error : new Error('Unknown error'),
+      {
+        user_id: currentUserId,
+        feature_name: 'attendance_get_all',
+        action_type: 'get_all_attendance',
+        resource_type: 'attendances',
+        method: 'GET',
+        path: '/api/attendance/all',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          company_id: companyId || null,
+          start_date: startDate || null,
+          end_date: endDate || null,
+          error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+          operation: 'get_all_attendance',
+          table: 'attendances',
+        },
+      }
+    );
     throw error;
   }
 }
@@ -1674,7 +1844,7 @@ export async function updateAttendance(
   currentUserId?: string
 ): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> {
   try {
-    console.log('updateAttendance 開始:', { attendanceId, updateData });
+    console.log('updateAttendance 開始:', { attendanceId, updateData, currentUserId });
 
     // UUID形式チェック
     if (attendanceId.startsWith('absent-')) {
@@ -1745,6 +1915,31 @@ export async function updateAttendance(
 
     if (updateError) {
       console.error('勤怠記録更新エラー:', updateError);
+
+      // company_idを取得
+      const companyId = currentUserId ? await getCompanyIdForUser(currentUserId) : null;
+
+      // システムログを記録
+      await logError('勤怠記録更新データベースエラー', new Error(updateError.message), {
+        user_id: currentUserId,
+        company_id: companyId || undefined,
+        feature_name: 'attendance_update',
+        action_type: 'update_attendance',
+        resource_type: 'attendances',
+        resource_id: attendanceId,
+        method: 'PUT',
+        path: '/api/attendance/update',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          error_code: updateError.code,
+          error_details: updateError.details,
+          attendance_id: attendanceId,
+          updated_fields: Object.keys(updateData),
+          operation: 'update',
+          table: 'attendances',
+        },
+      });
       return {
         success: false,
         message: '勤怠記録の更新に失敗しました',
@@ -1755,7 +1950,7 @@ export async function updateAttendance(
     console.log('勤怠記録更新成功:', updatedRecord);
 
     // 監査ログを記録
-    if (currentUserId) {
+    if (existingRecord.user_id) {
       const clientInfo = await getClientInfo();
       try {
         // ユーザーの企業IDを取得
@@ -1773,12 +1968,12 @@ export async function updateAttendance(
             .eq('user_id', existingRecord.user_id)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('attendance_updated', {
-          user_id: currentUserId,
-          company_id: companyId,
+          user_id: existingRecord.user_id,
+          company_id: companyId || undefined,
           target_type: 'attendances',
           target_id: attendanceId,
           before_data: existingRecord,
@@ -1786,8 +1981,8 @@ export async function updateAttendance(
           details: {
             action_type: 'manual_update',
             updated_fields: Object.keys(updateData),
-            approved_by: updateData.approved_by,
-            approved_at: updateData.approved_at,
+            approved_by: updateData.approved_by ?? null,
+            approved_at: updateData.approved_at ?? null,
           },
           ip_address: clientInfo.ip_address,
           user_agent: clientInfo.user_agent,
@@ -1810,6 +2005,33 @@ export async function updateAttendance(
     };
   } catch (error) {
     console.error('updateAttendance エラー:', error);
+
+    // company_idを取得
+    const companyId = currentUserId ? await getCompanyIdForUser(currentUserId) : null;
+
+    // システムログを記録
+    await logError(
+      '勤怠記録更新予期しないエラー',
+      error instanceof Error ? error : new Error('Unknown error'),
+      {
+        user_id: currentUserId,
+        company_id: companyId || undefined,
+        feature_name: 'attendance_update',
+        action_type: 'update_attendance',
+        resource_type: 'attendances',
+        resource_id: attendanceId,
+        method: 'PUT',
+        path: '/api/attendance/update',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          attendance_id: attendanceId,
+          error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+          operation: 'update_attendance',
+          table: 'attendances',
+        },
+      }
+    );
     return {
       success: false,
       message: '予期しないエラーが発生しました',
@@ -1826,7 +2048,7 @@ export async function deleteAttendance(
   currentUserId?: string
 ): Promise<{ success: boolean; message: string; error?: string }> {
   try {
-    console.log('deleteAttendance 開始:', { attendanceId });
+    console.log('deleteAttendance 開始:', { attendanceId, currentUserId });
 
     // UUID形式チェック
     if (attendanceId.startsWith('absent-')) {
@@ -1870,6 +2092,30 @@ export async function deleteAttendance(
 
     if (deleteError) {
       console.error('勤怠記録削除エラー:', deleteError);
+
+      // company_idを取得
+      const companyId = currentUserId ? await getCompanyIdForUser(currentUserId) : null;
+
+      // システムログを記録
+      await logError('勤怠記録削除データベースエラー', new Error(deleteError.message), {
+        user_id: currentUserId,
+        company_id: companyId || undefined,
+        feature_name: 'attendance_delete',
+        action_type: 'delete_attendance',
+        resource_type: 'attendances',
+        resource_id: attendanceId,
+        method: 'DELETE',
+        path: '/api/attendance/delete',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          error_code: deleteError.code,
+          error_details: deleteError.details,
+          attendance_id: attendanceId,
+          operation: 'delete',
+          table: 'attendances',
+        },
+      });
       return {
         success: false,
         message: '勤怠記録の削除に失敗しました',
@@ -1898,7 +2144,7 @@ export async function deleteAttendance(
             .eq('user_id', existingRecord.user_id)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('attendance_deleted', {
@@ -1934,6 +2180,33 @@ export async function deleteAttendance(
     };
   } catch (error) {
     console.error('deleteAttendance エラー:', error);
+
+    // company_idを取得
+    const companyId = currentUserId ? await getCompanyIdForUser(currentUserId) : null;
+
+    // システムログを記録
+    await logError(
+      '勤怠記録削除予期しないエラー',
+      error instanceof Error ? error : new Error('Unknown error'),
+      {
+        user_id: currentUserId,
+        company_id: companyId || undefined,
+        feature_name: 'attendance_delete',
+        action_type: 'delete_attendance',
+        resource_type: 'attendances',
+        resource_id: attendanceId,
+        method: 'DELETE',
+        path: '/api/attendance/delete',
+        status_code: 500,
+        response_time_ms: Date.now() - Date.now(),
+        metadata: {
+          attendance_id: attendanceId,
+          error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+          operation: 'delete_attendance',
+          table: 'attendances',
+        },
+      }
+    );
     return {
       success: false,
       message: '予期しないエラーが発生しました',
@@ -2130,8 +2403,7 @@ export async function editAttendanceTime(
   attendanceId: string,
   clockRecords: ClockRecord[],
   editReason: string,
-  editedBy: string,
-  currentUserId?: string
+  editedBy: string
 ): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> {
   try {
     console.log('editAttendanceTime 開始:', { attendanceId, editReason, editedBy });
@@ -2225,7 +2497,7 @@ export async function editAttendanceTime(
     console.log('勤怠記録編集成功:', newRecord);
 
     // 監査ログを記録
-    if (currentUserId) {
+    if (originalRecord.user_id) {
       const clientInfo = await getClientInfo();
       try {
         // ユーザーの企業IDを取得
@@ -2243,12 +2515,12 @@ export async function editAttendanceTime(
             .eq('user_id', originalRecord.user_id)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('attendance_updated', {
-          user_id: currentUserId,
-          company_id: companyId,
+          user_id: originalRecord.user_id,
+          company_id: companyId || undefined,
           target_type: 'attendances',
           target_id: newRecord.id,
           before_data: originalRecord,
@@ -2396,7 +2668,7 @@ export async function getLatestAttendance(
 }
 
 /**
- * 会社の勤怠ステータス一覧を取得
+ * 企業の勤怠ステータス一覧を取得
  */
 export async function getAttendanceStatuses(
   companyId: string

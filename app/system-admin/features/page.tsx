@@ -27,7 +27,7 @@ export default function SuperAdminFeaturesPage() {
   const [companyFeatures, setCompanyFeatures] = useState([
     {
       companyId: '1',
-      companyName: '株式会社TimePort',
+      companyName: '株式企業TimePort',
       features: {
         attendance: true,
         requests: true,

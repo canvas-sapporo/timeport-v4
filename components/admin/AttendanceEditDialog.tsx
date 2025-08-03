@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { getAttendanceDetail, updateAttendance, getWorkTypes } from '@/lib/actions/attendance';
 import { formatDate, formatTime } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 import type { AttendanceData, ClockRecord } from '@/schemas/attendance';
 
 interface AttendanceEditDialogProps {
@@ -41,6 +42,7 @@ export default function AttendanceEditDialog({
   onSuccess,
 }: AttendanceEditDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [attendance, setAttendance] = useState<AttendanceData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -120,13 +122,17 @@ export default function AttendanceEditDialog({
     setIsSaving(true);
 
     try {
-      const result = await updateAttendance(attendanceId, {
-        work_type_id: editData.work_type_id === 'none' ? undefined : editData.work_type_id,
-        description: editData.description || undefined,
-        status: editData.status,
-        auto_calculated: editData.auto_calculated,
-        clock_records: editData.clock_records,
-      });
+      const result = await updateAttendance(
+        attendanceId,
+        {
+          work_type_id: editData.work_type_id === 'none' ? undefined : editData.work_type_id,
+          description: editData.description || undefined,
+          status: editData.status,
+          auto_calculated: editData.auto_calculated,
+          clock_records: editData.clock_records,
+        },
+        user?.id
+      );
 
       if (result.success) {
         toast({

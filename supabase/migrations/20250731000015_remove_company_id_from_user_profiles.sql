@@ -1,5 +1,5 @@
 -- user_profilesテーブルからcompany_id列を削除
--- 新しい構造: users → user_groups → groups → companies で会社情報を取得
+-- 新しい構造: users → user_groups → groups → companies で企業情報を取得
 -- ================================
 
 -- 既存のcompany_id列を削除

@@ -1,7 +1,7 @@
 // 認証関連
 export type { AuthUser, LoginCredentials } from '@/schemas/auth';
 
-// 会社・雇用関連
+// 企業・雇用関連
 export type { Company } from '@/schemas/company';
 export type { EmploymentType, WorkType } from '@/schemas/employment-type';
 

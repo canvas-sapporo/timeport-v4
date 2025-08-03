@@ -13,7 +13,7 @@
 -- 1. 基本マスターテーブル（参照される側を先に定義）
 -- ================================
 
--- 会社テーブル
+-- 企業テーブル
 CREATE TABLE companies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
@@ -271,7 +271,7 @@ CREATE TABLE features (
     deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- 機能・会社関連テーブル（中間テーブル）
+-- 機能・企業関連テーブル（中間テーブル）
 CREATE TABLE feature_companies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     feature_id UUID REFERENCES features(id) ON DELETE CASCADE,

@@ -31,13 +31,13 @@ CREATE POLICY "users_can_update_own_profile" ON user_profiles
     FOR UPDATE
     USING (id = auth.uid());
 
--- 管理者が同じ会社のユーザーを管理できるポリシー
+-- 管理者が同じ企業のユーザーを管理できるポリシー
 CREATE POLICY "admin_manage_company_users" ON user_profiles
     FOR ALL
     USING (
         -- 管理者権限チェック
         (auth.jwt() ->> 'role')::text IN ('admin', 'system-admin') AND
-        -- 同じ会社のユーザーのみ（company_idカラムが存在する場合）
+        -- 同じ企業のユーザーのみ（company_idカラムが存在する場合）
         (company_id IS NULL OR company_id = (SELECT company_id FROM user_profiles WHERE id = auth.uid()))
     );
 
@@ -86,4 +86,4 @@ CREATE POLICY "admin_read_features" ON features
 
 COMMENT ON POLICY "users_can_read_own_profile" ON user_profiles IS 'ユーザーは自分のプロフィールと管理者権限で他のプロフィールを読み取り可能';
 COMMENT ON POLICY "users_can_update_own_profile" ON user_profiles IS 'ユーザーは自分のプロフィールを更新可能';
-COMMENT ON POLICY "admin_manage_company_users" ON user_profiles IS '管理者は同じ会社のユーザーを管理可能'; 
+COMMENT ON POLICY "admin_manage_company_users" ON user_profiles IS '管理者は同じ企業のユーザーを管理可能'; 

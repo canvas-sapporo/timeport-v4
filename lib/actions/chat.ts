@@ -19,11 +19,11 @@ import {
   type UserSearchResult,
 } from '@/schemas/chat';
 // ================================
-// ユーザーの会社ID取得
+// ユーザーの企業ID取得
 // ================================
 
 /**
- * ユーザーの会社IDを取得
+ * ユーザーの企業IDを取得
  */
 export async function getUserCompanyId(userId: string): Promise<string> {
   const supabase = createServerClient();
@@ -42,7 +42,7 @@ export async function getUserCompanyId(userId: string): Promise<string> {
       throw new Error('ユーザーグループの取得に失敗しました');
     }
 
-    // グループから会社IDを取得
+    // グループから企業IDを取得
     const { data: groupData, error: groupError } = await supabase
       .from('groups')
       .select('company_id')
@@ -51,7 +51,7 @@ export async function getUserCompanyId(userId: string): Promise<string> {
 
     if (groupError || !groupData?.company_id) {
       console.error('Error fetching group:', groupError);
-      throw new Error('会社情報の取得に失敗しました');
+      throw new Error('企業情報の取得に失敗しました');
     }
 
     return groupData.company_id;
@@ -126,7 +126,7 @@ export async function searchUsers(
     const groupId = activeUserGroups[0].group_id;
     console.log('Group ID:', groupId);
 
-    // グループから会社IDを取得
+    // グループから企業IDを取得
     console.log('Step 2: Fetching group data');
     console.log('Group ID to fetch:', groupId);
 
@@ -152,13 +152,13 @@ export async function searchUsers(
 
     if (!groupData?.company_id) {
       console.error('No company_id found in group');
-      throw new Error('グループに会社情報がありません');
+      throw new Error('グループに企業情報がありません');
     }
 
     const companyId = groupData.company_id;
     console.log('Company ID:', companyId);
 
-    // 同じ会社のユーザーを検索（簡略化）
+    // 同じ企業のユーザーを検索（簡略化）
     console.log('Step 3: Searching users in same company');
     console.log('Search query:', query);
     console.log('Company ID for filtering:', companyId);
@@ -201,7 +201,7 @@ export async function searchUsers(
     console.log('All users found:', data?.length || 0, 'users');
     console.log('All users data:', data);
 
-    // 会社IDでフィルタリング（簡略化：全ユーザーを返す）
+    // 企業IDでフィルタリング（簡略化：全ユーザーを返す）
     console.log('Step 4: Filtering users by company (simplified)');
     const users = (data || []).map((user) => ({
       id: user.id,

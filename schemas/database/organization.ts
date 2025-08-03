@@ -7,12 +7,12 @@ import { BaseEntitySchema, UUIDSchema, DateStringSchema } from './base';
 // ================================
 
 /**
- * 会社
+ * 企業
  */
 export const CompanySchema = BaseEntitySchema.extend({
-  /** 会社名 */
+  /** 企業名 */
   name: z.string(),
-  /** 会社コード */
+  /** 企業コード */
   code: z.string(),
   /** 住所 */
   address: z.string().optional(),
@@ -24,7 +24,7 @@ export const CompanySchema = BaseEntitySchema.extend({
  * グループ
  */
 export const GroupSchema = BaseEntitySchema.extend({
-  /** 会社ID */
+  /** 企業ID */
   company_id: UUIDSchema,
   /** 親グループID */
   parent_group_id: UUIDSchema.optional(),
@@ -54,7 +54,7 @@ export const UserGroupSchema = BaseEntitySchema.extend({
  * 雇用形態
  */
 export const EmploymentTypeSchema = BaseEntitySchema.extend({
-  /** 会社ID */
+  /** 企業ID */
   company_id: UUIDSchema,
   /** 雇用形態コード */
   code: z.string().optional(),

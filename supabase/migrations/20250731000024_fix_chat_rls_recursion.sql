@@ -90,7 +90,7 @@ CREATE POLICY "chat_users_update_own_policy" ON chat_users
 -- 4. chatsテーブルのポリシー
 -- ================================
 
--- 認証済みユーザーは自分の会社のチャットを読み取り可能
+-- 認証済みユーザーは自分の企業のチャットを読み取り可能
 CREATE POLICY "chats_read_policy" ON chats
   FOR SELECT
   TO authenticated
@@ -105,7 +105,7 @@ CREATE POLICY "chats_read_policy" ON chats
     )
   );
 
--- 認証済みユーザーは自分の会社のチャットを作成可能
+-- 認証済みユーザーは自分の企業のチャットを作成可能
 CREATE POLICY "chats_insert_policy" ON chats
   FOR INSERT
   TO authenticated

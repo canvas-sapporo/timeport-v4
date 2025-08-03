@@ -254,13 +254,13 @@ export default function AdminAttendancePage() {
         setIsLoadingUsers(true);
         setIsLoadingGroups(true);
 
-        // ユーザーの会社IDを使用
+        // ユーザーの企業IDを使用
         if (!user.company_id) {
-          console.error('ユーザーの会社IDが設定されていません');
+          console.error('ユーザーの企業IDが設定されていません');
           return;
         }
 
-        console.log('ユーザー・グループデータ取得用会社ID:', user.company_id);
+        console.log('ユーザー・グループデータ取得用企業ID:', user.company_id);
 
         const [usersData, groupsData] = await Promise.all([
           getCompanyUsers(user.company_id),
@@ -338,15 +338,15 @@ export default function AdminAttendancePage() {
       setIsLoading(true);
       console.log('勤怠データ取得開始:', { selectedMonth });
 
-      // ユーザーの会社IDを使用
+      // ユーザーの企業IDを使用
       if (!user.company_id) {
-        console.error('ユーザーの会社IDが設定されていません');
+        console.error('ユーザーの企業IDが設定されていません');
         return;
       }
 
-      console.log('使用する会社ID:', user.company_id);
-      console.log('会社IDの型:', typeof user.company_id);
-      console.log('会社IDが存在するか:', !!user.company_id);
+      console.log('使用する企業ID:', user.company_id);
+      console.log('企業IDの型:', typeof user.company_id);
+      console.log('企業IDが存在するか:', !!user.company_id);
 
       // 選択された月の日付範囲を計算
       const [year, month] = selectedMonth.split('-').map(Number);
@@ -360,7 +360,7 @@ export default function AdminAttendancePage() {
         endDate,
       });
 
-      const records = await getAllAttendance(user.company_id, startDate, endDate);
+      const records = await getAllAttendance(user.company_id, startDate, endDate, user.id);
       console.log('取得された勤怠データ:', records);
       console.log('取得された勤怠データ件数:', records?.length || 0);
 

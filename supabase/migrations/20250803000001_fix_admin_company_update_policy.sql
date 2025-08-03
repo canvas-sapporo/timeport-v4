@@ -1,4 +1,4 @@
--- adminロールのユーザーが自分の会社の情報を更新できるようにRLSポリシーを修正
+-- adminロールのユーザーが自分の企業の情報を更新できるようにRLSポリシーを修正
 -- 2025-08-02
 
 -- ================================
@@ -8,7 +8,7 @@
 -- 既存のadmin_read_companiesポリシーを削除
 DROP POLICY IF EXISTS "admin_read_companies" ON companies;
 
--- adminロールのユーザーが自分の会社の情報を読み取り・更新できるポリシーを作成
+-- adminロールのユーザーが自分の企業の情報を読み取り・更新できるポリシーを作成
 CREATE POLICY "admin_manage_own_company" ON companies
   FOR ALL
   TO authenticated
@@ -41,4 +41,4 @@ CREATE POLICY "admin_manage_own_company" ON companies
 -- コメント追加
 -- ================================
 
-COMMENT ON POLICY "admin_manage_own_company" ON companies IS 'adminロールのユーザーが自分の会社の情報を管理できるポリシー'; 
+COMMENT ON POLICY "admin_manage_own_company" ON companies IS 'adminロールのユーザーが自分の企業の情報を管理できるポリシー'; 

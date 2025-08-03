@@ -49,7 +49,7 @@ export const FeatureSchema = z.object({
 });
 
 /**
- * 会社機能スキーマ
+ * 企業機能スキーマ
  */
 export const CompanyFeaturesSchema = z.object({
   company_id: z.string().uuid(),

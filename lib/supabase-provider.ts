@@ -650,7 +650,7 @@ export async function getSettingsData() {
         enabled: item.is_enabled,
       })) || [],
     system: {
-      companyName: '株式会社TimePort',
+      companyName: '株式企業TimePort',
       timezone: 'Asia/Tokyo',
       workingHours: { start: '09:00', end: '18:00' },
     },

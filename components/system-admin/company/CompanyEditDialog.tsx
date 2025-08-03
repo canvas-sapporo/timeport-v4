@@ -40,7 +40,7 @@ export default function CompanyEditDialog({
   const router = useRouter();
   const { user: currentUser } = useAuth();
 
-  // 会社データが変更されたときにフォームを更新
+  // 企業データが変更されたときにフォームを更新
   useEffect(() => {
     if (company) {
       setEditForm({

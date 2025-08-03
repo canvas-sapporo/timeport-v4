@@ -146,7 +146,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         console.log('デバッグ: userGroups.groups型:', typeof userGroups?.groups);
 
         if (groupsError || !userGroups?.groups) {
-          console.error('ユーザーの会社情報が見つかりません');
+          console.error('ユーザーの企業情報が見つかりません');
           console.error('デバッグ: groupsError:', groupsError);
           console.error('デバッグ: userGroups:', userGroups);
 
@@ -171,17 +171,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        // 会社IDを安全に取得
+        // 企業IDを安全に取得
         const groupsData = userGroups.groups as unknown as { company_id: string };
         const companyId = groupsData?.company_id;
 
         if (!companyId) {
-          console.error('会社IDが見つかりません');
+          console.error('企業IDが見つかりません');
           return;
         }
-        console.log('デバッグ: 会社ID:', companyId);
+        console.log('デバッグ: 企業ID:', companyId);
 
-        // 会社内のユーザーを取得
+        // 企業内のユーザーを取得
         const { data: users, error: usersError } = await supabase
           .from('user_profiles')
           .select('*')
@@ -211,7 +211,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        // 会社IDでフィルタリング
+        // 企業IDでフィルタリング
         const companyUserIds =
           allUserGroups
             ?.filter(

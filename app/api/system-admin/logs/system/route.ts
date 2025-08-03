@@ -21,7 +21,21 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('system_logs')
-      .select('*', { count: 'exact' })
+      .select(
+        `
+        *,
+        user_profiles!system_logs_user_id_fkey (
+          id,
+          family_name,
+          first_name
+        ),
+        companies!system_logs_company_id_fkey (
+          id,
+          name
+        )
+      `,
+        { count: 'exact' }
+      )
       .order('created_at', { ascending: false });
 
     // フィルター適用

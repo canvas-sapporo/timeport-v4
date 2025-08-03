@@ -163,7 +163,7 @@ export const UserSearchParamsSchema = z.object({
 });
 
 /**
- * ユーザーの会社情報スキーマ
+ * ユーザーの企業情報スキーマ
  */
 export const UserCompanyInfoSchema = z.object({
   company_id: z.string().uuid(),
@@ -174,7 +174,7 @@ export const UserCompanyInfoSchema = z.object({
 });
 
 /**
- * ユーザーの会社ID取得結果スキーマ
+ * ユーザーの企業ID取得結果スキーマ
  */
 export const GetUserCompanyResultSchema = z.object({
   success: z.boolean(),
@@ -187,13 +187,13 @@ export const GetUserCompanyResultSchema = z.object({
 // ================================
 
 /**
- * ユーザーIDから会社IDを取得する関数の型定義
+ * ユーザーIDから企業IDを取得する関数の型定義
  * 実装は lib/utils/user.ts に配置
  */
 export type GetUserCompanyFunction = (userId: UUID) => Promise<GetUserCompanyResult>;
 
 /**
- * ユーザーIDから会社IDを取得する関数（同期版）
+ * ユーザーIDから企業IDを取得する関数（同期版）
  * 実装は lib/utils/user.ts に配置
  */
 export type GetUserCompanySyncFunction = (userId: UUID) => GetUserCompanyResult | null;

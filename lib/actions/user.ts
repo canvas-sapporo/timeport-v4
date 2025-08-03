@@ -3,7 +3,7 @@
 /**
  * ユーザー関連のサーバーアクション
  *
- * ユーザーIDから会社IDを取得する処理を提供
+ * ユーザーIDから企業IDを取得する処理を提供
  * users → user_groups → groups → companies の順で参照
  */
 
@@ -18,7 +18,7 @@ import type {
 
 /**
  * メンバー用のユーザー一覧を取得
- * 現在のユーザーが所属する会社のユーザーのみを取得
+ * 現在のユーザーが所属する企業のユーザーのみを取得
  */
 export async function getUsers(): Promise<{
   success: boolean;
@@ -41,16 +41,16 @@ export async function getUsers(): Promise<{
       };
     }
 
-    // ユーザーの会社IDを取得
+    // ユーザーの企業IDを取得
     const userCompanyId = await getUserCompanyId(user.id);
     if (!userCompanyId) {
       return {
         success: false,
-        error: 'ユーザーの会社情報が見つかりません',
+        error: 'ユーザーの企業情報が見つかりません',
       };
     }
 
-    // 会社内のユーザーを取得
+    // 企業内のユーザーを取得
     const { data: users, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -65,7 +65,7 @@ export async function getUsers(): Promise<{
       };
     }
 
-    // 会社内のユーザーのみをフィルタリング
+    // 企業内のユーザーのみをフィルタリング
     const companyUsers = await Promise.all(
       (users || []).map(async (userProfile) => {
         const isInCompany = await isUserInCompany(userProfile.id, userCompanyId);
@@ -89,10 +89,10 @@ export async function getUsers(): Promise<{
 }
 
 /**
- * ユーザーIDから会社IDを取得（サーバーアクション）
+ * ユーザーIDから企業IDを取得（サーバーアクション）
  *
  * @param userId ユーザーID
- * @returns 会社ID
+ * @returns 企業ID
  */
 export async function getUserCompanyId(userId: UUID): Promise<UUID | null> {
   const supabase = createServerClient();
@@ -131,10 +131,10 @@ export async function getUserCompanyId(userId: UUID): Promise<UUID | null> {
 }
 
 /**
- * ユーザーIDから会社情報を取得（サーバーアクション）
+ * ユーザーIDから企業情報を取得（サーバーアクション）
  *
  * @param userId ユーザーID
- * @returns 会社情報
+ * @returns 企業情報
  */
 export async function getUserCompanyInfo(userId: UUID): Promise<UserCompanyInfo | null> {
   const supabase = createServerClient();
@@ -198,10 +198,10 @@ export async function getUserCompanyInfo(userId: UUID): Promise<UserCompanyInfo 
 }
 
 /**
- * ユーザーが指定された会社に所属しているかチェック（サーバーアクション）
+ * ユーザーが指定された企業に所属しているかチェック（サーバーアクション）
  *
  * @param userId ユーザーID
- * @param companyId 会社ID
+ * @param companyId 企業ID
  * @returns 所属しているかどうか
  */
 export async function isUserInCompany(userId: UUID, companyId: UUID): Promise<boolean> {

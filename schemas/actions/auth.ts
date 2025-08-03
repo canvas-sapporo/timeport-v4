@@ -13,7 +13,7 @@ export const LoginResponseSchema = z.object({
 });
 
 /**
- * ユーザー会社情報スキーマ
+ * ユーザー企業情報スキーマ
  */
 export const UserCompanyInfoSchema = z.object({
   company_id: z.string().uuid(),

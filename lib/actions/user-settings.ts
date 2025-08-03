@@ -208,7 +208,7 @@ export async function getCompanyInfo(companyId: string): Promise<CompanyInfo | n
 }
 
 /**
- * 会社情報を更新
+ * 企業情報を更新
  */
 export async function updateCompanyInfo(
   companyId: string,
@@ -223,13 +223,13 @@ export async function updateCompanyInfo(
   const supabaseAdmin = createAdminClient();
 
   try {
-    // 現在のユーザーの会社IDを取得して検証
+    // 現在のユーザーの企業IDを取得して検証
     if (currentUserId) {
       const userCompanyId = await getUserCompanyId(currentUserId);
       if (userCompanyId !== companyId) {
         return {
           success: false,
-          message: '自分の会社の情報のみ更新できます',
+          message: '自分の企業の情報のみ更新できます',
           error: '権限エラー',
         };
       }
@@ -242,7 +242,7 @@ export async function updateCompanyInfo(
       .eq('id', companyId)
       .single();
 
-    // 会社情報を更新
+    // 企業情報を更新
     const { data, error } = await supabaseAdmin
       .from('companies')
       .update({
@@ -257,8 +257,8 @@ export async function updateCompanyInfo(
       console.error('Error updating company info:', error);
       return {
         success: false,
-        message: '会社情報の更新に失敗しました',
-        error: '会社情報の更新に失敗しました',
+        message: '企業情報の更新に失敗しました',
+        error: '企業情報の更新に失敗しました',
       };
     }
 
@@ -289,13 +289,13 @@ export async function updateCompanyInfo(
     }
 
     revalidatePath('/admin/settings');
-    return { success: true, message: '会社情報が正常に更新されました' };
+    return { success: true, message: '企業情報が正常に更新されました' };
   } catch (error) {
     console.error('Error in updateCompanyInfo:', error);
     return {
       success: false,
-      message: '会社情報の更新に失敗しました',
-      error: '会社情報の更新に失敗しました',
+      message: '企業情報の更新に失敗しました',
+      error: '企業情報の更新に失敗しました',
     };
   }
 }
