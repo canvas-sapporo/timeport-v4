@@ -437,84 +437,88 @@ export default function AttendancePreviewDialog({
               </CardContent>
             </Card>
 
-            {/* 勤務セッション */}
-            {attendance.clock_records && attendance.clock_records.length > 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    勤務セッション ({attendance.clock_records.length}回)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {attendance.clock_records.map((session, index) => (
-                      <div key={index} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-medium">セッション {index + 1}</h4>
-                          <div className="text-sm text-gray-500">
-                            {session.in_time ? formatTime(session.in_time) : '--:--'} -{' '}
-                            {session.out_time ? formatTime(session.out_time) : '--:--'}
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">出勤時刻</span>
-                            <span>{session.in_time ? formatTime(session.in_time) : '--:--'}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">退勤時刻</span>
-                            <span>{session.out_time ? formatTime(session.out_time) : '--:--'}</span>
-                          </div>
-                          {session.breaks && session.breaks.length > 0 && (
-                            <div className="mt-3">
-                              <h5 className="text-sm font-medium text-gray-700 mb-2">休憩記録</h5>
-                              <div className="space-y-1">
-                                {session.breaks.map(
-                                  (breakRecord: ClockBreakRecord, breakIndex: number) => {
-                                    const breakStart = new Date(breakRecord.break_start);
-                                    const breakEnd = breakRecord.break_end
-                                      ? new Date(breakRecord.break_end)
-                                      : null;
-                                    const breakMinutes = breakEnd
-                                      ? Math.floor(
-                                          (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60)
-                                        )
-                                      : 0;
+            {/* 休憩時間 */}
+            {(() => {
+              const allBreaks: Array<{ sessionIndex: number; breakIndex: number; break: any }> = [];
 
-                                    return (
-                                      <div
-                                        key={breakIndex}
-                                        className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded"
-                                      >
-                                        <span>休憩 {breakIndex + 1}</span>
-                                        <div className="flex items-center space-x-2">
-                                          <span>
-                                            {formatTime(breakRecord.break_start)} -{' '}
-                                            {breakRecord.break_end
-                                              ? formatTime(breakRecord.break_end)
-                                              : '終了未定'}
-                                          </span>
-                                          {breakMinutes > 0 && (
-                                            <span className="text-xs text-gray-500">
-                                              ({breakMinutes}分)
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    );
-                                  }
-                                )}
-                              </div>
+              // 全セッションから休憩時間を収集
+              attendance.clock_records?.forEach((session, sessionIndex) => {
+                if (session.breaks && session.breaks.length > 0) {
+                  session.breaks.forEach((breakRecord, breakIndex) => {
+                    allBreaks.push({
+                      sessionIndex,
+                      breakIndex,
+                      break: breakRecord,
+                    });
+                  });
+                }
+              });
+
+              return allBreaks.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      休憩時間 ({allBreaks.length}回)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {allBreaks.map(({ sessionIndex, breakIndex, break: breakRecord }, index) => {
+                        const breakStart = new Date(breakRecord.break_start);
+                        const breakEnd = breakRecord.break_end
+                          ? new Date(breakRecord.break_end)
+                          : null;
+                        const breakMinutes = breakEnd
+                          ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / (1000 * 60))
+                          : 0;
+
+                        return (
+                          <div
+                            key={`${sessionIndex}-${breakIndex}`}
+                            className="flex items-center justify-between text-sm bg-gray-50 p-3 rounded-lg border"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium text-gray-700">休憩 {index + 1}</span>
+                              {attendance.clock_records && attendance.clock_records.length > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  セッション{sessionIndex + 1}
+                                </Badge>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                            <div className="text-right">
+                              <div className="font-medium">
+                                {formatTime(breakRecord.break_start)} -{' '}
+                                {breakRecord.break_end
+                                  ? formatTime(breakRecord.break_end)
+                                  : '終了未定'}
+                              </div>
+                              {breakMinutes > 0 && (
+                                <div className="text-xs text-gray-500">
+                                  休憩時間: {Math.floor(breakMinutes / 60)}h{breakMinutes % 60}m
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      休憩時間
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-4 text-gray-500">休憩記録がありません</div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* 備考 */}
             {attendance.description && (

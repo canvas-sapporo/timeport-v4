@@ -1824,7 +1824,7 @@ export async function getCompanyGroups(
 }
 
 /**
- * 勤怠記録の更新
+ * 勤怠記録の更新（通常の更新）
  */
 export async function updateAttendance(
   attendanceId: string,
@@ -3011,6 +3011,237 @@ export async function deleteAttendanceStatus(
     console.error('deleteAttendanceStatus エラー:', error);
     return {
       success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * 勤怠記録の打刻編集（データ複製による更新）
+ */
+export async function updateAttendanceWithClockEdit(
+  attendanceId: string,
+  updateData: {
+    work_type_id?: string;
+    clock_records?: ClockRecord[];
+    actual_work_minutes?: number;
+    overtime_minutes?: number;
+    late_minutes?: number;
+    early_leave_minutes?: number;
+    status?: 'normal' | 'late' | 'early_leave' | 'absent';
+    auto_calculated?: boolean;
+    description?: string;
+    approved_by?: string;
+    approved_at?: string;
+    edit_reason: string;
+  },
+  currentUserId?: string
+): Promise<{ success: boolean; message: string; attendance?: Attendance; error?: string }> {
+  try {
+    console.log('updateAttendanceWithClockEdit 開始:', { attendanceId, updateData, currentUserId });
+
+    // UUID形式チェック
+    if (attendanceId.startsWith('absent-')) {
+      return {
+        success: false,
+        message: '該当する勤怠記録が見つかりません',
+        error: 'NOT_FOUND',
+      };
+    }
+
+    // 既存の勤怠記録を取得
+    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+      .from('attendances')
+      .select('*')
+      .eq('id', attendanceId)
+      .is('deleted_at', null)
+      .single();
+
+    if (fetchError) {
+      console.error('勤怠記録取得エラー:', fetchError);
+      return {
+        success: false,
+        message: '勤怠記録の取得に失敗しました',
+        error: fetchError.message,
+      };
+    }
+
+    if (!existingRecord) {
+      return {
+        success: false,
+        message: '勤怠記録が見つかりません',
+        error: 'NOT_FOUND',
+      };
+    }
+
+    // 編集理由のバリデーション
+    if (!updateData.edit_reason || updateData.edit_reason.trim() === '') {
+      return {
+        success: false,
+        message: '編集理由は必須です',
+        error: 'EDIT_REASON_REQUIRED',
+      };
+    }
+
+    // 時刻の整合性チェック
+    if (updateData.clock_records && updateData.clock_records.length > 0) {
+      for (const session of updateData.clock_records) {
+        if (session.in_time && session.out_time) {
+          const inTime = new Date(session.in_time);
+          const outTime = new Date(session.out_time);
+          if (inTime >= outTime) {
+            return {
+              success: false,
+              message: '出勤時刻は退勤時刻より前である必要があります',
+              error: 'INVALID_TIME_RANGE',
+            };
+          }
+        }
+
+        // 休憩時間の整合性チェック
+        if (session.breaks && session.breaks.length > 0) {
+          for (const breakRecord of session.breaks) {
+            if (breakRecord.break_start && breakRecord.break_end) {
+              const breakStart = new Date(breakRecord.break_start);
+              const breakEnd = new Date(breakRecord.break_end);
+              if (breakStart >= breakEnd) {
+                return {
+                  success: false,
+                  message: '休憩開始時刻は休憩終了時刻より前である必要があります',
+                  error: 'INVALID_BREAK_TIME_RANGE',
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 新しいレコード用のデータを準備
+    const newRecordData = {
+      user_id: existingRecord.user_id,
+      work_date: existingRecord.work_date,
+      work_type_id: updateData.work_type_id || existingRecord.work_type_id,
+      description: updateData.description || existingRecord.description,
+      approved_by: updateData.approved_by || existingRecord.approved_by,
+      approved_at: updateData.approved_at || existingRecord.approved_at,
+      source_id: attendanceId, // 複製元のID
+      edit_reason: updateData.edit_reason,
+      edited_by: currentUserId,
+      attendance_status_id: existingRecord.attendance_status_id,
+    };
+
+    // clock_recordsが更新された場合、旧カラムも同期
+    if (updateData.clock_records && updateData.clock_records.length > 0) {
+      const latestSession = updateData.clock_records[updateData.clock_records.length - 1];
+      newRecordData.clock_in_time = latestSession.in_time;
+      newRecordData.clock_out_time = latestSession.out_time || null;
+      newRecordData.clock_records = updateData.clock_records;
+    } else {
+      newRecordData.clock_in_time = existingRecord.clock_in_time;
+      newRecordData.clock_out_time = existingRecord.clock_out_time;
+      newRecordData.clock_records = existingRecord.clock_records;
+    }
+
+    // 勤務時間の自動計算
+    if (updateData.clock_records && updateData.clock_records.length > 0) {
+      const latestSession = updateData.clock_records[updateData.clock_records.length - 1];
+      if (latestSession.in_time && latestSession.out_time) {
+        const { actualWorkMinutes, overtimeMinutes } = await calculateWorkTime(
+          latestSession.in_time,
+          latestSession.out_time,
+          latestSession.breaks || [],
+          updateData.work_type_id || existingRecord.work_type_id
+        );
+        newRecordData.actual_work_minutes = actualWorkMinutes;
+        newRecordData.overtime_minutes = overtimeMinutes;
+      }
+    } else {
+      newRecordData.actual_work_minutes = existingRecord.actual_work_minutes;
+      newRecordData.overtime_minutes = existingRecord.overtime_minutes;
+    }
+
+    // 遅刻・早退時間の設定
+    newRecordData.late_minutes = updateData.late_minutes ?? existingRecord.late_minutes;
+    newRecordData.early_leave_minutes =
+      updateData.early_leave_minutes ?? existingRecord.early_leave_minutes;
+
+    // 新しいレコードを作成
+    const { data: newRecord, error: createError } = await supabaseAdmin
+      .from('attendances')
+      .insert(newRecordData)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('勤怠記録作成エラー:', createError);
+      return {
+        success: false,
+        message: '勤怠記録の作成に失敗しました',
+        error: createError.message,
+      };
+    }
+
+    console.log('勤怠記録打刻編集成功:', newRecord);
+
+    // 監査ログを記録
+    if (existingRecord.user_id) {
+      const clientInfo = await getClientInfo();
+      try {
+        // ユーザーの企業IDを取得
+        const { data: userProfile } = await supabaseAdmin
+          .from('user_profiles')
+          .select('id')
+          .eq('id', existingRecord.user_id)
+          .single();
+
+        let companyId: string | undefined;
+        if (userProfile) {
+          const { data: userGroup } = await supabaseAdmin
+            .from('user_groups')
+            .select('groups(company_id)')
+            .eq('user_id', existingRecord.user_id)
+            .is('deleted_at', null)
+            .single();
+          companyId = userGroup?.groups?.[0]?.company_id;
+        }
+
+        await logAudit('attendance_updated', {
+          user_id: existingRecord.user_id,
+          company_id: companyId || undefined,
+          target_type: 'attendances',
+          target_id: newRecord.id,
+          before_data: existingRecord,
+          after_data: newRecord,
+          details: {
+            action_type: 'clock_edit',
+            source_id: attendanceId,
+            edit_reason: updateData.edit_reason,
+            edited_by: currentUserId,
+            updated_fields: Object.keys(updateData).filter((key) => key !== 'edit_reason'),
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: attendance_updated (clock_edit)');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    }
+
+    revalidatePath('/admin/attendance');
+
+    return {
+      success: true,
+      message: '勤怠記録を打刻編集しました',
+      attendance: newRecord as Attendance,
+    };
+  } catch (error) {
+    console.error('updateAttendanceWithClockEdit エラー:', error);
+    return {
+      success: false,
+      message: '予期しないエラーが発生しました',
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }

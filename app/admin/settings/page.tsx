@@ -50,6 +50,7 @@ import { getEmploymentTypes, getEmploymentTypeStats } from '@/lib/actions/admin/
 import { getWorkTypes, getWorkTypeStats } from '@/lib/actions/admin/work-types';
 import { getAttendanceStatuses } from '@/lib/actions/attendance';
 import { getCompanyInfo, updateCompanyInfo } from '@/lib/actions/user-settings';
+import { saveAttendanceSetting, getAttendanceSettingValue } from '@/lib/actions/settings';
 import type { EmploymentType, WorkType } from '@/schemas/employment-type';
 import type { AttendanceStatusData } from '@/schemas/attendance';
 import type { Company } from '@/schemas/company';
@@ -144,6 +145,7 @@ export default function AdminSettingsPage() {
     systemMaintenance: true,
     securityAlert: false,
     backupNotification: false,
+    timeEditPermission: false, // 打刻編集許可
   });
 
   // 企業情報取得
@@ -171,12 +173,27 @@ export default function AdminSettingsPage() {
 
     setIsAttendanceStatusesLoading(true);
     try {
-      const result = await getAttendanceStatuses(user.company_id);
-      if (result.success && result.statuses) {
-        setAttendanceStatuses(result.statuses);
+      const [statusesResult, lateAlertResult, overtimeAlertResult, clockEditResult] =
+        await Promise.all([
+          getAttendanceStatuses(user.company_id),
+          getAttendanceSettingValue(user.company_id, 'late_alert'),
+          getAttendanceSettingValue(user.company_id, 'overtime_alert'),
+          getAttendanceSettingValue(user.company_id, 'clock_record_edit'),
+        ]);
+
+      if (statusesResult.success && statusesResult.statuses) {
+        setAttendanceStatuses(statusesResult.statuses);
       } else {
-        console.error('勤怠ステータス取得失敗:', result.error);
+        console.error('勤怠ステータス取得失敗:', statusesResult.error);
       }
+
+      // 設定値を更新
+      setNotificationSettings((prev) => ({
+        ...prev,
+        lateArrivalAlert: lateAlertResult?.enabled || false,
+        overtimeAlert: overtimeAlertResult?.enabled || false,
+        timeEditPermission: clockEditResult?.enabled || false,
+      }));
     } catch (error) {
       console.error('勤怠ステータス取得エラー:', error);
     } finally {
@@ -269,6 +286,42 @@ export default function AdminSettingsPage() {
             variant: 'destructive',
           });
         }
+      } else if (settingsType === 'attendance' && user?.company_id) {
+        // 勤怠設定の保存
+        const results = await Promise.all([
+          saveAttendanceSetting(
+            user.company_id,
+            'late_alert',
+            { enabled: notificationSettings.lateArrivalAlert },
+            user.id
+          ),
+          saveAttendanceSetting(
+            user.company_id,
+            'overtime_alert',
+            { enabled: notificationSettings.overtimeAlert },
+            user.id
+          ),
+          saveAttendanceSetting(
+            user.company_id,
+            'clock_record_edit',
+            { enabled: notificationSettings.timeEditPermission },
+            user.id
+          ),
+        ]);
+
+        const hasError = results.some((result) => !result.success);
+        if (hasError) {
+          toast({
+            title: 'エラー',
+            description: '勤怠設定の保存に失敗しました',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: '成功',
+            description: '勤怠設定を保存しました',
+          });
+        }
       } else {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         console.log(`Saving ${settingsType} settings...`);
@@ -344,9 +397,9 @@ export default function AdminSettingsPage() {
     { id: 'system', label: 'システム', icon: Settings },
     { id: 'notifications', label: '通知', icon: Bell },
     { id: 'features', label: '機能設定', icon: FormInput },
-    { id: 'attendance', label: '勤怠管理', icon: Clock },
     { id: 'employment-types', label: '雇用形態', icon: Users },
     { id: 'work-types', label: '勤務形態', icon: Briefcase },
+    { id: 'attendance', label: '勤怠管理', icon: Clock },
     { id: 'logs', label: 'ログ設定', icon: FileText },
   ];
 
@@ -799,6 +852,22 @@ export default function AdminSettingsPage() {
                         checked={notificationSettings.overtimeAlert}
                         onCheckedChange={(checked) =>
                           setNotificationSettings((prev) => ({ ...prev, overtimeAlert: checked }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>打刻編集</Label>
+                        <p className="text-sm text-gray-500">管理者による打刻の編集許可</p>
+                      </div>
+                      <Switch
+                        checked={notificationSettings.timeEditPermission}
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings((prev) => ({
+                            ...prev,
+                            timeEditPermission: checked,
+                          }))
                         }
                       />
                     </div>

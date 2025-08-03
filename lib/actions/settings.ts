@@ -374,3 +374,227 @@ export async function getNotificationSetting(
   const setting = await getSetting(userId, role, 'notification', settingKey);
   return setting ? (setting.setting_value as NotificationSetting) : null;
 }
+
+/**
+ * 打刻編集設定を取得する
+ * @param companyId 企業ID（nullの場合はグローバル設定）
+ * @returns 打刻編集が有効かどうか
+ */
+export async function getClockRecordEditSetting(companyId?: string): Promise<boolean> {
+  const supabase = createServerClient();
+
+  try {
+    // 企業固有の設定を優先して検索
+    let query = supabase
+      .from('settings')
+      .select('*')
+      .eq('setting_type', 'attendance')
+      .eq('setting_key', 'clock_record_edit')
+      .is('deleted_at', null);
+
+    if (companyId) {
+      query = query.eq('company_id', companyId);
+    } else {
+      query = query.is('company_id', null);
+    }
+
+    let { data, error } = await query.single();
+
+    // 企業固有の設定が見つからない場合、グローバル設定を検索
+    if (!data && error && companyId) {
+      query = supabase
+        .from('settings')
+        .select('*')
+        .eq('setting_type', 'attendance')
+        .eq('setting_key', 'clock_record_edit')
+        .is('company_id', null)
+        .is('deleted_at', null);
+
+      ({ data, error } = await query.single());
+    }
+
+    if (error || !data) {
+      // デフォルトは無効
+      return false;
+    }
+
+    const settingValue = data.setting_value as { enabled?: boolean };
+    return settingValue?.enabled || false;
+  } catch (error) {
+    console.error('Error in getClockRecordEditSetting:', error);
+    return false;
+  }
+}
+
+/**
+ * 勤怠設定を取得する
+ * @param companyId 企業ID
+ * @param settingKey 設定キー
+ * @returns 設定値またはデフォルト値
+ */
+export async function getAttendanceSettingValue(
+  companyId: string,
+  settingKey: string
+): Promise<any> {
+  const supabase = createServerClient();
+
+  try {
+    // 企業固有の設定を検索
+    let query = supabase
+      .from('settings')
+      .select('*')
+      .eq('setting_type', 'attendance')
+      .eq('setting_key', settingKey)
+      .eq('company_id', companyId)
+      .is('deleted_at', null);
+
+    let { data, error } = await query.single();
+
+    // 企業固有の設定が見つからない場合、グローバル設定を検索
+    if (!data && error) {
+      query = supabase
+        .from('settings')
+        .select('*')
+        .eq('setting_type', 'attendance')
+        .eq('setting_key', settingKey)
+        .is('company_id', null)
+        .is('deleted_at', null);
+
+      ({ data, error } = await query.single());
+    }
+
+    if (error || !data) {
+      // デフォルト値を返す
+      switch (settingKey) {
+        case 'late_alert':
+        case 'overtime_alert':
+        case 'clock_record_edit':
+          return false;
+        default:
+          return null;
+      }
+    }
+
+    return data.setting_value;
+  } catch (error) {
+    console.error('Error in getAttendanceSettingValue:', error);
+    return null;
+  }
+}
+
+/**
+ * 勤怠設定を保存する（upsert）
+ * @param companyId 企業ID
+ * @param settingKey 設定キー
+ * @param settingValue 設定値
+ * @param currentUserId 現在のユーザーID
+ * @returns 成功/失敗の結果
+ */
+export async function saveAttendanceSetting(
+  companyId: string,
+  settingKey: string,
+  settingValue: any,
+  currentUserId?: string
+): Promise<{ success: boolean; message: string; error?: string }> {
+  const supabase = createServerClient();
+
+  try {
+    // 現在のユーザーのロールを取得
+    let userRole = 'admin';
+    let userCompanyId = null;
+    if (currentUserId) {
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('role, company_id')
+        .eq('id', currentUserId)
+        .single();
+
+      if (userProfile) {
+        userRole = userProfile.role;
+        userCompanyId = userProfile.company_id;
+      }
+    }
+
+    console.log('Debug - saveAttendanceSetting:', {
+      companyId,
+      settingKey,
+      settingValue,
+      currentUserId,
+      userRole,
+      userCompanyId,
+    });
+
+    // upsertで設定を保存
+    const { data, error } = await supabase
+      .from('settings')
+      .upsert(
+        {
+          company_id: companyId,
+          setting_type: 'attendance',
+          setting_key: settingKey,
+          setting_value: settingValue,
+          role: userRole,
+          user_id: currentUserId || null,
+          is_default: false,
+        },
+        {
+          onConflict: 'company_id,setting_type,setting_key',
+        }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving attendance setting:', error);
+      return {
+        success: false,
+        message: '設定の保存に失敗しました',
+        error: error.message,
+      };
+    }
+
+    // 監査ログを記録
+    if (currentUserId) {
+      const clientInfo = await getClientInfo();
+      try {
+        await logAudit('setting_updated', {
+          user_id: currentUserId,
+          company_id: companyId,
+          target_type: 'settings',
+          target_id: data.id,
+          before_data: undefined, // upsertのため前のデータは不明
+          after_data: {
+            company_id: companyId,
+            setting_type: 'attendance',
+            setting_key: settingKey,
+            setting_value: settingValue,
+            role: userRole,
+            user_id: currentUserId || null,
+            is_default: false,
+          },
+          details: {
+            action_type: 'upsert',
+            setting_type: 'attendance',
+            setting_key: settingKey,
+          },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了: setting_updated (attendance)');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    }
+
+    revalidatePath('/admin/settings');
+    return { success: true, message: '設定が正常に保存されました' };
+  } catch (error) {
+    console.error('Error in saveAttendanceSetting:', error);
+    return {
+      success: false,
+      message: '設定の保存に失敗しました',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
