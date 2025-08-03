@@ -77,14 +77,14 @@ export async function loginAction(email: string, password: string): Promise<Logi
         before_data: undefined,
         after_data: undefined,
         details: {
-                  login_method: 'password',
-        email: email,
-        failure_reason: 'invalid_credentials',
-        user_agent: userAgent || null,
-        ip_address: ipAddress || null,
-      },
-      ip_address: ipAddress || undefined,
-      user_agent: userAgent || undefined,
+          login_method: 'password',
+          email: email,
+          failure_reason: 'invalid_credentials',
+          user_agent: userAgent || null,
+          ip_address: ipAddress || null,
+        },
+        ip_address: ipAddress || undefined,
+        user_agent: userAgent || undefined,
       });
       console.log('ログイン失敗監査ログ記録完了');
     } catch (error) {
