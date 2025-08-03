@@ -280,12 +280,12 @@ export function AuthMonitoring({ companyId, startDate, endDate }: AuthMonitoring
                           <span>{log.ip_address}</span>
                         </>
                       )}
-                      {log.details?.email && (
+                      {log.details?.email && typeof log.details.email === 'string' ? (
                         <>
                           <span className="mx-2">•</span>
-                          <span>{log.details.email as string}</span>
+                          <span>{log.details.email}</span>
                         </>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -329,18 +329,19 @@ export function AuthMonitoring({ companyId, startDate, endDate }: AuthMonitoring
                           <span>{log.ip_address}</span>
                         </>
                       )}
-                      {log.details?.email && (
+                      {log.details?.email && typeof log.details.email === 'string' ? (
                         <>
                           <span className="mx-2">•</span>
-                          <span>{log.details.email as string}</span>
+                          <span>{log.details.email}</span>
                         </>
-                      )}
-                      {log.details?.failure_reason && (
+                      ) : null}
+                      {log.details?.failure_reason &&
+                      typeof log.details.failure_reason === 'string' ? (
                         <>
                           <span className="mx-2">•</span>
-                          <span>理由: {log.details.failure_reason as string}</span>
+                          <span>理由: {log.details.failure_reason}</span>
                         </>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>

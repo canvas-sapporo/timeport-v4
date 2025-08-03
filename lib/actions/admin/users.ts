@@ -372,9 +372,8 @@ export async function getAdminUsers(
       );
     }
 
-    // ソート
-    filteredUsers.sort((a, b) => a.code.localeCompare(b.code));
-    console.log('ソート後のユーザー数:', filteredUsers.length);
+    // ソートは一時的に無効化
+    console.log('フィルタ後のユーザー数:', filteredUsers.length);
 
     // ページネーション
     const page = params.page || 1;
@@ -675,8 +674,8 @@ export async function createUser(
             first_name: input.first_name,
             email: input.email,
             role: input.role,
-            employment_type_id: input.employment_type_id,
-            current_work_type_id: input.current_work_type_id,
+            employment_type_id: input.employment_type_id || null,
+            current_work_type_id: input.current_work_type_id || null,
             group_ids: input.group_ids,
           },
           details: { company_id: companyId },
@@ -759,7 +758,7 @@ export async function updateUser(
           user_id: currentUserId,
           resource_id: userId,
           error_message: '最後の管理者を削除または無効化することはできません',
-          metadata: { current_role: beforeData?.role, new_role: input.role },
+          metadata: { current_role: beforeData?.role || null, new_role: input.role || null },
         });
 
         throw new AppError(

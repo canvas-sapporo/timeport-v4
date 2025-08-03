@@ -672,7 +672,7 @@ export default function AdminRequestsPage() {
                                       variant="ghost"
                                       className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                       onClick={() => openApprovalDialog(request.id)}
-                                      disabled={!canApprove(request)}
+                                      disabled={!canApprove(request as unknown as AdminRequestData)}
                                     >
                                       <Check className="w-4 h-4" />
                                     </Button>
@@ -690,7 +690,7 @@ export default function AdminRequestsPage() {
                                       variant="ghost"
                                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                       onClick={() => openRejectionDialog(request.id)}
-                                      disabled={!canReject(request)}
+                                      disabled={!canReject(request as unknown as AdminRequestData)}
                                     >
                                       <X className="w-4 h-4" />
                                     </Button>

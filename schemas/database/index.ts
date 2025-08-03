@@ -23,8 +23,8 @@ export * from './feature';
 // 操作ログ関連
 export * from './audit';
 
-// ログシステム関連
-export * from './log';
+// ログシステム関連（AuditLog関連は./auditからエクスポート済みのため除外）
+// export * from './log';
 
 // ビュー型定義
 export * from './view';

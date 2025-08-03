@@ -190,7 +190,7 @@ export async function saveSetting(
           company_id: undefined, // 設定は企業に依存しない
           target_type: 'settings',
           target_id: existingSetting?.id || 'new',
-          before_data: existingSetting,
+          before_data: existingSetting || undefined,
           after_data: {
             role,
             user_id: role === 'system-admin' ? null : userId,

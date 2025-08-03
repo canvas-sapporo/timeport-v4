@@ -625,7 +625,7 @@ export default function AdminLogsPage() {
           <label className="text-sm font-medium text-gray-700">メッセージ</label>
           <div className="mt-2 p-3 bg-gray-50 rounded-md">
             <p className="text-sm text-gray-900 whitespace-pre-wrap">
-              {log.metadata?.message || log.message || 'メッセージなし'}
+              {(log.metadata?.message as string) || log.message || 'メッセージなし'}
             </p>
           </div>
         </div>
@@ -940,7 +940,9 @@ export default function AdminLogsPage() {
                               {systemLogColumns.message && (
                                 <TableCell className="max-w-md">
                                   <div className="truncate">
-                                    {log.metadata?.message || log.message || 'メッセージなし'}
+                                    {(log.metadata?.message as string) ||
+                                      log.message ||
+                                      'メッセージなし'}
                                   </div>
                                 </TableCell>
                               )}

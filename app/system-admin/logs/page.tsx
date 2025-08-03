@@ -613,10 +613,8 @@ export default function SystemAdminLogsPage() {
                                 <div className="truncate">
                                   {log.metadata?.message || log.message || 'メッセージなし'}
                                 </div>
-                                {log.error_message && (
-                                  <div className="text-xs text-red-600 mt-1">
-                                    {log.error_message}
-                                  </div>
+                                {log.error_stack && (
+                                  <div className="text-xs text-red-600 mt-1">{log.error_stack}</div>
                                 )}
                               </TableCell>
                             )}

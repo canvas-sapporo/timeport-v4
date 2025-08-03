@@ -7,7 +7,7 @@ import { LogFilter, LogStats, LogSetting, LogSettingKey } from '@/schemas/databa
 // システムログ取得
 // ================================
 
-export async function getSystemLogs(filter: LogFilter = {}) {
+export async function getSystemLogs(filter: LogFilter = { page: 1, limit: 50 }) {
   try {
     const supabase = createClientAdminClient();
 
@@ -85,7 +85,7 @@ export async function getSystemLogs(filter: LogFilter = {}) {
 // 監査ログ取得
 // ================================
 
-export async function getAuditLogs(filter: LogFilter = {}) {
+export async function getAuditLogs(filter: LogFilter = { page: 1, limit: 50 }) {
   try {
     const supabase = createClientAdminClient();
 
@@ -276,7 +276,7 @@ export async function updateLogSetting(
 // ログエクスポート
 // ================================
 
-export async function exportSystemLogs(filter: LogFilter = {}) {
+export async function exportSystemLogs(filter: LogFilter = { page: 1, limit: 50 }) {
   try {
     const supabase = createClientAdminClient();
 
@@ -308,7 +308,7 @@ export async function exportSystemLogs(filter: LogFilter = {}) {
   }
 }
 
-export async function exportAuditLogs(filter: LogFilter = {}) {
+export async function exportAuditLogs(filter: LogFilter = { page: 1, limit: 50 }) {
   try {
     const supabase = createClientAdminClient();
 

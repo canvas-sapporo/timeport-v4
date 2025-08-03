@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 企業IDを取得（最初のグループの企業IDを使用）
-    const companyId = userGroups[0]?.groups?.company_id;
+    const companyId = userGroups[0]?.groups?.[0]?.company_id;
     console.log('Company ID extracted:', companyId);
 
     if (!companyId) {

@@ -11,23 +11,34 @@ import { supabase } from './supabase';
  */
 async function getClientInfo() {
   try {
-    const headersList = await headers();
-    const forwarded = headersList.get('x-forwarded-for');
-    const realIp = headersList.get('x-real-ip');
-    const userAgent = headersList.get('user-agent');
+    // サーバーサイドでのみheadersを使用
+    if (typeof window === 'undefined') {
+      const { headers } = await import('next/headers');
+      const headersList = await headers();
+      const forwarded = headersList.get('x-forwarded-for');
+      const realIp = headersList.get('x-real-ip');
+      const userAgent = headersList.get('user-agent');
 
-    // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
-    let ipAddress = forwarded || realIp;
-    if (ipAddress && ipAddress.includes(',')) {
-      // 複数のIPが含まれている場合は最初のものを使用
-      ipAddress = ipAddress.split(',')[0].trim();
+      // IPアドレスの取得（優先順位: x-forwarded-for > x-real-ip）
+      let ipAddress = forwarded || realIp;
+      if (ipAddress && ipAddress.includes(',')) {
+        // 複数のIPが含まれている場合は最初のものを使用
+        ipAddress = ipAddress.split(',')[0].trim();
+      }
+
+      return {
+        ip_address: ipAddress || undefined,
+        user_agent: userAgent || undefined,
+        session_id: undefined, // セッションIDは別途取得が必要
+      };
+    } else {
+      // クライアントサイドではデフォルト値を返す
+      return {
+        ip_address: undefined,
+        user_agent: undefined,
+        session_id: undefined,
+      };
     }
-
-    return {
-      ip_address: ipAddress || undefined,
-      user_agent: userAgent || undefined,
-      session_id: undefined, // セッションIDは別途取得が必要
-    };
   } catch (error) {
     console.error('クライアント情報取得エラー:', error);
     return {
@@ -350,7 +361,7 @@ export async function createRequest(requestData: Record<string, unknown>, curren
           .eq('user_id', requestData.user_id as string)
           .is('deleted_at', null)
           .single();
-        companyId = userGroup?.groups?.company_id;
+        companyId = userGroup?.groups?.[0]?.company_id;
       }
 
       await logAudit('request_created', {
@@ -434,7 +445,7 @@ export async function updateRequestStatus(
           .eq('user_id', data.user_id)
           .is('deleted_at', null)
           .single();
-        companyId = userGroup?.groups?.company_id;
+        companyId = userGroup?.groups?.[0]?.company_id;
       }
 
       await logAudit('request_status_updated', {

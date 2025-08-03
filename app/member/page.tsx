@@ -337,7 +337,7 @@ export default function MemberDashboard() {
       console.log('clockIn関数呼び出し直前');
       console.log('clockIn関数の引数:', { userId: user.id, timestamp, workTypeId });
 
-      const result = await clockIn(user.id, timestamp, workTypeId, user.id);
+      const result = await clockIn(user.id, timestamp, workTypeId);
       console.log('clockIn関数呼び出し完了');
       console.log('clockIn結果:', result);
 
@@ -402,7 +402,7 @@ export default function MemberDashboard() {
       console.log('退勤時刻:', timestamp);
       console.log('clockOut関数呼び出し開始');
 
-      const result = await clockOut(user.id, timestamp, user.id);
+      const result = await clockOut(user.id, timestamp);
       console.log('clockOut結果:', result);
 
       if (result.success) {

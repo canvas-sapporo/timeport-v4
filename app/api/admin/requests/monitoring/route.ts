@@ -28,14 +28,16 @@ export async function GET(request: NextRequest) {
 
     if (companyId) {
       // 企業IDでフィルタリング（ユーザーグループ経由）
-      statsQuery.in(
-        'user_id',
-        supabase
-          .from('user_groups')
-          .select('user_id')
-          .eq('groups.company_id', companyId)
-          .is('deleted_at', null)
-      );
+      const { data: userGroupUsers } = await supabase
+        .from('user_groups')
+        .select('user_id')
+        .eq('groups.company_id', companyId)
+        .is('deleted_at', null);
+
+      if (userGroupUsers && userGroupUsers.length > 0) {
+        const userIds = userGroupUsers.map((ug) => ug.user_id);
+        statsQuery.in('user_id', userIds);
+      }
     }
 
     if (startDate) {
@@ -102,14 +104,16 @@ export async function GET(request: NextRequest) {
       .limit(10);
 
     if (companyId) {
-      recentRequestsQuery.in(
-        'user_id',
-        supabase
-          .from('user_groups')
-          .select('user_id')
-          .eq('groups.company_id', companyId)
-          .is('deleted_at', null)
-      );
+      const { data: userGroupUsers } = await supabase
+        .from('user_groups')
+        .select('user_id')
+        .eq('groups.company_id', companyId)
+        .is('deleted_at', null);
+
+      if (userGroupUsers && userGroupUsers.length > 0) {
+        const userIds = userGroupUsers.map((ug) => ug.user_id);
+        recentRequestsQuery.in('user_id', userIds);
+      }
     }
 
     const { data: recentRequests, error: recentError } = await recentRequestsQuery;
@@ -131,14 +135,16 @@ export async function GET(request: NextRequest) {
       .is('deleted_at', null);
 
     if (companyId) {
-      pendingQuery.in(
-        'user_id',
-        supabase
-          .from('user_groups')
-          .select('user_id')
-          .eq('groups.company_id', companyId)
-          .is('deleted_at', null)
-      );
+      const { data: userGroupUsers } = await supabase
+        .from('user_groups')
+        .select('user_id')
+        .eq('groups.company_id', companyId)
+        .is('deleted_at', null);
+
+      if (userGroupUsers && userGroupUsers.length > 0) {
+        const userIds = userGroupUsers.map((ug) => ug.user_id);
+        pendingQuery.in('user_id', userIds);
+      }
     }
 
     const { count: pendingCount, error: pendingError } = await pendingQuery;

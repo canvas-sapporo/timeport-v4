@@ -194,7 +194,7 @@ export async function createRequest(
             .eq('user_id', requestData.user_id)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('request_created', {
@@ -621,7 +621,7 @@ export async function updateRequestStatus(
             .eq('user_id', currentRequest.user_id)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('request_status_updated', {
@@ -848,7 +848,7 @@ export async function approveRequest(
           .eq('user_id', request.user_id)
           .is('deleted_at', null)
           .single();
-        companyId = userGroup?.groups?.company_id;
+        companyId = userGroup?.groups?.[0]?.company_id;
       }
 
       await logAudit('request_approved', {
@@ -1127,7 +1127,7 @@ export async function updateRequest(
             .eq('user_id', request.user_id)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('request_updated', {
@@ -1135,8 +1135,8 @@ export async function updateRequest(
           company_id: companyId,
           target_type: 'requests',
           target_id: requestId,
-          before_data: request,
-          after_data: { ...request, ...updateData },
+          before_data: { user_id: request.user_id, status_id: request.status_id },
+          after_data: { user_id: request.user_id, status_id: request.status_id, ...updateData },
           details: {
             action_type: 'edit',
             updated_fields: Object.keys(updateData),
@@ -1257,7 +1257,7 @@ export async function deleteRequest(
             .eq('user_id', request.user_id)
             .is('deleted_at', null)
             .single();
-          companyId = userGroup?.groups?.company_id;
+          companyId = userGroup?.groups?.[0]?.company_id;
         }
 
         await logAudit('request_deleted', {
@@ -1265,7 +1265,7 @@ export async function deleteRequest(
           company_id: companyId,
           target_type: 'requests',
           target_id: requestId,
-          before_data: request,
+          before_data: { user_id: request.user_id, status_id: request.status_id },
           after_data: undefined,
           details: {
             action_type: 'logical_delete',

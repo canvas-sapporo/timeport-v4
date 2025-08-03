@@ -123,22 +123,19 @@ export default function CreateRequestPage() {
       // リクエストIDを生成
       const requestId = Date.now().toString();
       // リクエストを作成
-      await createRequest(
-        {
-          user_id: user.id,
-          request_form_id: selectedRequestForm!.id,
-          title: data.title,
-          form_data: formData as Record<string, string | number | boolean | Date | string[]>,
-          target_date: getJSTDate(),
-          start_date: getJSTDate(),
-          end_date: getJSTDate(),
-          submission_comment: data.description || '',
-          current_approval_step: 1,
-          comments: [],
-          attachments: [],
-        },
-        user.id
-      );
+      await createRequest({
+        user_id: user.id,
+        request_form_id: selectedRequestForm!.id,
+        title: data.title,
+        form_data: formData as Record<string, string | number | boolean | Date | string[]>,
+        target_date: getJSTDate(),
+        start_date: getJSTDate(),
+        end_date: getJSTDate(),
+        submission_comment: data.description || '',
+        current_approval_step: 1,
+        comments: [],
+        attachments: [],
+      });
       // 添付ファイルをアップロード
       if (attachments.length > 0) {
         const attachmentUrls = await uploadFiles(requestId);

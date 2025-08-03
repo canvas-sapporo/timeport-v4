@@ -233,7 +233,6 @@ export async function updateCompanyInfo(
           action_type: 'update_company_info',
           user_id: currentUserId,
           company_id: companyId,
-          user_company_id: userCompanyId,
           error_message: '権限エラー: 自分の企業の情報のみ更新できます',
         });
 

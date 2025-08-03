@@ -28,14 +28,16 @@ export async function GET(request: NextRequest) {
 
     if (companyId) {
       // 企業IDでフィルタリング（ユーザー経由）
-      authLogsQuery.in(
-        'user_id',
-        supabase
-          .from('user_groups')
-          .select('user_id')
-          .eq('groups.company_id', companyId)
-          .is('deleted_at', null)
-      );
+      const { data: userGroupUsers } = await supabase
+        .from('user_groups')
+        .select('user_id')
+        .eq('groups.company_id', companyId)
+        .is('deleted_at', null);
+
+      if (userGroupUsers && userGroupUsers.length > 0) {
+        const userIds = userGroupUsers.map((ug) => ug.user_id);
+        authLogsQuery.in('user_id', userIds);
+      }
     }
 
     if (startDate) {
@@ -83,14 +85,16 @@ export async function GET(request: NextRequest) {
       .limit(20);
 
     if (companyId) {
-      recentAuthLogsQuery.in(
-        'user_id',
-        supabase
-          .from('user_groups')
-          .select('user_id')
-          .eq('groups.company_id', companyId)
-          .is('deleted_at', null)
-      );
+      const { data: userGroupUsers } = await supabase
+        .from('user_groups')
+        .select('user_id')
+        .eq('groups.company_id', companyId)
+        .is('deleted_at', null);
+
+      if (userGroupUsers && userGroupUsers.length > 0) {
+        const userIds = userGroupUsers.map((ug) => ug.user_id);
+        recentAuthLogsQuery.in('user_id', userIds);
+      }
     }
 
     const { data: recentAuthLogs, error: recentError } = await recentAuthLogsQuery;
@@ -115,14 +119,16 @@ export async function GET(request: NextRequest) {
       .gte('created_at', yesterday.toISOString());
 
     if (companyId) {
-      activeUsersQuery.in(
-        'user_id',
-        supabase
-          .from('user_groups')
-          .select('user_id')
-          .eq('groups.company_id', companyId)
-          .is('deleted_at', null)
-      );
+      const { data: userGroupUsers } = await supabase
+        .from('user_groups')
+        .select('user_id')
+        .eq('groups.company_id', companyId)
+        .is('deleted_at', null);
+
+      if (userGroupUsers && userGroupUsers.length > 0) {
+        const userIds = userGroupUsers.map((ug) => ug.user_id);
+        activeUsersQuery.in('user_id', userIds);
+      }
     }
 
     const { count: activeUsersCount, error: activeUsersError } = await activeUsersQuery;
@@ -154,14 +160,16 @@ export async function GET(request: NextRequest) {
       .limit(10);
 
     if (companyId) {
-      failedLoginsQuery.in(
-        'user_id',
-        supabase
-          .from('user_groups')
-          .select('user_id')
-          .eq('groups.company_id', companyId)
-          .is('deleted_at', null)
-      );
+      const { data: userGroupUsers } = await supabase
+        .from('user_groups')
+        .select('user_id')
+        .eq('groups.company_id', companyId)
+        .is('deleted_at', null);
+
+      if (userGroupUsers && userGroupUsers.length > 0) {
+        const userIds = userGroupUsers.map((ug) => ug.user_id);
+        failedLoginsQuery.in('user_id', userIds);
+      }
     }
 
     const { data: failedLogins, error: failedLoginsError } = await failedLoginsQuery;
