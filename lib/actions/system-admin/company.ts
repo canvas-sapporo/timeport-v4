@@ -37,7 +37,7 @@ import {
   validateEmail,
   validatePassword,
 } from '@/lib/utils/error-handling';
-import { logAudit } from '@/lib/utils/log-system';
+import { logAudit, logSystem } from '@/lib/utils/log-system';
 import type { ValidationError } from '@/types/common';
 
 // 環境変数の確認
@@ -222,8 +222,30 @@ export async function createCompany(
 ): Promise<{ success: true; data: CreateCompanyResult } | { success: false; error: AppError }> {
   console.log('createCompany called with form:', { ...form, admin_password: '[REDACTED]' });
 
+  // システムログ: 開始
+  await logSystem('info', '企業作成開始', {
+    feature_name: 'company_management',
+    action_type: 'create_company',
+    user_id: currentUserId,
+    metadata: {
+      company_name: form.name,
+      company_code: form.code,
+      admin_email: form.admin_email,
+      admin_code: form.admin_code,
+      group_name: form.group_name,
+    },
+  });
+
   // 環境変数の確認
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // システムログ: 環境変数エラー
+    await logSystem('error', '企業作成時の環境変数エラー', {
+      feature_name: 'company_management',
+      action_type: 'create_company',
+      user_id: currentUserId,
+      error_message: '環境変数が正しく設定されていません',
+    });
+
     console.error('Required environment variables are not set');
     return {
       success: false,
@@ -235,24 +257,62 @@ export async function createCompany(
     // バリデーション
     const validation = validateCreateCompanyForm(form);
     if (!validation.isValid) {
+      // システムログ: バリデーションエラー
+      await logSystem('warn', '企業作成時のバリデーションエラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: 'バリデーションエラー',
+        metadata: {
+          validation_errors: validation.errors.map((e) => `${e.field}: ${e.message}`),
+        },
+      });
+
       throw AppError.fromValidationErrors(validation.errors, '企業作成');
     }
 
     // コードの重複チェック
     const codeExists = await checkCompanyCodeExists(form.code);
     if (codeExists) {
+      // システムログ: 重複エラー
+      await logSystem('warn', '企業作成時のコード重複エラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: 'コードが重複しています',
+        metadata: { code: form.code },
+      });
+
       throw AppError.duplicate('コード', form.code);
     }
 
     // メールアドレスの重複チェック
     const emailExists = await checkEmailExists(form.admin_email);
     if (emailExists) {
+      // システムログ: 重複エラー
+      await logSystem('warn', '企業作成時のメールアドレス重複エラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: 'メールアドレスが重複しています',
+        metadata: { email: form.admin_email },
+      });
+
       throw AppError.duplicate('メールアドレス', form.admin_email);
     }
 
     // 管理者コードの重複チェック
     const adminCodeExists = await checkUserCodeExists(form.admin_code);
     if (adminCodeExists) {
+      // システムログ: 重複エラー
+      await logSystem('warn', '企業作成時の管理者コード重複エラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: '管理者コードが重複しています',
+        metadata: { admin_code: form.admin_code },
+      });
+
       throw AppError.duplicate('管理者コード', form.admin_code);
     }
 
@@ -280,6 +340,15 @@ export async function createCompany(
       .single();
 
     if (companyError) {
+      // システムログ: データベースエラー
+      await logSystem('error', '企業作成時のデータベースエラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: companyError.message,
+        metadata: { company_name: form.name, company_code: form.code },
+      });
+
       console.error('Company creation error:', companyError);
       throw AppError.fromSupabaseError(companyError, '企業作成');
     }
@@ -301,6 +370,16 @@ export async function createCompany(
     if (groupError) {
       // 企業ロールバック
       await supabaseAdmin.from('companies').delete().eq('id', company.id);
+
+      // システムログ: グループ作成エラー
+      await logSystem('error', '企業作成時のグループ作成エラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: groupError.message,
+        metadata: { company_id: company.id, group_name: form.group_name },
+      });
+
       throw AppError.fromSupabaseError(groupError, 'グループ作成');
     }
 
@@ -315,6 +394,16 @@ export async function createCompany(
       // グループ・企業ロールバック
       await supabaseAdmin.from('groups').delete().eq('id', group.id);
       await supabaseAdmin.from('companies').delete().eq('id', company.id);
+
+      // システムログ: Auth作成エラー
+      await logSystem('error', '企業作成時の管理者ユーザー作成エラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: adminUserRes.error?.message || '管理者ユーザー作成に失敗しました',
+        metadata: { company_id: company.id, admin_email: form.admin_email },
+      });
+
       throw AppError.fromSupabaseError(
         adminUserRes.error || new Error('管理者ユーザー作成に失敗しました'),
         '管理者ユーザー作成'
@@ -343,6 +432,16 @@ export async function createCompany(
       await supabaseAdmin.auth.admin.deleteUser(adminUserId);
       await supabaseAdmin.from('groups').delete().eq('id', group.id);
       await supabaseAdmin.from('companies').delete().eq('id', company.id);
+
+      // システムログ: プロフィール作成エラー
+      await logSystem('error', '企業作成時のユーザープロフィール作成エラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: profileError.message,
+        metadata: { company_id: company.id, admin_user_id: adminUserId },
+      });
+
       throw AppError.fromSupabaseError(profileError, 'ユーザープロフィール作成');
     }
 
@@ -360,6 +459,16 @@ export async function createCompany(
       await supabaseAdmin.auth.admin.deleteUser(adminUserId);
       await supabaseAdmin.from('groups').delete().eq('id', group.id);
       await supabaseAdmin.from('companies').delete().eq('id', company.id);
+
+      // システムログ: ユーザーグループ作成エラー
+      await logSystem('error', '企業作成時のユーザーグループ作成エラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: userGroupError.message,
+        metadata: { company_id: company.id, admin_user_id: adminUserId, group_id: group.id },
+      });
+
       throw AppError.fromSupabaseError(userGroupError, 'ユーザーグループ作成');
     }
 
@@ -395,8 +504,32 @@ export async function createCompany(
 
     if (featuresError) {
       console.error('企業機能作成エラー:', featuresError);
+      // システムログ: 機能作成エラー（警告レベル）
+      await logSystem('warn', '企業作成時の機能作成エラー', {
+        feature_name: 'company_management',
+        action_type: 'create_company',
+        user_id: currentUserId,
+        error_message: featuresError.message,
+        metadata: { company_id: company.id, feature_count: defaultFeatures.length },
+      });
       // 機能作成に失敗しても企業作成は成功とする（後で手動で追加可能）
     }
+
+    // システムログ: 成功
+    await logSystem('info', '企業作成成功', {
+      feature_name: 'company_management',
+      action_type: 'create_company',
+      user_id: currentUserId,
+      resource_id: company.id,
+      metadata: {
+        company_id: company.id,
+        company_name: form.name,
+        company_code: form.code,
+        admin_user_id: adminUserId,
+        group_id: group.id,
+        feature_count: defaultFeatures.length,
+      },
+    });
 
     // 監査ログを記録
     if (currentUserId) {
@@ -430,6 +563,14 @@ export async function createCompany(
         console.log('監査ログ記録完了: company_created');
       } catch (error) {
         console.error('監査ログ記録エラー:', error);
+        // システムログ: 監査ログ記録エラー
+        await logSystem('error', '企業作成時の監査ログ記録エラー', {
+          feature_name: 'company_management',
+          action_type: 'create_company',
+          user_id: currentUserId,
+          resource_id: company.id,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     } else {
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
@@ -452,16 +593,49 @@ export async function updateCompany(
   form: EditCompanyFormData,
   currentUserId?: string
 ): Promise<{ success: true; data: UpdateCompanyResult } | { success: false; error: AppError }> {
+  // システムログ: 開始
+  await logSystem('info', '企業更新開始', {
+    feature_name: 'company_management',
+    action_type: 'update_company',
+    user_id: currentUserId,
+    resource_id: id,
+    metadata: {
+      updated_fields: Object.keys(form),
+    },
+  });
+
   return withErrorHandling(async () => {
     // バリデーション
     const validation = validateEditCompanyForm(form);
     if (!validation.isValid) {
+      // システムログ: バリデーションエラー
+      await logSystem('warn', '企業更新時のバリデーションエラー', {
+        feature_name: 'company_management',
+        action_type: 'update_company',
+        user_id: currentUserId,
+        resource_id: id,
+        error_message: 'バリデーションエラー',
+        metadata: {
+          validation_errors: validation.errors.map((e) => `${e.field}: ${e.message}`),
+        },
+      });
+
       throw AppError.fromValidationErrors(validation.errors, '企業更新');
     }
 
     // コードの重複チェック（自分以外）
     const codeExists = await checkCompanyCodeExists(form.code, id);
     if (codeExists) {
+      // システムログ: 重複エラー
+      await logSystem('warn', '企業更新時のコード重複エラー', {
+        feature_name: 'company_management',
+        action_type: 'update_company',
+        user_id: currentUserId,
+        resource_id: id,
+        error_message: 'コードが重複しています',
+        metadata: { code: form.code },
+      });
+
       throw AppError.duplicate('コード', form.code);
     }
 
@@ -474,6 +648,15 @@ export async function updateCompany(
       .single();
 
     if (fetchError || !existingCompany) {
+      // システムログ: 企業存在エラー
+      await logSystem('error', '企業更新時の企業存在エラー', {
+        feature_name: 'company_management',
+        action_type: 'update_company',
+        user_id: currentUserId,
+        resource_id: id,
+        error_message: fetchError?.message || '企業が見つかりません',
+      });
+
       throw AppError.notFound('企業', id);
     }
 
@@ -492,6 +675,15 @@ export async function updateCompany(
       .single();
 
     if (updateError) {
+      // システムログ: データベースエラー
+      await logSystem('error', '企業更新時のデータベースエラー', {
+        feature_name: 'company_management',
+        action_type: 'update_company',
+        user_id: currentUserId,
+        resource_id: id,
+        error_message: updateError.message,
+      });
+
       throw AppError.fromSupabaseError(updateError, '企業更新');
     }
 
@@ -502,6 +694,19 @@ export async function updateCompany(
     if (existingCompany.address !== form.address) updatedFields.push('address');
     if (existingCompany.phone !== form.phone) updatedFields.push('phone');
     if (existingCompany.is_active !== form.is_active) updatedFields.push('is_active');
+
+    // システムログ: 成功
+    await logSystem('info', '企業更新成功', {
+      feature_name: 'company_management',
+      action_type: 'update_company',
+      user_id: currentUserId,
+      resource_id: id,
+      metadata: {
+        updated_fields: updatedFields,
+        company_name: form.name,
+        company_code: form.code,
+      },
+    });
 
     // 監査ログを記録
     if (currentUserId) {
@@ -522,6 +727,14 @@ export async function updateCompany(
         console.log('監査ログ記録完了: company_updated');
       } catch (error) {
         console.error('監査ログ記録エラー:', error);
+        // システムログ: 監査ログ記録エラー
+        await logSystem('error', '企業更新時の監査ログ記録エラー', {
+          feature_name: 'company_management',
+          action_type: 'update_company',
+          user_id: currentUserId,
+          resource_id: id,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     } else {
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
@@ -542,6 +755,14 @@ export async function deleteCompany(
   id: string,
   currentUserId?: string
 ): Promise<{ success: true; data: DeleteCompanyResult } | { success: false; error: AppError }> {
+  // システムログ: 開始
+  await logSystem('info', '企業削除開始', {
+    feature_name: 'company_management',
+    action_type: 'delete_company',
+    user_id: currentUserId,
+    resource_id: id,
+  });
+
   return withErrorHandling(async () => {
     // 企業の存在確認
     const { data: existingCompany, error: fetchError } = await supabaseAdmin
@@ -552,11 +773,30 @@ export async function deleteCompany(
       .single();
 
     if (fetchError || !existingCompany) {
+      // システムログ: 企業存在エラー
+      await logSystem('error', '企業削除時の企業存在エラー', {
+        feature_name: 'company_management',
+        action_type: 'delete_company',
+        user_id: currentUserId,
+        resource_id: id,
+        error_message: fetchError?.message || '企業が見つかりません',
+      });
+
       throw AppError.notFound('企業', id);
     }
 
     // アクティブな企業は削除不可
     if (existingCompany.is_active) {
+      // システムログ: バリデーションエラー
+      await logSystem('warn', '企業削除時のアクティブ企業削除エラー', {
+        feature_name: 'company_management',
+        action_type: 'delete_company',
+        user_id: currentUserId,
+        resource_id: id,
+        error_message: 'アクティブな企業は削除できません',
+        metadata: { company_name: existingCompany.name, is_active: existingCompany.is_active },
+      });
+
       throw new AppError(
         'アクティブな企業は削除できません。先に無効化してください。',
         'ACTIVE_COMPANY_DELETE_ERROR',
@@ -573,8 +813,30 @@ export async function deleteCompany(
       .single();
 
     if (deleteError) {
+      // システムログ: データベースエラー
+      await logSystem('error', '企業削除時のデータベースエラー', {
+        feature_name: 'company_management',
+        action_type: 'delete_company',
+        user_id: currentUserId,
+        resource_id: id,
+        error_message: deleteError.message,
+      });
+
       throw AppError.fromSupabaseError(deleteError, '企業削除');
     }
+
+    // システムログ: 成功
+    await logSystem('info', '企業削除成功', {
+      feature_name: 'company_management',
+      action_type: 'delete_company',
+      user_id: currentUserId,
+      resource_id: id,
+      metadata: {
+        company_name: existingCompany.name,
+        company_code: existingCompany.code,
+        deletion_type: 'logical',
+      },
+    });
 
     // 監査ログを記録
     if (currentUserId) {
@@ -595,6 +857,14 @@ export async function deleteCompany(
         console.log('監査ログ記録完了: company_deleted');
       } catch (error) {
         console.error('監査ログ記録エラー:', error);
+        // システムログ: 監査ログ記録エラー
+        await logSystem('error', '企業削除時の監査ログ記録エラー', {
+          feature_name: 'company_management',
+          action_type: 'delete_company',
+          user_id: currentUserId,
+          resource_id: id,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     } else {
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
@@ -614,6 +884,15 @@ export async function deleteCompany(
 export async function getCompanies(
   params: CompanySearchParams = {}
 ): Promise<{ success: true; data: CompanyListResponse } | { success: false; error: AppError }> {
+  // システムログ: 開始
+  await logSystem('info', '企業一覧取得開始', {
+    feature_name: 'company_management',
+    action_type: 'get_companies',
+    metadata: {
+      search_params: params,
+    },
+  });
+
   return withErrorHandling(async () => {
     const {
       search = '',
@@ -654,6 +933,14 @@ export async function getCompanies(
     const { data: companies, error, count } = await query;
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '企業一覧取得時のデータベースエラー', {
+        feature_name: 'company_management',
+        action_type: 'get_companies',
+        error_message: error.message,
+        metadata: { search_params: params },
+      });
+
       throw AppError.fromSupabaseError(error, '企業一覧取得');
     }
 
@@ -666,6 +953,21 @@ export async function getCompanies(
     const activeCount = allCompanies?.filter((c) => c.is_active && !c.deleted_at).length || 0;
     const deletedCount = allCompanies?.filter((c) => c.deleted_at).length || 0;
     const totalPages = Math.ceil(total / limit);
+
+    // システムログ: 成功
+    await logSystem('info', '企業一覧取得成功', {
+      feature_name: 'company_management',
+      action_type: 'get_companies',
+      metadata: {
+        total_companies: total,
+        returned_companies: companies?.length || 0,
+        active_count: activeCount,
+        deleted_count: deletedCount,
+        page,
+        limit,
+        search_params: params,
+      },
+    });
 
     return {
       companies: companies || [],
@@ -689,12 +991,25 @@ export async function getCompanies(
 export async function getCompanyStats(): Promise<
   { success: true; data: CompanyStats } | { success: false; error: AppError }
 > {
+  // システムログ: 開始
+  await logSystem('info', '企業統計取得開始', {
+    feature_name: 'company_management',
+    action_type: 'get_company_stats',
+  });
+
   return withErrorHandling(async () => {
     const { data: companies, error } = await supabaseAdmin
       .from('companies')
       .select('is_active, deleted_at, created_at, updated_at');
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '企業統計取得時のデータベースエラー', {
+        feature_name: 'company_management',
+        action_type: 'get_company_stats',
+        error_message: error.message,
+      });
+
       throw AppError.fromSupabaseError(error, '企業統計取得');
     }
 
@@ -709,6 +1024,20 @@ export async function getCompanyStats(): Promise<
       createdThisMonth: companies?.filter((c) => new Date(c.created_at) >= thisMonth).length || 0,
       updatedThisMonth: companies?.filter((c) => new Date(c.updated_at) >= thisMonth).length || 0,
     };
+
+    // システムログ: 成功
+    await logSystem('info', '企業統計取得成功', {
+      feature_name: 'company_management',
+      action_type: 'get_company_stats',
+      metadata: {
+        total_companies: stats.total,
+        active_companies: stats.active,
+        inactive_companies: stats.inactive,
+        deleted_companies: stats.deleted,
+        created_this_month: stats.createdThisMonth,
+        updated_this_month: stats.updatedThisMonth,
+      },
+    });
 
     return stats;
   }, '企業統計取得');

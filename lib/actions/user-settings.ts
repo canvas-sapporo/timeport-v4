@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
-import { logAudit } from '@/lib/utils/log-system';
+import { logAudit, logSystem } from '@/lib/utils/log-system';
 import { createServerClient, createAdminClient } from '@/lib/supabase';
 import { getUserCompanyId } from '@/lib/actions/user';
 import type {
@@ -227,6 +227,16 @@ export async function updateCompanyInfo(
     if (currentUserId) {
       const userCompanyId = await getUserCompanyId(currentUserId);
       if (userCompanyId !== companyId) {
+        // システムログ: 権限エラー
+        await logSystem('warn', '企業情報更新時の権限エラー', {
+          feature_name: 'company_management',
+          action_type: 'update_company_info',
+          user_id: currentUserId,
+          company_id: companyId,
+          user_company_id: userCompanyId,
+          error_message: '権限エラー: 自分の企業の情報のみ更新できます',
+        });
+
         return {
           success: false,
           message: '自分の企業の情報のみ更新できます',
@@ -254,6 +264,15 @@ export async function updateCompanyInfo(
       .single();
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '企業情報更新エラー', {
+        feature_name: 'company_management',
+        action_type: 'update_company_info',
+        user_id: currentUserId,
+        company_id: companyId,
+        error_message: error.message,
+      });
+
       console.error('Error updating company info:', error);
       return {
         success: false,
@@ -261,6 +280,17 @@ export async function updateCompanyInfo(
         error: '企業情報の更新に失敗しました',
       };
     }
+
+    // システムログ: 成功
+    await logSystem('info', '企業情報更新成功', {
+      feature_name: 'company_management',
+      action_type: 'update_company_info',
+      user_id: currentUserId,
+      company_id: companyId,
+      metadata: {
+        updated_fields: Object.keys(companyData),
+      },
+    });
 
     // 監査ログを記録
     if (currentUserId) {
@@ -283,6 +313,14 @@ export async function updateCompanyInfo(
         console.log('監査ログ記録完了: company_info_updated');
       } catch (error) {
         console.error('監査ログ記録エラー:', error);
+        // システムログ: 監査ログ記録エラー
+        await logSystem('error', '監査ログ記録エラー', {
+          feature_name: 'company_management',
+          action_type: 'update_company_info',
+          user_id: currentUserId,
+          company_id: companyId,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     } else {
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
@@ -291,6 +329,16 @@ export async function updateCompanyInfo(
     revalidatePath('/admin/settings');
     return { success: true, message: '企業情報が正常に更新されました' };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '企業情報更新時の予期しないエラー', {
+      feature_name: 'company_management',
+      action_type: 'update_company_info',
+      user_id: currentUserId,
+      company_id: companyId,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('Error in updateCompanyInfo:', error);
     return {
       success: false,
@@ -339,6 +387,13 @@ export async function updateChatSendKeySetting(
   const supabase = createServerClient();
 
   try {
+    // 更新前のデータを取得（監査ログ用）
+    const { data: beforeData } = await supabase
+      .from('user_profiles')
+      .select('chat_send_key_shift_enter')
+      .eq('id', userId)
+      .single();
+
     const { error } = await supabase
       .from('user_profiles')
       .update({
@@ -348,6 +403,14 @@ export async function updateChatSendKeySetting(
       .eq('id', userId);
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', 'チャット設定更新エラー', {
+        feature_name: 'user_settings',
+        action_type: 'update_chat_send_key_setting',
+        user_id: userId,
+        error_message: error.message,
+      });
+
       console.error('Error updating chat send key setting:', error);
       return {
         success: false,
@@ -356,9 +419,41 @@ export async function updateChatSendKeySetting(
       };
     }
 
+    // システムログ: 成功
+    await logSystem('info', 'チャット設定更新成功', {
+      feature_name: 'user_settings',
+      action_type: 'update_chat_send_key_setting',
+      user_id: userId,
+      metadata: {
+        new_setting: useShiftEnter,
+      },
+    });
+
+    // 監査ログ: 設定変更
+    await logAudit('chat_setting_updated', {
+      user_id: userId,
+      target_type: 'user_profiles',
+      target_id: userId,
+      before_data: { chat_send_key_shift_enter: beforeData?.chat_send_key_shift_enter },
+      after_data: { chat_send_key_shift_enter: useShiftEnter },
+      details: {
+        setting_name: 'chat_send_key_shift_enter',
+        new_value: useShiftEnter,
+      },
+    });
+
     revalidatePath('/member/profile');
     return { success: true, message: '設定が正常に更新されました' };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', 'チャット設定更新時の予期しないエラー', {
+      feature_name: 'user_settings',
+      action_type: 'update_chat_send_key_setting',
+      user_id: userId,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('Error in updateChatSendKeySetting:', error);
     return {
       success: false,

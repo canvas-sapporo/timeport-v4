@@ -16,11 +16,13 @@ import {
   Users,
   Briefcase,
   Loader2,
+  FileText,
+  Activity,
 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -123,6 +125,7 @@ export default function AdminSettingsPage() {
   const [systemSettings, setSystemSettings] = useState({
     debugMode: false,
     maintenanceMode: false,
+    logLevel: 'info',
     features: {
       attendance: true,
       requests: true,
@@ -344,6 +347,7 @@ export default function AdminSettingsPage() {
     { id: 'attendance', label: '勤怠管理', icon: Clock },
     { id: 'employment-types', label: '雇用形態', icon: Users },
     { id: 'work-types', label: '勤務形態', icon: Briefcase },
+    { id: 'logs', label: 'ログ設定', icon: FileText },
   ];
 
   return (
@@ -1039,6 +1043,207 @@ export default function AdminSettingsPage() {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* ログ設定 */}
+        {activeTab === 'logs' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <FileText className="w-5 h-5" />
+                  <span>ログ設定</span>
+                </CardTitle>
+                <CardDescription>
+                  システムログと監査ログの設定を管理します。ログの記録レベルや保存期間を設定できます。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* システムログ設定 */}
+                <div className="border rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">システムログ設定</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>システムログ記録</Label>
+                        <p className="text-sm text-gray-500">
+                          システム技術ログの記録を有効にします
+                        </p>
+                      </div>
+                      <Switch
+                        checked={systemSettings.debugMode}
+                        onCheckedChange={(checked) =>
+                          setSystemSettings((prev) => ({ ...prev, debugMode: checked }))
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>ログレベル</Label>
+                      <p className="text-sm text-gray-500">
+                        記録するログの重要度レベルを選択します
+                      </p>
+                      <select
+                        className="w-full px-3 py-2 border border-input bg-background rounded-md"
+                        defaultValue="info"
+                      >
+                        <option value="debug">Debug - デバッグ情報</option>
+                        <option value="info">Info - 一般情報</option>
+                        <option value="warn">Warning - 警告</option>
+                        <option value="error">Error - エラー</option>
+                        <option value="fatal">Fatal - 致命的エラー</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>エラーログ即座保存</Label>
+                        <p className="text-sm text-gray-500">
+                          エラーログを即座にデータベースに保存します
+                        </p>
+                      </div>
+                      <Switch
+                        checked={notificationSettings.securityAlert || false}
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings((prev) => ({ ...prev, securityAlert: checked }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 監査ログ設定 */}
+                <div className="border rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">監査ログ設定</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>監査ログ記録</Label>
+                        <p className="text-sm text-gray-500">
+                          ユーザー操作ログの記録を有効にします
+                        </p>
+                      </div>
+                      <Switch
+                        checked={notificationSettings.applicationAlert}
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings((prev) => ({
+                            ...prev,
+                            applicationAlert: checked,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>データ変更記録</Label>
+                        <p className="text-sm text-gray-500">データの変更前後の状態を記録します</p>
+                      </div>
+                      <Switch
+                        checked={notificationSettings.systemMaintenance}
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings((prev) => ({
+                            ...prev,
+                            systemMaintenance: checked,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>セッション情報記録</Label>
+                        <p className="text-sm text-gray-500">ユーザーセッション情報を記録します</p>
+                      </div>
+                      <Switch
+                        checked={notificationSettings.backupNotification || false}
+                        onCheckedChange={(checked) =>
+                          setNotificationSettings((prev) => ({
+                            ...prev,
+                            backupNotification: checked,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ログ保持設定 */}
+                <div className="border rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">ログ保持設定</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="systemLogRetention">システムログ保持期間（日）</Label>
+                      <Input
+                        id="systemLogRetention"
+                        type="number"
+                        placeholder="30"
+                        className="w-full"
+                      />
+                      <p className="text-sm text-gray-500">システムログの自動削除期間</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="auditLogRetention">監査ログ保持期間（日）</Label>
+                      <Input
+                        id="auditLogRetention"
+                        type="number"
+                        placeholder="90"
+                        className="w-full"
+                      />
+                      <p className="text-sm text-gray-500">監査ログの自動削除期間</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => handleSaveSettings('logs')}
+                  disabled={isLoading}
+                  className="w-full"
+                  variant="timeport-primary"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  ログ設定を保存
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* ログ監視 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Activity className="w-5 h-5" />
+                  <span>ログ監視</span>
+                </CardTitle>
+                <CardDescription>企業内のログ状況を監視します</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">1,234</div>
+                    <div className="text-sm text-gray-600">今日のログ数</div>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg">
+                    <div className="text-2xl font-bold text-red-600">5</div>
+                    <div className="text-sm text-gray-600">エラーログ数</div>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">98.5%</div>
+                    <div className="text-sm text-gray-600">システム稼働率</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex justify-between items-center">
+                  <div className="text-sm text-gray-600">
+                    最終更新: {new Date().toLocaleString('ja-JP')}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => router.push('/admin/logs')}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    ログ詳細を表示
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
 

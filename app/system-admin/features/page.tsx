@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Settings, Save, Building } from 'lucide-react';
+import { Settings, Save, Building, FileText } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +52,16 @@ export default function SuperAdminFeaturesPage() {
   }
 
   function handleFeatureToggle(companyId: string, featureKey: string, enabled: boolean) {
+    // 機能変更ログ記録
+    console.log('機能設定変更:', {
+      companyId: companyId,
+      featureKey: featureKey,
+      enabled: enabled,
+      timestamp: new Date().toISOString(),
+      user: 'system-admin',
+      action: 'toggle_feature',
+    });
+
     setCompanyFeatures((prev) =>
       prev.map((company) =>
         company.companyId === companyId
@@ -70,9 +80,34 @@ export default function SuperAdminFeaturesPage() {
   async function handleSaveSettings() {
     setIsLoading(true);
     try {
+      // 設定保存開始ログ記録
+      console.log('機能設定保存開始:', {
+        companyCount: companyFeatures.length,
+        timestamp: new Date().toISOString(),
+        user: 'system-admin',
+        action: 'save_feature_settings',
+      });
+
       // In a real app, this would save to backend
       await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log('Saving feature settings...', companyFeatures);
+
+      // 設定保存成功ログ記録
+      console.log('機能設定保存成功:', {
+        companyCount: companyFeatures.length,
+        timestamp: new Date().toISOString(),
+        user: 'system-admin',
+        action: 'save_feature_settings_success',
+      });
+    } catch (error) {
+      // 設定保存失敗ログ記録
+      console.error('機能設定保存失敗:', {
+        companyCount: companyFeatures.length,
+        error: error,
+        timestamp: new Date().toISOString(),
+        user: 'system-admin',
+        action: 'save_feature_settings_error',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -218,6 +253,62 @@ export default function SuperAdminFeaturesPage() {
                 </div>
               );
             })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ログ監視 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="w-5 h-5" />
+            <span>ログ監視</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Settings className="w-5 h-5 text-blue-600" />
+                <span className="font-semibold">機能設定変更</span>
+              </div>
+              <div className="text-2xl font-bold text-blue-600">24</div>
+              <div className="text-sm text-gray-600">今月の変更数</div>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Building className="w-5 h-5 text-green-600" />
+                <span className="font-semibold">企業アクセス</span>
+              </div>
+              <div className="text-2xl font-bold text-green-600">156</div>
+              <div className="text-sm text-gray-600">今月のアクセス数</div>
+            </div>
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <FileText className="w-5 h-5 text-yellow-600" />
+                <span className="font-semibold">設定保存</span>
+              </div>
+              <div className="text-2xl font-bold text-yellow-600">12</div>
+              <div className="text-sm text-gray-600">今月の保存数</div>
+            </div>
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Settings className="w-5 h-5 text-purple-600" />
+                <span className="font-semibold">機能有効化</span>
+              </div>
+              <div className="text-2xl font-bold text-purple-600">8</div>
+              <div className="text-sm text-gray-600">今月の有効化数</div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              最終更新: {new Date().toLocaleString('ja-JP')}
+            </div>
+            <Button variant="outline" size="sm">
+              <FileText className="w-4 h-4 mr-2" />
+              詳細ログを表示
+            </Button>
           </div>
         </CardContent>
       </Card>

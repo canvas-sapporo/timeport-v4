@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 
 import { createServerClient, createAdminClient } from '@/lib/supabase';
 import { validateAttendanceObject } from '@/lib/utils/attendance-validation';
-import { logAudit } from '@/lib/utils/log-system';
+import { logAudit, logSystem } from '@/lib/utils/log-system';
 import type {
   RequestForm,
   ObjectMetadata,
@@ -62,8 +62,36 @@ export async function createRequest(
     submission_comment?: string;
   },
   currentUserId?: string
-): Promise<{ success: boolean; message: string; data?: any; error?: string }> {
+): Promise<{ success: boolean; message: string; data?: Record<string, unknown>; error?: string }> {
   console.log('createRequest Server Action: 開始', { requestData, currentUserId });
+
+  // システムログ: 開始
+  await logSystem('info', '申請作成開始', {
+    feature_name: 'request_management',
+    action_type: 'create_request',
+    user_id: currentUserId,
+    metadata: {
+      request_form_id: requestData.request_form_id,
+      title: requestData.title,
+      target_date: requestData.target_date || null,
+      start_date: requestData.start_date || null,
+      end_date: requestData.end_date || null,
+    },
+  });
+
+  // システムログ: 開始
+  await logSystem('info', '申請作成開始', {
+    feature_name: 'request_management',
+    action_type: 'create_request',
+    user_id: currentUserId,
+    metadata: {
+      request_form_id: requestData.request_form_id,
+      title: requestData.title,
+      target_date: requestData.target_date || null,
+      start_date: requestData.start_date || null,
+      end_date: requestData.end_date || null,
+    },
+  });
 
   try {
     const supabase = createAdminClient();
@@ -77,9 +105,18 @@ export async function createRequest(
       .single();
 
     if (statusError || !defaultStatus) {
+      // システムログ: ステータス取得エラー
+      await logSystem('error', '申請作成時のステータス取得エラー', {
+        feature_name: 'request_management',
+        action_type: 'create_request',
+        user_id: currentUserId,
+        error_message: statusError?.message || 'デフォルトステータスを取得できませんでした',
+      });
+
       console.error('デフォルトステータス取得エラー:', statusError);
       return {
         success: false,
+        message: 'デフォルトステータスを取得できませんでした',
         error: 'デフォルトステータスを取得できませんでした',
       };
     }
@@ -105,14 +142,38 @@ export async function createRequest(
       .single();
 
     if (error || !data) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請作成時のデータベースエラー', {
+        feature_name: 'request_management',
+        action_type: 'create_request',
+        user_id: currentUserId,
+        error_message: error?.message || '申請の作成に失敗しました',
+        metadata: { request_form_id: requestData.request_form_id },
+      });
+
       console.error('申請作成エラー:', error);
       return {
         success: false,
+        message: '申請の作成に失敗しました',
         error: error?.message || '申請の作成に失敗しました',
       };
     }
 
     console.log('申請作成成功:', data);
+
+    // システムログ: 成功
+    await logSystem('info', '申請作成成功', {
+      feature_name: 'request_management',
+      action_type: 'create_request',
+      user_id: currentUserId,
+      resource_id: data.id,
+      metadata: {
+        request_id: data.id,
+        request_form_id: data.request_form_id,
+        status_id: data.status_id,
+        title: data.title,
+      },
+    });
 
     // 監査ログを記録
     if (currentUserId) {
@@ -163,6 +224,14 @@ export async function createRequest(
         console.log('監査ログ記録完了: request_created');
       } catch (error) {
         console.error('監査ログ記録エラー:', error);
+        // システムログ: 監査ログ記録エラー
+        await logSystem('error', '申請作成時の監査ログ記録エラー', {
+          feature_name: 'request_management',
+          action_type: 'create_request',
+          user_id: currentUserId,
+          resource_id: data.id,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     } else {
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
@@ -177,9 +246,19 @@ export async function createRequest(
       data,
     };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請作成時の予期しないエラー', {
+      feature_name: 'request_management',
+      action_type: 'create_request',
+      user_id: currentUserId,
+      error_message: error instanceof Error ? error.message : '不明なエラーが発生しました',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('createRequest Server Action エラー:', error);
     return {
       success: false,
+      message: '申請の作成に失敗しました',
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
   }
@@ -191,11 +270,25 @@ export async function createRequest(
 export async function getRequests(userId?: string): Promise<GetRequestsResult> {
   console.log('getRequests: 開始', { userId });
 
+  // システムログ: 開始
+  await logSystem('info', '申請一覧取得開始', {
+    feature_name: 'request_management',
+    action_type: 'get_requests',
+    user_id: userId,
+  });
+
   try {
     const supabase = createAdminClient();
     console.log('getRequests: Supabase Admin クライアント作成完了');
 
     if (!userId) {
+      // システムログ: バリデーションエラー
+      await logSystem('error', '申請一覧取得時のユーザーID未指定エラー', {
+        feature_name: 'request_management',
+        action_type: 'get_requests',
+        error_message: 'ユーザーIDが指定されていません',
+      });
+
       console.error('getRequests: ユーザーIDが指定されていません');
       return {
         success: false,
@@ -247,6 +340,14 @@ export async function getRequests(userId?: string): Promise<GetRequestsResult> {
     }
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請一覧取得時のデータベースエラー', {
+        feature_name: 'request_management',
+        action_type: 'get_requests',
+        user_id: userId,
+        error_message: error.message,
+      });
+
       console.error('申請データ取得エラー:', error);
       return {
         success: false,
@@ -254,12 +355,31 @@ export async function getRequests(userId?: string): Promise<GetRequestsResult> {
       };
     }
 
+    // システムログ: 成功
+    await logSystem('info', '申請一覧取得成功', {
+      feature_name: 'request_management',
+      action_type: 'get_requests',
+      user_id: userId,
+      metadata: {
+        request_count: data?.length || 0,
+      },
+    });
+
     console.log('getRequests: 成功', { dataCount: data?.length || 0 });
     return {
       success: true,
       data: data || [],
     };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請一覧取得時の予期しないエラー', {
+      feature_name: 'request_management',
+      action_type: 'get_requests',
+      user_id: userId,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('getRequests エラー:', error);
     return {
       success: false,
@@ -273,6 +393,12 @@ export async function getRequests(userId?: string): Promise<GetRequestsResult> {
  */
 export async function getAdminRequests(): Promise<GetRequestsResult> {
   console.log('getAdminRequests: 開始');
+
+  // システムログ: 開始
+  await logSystem('info', '管理者申請一覧取得開始', {
+    feature_name: 'request_management',
+    action_type: 'get_admin_requests',
+  });
 
   try {
     const supabase = createAdminClient();
@@ -304,15 +430,39 @@ export async function getAdminRequests(): Promise<GetRequestsResult> {
       .order('created_at', { ascending: false });
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '管理者申請一覧取得時のデータベースエラー', {
+        feature_name: 'request_management',
+        action_type: 'get_admin_requests',
+        error_message: error.message,
+      });
+
       console.error('getAdminRequests: エラー', error);
       return { success: false, error: error.message };
     }
+
+    // システムログ: 成功
+    await logSystem('info', '管理者申請一覧取得成功', {
+      feature_name: 'request_management',
+      action_type: 'get_admin_requests',
+      metadata: {
+        request_count: data?.length || 0,
+      },
+    });
 
     console.log('getAdminRequests: クエリ実行結果', { data, error });
     console.log('getAdminRequests: 成功', { dataCount: data?.length || 0 });
 
     return { success: true, data: data || [] };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '管理者申請一覧取得時の予期しないエラー', {
+      feature_name: 'request_management',
+      action_type: 'get_admin_requests',
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('getAdminRequests: 例外エラー', error);
     return {
       success: false,
@@ -332,6 +482,18 @@ export async function updateRequestStatus(
 ): Promise<UpdateRequestResult> {
   console.log('updateRequestStatus 開始:', { requestId, newStatusCode, comment });
 
+  // システムログ: 開始
+  await logSystem('info', '申請ステータス更新開始', {
+    feature_name: 'request_management',
+    action_type: 'update_request_status',
+    user_id: currentUserId,
+    resource_id: requestId,
+    metadata: {
+      new_status_code: newStatusCode,
+      has_comment: !!comment,
+    },
+  });
+
   try {
     const supabase = createAdminClient();
 
@@ -343,6 +505,15 @@ export async function updateRequestStatus(
       .single();
 
     if (currentError || !currentRequest) {
+      // システムログ: 申請取得エラー
+      await logSystem('error', '申請ステータス更新時の申請取得エラー', {
+        feature_name: 'request_management',
+        action_type: 'update_request_status',
+        user_id: currentUserId,
+        resource_id: requestId,
+        error_message: currentError?.message || '申請が見つかりません',
+      });
+
       console.error('現在の申請データ取得エラー:', currentError);
       return {
         success: false,
@@ -362,6 +533,16 @@ export async function updateRequestStatus(
       .single();
 
     if (statusError || !statusData) {
+      // システムログ: ステータス取得エラー
+      await logSystem('error', '申請ステータス更新時のステータス取得エラー', {
+        feature_name: 'request_management',
+        action_type: 'update_request_status',
+        user_id: currentUserId,
+        resource_id: requestId,
+        error_message: statusError?.message || 'ステータスが見つかりません',
+        metadata: { new_status_code: newStatusCode },
+      });
+
       console.error('ステータス取得エラー:', statusError);
       return {
         success: false,
@@ -387,6 +568,15 @@ export async function updateRequestStatus(
       .select();
 
     if (updateError) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請ステータス更新時のデータベースエラー', {
+        feature_name: 'request_management',
+        action_type: 'update_request_status',
+        user_id: currentUserId,
+        resource_id: requestId,
+        error_message: updateError.message,
+      });
+
       console.error('申請ステータス更新エラー:', updateError);
       return {
         success: false,
@@ -396,6 +586,19 @@ export async function updateRequestStatus(
     }
 
     console.log('更新後のデータ:', updateData);
+
+    // システムログ: 成功
+    await logSystem('info', '申請ステータス更新成功', {
+      feature_name: 'request_management',
+      action_type: 'update_request_status',
+      user_id: currentUserId,
+      resource_id: requestId,
+      metadata: {
+        old_status_id: currentRequest.status_id,
+        new_status_id: statusData.id,
+        new_status_code: newStatusCode,
+      },
+    });
 
     console.log('updateRequestStatus 成功');
 
@@ -431,7 +634,7 @@ export async function updateRequestStatus(
           details: {
             action_type: newStatusCode === 'approved' ? 'approve' : 'reject',
             status_code: newStatusCode,
-            comment: comment,
+            comment: comment || null,
           },
           ip_address: clientInfo.ip_address,
           user_agent: clientInfo.user_agent,
@@ -440,6 +643,14 @@ export async function updateRequestStatus(
         console.log('監査ログ記録完了: request_status_updated');
       } catch (error) {
         console.error('監査ログ記録エラー:', error);
+        // システムログ: 監査ログ記録エラー
+        await logSystem('error', '申請ステータス更新時の監査ログ記録エラー', {
+          feature_name: 'request_management',
+          action_type: 'update_request_status',
+          user_id: currentUserId,
+          resource_id: requestId,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     } else {
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
@@ -452,6 +663,16 @@ export async function updateRequestStatus(
       message: '申請ステータスを更新しました',
     };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請ステータス更新時の予期しないエラー', {
+      feature_name: 'request_management',
+      action_type: 'update_request_status',
+      user_id: currentUserId,
+      resource_id: requestId,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('updateRequestStatus エラー:', error);
     return {
       success: false,
@@ -470,6 +691,17 @@ export async function approveRequest(
   comment?: string
 ): Promise<ApproveRequestResult> {
   console.log('approveRequest 開始:', { requestId, approverId, comment });
+
+  // システムログ: 開始
+  await logSystem('info', '申請承認開始', {
+    feature_name: 'request_management',
+    action_type: 'approve_request',
+    user_id: approverId,
+    resource_id: requestId,
+    metadata: {
+      has_comment: !!comment,
+    },
+  });
 
   try {
     const supabase = createServerClient();
@@ -493,6 +725,15 @@ export async function approveRequest(
       .single();
 
     if (requestError || !request) {
+      // システムログ: 申請取得エラー
+      await logSystem('error', '申請承認時の申請取得エラー', {
+        feature_name: 'request_management',
+        action_type: 'approve_request',
+        user_id: approverId,
+        resource_id: requestId,
+        error_message: requestError?.message || '申請が見つかりません',
+      });
+
       console.error('申請取得エラー:', requestError);
       return {
         success: false,
@@ -504,6 +745,15 @@ export async function approveRequest(
     // 申請フォーム情報を取得
     const requestForm = request.request_forms as RequestForm;
     if (!requestForm) {
+      // システムログ: フォーム取得エラー
+      await logSystem('error', '申請承認時の申請フォーム取得エラー', {
+        feature_name: 'request_management',
+        action_type: 'approve_request',
+        user_id: approverId,
+        resource_id: requestId,
+        error_message: '申請フォームが見つかりません',
+      });
+
       return {
         success: false,
         message: '申請フォームが見つかりません',
@@ -525,6 +775,16 @@ export async function approveRequest(
             approverId
           );
           if (!result.success) {
+            // システムログ: オブジェクト処理エラー
+            await logSystem('error', '申請承認時のオブジェクト処理エラー', {
+              feature_name: 'request_management',
+              action_type: 'approve_request',
+              user_id: approverId,
+              resource_id: requestId,
+              error_message: result.error || 'オブジェクト処理に失敗しました',
+              metadata: { object_type: objectMetadata.object_type },
+            });
+
             return result;
           }
         }
@@ -541,6 +801,15 @@ export async function approveRequest(
       .eq('id', requestId);
 
     if (updateError) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請承認時のデータベースエラー', {
+        feature_name: 'request_management',
+        action_type: 'approve_request',
+        user_id: approverId,
+        resource_id: requestId,
+        error_message: updateError.message,
+      });
+
       console.error('申請更新エラー:', updateError);
       return {
         success: false,
@@ -548,6 +817,18 @@ export async function approveRequest(
         error: updateError.message,
       };
     }
+
+    // システムログ: 成功
+    await logSystem('info', '申請承認成功', {
+      feature_name: 'request_management',
+      action_type: 'approve_request',
+      user_id: approverId,
+      resource_id: requestId,
+      metadata: {
+        request_form_id: request.request_form_id,
+        object_type: requestForm.object_config?.object_type || null,
+      },
+    });
 
     // 監査ログを記録
     const clientInfo = await getClientInfo();
@@ -580,7 +861,7 @@ export async function approveRequest(
         details: {
           action_type: 'approve',
           approver_id: approverId,
-          comment: comment,
+          comment: comment || null,
           request_form_id: request.request_form_id,
         },
         ip_address: clientInfo.ip_address,
@@ -590,6 +871,14 @@ export async function approveRequest(
       console.log('監査ログ記録完了: request_approved');
     } catch (error) {
       console.error('監査ログ記録エラー:', error);
+      // システムログ: 監査ログ記録エラー
+      await logSystem('error', '申請承認時の監査ログ記録エラー', {
+        feature_name: 'request_management',
+        action_type: 'approve_request',
+        user_id: approverId,
+        resource_id: requestId,
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
 
     console.log('approveRequest 成功');
@@ -601,6 +890,16 @@ export async function approveRequest(
       message: '申請を承認しました',
     };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請承認時の予期しないエラー', {
+      feature_name: 'request_management',
+      action_type: 'approve_request',
+      user_id: approverId,
+      resource_id: requestId,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('approveRequest エラー:', error);
     return {
       success: false,
@@ -712,6 +1011,17 @@ export async function updateRequest(
 ): Promise<UpdateRequestResult> {
   console.log('updateRequest 開始', { requestId, updateData });
 
+  // システムログ: 開始
+  await logSystem('info', '申請更新開始', {
+    feature_name: 'request_management',
+    action_type: 'update_request',
+    user_id: currentUserId,
+    resource_id: requestId,
+    metadata: {
+      updated_fields: Object.keys(updateData),
+    },
+  });
+
   try {
     const supabase = createServerClient();
 
@@ -723,6 +1033,15 @@ export async function updateRequest(
       .single();
 
     if (fetchError) {
+      // システムログ: 申請取得エラー
+      await logSystem('error', '申請更新時の申請取得エラー', {
+        feature_name: 'request_management',
+        action_type: 'update_request',
+        user_id: currentUserId,
+        resource_id: requestId,
+        error_message: fetchError.message,
+      });
+
       console.error('申請取得エラー:', fetchError);
       return {
         success: false,
@@ -732,6 +1051,16 @@ export async function updateRequest(
     }
 
     if ((request.statuses as unknown as { code: string })?.code !== 'draft') {
+      // システムログ: ステータスエラー
+      await logSystem('warn', '申請更新時のステータスエラー', {
+        feature_name: 'request_management',
+        action_type: 'update_request',
+        user_id: currentUserId,
+        resource_id: requestId,
+        error_message: '下書き状態の申請のみ編集可能です',
+        metadata: { current_status: (request.statuses as unknown as { code: string })?.code },
+      });
+
       return {
         success: false,
         message: '下書き状態の申請のみ編集可能です',
@@ -749,6 +1078,15 @@ export async function updateRequest(
       .eq('id', requestId);
 
     if (updateError) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請更新時のデータベースエラー', {
+        feature_name: 'request_management',
+        action_type: 'update_request',
+        user_id: currentUserId,
+        resource_id: requestId,
+        error_message: updateError.message,
+      });
+
       console.error('申請更新エラー:', updateError);
       return {
         success: false,
@@ -758,6 +1096,17 @@ export async function updateRequest(
     }
 
     console.log('申請更新成功');
+
+    // システムログ: 成功
+    await logSystem('info', '申請更新成功', {
+      feature_name: 'request_management',
+      action_type: 'update_request',
+      user_id: currentUserId,
+      resource_id: requestId,
+      metadata: {
+        updated_fields: Object.keys(updateData),
+      },
+    });
 
     // 監査ログを記録
     if (currentUserId) {
@@ -826,6 +1175,14 @@ export async function deleteRequest(
   currentUserId?: string
 ): Promise<{ success: boolean; message: string; error?: string }> {
   console.log('deleteRequest 開始:', { requestId });
+
+  // システムログ: 開始
+  await logSystem('info', '申請削除開始', {
+    feature_name: 'request_management',
+    action_type: 'delete_request',
+    user_id: currentUserId,
+    resource_id: requestId,
+  });
 
   try {
     const supabase = createServerClient();

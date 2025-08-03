@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, FileText } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -152,6 +152,62 @@ export default function ReportTemplatesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ログ監視 */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="w-5 h-5" />
+            <span>ログ監視</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <span className="font-semibold">テンプレート作成</span>
+              </div>
+              <div className="text-2xl font-bold text-blue-600">12</div>
+              <div className="text-sm text-gray-600">今月の作成数</div>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Edit className="w-5 h-5 text-green-600" />
+                <span className="font-semibold">テンプレート編集</span>
+              </div>
+              <div className="text-2xl font-bold text-green-600">8</div>
+              <div className="text-sm text-gray-600">今月の編集数</div>
+            </div>
+            <div className="p-4 bg-red-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Trash2 className="w-5 h-5 text-red-600" />
+                <span className="font-semibold">テンプレート削除</span>
+              </div>
+              <div className="text-2xl font-bold text-red-600">2</div>
+              <div className="text-sm text-gray-600">今月の削除数</div>
+            </div>
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Eye className="w-5 h-5 text-purple-600" />
+                <span className="font-semibold">プレビュー表示</span>
+              </div>
+              <div className="text-2xl font-bold text-purple-600">45</div>
+              <div className="text-sm text-gray-600">今月の表示数</div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              最終更新: {new Date().toLocaleString('ja-JP')}
+            </div>
+            <Button variant="outline" size="sm">
+              <FileText className="w-4 h-4 mr-2" />
+              詳細ログを表示
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* テンプレート一覧 */}
       <Card>

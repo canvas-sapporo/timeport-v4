@@ -187,8 +187,8 @@ export default function SystemAdminLogsPage() {
     target: true,
     before_data: false,
     after_data: false,
-    details: false,
-    ip_address: false,
+    details: true,
+    ip_address: true,
     user_agent: false,
     session_id: false,
   });
@@ -375,6 +375,9 @@ export default function SystemAdminLogsPage() {
     if (action?.includes('delete')) variant = 'destructive';
     else if (action?.includes('create')) variant = 'default';
     else if (action?.includes('update')) variant = 'secondary';
+    else if (action?.includes('login')) variant = 'default';
+    else if (action?.includes('logout')) variant = 'secondary';
+    else if (action?.includes('failed')) variant = 'destructive';
 
     return <Badge variant={variant as any}>{action}</Badge>;
   };
@@ -897,7 +900,20 @@ export default function SystemAdminLogsPage() {
                               </TableCell>
                             )}
                             {auditLogColumns.action && (
-                              <TableCell>{getActionBadge(log.action)}</TableCell>
+                              <TableCell>
+                                <div className="space-y-1">
+                                  {getActionBadge(log.action)}
+                                  {log.action === 'user_login' && (
+                                    <div className="text-xs text-green-600">ログイン成功</div>
+                                  )}
+                                  {log.action === 'user_login_failed' && (
+                                    <div className="text-xs text-red-600">ログイン失敗</div>
+                                  )}
+                                  {log.action === 'user_logout' && (
+                                    <div className="text-xs text-blue-600">ログアウト</div>
+                                  )}
+                                </div>
+                              </TableCell>
                             )}
                             {auditLogColumns.target && (
                               <TableCell>
@@ -943,9 +959,29 @@ export default function SystemAdminLogsPage() {
                               <TableCell className="max-w-xs">
                                 <div className="text-xs">
                                   {log.details ? (
-                                    <pre className="whitespace-pre-wrap text-xs max-h-20 overflow-y-auto">
-                                      {JSON.stringify(log.details, null, 2)}
-                                    </pre>
+                                    <div className="space-y-1">
+                                      {log.action === 'user_login' && log.details.email && (
+                                        <div className="text-green-600">
+                                          メール: {log.details.email}
+                                        </div>
+                                      )}
+                                      {log.action === 'user_login_failed' && log.details.email && (
+                                        <div className="text-red-600">
+                                          メール: {log.details.email}
+                                        </div>
+                                      )}
+                                      {log.details.login_method && (
+                                        <div>認証方法: {log.details.login_method}</div>
+                                      )}
+                                      {log.details.failure_reason && (
+                                        <div className="text-red-600">
+                                          失敗理由: {log.details.failure_reason}
+                                        </div>
+                                      )}
+                                      <pre className="whitespace-pre-wrap text-xs max-h-20 overflow-y-auto">
+                                        {JSON.stringify(log.details, null, 2)}
+                                      </pre>
+                                    </div>
                                   ) : (
                                     '-'
                                   )}
@@ -1165,8 +1201,8 @@ export default function SystemAdminLogsPage() {
                       target: true,
                       before_data: false,
                       after_data: false,
-                      details: false,
-                      ip_address: false,
+                      details: true,
+                      ip_address: true,
                       user_agent: false,
                       session_id: false,
                     });

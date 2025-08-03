@@ -56,6 +56,16 @@ export default function EditRequestTypePage() {
   async function handleSave() {
     setIsLoading(true);
     try {
+      // システムログ記録
+      console.log('申請フォーム編集開始:', {
+        requestTypeId: requestTypeId,
+        name: requestType?.name,
+        fieldCount: formConfig.length,
+        timestamp: new Date().toISOString(),
+        user: 'admin',
+        action: 'edit_request_form',
+      });
+
       // In a real app, this would update the backend
       console.log('Updating request type:', requestTypeId, {
         ...requestType,
@@ -63,9 +73,28 @@ export default function EditRequestTypePage() {
       });
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
+      // 成功ログ記録
+      console.log('申請フォーム編集成功:', {
+        requestTypeId: requestTypeId,
+        name: requestType?.name,
+        timestamp: new Date().toISOString(),
+        user: 'admin',
+        action: 'edit_request_form_success',
+      });
+
       // Redirect to request form detail
       router.push(`/admin/request-forms/${requestTypeId}`);
     } catch (error) {
+      // エラーログ記録
+      console.error('申請フォーム編集失敗:', {
+        requestTypeId: requestTypeId,
+        name: requestType?.name,
+        error: error,
+        timestamp: new Date().toISOString(),
+        user: 'admin',
+        action: 'edit_request_form_error',
+      });
+
       console.error('Error updating request type:', error);
     } finally {
       setIsLoading(false);

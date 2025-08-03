@@ -124,6 +124,17 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
     setIsSaving(true);
 
     try {
+      // システムログ記録
+      console.log('レポートテンプレート編集開始:', {
+        templateId: templateId,
+        name: formData.name,
+        description: formData.description,
+        fieldCount: formConfig.length,
+        timestamp: new Date().toISOString(),
+        user: 'admin',
+        action: 'edit_report_template',
+      });
+
       const formDataObj = new FormData();
       formDataObj.append('name', formData.name);
       formDataObj.append('description', formData.description);
@@ -141,12 +152,31 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
 
       const result = await updateReportTemplate(templateId, formDataObj);
       if (result.success) {
+        // 成功ログ記録
+        console.log('レポートテンプレート編集成功:', {
+          templateId: templateId,
+          name: formData.name,
+          timestamp: new Date().toISOString(),
+          user: 'admin',
+          action: 'edit_report_template_success',
+        });
+
         toast({
           title: '成功',
           description: 'テンプレートを更新しました',
         });
         router.push('/admin/report-templates');
       } else {
+        // エラーログ記録
+        console.error('レポートテンプレート編集失敗:', {
+          templateId: templateId,
+          name: formData.name,
+          error: result.error,
+          timestamp: new Date().toISOString(),
+          user: 'admin',
+          action: 'edit_report_template_error',
+        });
+
         toast({
           title: 'エラー',
           description: result.error || 'テンプレートの更新に失敗しました',
@@ -154,7 +184,16 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
         });
       }
     } catch (error) {
-      console.error('更新エラー:', error);
+      // 例外ログ記録
+      console.error('レポートテンプレート編集例外:', {
+        templateId: templateId,
+        name: formData.name,
+        error: error,
+        timestamp: new Date().toISOString(),
+        user: 'admin',
+        action: 'edit_report_template_exception',
+      });
+
       toast({
         title: 'エラー',
         description: 'テンプレートの更新に失敗しました',

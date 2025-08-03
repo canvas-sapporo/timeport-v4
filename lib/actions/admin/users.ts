@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase';
 import { withErrorHandling, AppError } from '@/lib/utils/error-handling';
 import { getUserCompanyId } from '@/lib/actions/user';
-import { logAudit } from '@/lib/utils/log-system';
+import { logAudit, logSystem } from '@/lib/utils/log-system';
 import type { UUID } from '@/types/common';
 import {
   UserProfileSchema,
@@ -76,6 +76,13 @@ export async function getApprovers(userId?: string): Promise<ApproverListRespons
       console.log('認証結果:', { user, userError });
 
       if (userError || !user) {
+        // システムログ: 認証エラー
+        await logSystem('error', '承認者取得時の認証エラー', {
+          feature_name: 'user_management',
+          action_type: 'get_approvers',
+          error_message: userError?.message || '認証エラー',
+        });
+
         console.log('認証エラー、空の配列を返す');
         return { success: false, error: '認証エラーが発生しました', data: [] };
       }
@@ -86,6 +93,14 @@ export async function getApprovers(userId?: string): Promise<ApproverListRespons
     const companyId = await getUserCompanyId(currentUserId);
     console.log('企業ID取得結果:', { currentUserId, companyId });
     if (!companyId) {
+      // システムログ: 企業情報取得エラー
+      await logSystem('error', '承認者取得時の企業情報取得エラー', {
+        feature_name: 'user_management',
+        action_type: 'get_approvers',
+        user_id: currentUserId,
+        error_message: 'ユーザーの企業情報を取得できませんでした',
+      });
+
       console.error('ユーザーの企業情報を取得できませんでした');
       return { success: false, error: 'ユーザーの企業情報を取得できませんでした', data: [] };
     }
@@ -108,11 +123,29 @@ export async function getApprovers(userId?: string): Promise<ApproverListRespons
     console.log('ユーザーID取得結果:', { userIds, userIdsError });
 
     if (userIdsError) {
+      // システムログ: データベースエラー
+      await logSystem('error', '承認者取得時のデータベースエラー', {
+        feature_name: 'user_management',
+        action_type: 'get_approvers',
+        user_id: currentUserId,
+        company_id: companyId,
+        error_message: userIdsError.message,
+      });
+
       console.error('ユーザーID取得エラー:', userIdsError);
       return { success: false, error: userIdsError.message, data: [] };
     }
 
     if (!userIds || userIds.length === 0) {
+      // システムログ: データなし
+      await logSystem('info', '承認者取得: 企業内にユーザーなし', {
+        feature_name: 'user_management',
+        action_type: 'get_approvers',
+        user_id: currentUserId,
+        company_id: companyId,
+        metadata: { user_count: 0 },
+      });
+
       console.log('企業内にユーザーが見つかりません');
       return { success: true, data: [] };
     }
@@ -127,13 +160,43 @@ export async function getApprovers(userId?: string): Promise<ApproverListRespons
       .order('family_name', { ascending: true });
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '承認者詳細取得エラー', {
+        feature_name: 'user_management',
+        action_type: 'get_approvers',
+        user_id: currentUserId,
+        company_id: companyId,
+        error_message: error.message,
+      });
+
       console.error('承認者取得エラー:', error);
       return { success: false, error: error.message, data: [] };
     }
 
+    // システムログ: 成功
+    await logSystem('info', '承認者取得成功', {
+      feature_name: 'user_management',
+      action_type: 'get_approvers',
+      user_id: currentUserId,
+      company_id: companyId,
+      metadata: {
+        approver_count: data?.length || 0,
+        total_users: userIds.length,
+      },
+    });
+
     console.log('承認者取得成功:', data?.length || 0, '件');
     return { success: true, data };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '承認者取得時の予期しないエラー', {
+      feature_name: 'user_management',
+      action_type: 'get_approvers',
+      user_id: userId,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('承認者取得エラー:', error);
     return { success: false, error: '承認者取得中にエラーが発生しました', data: [] };
   }
@@ -148,6 +211,16 @@ export async function getAdminUsers(
 ): Promise<UserListResponse> {
   try {
     console.log('ユーザー一覧取得開始:', { companyId, params });
+
+    // システムログ: 開始
+    await logSystem('info', '管理者ユーザー一覧取得開始', {
+      feature_name: 'user_management',
+      action_type: 'get_admin_users',
+      company_id: companyId,
+      metadata: {
+        search_params: params,
+      },
+    });
 
     const supabaseAdmin = createAdminClient();
 
@@ -170,6 +243,14 @@ export async function getAdminUsers(
       .is('deleted_at', null);
 
     if (userIdsError) {
+      // システムログ: データベースエラー
+      await logSystem('error', '管理者ユーザー一覧取得時のデータベースエラー', {
+        feature_name: 'user_management',
+        action_type: 'get_admin_users',
+        company_id: companyId,
+        error_message: userIdsError.message,
+      });
+
       console.error('ユーザーID取得エラー:', userIdsError);
       return {
         success: false,
@@ -180,6 +261,14 @@ export async function getAdminUsers(
     }
 
     if (!companyUserIds || companyUserIds.length === 0) {
+      // システムログ: データなし
+      await logSystem('info', '管理者ユーザー一覧取得: 企業内にユーザーなし', {
+        feature_name: 'user_management',
+        action_type: 'get_admin_users',
+        company_id: companyId,
+        metadata: { user_count: 0 },
+      });
+
       console.log('企業内にユーザーが見つかりません');
       return {
         success: true,
@@ -197,6 +286,14 @@ export async function getAdminUsers(
       .is('deleted_at', null);
 
     if (usersError) {
+      // システムログ: データベースエラー
+      await logSystem('error', '管理者ユーザー詳細取得エラー', {
+        feature_name: 'user_management',
+        action_type: 'get_admin_users',
+        company_id: companyId,
+        error_message: usersError.message,
+      });
+
       console.error('ユーザー取得エラー:', usersError);
       return {
         success: false,
@@ -248,7 +345,7 @@ export async function getAdminUsers(
     console.log('フィルタリング前のユーザー数:', filteredUsers.length);
 
     if (params.search) {
-      filteredUsers = filteredUsers.filter((user) => {
+      filteredUsers = filteredUsers.filter((user: any) => {
         const fullName = `${user.family_name} ${user.first_name}`;
         const fullNameKana = `${user.family_name_kana} ${user.first_name_kana}`;
         return (
@@ -262,11 +359,11 @@ export async function getAdminUsers(
     }
 
     if (params.role) {
-      filteredUsers = filteredUsers.filter((user) => user.role === params.role);
+      filteredUsers = filteredUsers.filter((user: any) => user.role === params.role);
     }
 
     if (params.is_active !== undefined) {
-      filteredUsers = filteredUsers.filter((user) => user.is_active === params.is_active);
+      filteredUsers = filteredUsers.filter((user: any) => user.is_active === params.is_active);
     }
 
     if (params.group_id) {
@@ -294,12 +391,35 @@ export async function getAdminUsers(
     });
     console.log('返却するユーザー:', paginatedUsers);
 
+    // システムログ: 成功
+    await logSystem('info', '管理者ユーザー一覧取得成功', {
+      feature_name: 'user_management',
+      action_type: 'get_admin_users',
+      company_id: companyId,
+      metadata: {
+        total_users: filteredUsers.length,
+        returned_users: paginatedUsers.length,
+        page,
+        limit,
+        search_params: params,
+      },
+    });
+
     return {
       success: true,
       data: paginatedUsers,
       total: filteredUsers.length,
     };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '管理者ユーザー一覧取得時の予期しないエラー', {
+      feature_name: 'user_management',
+      action_type: 'get_admin_users',
+      company_id: companyId,
+      error_message: error instanceof Error ? error.message : '不明なエラーが発生しました',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('getUsers エラー:', error);
     return {
       success: false,
@@ -366,6 +486,19 @@ export async function createUser(
   return withErrorHandling(async () => {
     console.log('ユーザー作成開始:', { companyId, input });
 
+    // システムログ: 開始
+    await logSystem('info', 'ユーザー作成開始', {
+      feature_name: 'user_management',
+      action_type: 'create_user',
+      user_id: currentUserId,
+      company_id: companyId,
+      metadata: {
+        new_user_email: input.email,
+        new_user_role: input.role,
+        group_count: input.group_ids?.length || 0,
+      },
+    });
+
     const supabaseAdmin = createAdminClient();
 
     // バリデーション
@@ -378,6 +511,16 @@ export async function createUser(
         .is('deleted_at', null);
 
       if (existingUser && existingUser.length > 0) {
+        // システムログ: バリデーションエラー
+        await logSystem('warn', 'ユーザー作成時のメールアドレス重複エラー', {
+          feature_name: 'user_management',
+          action_type: 'create_user',
+          user_id: currentUserId,
+          company_id: companyId,
+          error_message: 'このメールアドレスは既に使用されています',
+          metadata: { email: input.email },
+        });
+
         throw new AppError('このメールアドレスは既に使用されています', 'VALIDATION_ERROR');
       }
     }
@@ -390,6 +533,16 @@ export async function createUser(
       .is('deleted_at', null);
 
     if (existingCode && existingCode.length > 0) {
+      // システムログ: バリデーションエラー
+      await logSystem('warn', 'ユーザー作成時の個人コード重複エラー', {
+        feature_name: 'user_management',
+        action_type: 'create_user',
+        user_id: currentUserId,
+        company_id: companyId,
+        error_message: 'この個人コードは既に使用されています',
+        metadata: { code: input.code },
+      });
+
       throw new AppError('この個人コードは既に使用されています', 'VALIDATION_ERROR');
     }
 
@@ -404,6 +557,16 @@ export async function createUser(
     });
 
     if (authError || !authUser.user) {
+      // システムログ: Auth作成エラー
+      await logSystem('error', 'ユーザー作成時のAuth作成エラー', {
+        feature_name: 'user_management',
+        action_type: 'create_user',
+        user_id: currentUserId,
+        company_id: companyId,
+        error_message: authError?.message || 'ユーザー作成に失敗しました',
+        metadata: { email: input.email },
+      });
+
       console.error('Authユーザー作成エラー:', authError);
       throw AppError.fromSupabaseError(
         authError || new Error('ユーザー作成に失敗しました'),
@@ -434,6 +597,17 @@ export async function createUser(
     if (profileError) {
       // Authユーザーを削除してロールバック
       await supabaseAdmin.auth.admin.deleteUser(userId);
+
+      // システムログ: プロフィール作成エラー
+      await logSystem('error', 'ユーザー作成時のプロフィール作成エラー', {
+        feature_name: 'user_management',
+        action_type: 'create_user',
+        user_id: currentUserId,
+        company_id: companyId,
+        error_message: profileError.message,
+        metadata: { auth_user_id: userId, email: input.email },
+      });
+
       console.error('プロフィール作成エラー:', profileError);
       throw AppError.fromSupabaseError(profileError, 'プロフィール作成');
     }
@@ -451,12 +625,38 @@ export async function createUser(
         // プロフィールとAuthユーザーを削除してロールバック
         await supabaseAdmin.from('user_profiles').delete().eq('id', userId);
         await supabaseAdmin.auth.admin.deleteUser(userId);
+
+        // システムログ: グループ作成エラー
+        await logSystem('error', 'ユーザー作成時のグループ作成エラー', {
+          feature_name: 'user_management',
+          action_type: 'create_user',
+          user_id: currentUserId,
+          company_id: companyId,
+          error_message: groupError.message,
+          metadata: { auth_user_id: userId, group_ids: input.group_ids },
+        });
+
         console.error('ユーザーグループ作成エラー:', groupError);
         throw AppError.fromSupabaseError(groupError, 'ユーザーグループ作成');
       }
     }
 
     console.log('ユーザー作成完了:', userId);
+
+    // システムログ: 成功
+    await logSystem('info', 'ユーザー作成成功', {
+      feature_name: 'user_management',
+      action_type: 'create_user',
+      user_id: currentUserId,
+      company_id: companyId,
+      resource_id: userId,
+      metadata: {
+        new_user_id: userId,
+        new_user_email: input.email,
+        new_user_role: input.role,
+        group_count: input.group_ids?.length || 0,
+      },
+    });
 
     // 監査ログを記録
     if (currentUserId) {
@@ -487,6 +687,15 @@ export async function createUser(
         console.log('監査ログ記録完了: user_created');
       } catch (error) {
         console.error('監査ログ記録エラー:', error);
+        // システムログ: 監査ログ記録エラー
+        await logSystem('error', 'ユーザー作成時の監査ログ記録エラー', {
+          feature_name: 'user_management',
+          action_type: 'create_user',
+          user_id: currentUserId,
+          company_id: companyId,
+          resource_id: userId,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     } else {
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
@@ -510,6 +719,19 @@ export async function updateUser(
   return withErrorHandling(async () => {
     console.log('ユーザー更新開始:', { userId, input });
 
+    // システムログ: 開始
+    await logSystem('info', 'ユーザー更新開始', {
+      feature_name: 'user_management',
+      action_type: 'update_user',
+      user_id: currentUserId,
+      resource_id: userId,
+      metadata: {
+        updated_fields: Object.keys(input),
+        role_change: input.role !== undefined,
+        status_change: input.is_active !== undefined,
+      },
+    });
+
     const supabaseAdmin = createAdminClient();
 
     // 更新前のデータを取得（監査ログ用）
@@ -530,6 +752,16 @@ export async function updateUser(
         .is('deleted_at', null);
 
       if (adminCount && adminCount.length <= 0) {
+        // システムログ: バリデーションエラー
+        await logSystem('warn', 'ユーザー更新時の最後の管理者削除エラー', {
+          feature_name: 'user_management',
+          action_type: 'update_user',
+          user_id: currentUserId,
+          resource_id: userId,
+          error_message: '最後の管理者を削除または無効化することはできません',
+          metadata: { current_role: beforeData?.role, new_role: input.role },
+        });
+
         throw new AppError(
           '最後の管理者を削除または無効化することはできません',
           'VALIDATION_ERROR'
@@ -547,6 +779,16 @@ export async function updateUser(
         .is('deleted_at', null);
 
       if (existingUser && existingUser.length > 0) {
+        // システムログ: バリデーションエラー
+        await logSystem('warn', 'ユーザー更新時のメールアドレス重複エラー', {
+          feature_name: 'user_management',
+          action_type: 'update_user',
+          user_id: currentUserId,
+          resource_id: userId,
+          error_message: 'このメールアドレスは既に使用されています',
+          metadata: { email: input.email },
+        });
+
         throw new AppError('このメールアドレスは既に使用されています', 'VALIDATION_ERROR');
       }
     }
@@ -561,6 +803,16 @@ export async function updateUser(
         .is('deleted_at', null);
 
       if (existingCode && existingCode.length > 0) {
+        // システムログ: バリデーションエラー
+        await logSystem('warn', 'ユーザー更新時の個人コード重複エラー', {
+          feature_name: 'user_management',
+          action_type: 'update_user',
+          user_id: currentUserId,
+          resource_id: userId,
+          error_message: 'この個人コードは既に使用されています',
+          metadata: { code: input.code },
+        });
+
         throw new AppError('この個人コードは既に使用されています', 'VALIDATION_ERROR');
       }
     }
@@ -587,6 +839,15 @@ export async function updateUser(
       .eq('id', userId);
 
     if (profileError) {
+      // システムログ: プロフィール更新エラー
+      await logSystem('error', 'ユーザー更新時のプロフィール更新エラー', {
+        feature_name: 'user_management',
+        action_type: 'update_user',
+        user_id: currentUserId,
+        resource_id: userId,
+        error_message: profileError.message,
+      });
+
       console.error('プロフィール更新エラー:', profileError);
       throw AppError.fromSupabaseError(profileError, 'プロフィール更新');
     }
@@ -606,6 +867,16 @@ export async function updateUser(
         const { error: groupError } = await supabaseAdmin.from('user_groups').insert(userGroups);
 
         if (groupError) {
+          // システムログ: グループ更新エラー
+          await logSystem('error', 'ユーザー更新時のグループ更新エラー', {
+            feature_name: 'user_management',
+            action_type: 'update_user',
+            user_id: currentUserId,
+            resource_id: userId,
+            error_message: groupError.message,
+            metadata: { group_ids: input.group_ids },
+          });
+
           console.error('ユーザーグループ更新エラー:', groupError);
           throw AppError.fromSupabaseError(groupError, 'ユーザーグループ更新');
         }
@@ -613,6 +884,20 @@ export async function updateUser(
     }
 
     console.log('ユーザー更新完了:', userId);
+
+    // システムログ: 成功
+    await logSystem('info', 'ユーザー更新成功', {
+      feature_name: 'user_management',
+      action_type: 'update_user',
+      user_id: currentUserId,
+      resource_id: userId,
+      metadata: {
+        updated_fields: Object.keys(input),
+        role_change: input.role !== undefined,
+        status_change: input.is_active !== undefined,
+        group_change: input.group_ids !== undefined,
+      },
+    });
 
     // 監査ログを記録
     console.log('監査ログ記録開始');
@@ -639,6 +924,14 @@ export async function updateUser(
         console.log('監査ログ記録完了');
       } catch (error) {
         console.error('監査ログ記録エラー:', error);
+        // システムログ: 監査ログ記録エラー
+        await logSystem('error', 'ユーザー更新時の監査ログ記録エラー', {
+          feature_name: 'user_management',
+          action_type: 'update_user',
+          user_id: currentUserId,
+          resource_id: userId,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     } else {
       console.log('現在のユーザーIDが提供されていません');
@@ -659,6 +952,14 @@ export async function deleteUser(userId: UUID, currentUserId?: string) {
   return withErrorHandling(async () => {
     console.log('ユーザー削除開始:', userId);
 
+    // システムログ: 開始
+    await logSystem('info', 'ユーザー削除開始', {
+      feature_name: 'user_management',
+      action_type: 'delete_user',
+      user_id: currentUserId,
+      resource_id: userId,
+    });
+
     const supabaseAdmin = createAdminClient();
 
     // ユーザーの存在確認とステータスチェック
@@ -670,11 +971,30 @@ export async function deleteUser(userId: UUID, currentUserId?: string) {
       .single();
 
     if (fetchError || !user) {
+      // システムログ: ユーザー存在エラー
+      await logSystem('error', 'ユーザー削除時のユーザー存在エラー', {
+        feature_name: 'user_management',
+        action_type: 'delete_user',
+        user_id: currentUserId,
+        resource_id: userId,
+        error_message: fetchError?.message || 'ユーザーが見つかりません',
+      });
+
       throw AppError.notFound('ユーザー', userId);
     }
 
     // アクティブなユーザーは削除不可
     if (user.is_active) {
+      // システムログ: バリデーションエラー
+      await logSystem('warn', 'ユーザー削除時のアクティブユーザー削除エラー', {
+        feature_name: 'user_management',
+        action_type: 'delete_user',
+        user_id: currentUserId,
+        resource_id: userId,
+        error_message: 'アクティブなユーザーは削除できません',
+        metadata: { user_role: user.role, is_active: user.is_active },
+      });
+
       throw new AppError(
         'アクティブなユーザーは削除できません。先に無効化してください。',
         'ACTIVE_USER_DELETE_ERROR',
@@ -692,6 +1012,16 @@ export async function deleteUser(userId: UUID, currentUserId?: string) {
         .is('deleted_at', null);
 
       if (adminCount && adminCount.length <= 1) {
+        // システムログ: バリデーションエラー
+        await logSystem('warn', 'ユーザー削除時の最後の管理者削除エラー', {
+          feature_name: 'user_management',
+          action_type: 'delete_user',
+          user_id: currentUserId,
+          resource_id: userId,
+          error_message: '最後の管理者を削除することはできません',
+          metadata: { user_role: user.role },
+        });
+
         throw new AppError('最後の管理者を削除することはできません', 'VALIDATION_ERROR');
       }
     }
@@ -703,11 +1033,32 @@ export async function deleteUser(userId: UUID, currentUserId?: string) {
       .eq('id', userId);
 
     if (error) {
+      // システムログ: 削除エラー
+      await logSystem('error', 'ユーザー削除時のデータベースエラー', {
+        feature_name: 'user_management',
+        action_type: 'delete_user',
+        user_id: currentUserId,
+        resource_id: userId,
+        error_message: error.message,
+      });
+
       console.error('ユーザー削除エラー:', error);
       throw AppError.fromSupabaseError(error, 'ユーザー削除');
     }
 
     console.log('ユーザー削除完了:', userId);
+
+    // システムログ: 成功
+    await logSystem('info', 'ユーザー削除成功', {
+      feature_name: 'user_management',
+      action_type: 'delete_user',
+      user_id: currentUserId,
+      resource_id: userId,
+      metadata: {
+        deleted_user_role: user.role,
+        deletion_type: 'logical',
+      },
+    });
 
     // 監査ログを記録
     if (currentUserId) {
@@ -729,6 +1080,14 @@ export async function deleteUser(userId: UUID, currentUserId?: string) {
         console.log('監査ログ記録完了: user_deleted');
       } catch (error) {
         console.error('監査ログ記録エラー:', error);
+        // システムログ: 監査ログ記録エラー
+        await logSystem('error', 'ユーザー削除時の監査ログ記録エラー', {
+          feature_name: 'user_management',
+          action_type: 'delete_user',
+          user_id: currentUserId,
+          resource_id: userId,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     } else {
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
@@ -748,6 +1107,13 @@ export async function getUserStats(companyId: UUID) {
   return withErrorHandling(async () => {
     console.log('ユーザー統計取得開始:', companyId);
 
+    // システムログ: 開始
+    await logSystem('info', 'ユーザー統計取得開始', {
+      feature_name: 'user_management',
+      action_type: 'get_user_stats',
+      company_id: companyId,
+    });
+
     const supabaseAdmin = createAdminClient();
 
     // 企業内のユーザーを特定するために、user_groupsを通じてcompany_idを確認
@@ -765,6 +1131,14 @@ export async function getUserStats(companyId: UUID) {
       .eq('groups.company_id', companyId);
 
     if (userGroupsError) {
+      // システムログ: データベースエラー
+      await logSystem('error', 'ユーザー統計取得時のデータベースエラー', {
+        feature_name: 'user_management',
+        action_type: 'get_user_stats',
+        company_id: companyId,
+        error_message: userGroupsError.message,
+      });
+
       console.error('ユーザーグループ取得エラー:', userGroupsError);
       throw AppError.fromSupabaseError(userGroupsError, 'ユーザーグループ取得');
     }
@@ -780,6 +1154,14 @@ export async function getUserStats(companyId: UUID) {
       .is('deleted_at', null);
 
     if (usersError) {
+      // システムログ: データベースエラー
+      await logSystem('error', 'ユーザー統計取得時のユーザー詳細取得エラー', {
+        feature_name: 'user_management',
+        action_type: 'get_user_stats',
+        company_id: companyId,
+        error_message: usersError.message,
+      });
+
       console.error('ユーザー詳細取得エラー:', usersError);
       throw AppError.fromSupabaseError(usersError, 'ユーザー詳細取得');
     }
@@ -797,6 +1179,20 @@ export async function getUserStats(companyId: UUID) {
           (u: { role: string; is_active: boolean }) => u.role === 'member' && u.is_active
         ).length || 0,
     };
+
+    // システムログ: 成功
+    await logSystem('info', 'ユーザー統計取得成功', {
+      feature_name: 'user_management',
+      action_type: 'get_user_stats',
+      company_id: companyId,
+      metadata: {
+        total_users: stats.total,
+        active_users: stats.active,
+        inactive_users: stats.inactive,
+        admin_users: stats.admin,
+        member_users: stats.member,
+      },
+    });
 
     console.log('ユーザー統計取得完了:', stats);
 

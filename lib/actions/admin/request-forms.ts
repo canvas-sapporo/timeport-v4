@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 
 import { createServerClient } from '@/lib/supabase';
+import { logAudit, logSystem } from '@/lib/utils/log-system';
 import { RequestFormSchema } from '@/schemas/request-forms';
 
 // ================================
@@ -20,6 +21,15 @@ export async function createRequestForm(formData: FormData) {
   try {
     console.log('createRequestForm: 開始');
 
+    // システムログ: 開始
+    await logSystem('info', '申請フォーム作成開始', {
+      feature_name: 'request_form_management',
+      action_type: 'create_request_form',
+      metadata: {
+        form_data_keys: Array.from(formData.keys()),
+      },
+    });
+
     // ユーザー情報を取得
     const {
       data: { user },
@@ -29,6 +39,13 @@ export async function createRequestForm(formData: FormData) {
     console.log('認証結果:', { user: user?.id, userError });
 
     if (userError || !user) {
+      // システムログ: 認証エラー
+      await logSystem('error', '申請フォーム作成時の認証エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'create_request_form',
+        error_message: userError?.message || '認証エラー',
+      });
+
       console.log('認証エラー、service_role_keyで試行');
       // 認証エラーの場合、service_role_keyで直接アクセス
       const serviceSupabase = createClient(
@@ -66,9 +83,46 @@ export async function createRequestForm(formData: FormData) {
       console.log('データベース挿入結果:', { data, error });
 
       if (error) {
+        // システムログ: データベースエラー
+        await logSystem('error', '申請フォーム作成時のデータベースエラー', {
+          feature_name: 'request_form_management',
+          action_type: 'create_request_form',
+          error_message: error.message,
+          metadata: { form_name: rawData.name, category: rawData.category },
+        });
+
         console.error('申請フォーム作成エラー:', error);
         throw new Error('申請フォームの作成に失敗しました');
       }
+
+      // システムログ: 成功
+      await logSystem('info', '申請フォーム作成成功', {
+        feature_name: 'request_form_management',
+        action_type: 'create_request_form',
+        resource_id: data.id,
+        metadata: {
+          form_id: data.id,
+          form_name: data.name,
+          category: data.category,
+          is_active: data.is_active,
+          form_config_count: data.form_config?.length || 0,
+          approval_flow_count: data.approval_flow?.length || 0,
+        },
+      });
+
+      // 監査ログ: 申請フォーム作成
+      await logAudit('request_form_created', {
+        user_id: undefined, // service_role_key使用時はユーザーID不明
+        target_type: 'request_forms',
+        target_id: data.id,
+        before_data: undefined,
+        after_data: data,
+        details: {
+          form_name: data.name,
+          category: data.category,
+          is_active: data.is_active,
+        },
+      });
 
       console.log('申請フォーム作成成功:', data);
       revalidatePath('/admin/request-forms');
@@ -86,10 +140,27 @@ export async function createRequestForm(formData: FormData) {
       .single();
 
     if (profileError || !profile) {
+      // システムログ: プロフィール取得エラー
+      await logSystem('error', '申請フォーム作成時のプロフィール取得エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'create_request_form',
+        user_id: user.id,
+        error_message: profileError?.message || 'ユーザープロフィールが見つかりません',
+      });
+
       throw new Error('ユーザープロフィールが見つかりません');
     }
 
     if (profile.role !== 'admin') {
+      // システムログ: 権限エラー
+      await logSystem('warn', '申請フォーム作成時の権限エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'create_request_form',
+        user_id: user.id,
+        error_message: '権限がありません',
+        metadata: { user_role: profile.role },
+      });
+
       throw new Error('権限がありません');
     }
 
@@ -117,13 +188,60 @@ export async function createRequestForm(formData: FormData) {
       .single();
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請フォーム作成時のデータベースエラー', {
+        feature_name: 'request_form_management',
+        action_type: 'create_request_form',
+        user_id: user.id,
+        error_message: error.message,
+        metadata: { form_name: rawData.name, category: rawData.category },
+      });
+
       console.error('申請フォーム作成エラー:', error);
       throw new Error('申請フォームの作成に失敗しました');
     }
 
+    // システムログ: 成功
+    await logSystem('info', '申請フォーム作成成功', {
+      feature_name: 'request_form_management',
+      action_type: 'create_request_form',
+      user_id: user.id,
+      resource_id: data.id,
+      metadata: {
+        form_id: data.id,
+        form_name: data.name,
+        category: data.category,
+        is_active: data.is_active,
+        form_config_count: data.form_config?.length || 0,
+        approval_flow_count: data.approval_flow?.length || 0,
+      },
+    });
+
+    // 監査ログ: 申請フォーム作成
+    await logAudit('request_form_created', {
+      user_id: user.id,
+      target_type: 'request_forms',
+      target_id: data.id,
+      before_data: undefined,
+      after_data: data,
+      details: {
+        form_name: data.name,
+        category: data.category,
+        is_active: data.is_active,
+      },
+    });
+
     revalidatePath('/admin/request-forms');
     return { success: true, data };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請フォーム作成時の予期しないエラー', {
+      feature_name: 'request_form_management',
+      action_type: 'create_request_form',
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('申請フォーム作成エラー:', error);
     return {
       success: false,
@@ -140,6 +258,16 @@ export async function updateRequestForm(id: string, formData: FormData) {
   const supabase = createServerClient();
 
   try {
+    // システムログ: 開始
+    await logSystem('info', '申請フォーム更新開始', {
+      feature_name: 'request_form_management',
+      action_type: 'update_request_form',
+      resource_id: id,
+      metadata: {
+        form_data_keys: Array.from(formData.keys()),
+      },
+    });
+
     // ユーザー情報を取得
     const {
       data: { user },
@@ -149,6 +277,14 @@ export async function updateRequestForm(id: string, formData: FormData) {
     console.log('認証結果:', { user, userError });
 
     if (userError || !user) {
+      // システムログ: 認証エラー
+      await logSystem('error', '申請フォーム更新時の認証エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'update_request_form',
+        resource_id: id,
+        error_message: userError?.message || '認証エラー',
+      });
+
       console.log('認証エラー、service_role_keyで試行');
       // service_role_keyを使用してSupabaseクライアントを作成
       const supabaseAdmin = createServerClient();
@@ -162,6 +298,13 @@ export async function updateRequestForm(id: string, formData: FormData) {
           },
         }
       );
+
+      // 更新前のデータを取得（監査ログ用）
+      const { data: beforeData } = await supabaseWithServiceRole
+        .from('request_forms')
+        .select('*')
+        .eq('id', id)
+        .single();
 
       // フォームデータを解析
       const rawData = {
@@ -191,9 +334,41 @@ export async function updateRequestForm(id: string, formData: FormData) {
         .single();
 
       if (error) {
+        // システムログ: データベースエラー
+        await logSystem('error', '申請フォーム更新時のデータベースエラー', {
+          feature_name: 'request_form_management',
+          action_type: 'update_request_form',
+          resource_id: id,
+          error_message: error.message,
+        });
+
         console.error('申請フォーム更新エラー:', error);
         throw new Error('申請フォームの更新に失敗しました');
       }
+
+      // システムログ: 成功
+      await logSystem('info', '申請フォーム更新成功', {
+        feature_name: 'request_form_management',
+        action_type: 'update_request_form',
+        resource_id: id,
+        metadata: {
+          form_name: data.name,
+          category: data.category,
+          is_active: data.is_active,
+        },
+      });
+
+      // 監査ログ: 申請フォーム更新
+      await logAudit('request_form_updated', {
+        user_id: undefined, // service_role_key使用時はユーザーID不明
+        target_type: 'request_forms',
+        target_id: id,
+        before_data: beforeData,
+        after_data: data,
+        details: {
+          updated_fields: Object.keys(validatedData),
+        },
+      });
 
       revalidatePath('/admin/requests');
       return { success: true, data };
@@ -208,12 +383,38 @@ export async function updateRequestForm(id: string, formData: FormData) {
       .single();
 
     if (profileError || !profile) {
+      // システムログ: プロフィール取得エラー
+      await logSystem('error', '申請フォーム更新時のプロフィール取得エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'update_request_form',
+        user_id: user.id,
+        resource_id: id,
+        error_message: profileError?.message || 'ユーザープロフィールが見つかりません',
+      });
+
       throw new Error('ユーザープロフィールが見つかりません');
     }
 
     if (profile.role !== 'admin') {
+      // システムログ: 権限エラー
+      await logSystem('warn', '申請フォーム更新時の権限エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'update_request_form',
+        user_id: user.id,
+        resource_id: id,
+        error_message: '権限がありません',
+        metadata: { user_role: profile.role },
+      });
+
       throw new Error('権限がありません');
     }
+
+    // 更新前のデータを取得（監査ログ用）
+    const { data: beforeData } = await supabase
+      .from('request_forms')
+      .select('*')
+      .eq('id', id)
+      .single();
 
     // フォームデータを解析
     const rawData = {
@@ -243,13 +444,56 @@ export async function updateRequestForm(id: string, formData: FormData) {
       .single();
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請フォーム更新時のデータベースエラー', {
+        feature_name: 'request_form_management',
+        action_type: 'update_request_form',
+        user_id: user.id,
+        resource_id: id,
+        error_message: error.message,
+      });
+
       console.error('申請フォーム更新エラー:', error);
       throw new Error('申請フォームの更新に失敗しました');
     }
 
+    // システムログ: 成功
+    await logSystem('info', '申請フォーム更新成功', {
+      feature_name: 'request_form_management',
+      action_type: 'update_request_form',
+      user_id: user.id,
+      resource_id: id,
+      metadata: {
+        form_name: data.name,
+        category: data.category,
+        is_active: data.is_active,
+      },
+    });
+
+    // 監査ログ: 申請フォーム更新
+    await logAudit('request_form_updated', {
+      user_id: user.id,
+      target_type: 'request_forms',
+      target_id: id,
+      before_data: beforeData,
+      after_data: data,
+      details: {
+        updated_fields: Object.keys(validatedData),
+      },
+    });
+
     revalidatePath('/admin/request-forms');
     return { success: true, data };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請フォーム更新時の予期しないエラー', {
+      feature_name: 'request_form_management',
+      action_type: 'update_request_form',
+      resource_id: id,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('申請フォーム更新エラー:', error);
     return {
       success: false,
@@ -266,6 +510,13 @@ export async function deleteRequestForm(id: string) {
   const supabase = createServerClient();
 
   try {
+    // システムログ: 開始
+    await logSystem('info', '申請フォーム削除開始', {
+      feature_name: 'request_form_management',
+      action_type: 'delete_request_form',
+      resource_id: id,
+    });
+
     // ユーザー情報を取得
     const {
       data: { user },
@@ -275,6 +526,14 @@ export async function deleteRequestForm(id: string) {
     console.log('認証結果:', { user, userError });
 
     if (userError || !user) {
+      // システムログ: 認証エラー
+      await logSystem('error', '申請フォーム削除時の認証エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'delete_request_form',
+        resource_id: id,
+        error_message: userError?.message || '認証エラー',
+      });
+
       console.log('認証エラー、service_role_keyで試行');
       // service_role_keyを使用してSupabaseクライアントを作成
       const supabaseWithServiceRole = createClient(
@@ -288,6 +547,13 @@ export async function deleteRequestForm(id: string) {
         }
       );
 
+      // 削除前のデータを取得（監査ログ用）
+      const { data: beforeData } = await supabaseWithServiceRole
+        .from('request_forms')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       // 申請フォームを論理削除（deleted_atを設定）
       const { data, error } = await supabaseWithServiceRole
         .from('request_forms')
@@ -300,9 +566,41 @@ export async function deleteRequestForm(id: string) {
         .single();
 
       if (error) {
+        // システムログ: データベースエラー
+        await logSystem('error', '申請フォーム削除時のデータベースエラー', {
+          feature_name: 'request_form_management',
+          action_type: 'delete_request_form',
+          resource_id: id,
+          error_message: error.message,
+        });
+
         console.error('申請フォーム削除エラー:', error);
         throw new Error('申請フォームの削除に失敗しました');
       }
+
+      // システムログ: 成功
+      await logSystem('info', '申請フォーム削除成功', {
+        feature_name: 'request_form_management',
+        action_type: 'delete_request_form',
+        resource_id: id,
+        metadata: {
+          form_name: beforeData?.name,
+          deletion_type: 'logical',
+        },
+      });
+
+      // 監査ログ: 申請フォーム削除
+      await logAudit('request_form_deleted', {
+        user_id: undefined, // service_role_key使用時はユーザーID不明
+        target_type: 'request_forms',
+        target_id: id,
+        before_data: beforeData,
+        after_data: undefined,
+        details: {
+          deletion_type: 'logical',
+          deleted_at: data.deleted_at,
+        },
+      });
 
       revalidatePath('/admin/requests');
       return { success: true, data };
@@ -317,12 +615,38 @@ export async function deleteRequestForm(id: string) {
       .single();
 
     if (profileError || !profile) {
+      // システムログ: プロフィール取得エラー
+      await logSystem('error', '申請フォーム削除時のプロフィール取得エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'delete_request_form',
+        user_id: user.id,
+        resource_id: id,
+        error_message: profileError?.message || 'ユーザープロフィールが見つかりません',
+      });
+
       throw new Error('ユーザープロフィールが見つかりません');
     }
 
     if (profile.role !== 'admin') {
+      // システムログ: 権限エラー
+      await logSystem('warn', '申請フォーム削除時の権限エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'delete_request_form',
+        user_id: user.id,
+        resource_id: id,
+        error_message: '権限がありません',
+        metadata: { user_role: profile.role },
+      });
+
       throw new Error('権限がありません');
     }
+
+    // 削除前のデータを取得（監査ログ用）
+    const { data: beforeData } = await supabase
+      .from('request_forms')
+      .select('*')
+      .eq('id', id)
+      .single();
 
     // 論理削除（deleted_atを設定）
     const { error } = await supabase
@@ -334,13 +658,56 @@ export async function deleteRequestForm(id: string) {
       .eq('id', id);
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請フォーム削除時のデータベースエラー', {
+        feature_name: 'request_form_management',
+        action_type: 'delete_request_form',
+        user_id: user.id,
+        resource_id: id,
+        error_message: error.message,
+      });
+
       console.error('申請フォーム削除エラー:', error);
       throw new Error('申請フォームの削除に失敗しました');
     }
 
+    // システムログ: 成功
+    await logSystem('info', '申請フォーム削除成功', {
+      feature_name: 'request_form_management',
+      action_type: 'delete_request_form',
+      user_id: user.id,
+      resource_id: id,
+      metadata: {
+        form_name: beforeData?.name,
+        deletion_type: 'logical',
+      },
+    });
+
+    // 監査ログ: 申請フォーム削除
+    await logAudit('request_form_deleted', {
+      user_id: user.id,
+      target_type: 'request_forms',
+      target_id: id,
+      before_data: beforeData,
+      after_data: undefined,
+      details: {
+        deletion_type: 'logical',
+        deleted_at: new Date().toISOString(),
+      },
+    });
+
     revalidatePath('/admin/requests');
     return { success: true };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請フォーム削除時の予期しないエラー', {
+      feature_name: 'request_form_management',
+      action_type: 'delete_request_form',
+      resource_id: id,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('申請フォーム削除エラー:', error);
     return {
       success: false,
@@ -357,12 +724,27 @@ export async function toggleRequestFormStatus(id: string) {
   const supabase = createServerClient();
 
   try {
+    // システムログ: 開始
+    await logSystem('info', '申請フォームステータス切り替え開始', {
+      feature_name: 'request_form_management',
+      action_type: 'toggle_request_form_status',
+      resource_id: id,
+    });
+
     // ユーザー情報を取得
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
     if (userError || !user) {
+      // システムログ: 認証エラー
+      await logSystem('error', '申請フォームステータス切り替え時の認証エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'toggle_request_form_status',
+        resource_id: id,
+        error_message: userError?.message || '認証エラー',
+      });
+
       throw new Error('認証エラー');
     }
 
@@ -374,21 +756,49 @@ export async function toggleRequestFormStatus(id: string) {
       .single();
 
     if (profileError || !profile) {
+      // システムログ: プロフィール取得エラー
+      await logSystem('error', '申請フォームステータス切り替え時のプロフィール取得エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'toggle_request_form_status',
+        user_id: user.id,
+        resource_id: id,
+        error_message: profileError?.message || 'ユーザープロフィールが見つかりません',
+      });
+
       throw new Error('ユーザープロフィールが見つかりません');
     }
 
     if (profile.role !== 'admin') {
+      // システムログ: 権限エラー
+      await logSystem('warn', '申請フォームステータス切り替え時の権限エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'toggle_request_form_status',
+        user_id: user.id,
+        resource_id: id,
+        error_message: '権限がありません',
+        metadata: { user_role: profile.role },
+      });
+
       throw new Error('権限がありません');
     }
 
     // 現在のステータスを取得
     const { data: currentForm, error: fetchError } = await supabase
       .from('request_forms')
-      .select('is_active')
+      .select('is_active, name')
       .eq('id', id)
       .single();
 
     if (fetchError || !currentForm) {
+      // システムログ: フォーム取得エラー
+      await logSystem('error', '申請フォームステータス切り替え時のフォーム取得エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'toggle_request_form_status',
+        user_id: user.id,
+        resource_id: id,
+        error_message: fetchError?.message || '申請フォームが見つかりません',
+      });
+
       throw new Error('申請フォームが見つかりません');
     }
 
@@ -402,13 +812,58 @@ export async function toggleRequestFormStatus(id: string) {
       .eq('id', id);
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請フォームステータス切り替え時のデータベースエラー', {
+        feature_name: 'request_form_management',
+        action_type: 'toggle_request_form_status',
+        user_id: user.id,
+        resource_id: id,
+        error_message: error.message,
+      });
+
       console.error('申請フォームステータス更新エラー:', error);
       throw new Error('申請フォームのステータス更新に失敗しました');
     }
 
+    // システムログ: 成功
+    await logSystem('info', '申請フォームステータス切り替え成功', {
+      feature_name: 'request_form_management',
+      action_type: 'toggle_request_form_status',
+      user_id: user.id,
+      resource_id: id,
+      metadata: {
+        form_name: currentForm.name,
+        old_status: currentForm.is_active,
+        new_status: !currentForm.is_active,
+      },
+    });
+
+    // 監査ログ: 申請フォームステータス切り替え
+    await logAudit('request_form_status_toggled', {
+      user_id: user.id,
+      target_type: 'request_forms',
+      target_id: id,
+      before_data: { is_active: currentForm.is_active },
+      after_data: { is_active: !currentForm.is_active },
+      details: {
+        form_name: currentForm.name,
+        old_status: currentForm.is_active,
+        new_status: !currentForm.is_active,
+      },
+    });
+
     revalidatePath('/admin/request-forms');
     return { success: true, is_active: !currentForm.is_active };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請フォームステータス切り替え時の予期しないエラー', {
+      feature_name: 'request_form_management',
+      action_type: 'toggle_request_form_status',
+      resource_id: id,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('申請フォームステータス更新エラー:', error);
     return {
       success: false,
@@ -425,6 +880,12 @@ export async function getRequestForms() {
   const supabase = createServerClient();
 
   try {
+    // システムログ: 開始
+    await logSystem('info', '申請フォーム一覧取得開始', {
+      feature_name: 'request_form_management',
+      action_type: 'get_request_forms',
+    });
+
     // デバッグ用：認証チェックを一時的に無効化
     console.log('getRequestForms: 開始');
 
@@ -437,6 +898,13 @@ export async function getRequestForms() {
     console.log('認証結果:', { user: user?.id, userError });
 
     if (userError || !user) {
+      // システムログ: 認証エラー
+      await logSystem('error', '申請フォーム一覧取得時の認証エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'get_request_forms',
+        error_message: userError?.message || '認証エラー',
+      });
+
       console.log('認証エラー、service_role_keyで試行');
       // 認証エラーの場合、service_role_keyで直接アクセス
       const serviceSupabase = createClient(
@@ -452,9 +920,25 @@ export async function getRequestForms() {
         .order('created_at', { ascending: false });
 
       if (error) {
+        // システムログ: データベースエラー
+        await logSystem('error', '申請フォーム一覧取得時のデータベースエラー', {
+          feature_name: 'request_form_management',
+          action_type: 'get_request_forms',
+          error_message: error.message,
+        });
+
         console.error('申請フォーム取得エラー:', error);
         throw new Error('申請フォームの取得に失敗しました');
       }
+
+      // システムログ: 成功
+      await logSystem('info', '申請フォーム一覧取得成功', {
+        feature_name: 'request_form_management',
+        action_type: 'get_request_forms',
+        metadata: {
+          form_count: data?.length || 0,
+        },
+      });
 
       return { success: true, data };
     }
@@ -470,6 +954,14 @@ export async function getRequestForms() {
       .single();
 
     if (profileError || !profile) {
+      // システムログ: プロフィール取得エラー
+      await logSystem('error', '申請フォーム一覧取得時のプロフィール取得エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'get_request_forms',
+        user_id: user.id,
+        error_message: profileError?.message || 'ユーザープロフィールが見つかりません',
+      });
+
       throw new Error('ユーザープロフィールが見つかりません');
     }
 
@@ -481,12 +973,38 @@ export async function getRequestForms() {
       .order('created_at', { ascending: false });
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請フォーム一覧取得時のデータベースエラー', {
+        feature_name: 'request_form_management',
+        action_type: 'get_request_forms',
+        user_id: user.id,
+        error_message: error.message,
+      });
+
       console.error('申請フォーム取得エラー:', error);
       throw new Error('申請フォームの取得に失敗しました');
     }
 
+    // システムログ: 成功
+    await logSystem('info', '申請フォーム一覧取得成功', {
+      feature_name: 'request_form_management',
+      action_type: 'get_request_forms',
+      user_id: user.id,
+      metadata: {
+        form_count: data?.length || 0,
+      },
+    });
+
     return { success: true, data };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請フォーム一覧取得時の予期しないエラー', {
+      feature_name: 'request_form_management',
+      action_type: 'get_request_forms',
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('申請フォーム取得エラー:', error);
     return {
       success: false,
@@ -504,12 +1022,27 @@ export async function getRequestForm(id: string) {
   const supabase = createServerClient();
 
   try {
+    // システムログ: 開始
+    await logSystem('info', '申請フォーム詳細取得開始', {
+      feature_name: 'request_form_management',
+      action_type: 'get_request_form',
+      resource_id: id,
+    });
+
     // ユーザー情報を取得
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
     if (userError || !user) {
+      // システムログ: 認証エラー
+      await logSystem('error', '申請フォーム詳細取得時の認証エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'get_request_form',
+        resource_id: id,
+        error_message: userError?.message || '認証エラー',
+      });
+
       throw new Error('認証エラー');
     }
 
@@ -521,6 +1054,15 @@ export async function getRequestForm(id: string) {
       .single();
 
     if (profileError || !profile) {
+      // システムログ: プロフィール取得エラー
+      await logSystem('error', '申請フォーム詳細取得時のプロフィール取得エラー', {
+        feature_name: 'request_form_management',
+        action_type: 'get_request_form',
+        user_id: user.id,
+        resource_id: id,
+        error_message: profileError?.message || 'ユーザープロフィールが見つかりません',
+      });
+
       throw new Error('ユーザープロフィールが見つかりません');
     }
 
@@ -533,12 +1075,43 @@ export async function getRequestForm(id: string) {
       .single();
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', '申請フォーム詳細取得時のデータベースエラー', {
+        feature_name: 'request_form_management',
+        action_type: 'get_request_form',
+        user_id: user.id,
+        resource_id: id,
+        error_message: error.message,
+      });
+
       console.error('申請フォーム詳細取得エラー:', error);
       throw new Error('申請フォームの詳細取得に失敗しました');
     }
 
+    // システムログ: 成功
+    await logSystem('info', '申請フォーム詳細取得成功', {
+      feature_name: 'request_form_management',
+      action_type: 'get_request_form',
+      user_id: user.id,
+      resource_id: id,
+      metadata: {
+        form_name: data.name,
+        category: data.category,
+        is_active: data.is_active,
+      },
+    });
+
     return { success: true, data };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', '申請フォーム詳細取得時の予期しないエラー', {
+      feature_name: 'request_form_management',
+      action_type: 'get_request_form',
+      resource_id: id,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('申請フォーム詳細取得エラー:', error);
     return {
       success: false,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FormInput, Edit, ArrowLeft, Eye } from 'lucide-react';
+import { FormInput, Edit, ArrowLeft, Eye, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -186,6 +186,62 @@ export default function RequestTypeDetailPage() {
               <div className="text-sm font-medium text-gray-600">編集日</div>
               <div className="text-gray-900">{formatDate(requestType.updated_at)}</div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ログ監視 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="w-5 h-5" />
+            <span>ログ監視</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <FormInput className="w-5 h-5 text-blue-600" />
+                <span className="font-semibold">申請作成</span>
+              </div>
+              <div className="text-2xl font-bold text-blue-600">156</div>
+              <div className="text-sm text-gray-600">今月の作成数</div>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Eye className="w-5 h-5 text-green-600" />
+                <span className="font-semibold">申請表示</span>
+              </div>
+              <div className="text-2xl font-bold text-green-600">89</div>
+              <div className="text-sm text-gray-600">今月の表示数</div>
+            </div>
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Edit className="w-5 h-5 text-yellow-600" />
+                <span className="font-semibold">申請編集</span>
+              </div>
+              <div className="text-2xl font-bold text-yellow-600">23</div>
+              <div className="text-sm text-gray-600">今月の編集数</div>
+            </div>
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <FileText className="w-5 h-5 text-purple-600" />
+                <span className="font-semibold">承認処理</span>
+              </div>
+              <div className="text-2xl font-bold text-purple-600">67</div>
+              <div className="text-sm text-gray-600">今月の承認数</div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              最終更新: {new Date().toLocaleString('ja-JP')}
+            </div>
+            <Button variant="outline" size="sm">
+              <FileText className="w-4 h-4 mr-2" />
+              詳細ログを表示
+            </Button>
           </div>
         </CardContent>
       </Card>

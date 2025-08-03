@@ -32,11 +32,11 @@ export async function GET(request: NextRequest) {
 
     // フィルター適用
     if (startDate) {
-      query = query.gte('created_date', startDate);
+      query = query.gte('created_at', startDate);
     }
 
     if (endDate) {
-      query = query.lte('created_date', endDate);
+      query = query.lte('created_at', endDate);
     }
 
     if (userId) {

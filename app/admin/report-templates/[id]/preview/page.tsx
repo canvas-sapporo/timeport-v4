@@ -45,10 +45,28 @@ export default function PreviewReportTemplatePage({ params }: { params: Promise<
 
   async function loadData(id: string) {
     try {
+      // プレビューアクセスログ記録
+      console.log('レポートテンプレートプレビューアクセス:', {
+        templateId: id,
+        timestamp: new Date().toISOString(),
+        user: 'admin',
+        action: 'preview_report_template',
+      });
+
       // テンプレート情報を取得
       const templateResult = await getReportTemplate(id);
       if (templateResult.success && templateResult.data) {
         setTemplate(templateResult.data);
+
+        // プレビュー成功ログ記録
+        console.log('レポートテンプレートプレビュー成功:', {
+          templateId: id,
+          name: templateResult.data.name,
+          fieldCount: templateResult.data.form_config.length,
+          timestamp: new Date().toISOString(),
+          user: 'admin',
+          action: 'preview_report_template_success',
+        });
 
         // プレビューデータを初期化
         const initialData: Record<string, unknown> = {};
@@ -69,6 +87,15 @@ export default function PreviewReportTemplatePage({ params }: { params: Promise<
         });
         setPreviewData(initialData);
       } else {
+        // プレビュー失敗ログ記録
+        console.error('レポートテンプレートプレビュー失敗:', {
+          templateId: id,
+          error: templateResult.error,
+          timestamp: new Date().toISOString(),
+          user: 'admin',
+          action: 'preview_report_template_error',
+        });
+
         toast({
           title: 'エラー',
           description: templateResult.error || 'テンプレートの取得に失敗しました',
@@ -84,7 +111,15 @@ export default function PreviewReportTemplatePage({ params }: { params: Promise<
         setGroups(groupsResult.data.groups);
       }
     } catch (error) {
-      console.error('データ読み込みエラー:', error);
+      // 例外ログ記録
+      console.error('レポートテンプレートプレビュー例外:', {
+        templateId: id,
+        error: error,
+        timestamp: new Date().toISOString(),
+        user: 'admin',
+        action: 'preview_report_template_exception',
+      });
+
       toast({
         title: 'エラー',
         description: 'データの読み込みに失敗しました',

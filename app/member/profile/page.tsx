@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Building, Calendar } from 'lucide-react';
+import { User, Building, Calendar, FileText } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -419,6 +419,84 @@ export default function MemberProfilePage() {
               <div className="text-2xl font-bold text-purple-600">3</div>
               <div className="text-sm text-purple-600">今月有給取得</div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 操作ログ */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="w-5 h-5" />
+            <span>操作ログ</span>
+          </CardTitle>
+          <CardDescription>最近の操作履歴を表示します</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium">プロフィール更新</p>
+                  <p className="text-sm text-gray-600">基本情報を更新しました</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium">2024/01/15 14:30</p>
+                <p className="text-xs text-gray-500">IP: 192.168.1.100</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium">勤怠記録</p>
+                  <p className="text-sm text-gray-600">出勤を記録しました</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium">2024/01/15 09:00</p>
+                <p className="text-xs text-gray-500">IP: 192.168.1.100</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium">申請提出</p>
+                  <p className="text-sm text-gray-600">有給申請を提出しました</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium">2024/01/14 16:45</p>
+                <p className="text-xs text-gray-500">IP: 192.168.1.100</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <div>
+                  <p className="font-medium">ログイン</p>
+                  <p className="text-sm text-gray-600">システムにログインしました</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium">2024/01/14 08:30</p>
+                <p className="text-xs text-gray-500">IP: 192.168.1.100</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-between items-center">
+            <div className="text-sm text-gray-600">表示期間: 過去30日間</div>
+            <Button variant="outline" size="sm">
+              <FileText className="w-4 h-4 mr-2" />
+              詳細ログを表示
+            </Button>
           </div>
         </CardContent>
       </Card>

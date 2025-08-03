@@ -173,6 +173,16 @@ export default function CreateReportTemplatePage() {
     try {
       setIsSubmitting(true);
 
+      // システムログ記録
+      console.log('レポートテンプレート作成開始:', {
+        name: basicInfo.name,
+        description: basicInfo.description,
+        fieldCount: formFields.length,
+        timestamp: new Date().toISOString(),
+        user: 'admin',
+        action: 'create_report_template',
+      });
+
       const formData = new FormData();
       formData.append('name', basicInfo.name);
       formData.append('description', basicInfo.description);
@@ -205,12 +215,30 @@ export default function CreateReportTemplatePage() {
       const result = await createReportTemplate(formData);
 
       if (result.success) {
+        // 成功ログ記録
+        console.log('レポートテンプレート作成成功:', {
+          templateId: result.data?.id,
+          name: basicInfo.name,
+          timestamp: new Date().toISOString(),
+          user: 'admin',
+          action: 'create_report_template_success',
+        });
+
         toast({
           title: '成功',
           description: 'テンプレートを作成しました',
         });
         router.push('/admin/report-templates');
       } else {
+        // エラーログ記録
+        console.error('レポートテンプレート作成失敗:', {
+          name: basicInfo.name,
+          error: result.error,
+          timestamp: new Date().toISOString(),
+          user: 'admin',
+          action: 'create_report_template_error',
+        });
+
         toast({
           title: 'エラー',
           description: result.error || 'テンプレートの作成に失敗しました',
@@ -218,7 +246,15 @@ export default function CreateReportTemplatePage() {
         });
       }
     } catch (error) {
-      console.error('テンプレート作成エラー:', error);
+      // 例外ログ記録
+      console.error('レポートテンプレート作成例外:', {
+        name: basicInfo.name,
+        error: error,
+        timestamp: new Date().toISOString(),
+        user: 'admin',
+        action: 'create_report_template_exception',
+      });
+
       toast({
         title: 'エラー',
         description: 'テンプレートの作成に失敗しました',

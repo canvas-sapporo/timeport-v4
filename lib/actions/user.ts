@@ -8,6 +8,7 @@
  */
 
 import { createServerClient } from '@/lib/supabase';
+import { logSystem, logAudit } from '@/lib/utils/log-system';
 import type { UUID } from '@/types/common';
 import type {
   UserCompanyInfo,
@@ -35,6 +36,14 @@ export async function getUsers(): Promise<{
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
+      // システムログ: 認証エラー
+      await logSystem('error', 'ユーザー一覧取得時の認証エラー', {
+        feature_name: 'user_management',
+        action_type: 'get_users',
+        user_id: user?.id,
+        error_message: userError?.message,
+      });
+
       return {
         success: false,
         error: '認証エラー',
@@ -44,6 +53,14 @@ export async function getUsers(): Promise<{
     // ユーザーの企業IDを取得
     const userCompanyId = await getUserCompanyId(user.id);
     if (!userCompanyId) {
+      // システムログ: 企業情報取得エラー
+      await logSystem('error', 'ユーザーの企業情報が見つかりません', {
+        feature_name: 'user_management',
+        action_type: 'get_users',
+        user_id: user.id,
+        error_message: '企業情報が見つかりません',
+      });
+
       return {
         success: false,
         error: 'ユーザーの企業情報が見つかりません',
@@ -58,6 +75,15 @@ export async function getUsers(): Promise<{
       .order('code', { ascending: true });
 
     if (error) {
+      // システムログ: データベースエラー
+      await logSystem('error', 'ユーザー取得エラー', {
+        feature_name: 'user_management',
+        action_type: 'get_users',
+        user_id: user.id,
+        company_id: userCompanyId,
+        error_message: error.message,
+      });
+
       console.error('ユーザー取得エラー:', error);
       return {
         success: false,
@@ -75,11 +101,42 @@ export async function getUsers(): Promise<{
 
     const filteredUsers = companyUsers.filter(Boolean) as UserProfile[];
 
+    // システムログ: 成功
+    await logSystem('info', 'ユーザー一覧取得成功', {
+      feature_name: 'user_management',
+      action_type: 'get_users',
+      user_id: user.id,
+      company_id: userCompanyId,
+      metadata: {
+        total_users: filteredUsers.length,
+        company_users: users?.length || 0,
+      },
+    });
+
+    // 監査ログ: ユーザー一覧閲覧
+    await logAudit('user_list_viewed', {
+      user_id: user.id,
+      company_id: userCompanyId,
+      target_type: 'user_profiles',
+      details: {
+        total_users: filteredUsers.length,
+        action: 'view_user_list',
+      },
+    });
+
     return {
       success: true,
       data: filteredUsers,
     };
   } catch (error) {
+    // システムログ: 予期しないエラー
+    await logSystem('error', 'getUsers 予期しないエラー', {
+      feature_name: 'user_management',
+      action_type: 'get_users',
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_stack: error instanceof Error ? error.stack : undefined,
+    });
+
     console.error('getUsers エラー:', error);
     return {
       success: false,
