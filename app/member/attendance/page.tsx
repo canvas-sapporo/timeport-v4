@@ -26,8 +26,8 @@ import {
 } from '@/components/ui/dialog';
 import type { AttendanceData, AttendanceStatusData, AttendanceFilters } from '@/schemas/attendance';
 import AdminCsvExportDialog from '@/components/admin/CsvExportDialog';
-import AttendanceFiltersComponent from '@/components/member/AttendanceFilters';
-import WorkTypeDetailDialog from '@/components/admin/WorkTypeDetailDialog';
+import AttendanceFiltersComponent from '@/components/member/attendance/AttendanceFilters';
+import WorkTypeDetailDialog from '@/components/admin/work-types/WorkTypeDetailDialog';
 
 // カレンダー用の日付データ型
 interface CalendarDay {

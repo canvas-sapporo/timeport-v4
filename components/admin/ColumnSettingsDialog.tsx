@@ -29,14 +29,14 @@ interface ColumnSettingsDialogProps {
   onReset: () => void;
 }
 
-export function ColumnSettingsDialog({
+export const ColumnSettingsDialog = ({
   open,
   onOpenChange,
   columns,
   visibleColumns,
   onApply,
   onReset,
-}: ColumnSettingsDialogProps) {
+}: ColumnSettingsDialogProps) => {
   const [selectedColumns, setSelectedColumns] = useState<string[]>(visibleColumns);
 
   const handleColumnToggle = (columnKey: string, checked: boolean) => {
@@ -106,4 +106,4 @@ export function ColumnSettingsDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

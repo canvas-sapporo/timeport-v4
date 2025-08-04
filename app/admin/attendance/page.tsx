@@ -42,13 +42,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { AttendanceData, AttendanceStatusData, AttendanceFilters } from '@/schemas/attendance';
-import AdminAttendanceFilters from '@/components/admin/AttendanceFilters';
+import AdminAttendanceFilters from '@/components/admin/attendance/AttendanceFilters';
 import AdminCsvExportDialog from '@/components/admin/CsvExportDialog';
-import AttendancePreviewDialog from '@/components/admin/AttendancePreviewDialog';
-import AttendanceEditDialog from '@/components/admin/AttendanceEditDialog';
-import AttendanceDeleteDialog from '@/components/admin/AttendanceDeleteDialog';
-import { AttendanceTimeEditDialog } from '@/components/admin/AttendanceTimeEditDialog';
-import WorkTypeDetailDialog from '@/components/admin/WorkTypeDetailDialog';
+import AttendancePreviewDialog from '@/components/admin/attendance/AttendancePreviewDialog';
+import AttendanceEditDialog from '@/components/admin/attendance/AttendanceEditDialog';
+import AttendanceDeleteDialog from '@/components/admin/attendance/AttendanceDeleteDialog';
+import { AttendanceTimeEditDialog } from '@/components/admin/attendance/AttendanceTimeEditDialog';
+import WorkTypeDetailDialog from '@/components/admin/work-types/WorkTypeDetailDialog';
 
 export default function AdminAttendancePage() {
   const { user } = useAuth();
@@ -306,7 +306,7 @@ export default function AdminAttendancePage() {
 
       setIsLoadingWorkTypes(true);
       try {
-        const types = await getWorkTypes();
+        const types = await getWorkTypes(user.company_id);
         setWorkTypes(types);
       } catch (error) {
         console.error('勤務形態取得エラー:', error);
@@ -721,7 +721,6 @@ export default function AdminAttendancePage() {
           late_minutes: 0,
           early_leave_minutes: 0,
           status: isWeekendDay ? 'normal' : 'absent', // 土日は正常、平日は欠勤
-          auto_calculated: false,
           description: undefined,
           approved_by: undefined,
           approved_at: undefined,

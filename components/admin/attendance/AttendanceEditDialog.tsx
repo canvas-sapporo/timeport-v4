@@ -1,7 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, User, Calendar, FileText, AlertCircle, Save, X, Plus, Trash2 } from 'lucide-react';
+import {
+  Clock,
+  User,
+  Calendar,
+  FileText,
+  AlertCircle,
+  Save,
+  X,
+  Plus,
+  Trash2,
+  History,
+} from 'lucide-react';
 
 import {
   Dialog,
@@ -25,11 +36,11 @@ import { Badge } from '@/components/ui/badge';
 import {
   getAttendanceDetail,
   updateAttendance,
-  updateAttendanceWithClockEdit,
   getWorkTypes,
+  getAttendanceEditHistory,
 } from '@/lib/actions/attendance';
 import { getAttendanceSettingValue } from '@/lib/actions/settings';
-import { formatDate, formatTime } from '@/lib/utils';
+import { formatDate, formatTime, formatMinutes, getAttendanceChanges } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import type { AttendanceData, ClockRecord } from '@/schemas/attendance';
@@ -55,14 +66,16 @@ export default function AttendanceEditDialog({
   const [error, setError] = useState<string | null>(null);
   const [workTypes, setWorkTypes] = useState<{ id: string; name: string }[]>([]);
   const [clockEditEnabled, setClockEditEnabled] = useState(false);
-  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  // 編集履歴の状態
+  const [editHistory, setEditHistory] = useState<AttendanceData[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // 編集用の状態
   const [editData, setEditData] = useState({
     work_type_id: 'none',
     description: '',
     status: 'normal' as 'normal' | 'late' | 'early_leave' | 'absent',
-    auto_calculated: true,
     clock_records: [] as ClockRecord[],
     edit_reason: '',
   });
@@ -72,6 +85,7 @@ export default function AttendanceEditDialog({
       fetchAttendanceDetail();
       fetchWorkTypes();
       fetchClockEditSetting();
+      fetchEditHistory(); // 編集履歴の存在確認のため、常に呼び出す
     } else {
       setAttendance(null);
       setError(null);
@@ -79,10 +93,11 @@ export default function AttendanceEditDialog({
         work_type_id: 'none',
         description: '',
         status: 'normal',
-        auto_calculated: true,
         clock_records: [],
         edit_reason: '',
       });
+      // ダイアログが閉じられた時に状態をリセット
+      setEditHistory([]);
     }
   }, [open, attendanceId]);
 
@@ -100,7 +115,6 @@ export default function AttendanceEditDialog({
           work_type_id: result.attendance.work_type_id || 'none',
           description: result.attendance.description || '',
           status: result.attendance.status,
-          auto_calculated: result.attendance.auto_calculated,
           clock_records: result.attendance.clock_records || [],
           edit_reason: '',
         });
@@ -121,7 +135,9 @@ export default function AttendanceEditDialog({
 
   const fetchWorkTypes = async () => {
     try {
-      const types = await getWorkTypes();
+      // ユーザーの企業IDを取得して勤務タイプをフィルタリング
+      const companyId = user?.company_id;
+      const types = await getWorkTypes(companyId);
       setWorkTypes(types);
     } catch (err) {
       console.error('勤務タイプ取得エラー:', err);
@@ -140,6 +156,22 @@ export default function AttendanceEditDialog({
     } catch (err) {
       console.error('打刻編集設定取得エラー:', err);
       setClockEditEnabled(false);
+    }
+  };
+
+  const fetchEditHistory = async () => {
+    if (!attendanceId) return;
+
+    setIsLoadingHistory(true);
+    try {
+      const result = await getAttendanceEditHistory(attendanceId);
+      if (result.success && result.history) {
+        setEditHistory(result.history);
+      }
+    } catch (err) {
+      console.error('編集履歴取得エラー:', err);
+    } finally {
+      setIsLoadingHistory(false);
     }
   };
 
@@ -165,36 +197,27 @@ export default function AttendanceEditDialog({
     setIsSaving(true);
 
     try {
-      let result;
-
-      if (clockEditEnabled && hasClockChanges) {
-        // 打刻編集の場合
-        result = await updateAttendanceWithClockEdit(
-          attendanceId,
-          {
-            work_type_id: editData.work_type_id === 'none' ? undefined : editData.work_type_id,
-            description: editData.description || undefined,
-            status: editData.status,
-            auto_calculated: editData.auto_calculated,
-            clock_records: editData.clock_records,
-            edit_reason: editData.edit_reason,
-          },
-          user?.id
-        );
-      } else {
-        // 通常の更新の場合
-        result = await updateAttendance(
-          attendanceId,
-          {
-            work_type_id: editData.work_type_id === 'none' ? undefined : editData.work_type_id,
-            description: editData.description || undefined,
-            status: editData.status,
-            auto_calculated: editData.auto_calculated,
-            clock_records: editData.clock_records,
-          },
-          user?.id
-        );
+      // 編集理由の必須チェック
+      if (!editData.edit_reason || editData.edit_reason.trim() === '') {
+        toast({
+          title: '編集理由が必要です',
+          description: '編集理由を入力してください',
+          variant: 'destructive',
+        });
+        return;
       }
+
+      const result = await updateAttendance(
+        attendanceId,
+        {
+          work_type_id: editData.work_type_id === 'none' ? undefined : editData.work_type_id,
+          description: editData.description || undefined,
+          status: editData.status,
+          clock_records: editData.clock_records,
+          edit_reason: editData.edit_reason,
+        },
+        user?.id
+      );
 
       if (result.success) {
         toast({
@@ -321,12 +344,13 @@ export default function AttendanceEditDialog({
                 </div>
 
                 <div>
-                  <Label htmlFor="status">ステータス</Label>
+                  <Label htmlFor="status">ステータス（変更不可）</Label>
                   <Select
                     value={editData.status}
                     onValueChange={(value: 'normal' | 'late' | 'early_leave' | 'absent') =>
                       setEditData({ ...editData, status: value })
                     }
+                    disabled
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -343,24 +367,6 @@ export default function AttendanceEditDialog({
 
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="auto_calculated">自動計算</Label>
-                  <Select
-                    value={editData.auto_calculated ? 'true' : 'false'}
-                    onValueChange={(value) =>
-                      setEditData({ ...editData, auto_calculated: value === 'true' })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">有効</SelectItem>
-                      <SelectItem value="false">無効</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
                   <Label htmlFor="description">備考</Label>
                   <Textarea
                     id="description"
@@ -370,18 +376,17 @@ export default function AttendanceEditDialog({
                     rows={3}
                   />
                 </div>
-                {clockEditEnabled && (
-                  <div>
-                    <Label htmlFor="edit_reason">編集理由</Label>
-                    <Textarea
-                      id="edit_reason"
-                      value={editData.edit_reason}
-                      onChange={(e) => setEditData({ ...editData, edit_reason: e.target.value })}
-                      placeholder="編集理由を入力してください"
-                      rows={3}
-                    />
-                  </div>
-                )}
+                <div>
+                  <Label htmlFor="edit_reason">編集理由 *</Label>
+                  <Textarea
+                    id="edit_reason"
+                    value={editData.edit_reason}
+                    onChange={(e) => setEditData({ ...editData, edit_reason: e.target.value })}
+                    placeholder="編集理由を入力してください"
+                    rows={3}
+                    required
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -456,7 +461,7 @@ export default function AttendanceEditDialog({
                   <span className="text-sm font-medium text-gray-600">実勤務時間</span>
                   <span className="text-sm">
                     {attendance.actual_work_minutes !== undefined
-                      ? `${Math.floor(attendance.actual_work_minutes / 60)}h${attendance.actual_work_minutes % 60}m`
+                      ? formatMinutes(attendance.actual_work_minutes)
                       : '--:--'}
                   </span>
                 </div>
@@ -466,7 +471,7 @@ export default function AttendanceEditDialog({
                   <span className="text-sm font-medium text-gray-600">残業時間</span>
                   <span className="text-sm">
                     {attendance.overtime_minutes !== undefined
-                      ? `${Math.floor(attendance.overtime_minutes / 60)}h${attendance.overtime_minutes % 60}m`
+                      ? formatMinutes(attendance.overtime_minutes)
                       : '--:--'}
                   </span>
                 </div>
@@ -474,7 +479,7 @@ export default function AttendanceEditDialog({
                   <span className="text-sm font-medium text-gray-600">遅刻時間</span>
                   <span className="text-sm">
                     {attendance.late_minutes !== undefined
-                      ? `${Math.floor(attendance.late_minutes / 60)}h${attendance.late_minutes % 60}m`
+                      ? formatMinutes(attendance.late_minutes)
                       : '--:--'}
                   </span>
                 </div>
@@ -482,7 +487,7 @@ export default function AttendanceEditDialog({
                   <span className="text-sm font-medium text-gray-600">早退時間</span>
                   <span className="text-sm">
                     {attendance.early_leave_minutes !== undefined
-                      ? `${Math.floor(attendance.early_leave_minutes / 60)}h${attendance.early_leave_minutes % 60}m`
+                      ? formatMinutes(attendance.early_leave_minutes)
                       : '--:--'}
                   </span>
                 </div>
@@ -619,7 +624,7 @@ export default function AttendanceEditDialog({
                                       const end = new Date(breakRecord.break_end);
                                       const diffMs = end.getTime() - start.getTime();
                                       const diffMinutes = Math.floor(diffMs / (1000 * 60));
-                                      return `${Math.floor(diffMinutes / 60)}h${diffMinutes % 60}m`;
+                                      return formatMinutes(diffMinutes);
                                     })()}
                                   </div>
                                 )}
@@ -636,6 +641,80 @@ export default function AttendanceEditDialog({
               </Card>
             );
           })()}
+
+          {/* 編集履歴 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="w-4 h-4" />
+                編集履歴
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingHistory ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-sm text-gray-600">編集履歴を読み込み中...</span>
+                </div>
+              ) : editHistory.length > 1 ? (
+                <div className="space-y-4">
+                  {editHistory.map((record, index) => {
+                    // 最初のレコード（最新）は比較対象がないのでスキップ
+                    if (index === 0) return null;
+
+                    const previousRecord = editHistory[index - 1];
+                    const changes = getAttendanceChanges(previousRecord, record);
+
+                    return (
+                      <div key={record.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">
+                              編集 {editHistory.length - index}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {new Date(record.updated_at).toLocaleString('ja-JP')}
+                            </Badge>
+                          </div>
+                          {record.editor_name && (
+                            <span className="text-xs text-gray-600">
+                              編集者: {record.editor_name}
+                            </span>
+                          )}
+                        </div>
+
+                        {changes.length > 0 ? (
+                          <div className="space-y-2">
+                            {changes.map((change, changeIndex) => (
+                              <div key={changeIndex} className="flex items-center gap-2 text-sm">
+                                <span className="text-gray-600 min-w-20">{change.fieldName}:</span>
+                                <span className="text-red-600 line-through">{change.oldValue}</span>
+                                <span className="text-gray-400">→</span>
+                                <span className="text-green-600 font-medium">
+                                  {change.newValue}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500">変更された項目はありません</div>
+                        )}
+
+                        {record.edit_reason && (
+                          <div className="mt-3 p-2 bg-blue-50 rounded border-l-4 border-blue-400">
+                            <div className="text-xs text-blue-800 font-medium">編集理由:</div>
+                            <div className="text-sm text-blue-700">{record.edit_reason}</div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500">編集履歴はありません</div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex justify-end gap-2 pt-4">

@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAttendanceDetail, deleteAttendance } from '@/lib/actions/attendance';
-import { formatDate, formatTime } from '@/lib/utils';
+import { formatDate, formatTime, formatMinutes } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import type { AttendanceData } from '@/schemas/attendance';
 
@@ -199,9 +199,7 @@ export default function AttendanceDeleteDialog({
               {attendance.actual_work_minutes !== undefined && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">実勤務時間:</span>
-                  <span className="text-sm">
-                    {`${Math.floor(attendance.actual_work_minutes / 60)}h${attendance.actual_work_minutes % 60}m`}
-                  </span>
+                  <span className="text-sm">{formatMinutes(attendance.actual_work_minutes)}</span>
                 </div>
               )}
               {attendance.description && (

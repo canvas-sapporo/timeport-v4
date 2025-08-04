@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerAdminClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Search params:', { page, limit, startDate, endDate, userId, search });
 
-    const supabase = createServerSupabaseClient();
+    const supabase = createServerAdminClient();
 
     // Authorizationヘッダーからトークンを取得
     const authHeader = request.headers.get('authorization');
@@ -73,15 +73,10 @@ export async function GET(request: NextRequest) {
     // ユーザーのグループと企業IDを取得
     console.log('Fetching user groups for user ID:', user.id);
 
+    // まずユーザーグループを取得
     const { data: userGroups, error: userGroupsError } = await supabase
       .from('user_groups')
-      .select(
-        `
-        groups!user_groups_group_id_fkey(
-          company_id
-        )
-      `
-      )
+      .select('group_id')
       .eq('user_id', user.id);
 
     console.log('User groups result:', {
@@ -94,12 +89,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User groups not found' }, { status: 404 });
     }
 
-    // 企業IDを取得（最初のグループの企業IDを使用）
-    const companyId = userGroups[0]?.groups?.[0]?.company_id;
+    // 最初のグループIDを取得
+    const firstGroupId = userGroups[0].group_id;
+
+    // グループから企業IDを取得
+    const { data: groupData, error: groupError } = await supabase
+      .from('groups')
+      .select('company_id')
+      .eq('id', firstGroupId)
+      .single();
+
+    if (groupError || !groupData) {
+      console.error('Group error:', groupError);
+      return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+    }
+
+    const companyId = groupData.company_id;
     console.log('Company ID extracted:', companyId);
 
     if (!companyId) {
-      console.error('Company ID not found in user groups');
+      console.error('Company ID not found in group');
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 

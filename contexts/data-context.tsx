@@ -415,7 +415,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         late_minutes: 0,
         early_leave_minutes: 0,
         status: 'normal',
-        auto_calculated: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RequestMonitoring } from '@/components/admin/RequestMonitoring';
+import { RequestMonitoring } from '@/components/admin/request/RequestMonitoring';
 
 function MonitoringSkeleton() {
   return (

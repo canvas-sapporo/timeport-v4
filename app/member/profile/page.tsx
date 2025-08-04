@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import UserSettings from '@/components/member/UserSettings';
+import UserSettings from '@/components/member/settings/UserSettings';
 import { getCompanyInfo, getUserProfile } from '@/lib/actions/user-settings';
 import { getUserCompanyId } from '@/lib/actions/user';
 import type { CompanyInfo } from '@/schemas/user_profile';

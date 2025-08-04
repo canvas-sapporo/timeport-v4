@@ -371,7 +371,6 @@ export function generateAttendanceRecords(userId: string): AttendanceData[] {
       late_minutes: clockInVariation > 0 ? Math.abs(clockInVariation) : 0,
       early_leave_minutes: 0,
       status: clockInVariation > 0 ? 'late' : 'normal',
-      auto_calculated: true,
       description: clockInVariation > 0 ? '遅刻' : undefined,
       created_at: date.toISOString(),
       updated_at: date.toISOString(),
@@ -500,7 +499,6 @@ export async function clockIn(userId: string, time: string) {
     late_minutes: 0,
     early_leave_minutes: 0,
     status: 'normal',
-    auto_calculated: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

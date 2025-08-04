@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ClockRecord, ClockBreakRecord, AttendanceData } from '@/schemas/attendance';
+import { formatMinutes } from '@/lib/utils';
 import { getAttendanceDetail, editAttendanceTime } from '@/lib/actions/attendance';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -522,21 +523,15 @@ export const AttendanceTimeEditDialog = ({
             <CardContent className="grid grid-cols-3 gap-4">
               <div>
                 <Label>実勤務時間</Label>
-                <p className="text-lg font-semibold">
-                  {Math.floor(workMinutes / 60)}h{workMinutes % 60}m
-                </p>
+                <p className="text-lg font-semibold">{formatMinutes(workMinutes)}</p>
               </div>
               <div>
                 <Label>残業時間</Label>
-                <p className="text-lg font-semibold">
-                  {Math.floor(overtimeMinutes / 60)}h{overtimeMinutes % 60}m
-                </p>
+                <p className="text-lg font-semibold">{formatMinutes(overtimeMinutes)}</p>
               </div>
               <div>
                 <Label>総休憩時間</Label>
-                <p className="text-lg font-semibold">
-                  {Math.floor(breakMinutes / 60)}h{breakMinutes % 60}m
-                </p>
+                <p className="text-lg font-semibold">{formatMinutes(breakMinutes)}</p>
               </div>
             </CardContent>
           </Card>
