@@ -1066,12 +1066,13 @@ export async function getTodayAttendance(userId: string): Promise<Attendance | n
   try {
     const today = getJSTDate();
 
-    // 今日の勤怠記録を取得（複数レコードがある場合は最新のものを取得）
+    // 今日の勤怠記録を取得（is_current = true のレコードのみ）
     const { data: records, error } = await supabaseAdmin
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
       .eq('work_date', today)
+      .eq('is_current', true)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -1158,6 +1159,7 @@ export async function getMemberAttendance(userId: string): Promise<Attendance[]>
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
+      .eq('is_current', true)
       .is('deleted_at', null)
       .gte('work_date', lastMonthStr)
       .order('work_date', { ascending: false })
@@ -1223,6 +1225,7 @@ export async function getUserAttendance(
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
+      .eq('is_current', true)
       .is('deleted_at', null)
       .order('work_date', { ascending: false })
       .order('created_at', { ascending: false })
