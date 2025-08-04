@@ -11,14 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
 
@@ -197,113 +189,73 @@ export default function NotificationSystem({ onNotificationClick }: Notification
   };
 
   return (
-    <>
-      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs"
-              >
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </Badge>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80">
-          <div className="flex items-center justify-between p-2 border-b">
-            <h3 className="font-medium">通知</h3>
-            {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs">
-                すべて既読
-              </Button>
-            )}
-          </div>
-          <div className="max-h-96 overflow-y-auto">
-            {isLoading ? (
-              <div className="p-4 text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-                <p className="text-sm text-muted-foreground mt-2">読み込み中...</p>
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-4 text-center">
-                <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">通知はありません</p>
-              </div>
-            ) : (
-              notifications.map((notification) => (
-                <DropdownMenuItem
-                  key={notification.id}
-                  className="p-3 cursor-pointer hover:bg-muted"
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <div className="flex items-start gap-3 w-full">
-                    <div className="flex-shrink-0 mt-0.5">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm font-medium truncate">{notification.title}</p>
-                        {getNotificationBadge(notification.type)}
-                        {!notification.is_read && (
-                          <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(notification.created_at).toLocaleString('ja-JP')}
-                      </p>
-                    </div>
-                  </div>
-                </DropdownMenuItem>
-              ))
-            )}
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>通知一覧</DialogTitle>
-            <DialogDescription>
-              システムからの通知やリクエスト関連のメッセージを確認できます。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {notifications.map((notification) => (
-              <Card
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="relative">
+          <Bell className="w-5 h-5" />
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs"
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80">
+        <div className="flex items-center justify-between p-2 border-b">
+          <h3 className="font-medium">通知</h3>
+          {unreadCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs">
+              すべて既読
+            </Button>
+          )}
+        </div>
+        <div className="max-h-96 overflow-y-auto">
+          {isLoading ? (
+            <div className="p-4 text-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+              <p className="text-sm text-muted-foreground mt-2">読み込み中...</p>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="p-4 text-center">
+              <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">通知はありません</p>
+            </div>
+          ) : (
+            notifications.map((notification) => (
+              <DropdownMenuItem
                 key={notification.id}
-                className={`cursor-pointer transition-colors ${
-                  !notification.is_read ? 'bg-muted/50' : ''
-                }`}
+                className="p-3 cursor-pointer hover:bg-muted"
                 onClick={() => handleNotificationClick(notification)}
               >
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {getNotificationIcon(notification.type)}
-                      <CardTitle className="text-base">{notification.title}</CardTitle>
+                <div className="flex items-start gap-3 w-full">
+                  <div className="flex-shrink-0 mt-0.5">
+                    {getNotificationIcon(notification.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-medium truncate">{notification.title}</p>
                       {getNotificationBadge(notification.type)}
+                      {!notification.is_read && (
+                        <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {notification.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
                       {new Date(notification.created_at).toLocaleString('ja-JP')}
                     </p>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{notification.message}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+                </div>
+              </DropdownMenuItem>
+            ))
+          )}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
