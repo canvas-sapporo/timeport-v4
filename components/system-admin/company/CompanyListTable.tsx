@@ -12,6 +12,7 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
+  Eye,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ import { clearFeatureCache, triggerFeatureUpdate } from '@/hooks/use-company-fea
 import CompanyCreateDialog from './CompanyCreateDialog';
 import CompanyEditDialog from './CompanyEditDialog';
 import CompanyDeleteDialog from './CompanyDeleteDialog';
+import CompanyPreviewDialog from './CompanyPreviewDialog';
 
 export default function CompanyListTable({
   companies,
@@ -445,7 +447,12 @@ export default function CompanyListTable({
                     {getSortIcon('updated_at')}
                   </button>
                 </th>
-                <th className="px-4 py-2 text-center font-medium">操作</th>
+                <th className="px-4 py-2 text-center font-medium">
+                  <div className="flex items-center justify-center gap-1">
+                    <Eye className="w-4 h-4" />
+                    操作
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -542,6 +549,18 @@ export default function CompanyListTable({
                         </div>
                       </td>
                       <td className="px-4 py-2 text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <CompanyPreviewDialog company={company}>
+                                <Button variant="ghost" size="icon" className="mr-2">
+                                  <Eye size={16} />
+                                </Button>
+                              </CompanyPreviewDialog>
+                            </TooltipTrigger>
+                            <TooltipContent>企業情報をプレビュー</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <Button
                           variant="ghost"
                           size="icon"
