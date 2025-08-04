@@ -274,3 +274,21 @@ export function getJSTDateFromString(dateString: string): string {
   const date = new Date(dateString);
   return getJSTDate(date);
 }
+
+/**
+ * 日時文字列をJSTでフォーマットしてHTML datetime-local入力用に変換する関数
+ * @param dateTimeString ISO形式の日時文字列
+ * @returns YYYY-MM-DDTHH:mm形式のJST日時文字列
+ */
+export function formatDateTimeForInput(dateTimeString: string): string {
+  if (!dateTimeString) return '';
+  try {
+    const date = new Date(dateTimeString);
+    // JSTオフセット（+9時間）を適用
+    const jstOffset = 9 * 60; // JSTはUTC+9
+    const jstTime = new Date(date.getTime() + jstOffset * 60 * 1000);
+    return jstTime.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
+  } catch {
+    return '';
+  }
+}

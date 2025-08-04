@@ -12,6 +12,7 @@ import {
   createDefaultClockRecord,
   createDefaultBreakRecord,
 } from '@/lib/utils/attendance-validation';
+import { formatDateTimeForInput } from '@/lib/utils';
 
 interface ClockRecordsInputProps {
   value: ClockRecord[];
@@ -20,6 +21,7 @@ interface ClockRecordsInputProps {
   disabled?: boolean;
   workDate?: string;
   userId?: string;
+  onWorkDateChange?: (workDate: string) => void;
 }
 
 export default function ClockRecordsInput({
@@ -29,6 +31,7 @@ export default function ClockRecordsInput({
   disabled = false,
   workDate,
   userId,
+  onWorkDateChange,
 }: ClockRecordsInputProps) {
   console.log('ClockRecordsInput - コンポーネント開始:', {
     value,
@@ -56,17 +59,6 @@ export default function ClockRecordsInput({
         return;
       }
 
-      // 既にデータが設定されている場合はスキップ
-      if (clockRecords.length > 0 && clockRecords.some((record) => record.in_time)) {
-        console.log('ClockRecordsInput - 既存データ取得をスキップ（既にデータあり）:', {
-          workDate,
-          userId,
-          clockRecordsLength: clockRecords.length,
-          hasInTime: clockRecords.some((record) => record.in_time),
-        });
-        return;
-      }
-
       console.log('ClockRecordsInput - 既存データ取得開始:', { workDate, userId });
 
       try {
@@ -79,14 +71,24 @@ export default function ClockRecordsInput({
           console.log('ClockRecordsInput - 既存データで初期化:', existingAttendance.clock_records);
           setClockRecords(existingAttendance.clock_records);
           onChangeAction(existingAttendance.clock_records);
+        } else {
+          // 既存データがない場合、デフォルトのセッションを作成
+          console.log('ClockRecordsInput - 既存データなし、デフォルトセッション作成');
+          const defaultRecord = createDefaultClockRecord(workDate);
+          setClockRecords([defaultRecord]);
+          onChangeAction([defaultRecord]);
         }
       } catch (error) {
         console.error('ClockRecordsInput - 既存データ取得エラー:', error);
+        // エラーの場合もデフォルトセッションを作成
+        const defaultRecord = createDefaultClockRecord(workDate);
+        setClockRecords([defaultRecord]);
+        onChangeAction([defaultRecord]);
       }
     };
 
     fetchExistingAttendance();
-  }, [workDate, userId, clockRecords.length, onChangeAction]);
+  }, [workDate, userId, onChangeAction]);
 
   const updateClockRecords = (newRecords: ClockRecord[]) => {
     setClockRecords(newRecords);
@@ -94,7 +96,7 @@ export default function ClockRecordsInput({
   };
 
   const addSession = () => {
-    const newRecords = [...clockRecords, createDefaultClockRecord()];
+    const newRecords = [...clockRecords, createDefaultClockRecord(workDate)];
     updateClockRecords(newRecords);
   };
 
@@ -114,7 +116,7 @@ export default function ClockRecordsInput({
     if (!newRecords[sessionIndex].breaks) {
       newRecords[sessionIndex].breaks = [];
     }
-    newRecords[sessionIndex].breaks.push(createDefaultBreakRecord());
+    newRecords[sessionIndex].breaks.push(createDefaultBreakRecord(workDate));
     updateClockRecords(newRecords);
   };
 
@@ -138,18 +140,62 @@ export default function ClockRecordsInput({
     updateClockRecords(newRecords);
   };
 
-  const formatDateTimeForInput = (dateTimeString: string): string => {
+  // 勤務日が変更された際に、時刻データの日付部分を更新する関数
+  const updateDateTimeWithNewWorkDate = (dateTimeString: string, newWorkDate: string): string => {
     if (!dateTimeString) return '';
     try {
       const date = new Date(dateTimeString);
-      return date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
-    } catch {
+      // JST時間で時刻部分を抽出（HH:mm:ss）
+      const jstOffset = 9 * 60; // JSTはUTC+9
+      const jstTime = new Date(date.getTime() + jstOffset * 60 * 1000);
+      const timeString = jstTime.toISOString().split('T')[1].split('.')[0];
+      const result = `${newWorkDate}T${timeString}`;
+      console.log('updateDateTimeWithNewWorkDate:', {
+        original: dateTimeString,
+        newWorkDate,
+        timeString,
+        result,
+      });
+      return result;
+    } catch (error) {
+      console.error('updateDateTimeWithNewWorkDate error:', error);
       return '';
     }
   };
 
+  // 勤務日変更時の処理
+  const handleWorkDateChange = (newWorkDate: string) => {
+    console.log('handleWorkDateChange 開始:', {
+      newWorkDate,
+      currentWorkDate: workDate,
+      clockRecordsLength: clockRecords.length,
+      clockRecords: clockRecords,
+    });
+
+    // 親コンポーネントに勤務日変更を通知
+    onWorkDateChange?.(newWorkDate);
+
+    // 勤務日が変更された場合、既存データの取得処理を実行
+    // useEffectが新しいworkDateで実行されるため、自動的に既存データが取得される
+  };
+
   return (
     <div className="space-y-4">
+      {/* 勤務日選択 */}
+      <div className="space-y-2">
+        <Label htmlFor="work_date" className="text-sm font-medium">
+          勤務日 *
+        </Label>
+        <Input
+          id="work_date"
+          type="date"
+          value={workDate || ''}
+          onChange={(e) => handleWorkDateChange(e.target.value)}
+          disabled={disabled}
+          required
+        />
+      </div>
+
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">勤務セッション</Label>
         <Button type="button" variant="outline" size="sm" onClick={addSession} disabled={disabled}>

@@ -247,6 +247,10 @@ const RequestEditDialog = ({
                           }[]) || []
                         }
                         onChangeAction={(value) => handleFormDataChange(field.name, value)}
+                        workDate={formData.work_date as string}
+                        onWorkDateChange={(newWorkDate) =>
+                          handleFormDataChange('work_date', newWorkDate)
+                        }
                       />
                     ) : field.type === 'text' ? (
                       <Input

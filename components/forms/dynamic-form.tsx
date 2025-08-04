@@ -221,6 +221,7 @@ const DynamicFormField = ({
                 disabled={false}
                 workDate={workDate}
                 userId={userId}
+                onWorkDateChange={(newWorkDate) => setValue('work_date', newWorkDate)}
               />
             );
           }

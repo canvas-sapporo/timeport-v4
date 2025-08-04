@@ -532,6 +532,9 @@ export default function MemberRequestsPage() {
                 disabled={false}
                 workDate={workDate}
                 userId={user?.id}
+                onWorkDateChange={(newWorkDate) =>
+                  setFormData((prev) => ({ ...prev, work_date: newWorkDate }))
+                }
               />
             );
           }
