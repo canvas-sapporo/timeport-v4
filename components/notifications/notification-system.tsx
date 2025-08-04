@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
+import { formatDateTimeForDisplay } from '@/lib/utils';
 
 export interface Notification {
   id: string;
@@ -246,7 +247,7 @@ export default function NotificationSystem({ onNotificationClick }: Notification
                       {notification.message}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(notification.created_at).toLocaleString('ja-JP')}
+                      {formatDateTimeForDisplay(notification.created_at)}
                     </p>
                   </div>
                 </div>

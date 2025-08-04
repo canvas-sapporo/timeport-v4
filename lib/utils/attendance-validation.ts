@@ -207,32 +207,37 @@ export function validateAttendanceObject(
 // ================================
 
 /**
+ * JST時刻をUTC時刻に変換するヘルパー関数
+ */
+function convertJSTToUTC(jstDate: Date): string {
+  const jstOffset = 9 * 60; // JSTはUTC+9
+  return new Date(jstDate.getTime() - jstOffset * 60 * 1000).toISOString();
+}
+
+/**
  * clock_recordsのデフォルト構造を生成
  */
 export function createDefaultClockRecord(workDate?: string): ClockRecord {
-  const now = new Date();
-  const jstOffset = 9 * 60; // JSTはUTC+9
-  
   let defaultInTime: string;
   let defaultOutTime: string;
-  
+
   if (workDate) {
     // 指定された勤務日のJST時刻を生成
     const jstInTime = new Date(`${workDate}T09:00:00`);
     const jstOutTime = new Date(`${workDate}T18:00:00`);
-    
+
     // UTC時間に変換
-    defaultInTime = new Date(jstInTime.getTime() - jstOffset * 60 * 1000).toISOString();
-    defaultOutTime = new Date(jstOutTime.getTime() - jstOffset * 60 * 1000).toISOString();
+    defaultInTime = convertJSTToUTC(jstInTime);
+    defaultOutTime = convertJSTToUTC(jstOutTime);
   } else {
     // 現在の日付のJST時刻を生成
     const today = new Date();
     const jstInTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0, 0);
     const jstOutTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0, 0);
-    
+
     // UTC時間に変換
-    defaultInTime = new Date(jstInTime.getTime() - jstOffset * 60 * 1000).toISOString();
-    defaultOutTime = new Date(jstOutTime.getTime() - jstOffset * 60 * 1000).toISOString();
+    defaultInTime = convertJSTToUTC(jstInTime);
+    defaultOutTime = convertJSTToUTC(jstOutTime);
   }
 
   return {
@@ -246,29 +251,33 @@ export function createDefaultClockRecord(workDate?: string): ClockRecord {
  * 休憩記録のデフォルト構造を生成
  */
 export function createDefaultBreakRecord(workDate?: string): ClockBreakRecord {
-  const now = new Date();
-  const jstOffset = 9 * 60; // JSTはUTC+9
-  
   let defaultBreakStart: string;
   let defaultBreakEnd: string;
-  
+
   if (workDate) {
     // 指定された勤務日のJST時刻を生成
     const jstBreakStart = new Date(`${workDate}T12:00:00`);
     const jstBreakEnd = new Date(`${workDate}T13:00:00`);
-    
+
     // UTC時間に変換
-    defaultBreakStart = new Date(jstBreakStart.getTime() - jstOffset * 60 * 1000).toISOString();
-    defaultBreakEnd = new Date(jstBreakEnd.getTime() - jstOffset * 60 * 1000).toISOString();
+    defaultBreakStart = convertJSTToUTC(jstBreakStart);
+    defaultBreakEnd = convertJSTToUTC(jstBreakEnd);
   } else {
     // 現在の日付のJST時刻を生成
     const today = new Date();
-    const jstBreakStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0);
+    const jstBreakStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      12,
+      0,
+      0
+    );
     const jstBreakEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 13, 0, 0);
-    
+
     // UTC時間に変換
-    defaultBreakStart = new Date(jstBreakStart.getTime() - jstOffset * 60 * 1000).toISOString();
-    defaultBreakEnd = new Date(jstBreakEnd.getTime() - jstOffset * 60 * 1000).toISOString();
+    defaultBreakStart = convertJSTToUTC(jstBreakStart);
+    defaultBreakEnd = convertJSTToUTC(jstBreakEnd);
   }
 
   return {

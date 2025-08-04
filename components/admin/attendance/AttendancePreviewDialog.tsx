@@ -28,7 +28,13 @@ import {
   getAttendanceEditHistory,
 } from '@/lib/actions/attendance';
 import WorkTypeDetailDialog from '@/components/admin/work-types/WorkTypeDetailDialog';
-import { formatDate, formatTime, formatMinutes, getAttendanceChanges } from '@/lib/utils';
+import {
+  formatDate,
+  formatTime,
+  formatMinutes,
+  getAttendanceChanges,
+  formatDateTimeForDisplay,
+} from '@/lib/utils';
 import type { AttendanceData, AttendanceStatusData, ClockBreakRecord } from '@/schemas/attendance';
 
 interface AttendancePreviewDialogProps {
@@ -580,7 +586,7 @@ export default function AttendancePreviewDialog({
                                 編集 {editHistory.length - index}
                               </span>
                               <Badge variant="outline" className="text-xs">
-                                {new Date(record.updated_at).toLocaleString('ja-JP')}
+                                {formatDateTimeForDisplay(record.updated_at)}
                               </Badge>
                             </div>
                             {record.editor_name && (
@@ -659,7 +665,7 @@ export default function AttendancePreviewDialog({
                     <span className="text-gray-600">作成日時</span>
                     <span>
                       {attendance.created_at
-                        ? new Date(attendance.created_at).toLocaleString('ja-JP')
+                        ? formatDateTimeForDisplay(attendance.created_at)
                         : '-'}
                     </span>
                   </div>
@@ -668,7 +674,7 @@ export default function AttendancePreviewDialog({
                     <span className="text-gray-600">編集日時</span>
                     <span>
                       {attendance.updated_at
-                        ? new Date(attendance.updated_at).toLocaleString('ja-JP')
+                        ? formatDateTimeForDisplay(attendance.updated_at)
                         : '-'}
                     </span>
                   </div>
@@ -677,7 +683,7 @@ export default function AttendancePreviewDialog({
                   <div className="mt-4 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">承認日時</span>
-                      <span>{new Date(attendance.approved_at).toLocaleString('ja-JP')}</span>
+                      <span>{formatDateTimeForDisplay(attendance.approved_at)}</span>
                     </div>
                   </div>
                 )}

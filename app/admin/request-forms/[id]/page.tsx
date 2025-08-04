@@ -27,6 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { formatDateTimeForDisplay } from '@/lib/utils';
 
 export default function RequestTypeDetailPage() {
   const { user } = useAuth();
@@ -236,7 +237,7 @@ export default function RequestTypeDetailPage() {
 
           <div className="mt-4 flex justify-between items-center">
             <div className="text-sm text-gray-600">
-              最終更新: {new Date().toLocaleString('ja-JP')}
+              最終更新: {formatDateTimeForDisplay(new Date())}
             </div>
             <Button variant="outline" size="sm">
               <FileText className="w-4 h-4 mr-2" />

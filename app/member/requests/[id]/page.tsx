@@ -33,6 +33,7 @@ import {
 // } from '@/components/ui/select';
 import { RequestDetail, RequestComment, RequestAttachment, ApprovalStep } from '@/schemas/request';
 import { supabase } from '@/lib/supabase';
+import { formatDateTimeForDisplay } from '@/lib/utils';
 
 // コメント投稿スキーマ
 const commentSchema = z.object({
@@ -566,7 +567,7 @@ export default function RequestDetailPage() {
                               {comment.type}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(comment.created_at).toLocaleString('ja-JP')}
+                              {formatDateTimeForDisplay(comment.created_at)}
                             </span>
                           </div>
                           <p className="text-sm">{comment.content}</p>
@@ -648,7 +649,7 @@ export default function RequestDetailPage() {
                           </Badge>
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(history.processed_at).toLocaleString('ja-JP')}
+                          {formatDateTimeForDisplay(history.processed_at)}
                         </span>
                       </div>
                       {history.comment && (

@@ -55,6 +55,7 @@ import type { EmploymentType, WorkType } from '@/schemas/employment-type';
 import type { AttendanceStatusData } from '@/schemas/attendance';
 import type { Company } from '@/schemas/company';
 import type { CompanyInfo } from '@/schemas/user_profile';
+import { formatDateTimeForDisplay } from '@/lib/utils';
 
 // 時刻フォーマット関数を追加
 function formatTime(time: string) {
@@ -1303,7 +1304,7 @@ export default function AdminSettingsPage() {
 
                 <div className="mt-4 flex justify-between items-center">
                   <div className="text-sm text-gray-600">
-                    最終更新: {new Date().toLocaleString('ja-JP')}
+                    最終更新: {formatDateTimeForDisplay(new Date())}
                   </div>
                   <Button variant="outline" size="sm" onClick={() => router.push('/admin/logs')}>
                     <FileText className="w-4 h-4 mr-2" />

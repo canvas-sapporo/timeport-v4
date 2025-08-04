@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ClockRecord, ClockBreakRecord, AttendanceData } from '@/schemas/attendance';
-import { formatMinutes } from '@/lib/utils';
+import { formatMinutes, formatDateTimeForDisplay, formatDateTimeForInput } from '@/lib/utils';
 import { getAttendanceDetail, editAttendanceTime } from '@/lib/actions/attendance';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -205,35 +205,11 @@ export const AttendanceTimeEditDialog = ({
   };
 
   const formatDateTime = (dateTime: string) => {
-    if (!dateTime) return '';
-    try {
-      const date = new Date(dateTime);
-      return date.toLocaleString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return '';
-    }
+    return formatDateTimeForDisplay(dateTime);
   };
 
-  const formatDateTimeForInput = (dateTime: string) => {
-    if (!dateTime || dateTime === '') return '';
-    try {
-      const date = new Date(dateTime);
-      // ローカルタイムゾーンでフォーマット
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
-    } catch {
-      return '';
-    }
+  const formatDateTimeForInputLocal = (dateTime: string) => {
+    return formatDateTimeForInput(dateTime);
   };
 
   const calculateWorkTime = () => {
@@ -353,7 +329,7 @@ export const AttendanceTimeEditDialog = ({
                         <Input
                           id={`in-time-${sessionIndex}`}
                           type="datetime-local"
-                          value={formatDateTimeForInput(session.in_time)}
+                          value={formatDateTimeForInputLocal(session.in_time)}
                           onChange={(e) =>
                             updateClockRecord(sessionIndex, 'in_time', e.target.value)
                           }
@@ -364,7 +340,7 @@ export const AttendanceTimeEditDialog = ({
                         <Input
                           id={`out-time-${sessionIndex}`}
                           type="datetime-local"
-                          value={formatDateTimeForInput(session.out_time || '')}
+                          value={formatDateTimeForInputLocal(session.out_time || '')}
                           onChange={(e) =>
                             updateClockRecord(sessionIndex, 'out_time', e.target.value)
                           }
@@ -379,7 +355,7 @@ export const AttendanceTimeEditDialog = ({
                         <div key={breakIndex} className="flex items-center gap-2">
                           <Input
                             type="datetime-local"
-                            value={formatDateTimeForInput(breakRecord.break_start)}
+                            value={formatDateTimeForInputLocal(breakRecord.break_start)}
                             onChange={(e) =>
                               updateBreakRecord(
                                 sessionIndex,
@@ -393,7 +369,7 @@ export const AttendanceTimeEditDialog = ({
                           <span>～</span>
                           <Input
                             type="datetime-local"
-                            value={formatDateTimeForInput(breakRecord.break_end)}
+                            value={formatDateTimeForInputLocal(breakRecord.break_end)}
                             onChange={(e) =>
                               updateBreakRecord(
                                 sessionIndex,
@@ -439,7 +415,7 @@ export const AttendanceTimeEditDialog = ({
                         <Input
                           id={`in-time-${sessionIndex}`}
                           type="datetime-local"
-                          value={formatDateTimeForInput(session.in_time)}
+                          value={formatDateTimeForInputLocal(session.in_time)}
                           onChange={(e) =>
                             updateClockRecord(sessionIndex, 'in_time', e.target.value)
                           }
@@ -450,7 +426,7 @@ export const AttendanceTimeEditDialog = ({
                         <Input
                           id={`out-time-${sessionIndex}`}
                           type="datetime-local"
-                          value={formatDateTimeForInput(session.out_time || '')}
+                          value={formatDateTimeForInputLocal(session.out_time || '')}
                           onChange={(e) =>
                             updateClockRecord(sessionIndex, 'out_time', e.target.value)
                           }
@@ -465,7 +441,7 @@ export const AttendanceTimeEditDialog = ({
                         <div key={breakIndex} className="flex items-center gap-2">
                           <Input
                             type="datetime-local"
-                            value={formatDateTimeForInput(breakRecord.break_start)}
+                            value={formatDateTimeForInputLocal(breakRecord.break_start)}
                             onChange={(e) =>
                               updateBreakRecord(
                                 sessionIndex,
@@ -479,7 +455,7 @@ export const AttendanceTimeEditDialog = ({
                           <span>～</span>
                           <Input
                             type="datetime-local"
-                            value={formatDateTimeForInput(breakRecord.break_end)}
+                            value={formatDateTimeForInputLocal(breakRecord.break_end)}
                             onChange={(e) =>
                               updateBreakRecord(
                                 sessionIndex,

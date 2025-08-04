@@ -292,3 +292,47 @@ export function formatDateTimeForInput(dateTimeString: string): string {
     return '';
   }
 }
+
+/**
+ * 日時を日本時間で表示用にフォーマットする関数
+ * @param dateTime ISO形式の日時文字列またはDateオブジェクト
+ * @param options フォーマットオプション
+ * @returns フォーマットされた日時文字列
+ */
+export function formatDateTimeForDisplay(
+  dateTime: string | Date | null | undefined,
+  options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }
+): string {
+  if (!dateTime) return '--:--';
+
+  try {
+    const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
+
+    if (isNaN(date.getTime())) {
+      return '--:--';
+    }
+
+    return date.toLocaleString('ja-JP', options);
+  } catch {
+    return '--:--';
+  }
+}
+
+/**
+ * 日時を日本時間で表示用にフォーマットする関数（日付のみ）
+ * @param dateTime ISO形式の日時文字列またはDateオブジェクト
+ * @returns フォーマットされた日付文字列
+ */
+export function formatDateForDisplay(dateTime: string | Date | null | undefined): string {
+  return formatDateTimeForDisplay(dateTime, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}

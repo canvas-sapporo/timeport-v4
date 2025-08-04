@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { formatDateTimeForDisplay } from '@/lib/utils';
 
 interface AuthLog {
   id: string;
@@ -138,7 +139,7 @@ export default function AuthLogsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('ja-JP');
+    return formatDateTimeForDisplay(dateString);
   };
 
   if (!user || user.role !== 'system-admin') {

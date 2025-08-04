@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { formatDateTimeForDisplay } from '@/lib/utils';
 
 interface AuthMonitoringData {
   total_auth_logs: number;
@@ -270,7 +271,7 @@ export function AuthMonitoring({ companyId, startDate, endDate }: AuthMonitoring
                         <span className="ml-1">{getActionLabel(log.action)}</span>
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        {new Date(log.created_at).toLocaleString('ja-JP')}
+                        {formatDateTimeForDisplay(log.created_at)}
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -319,7 +320,7 @@ export function AuthMonitoring({ companyId, startDate, endDate }: AuthMonitoring
                         <span className="ml-1">ログイン失敗</span>
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        {new Date(log.created_at).toLocaleString('ja-JP')}
+                        {formatDateTimeForDisplay(log.created_at)}
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground">

@@ -40,7 +40,13 @@ import {
   getAttendanceEditHistory,
 } from '@/lib/actions/attendance';
 import { getAttendanceSettingValue } from '@/lib/actions/settings';
-import { formatDate, formatTime, formatMinutes, getAttendanceChanges } from '@/lib/utils';
+import {
+  formatDate,
+  formatTime,
+  formatMinutes,
+  getAttendanceChanges,
+  formatDateTimeForDisplay,
+} from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import type { AttendanceData, ClockRecord } from '@/schemas/attendance';
@@ -673,7 +679,7 @@ export default function AttendanceEditDialog({
                               編集 {editHistory.length - index}
                             </span>
                             <Badge variant="outline" className="text-xs">
-                              {new Date(record.updated_at).toLocaleString('ja-JP')}
+                              {formatDateTimeForDisplay(record.updated_at)}
                             </Badge>
                           </div>
                           {record.editor_name && (
