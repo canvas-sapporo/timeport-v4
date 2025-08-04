@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { Toaster } from '@/components/ui/toaster';
+import OfflineIndicator from '@/components/pwa/offline-indicator';
+import InstallPrompt from '@/components/pwa/install-prompt';
 
 import Sidebar from './sidebar';
 import Header from './header';
@@ -105,6 +107,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </div>
       </div>
       <Toaster />
+      <OfflineIndicator />
+      <InstallPrompt />
     </>
   );
 }
