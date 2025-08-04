@@ -10,6 +10,7 @@ import {
   XCircle,
   Users,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import type { Company } from '@/schemas/company';
 import type { CompanyFeatures } from '@/schemas/features';
-import type { UserProfile } from '@/schemas/users';
+import type { UserProfileData } from '@/schemas/users';
 import { getAllCompanyFeatures } from '@/lib/actions/system-admin/features';
 import { getAdminUsers } from '@/lib/actions/admin/users';
 
@@ -35,7 +36,7 @@ interface CompanyPreviewDialogProps {
 export default function CompanyPreviewDialog({ company, children }: CompanyPreviewDialogProps) {
   const [open, setOpen] = useState(false);
   const [features, setFeatures] = useState<CompanyFeatures['features'] | null>(null);
-  const [adminUsers, setAdminUsers] = useState<UserProfile[]>([]);
+  const [adminUsers, setAdminUsers] = useState<UserProfileData[]>([]);
   const [loading, setLoading] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
 
