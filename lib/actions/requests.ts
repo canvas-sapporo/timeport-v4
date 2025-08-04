@@ -1277,11 +1277,12 @@ export async function deleteRequest(
       };
     }
 
-    // 下書き状態の申請のみ削除可能
-    if ((request.statuses as unknown as { code: string })?.code !== 'draft') {
+    // 下書き状態または承認待ち状態の申請のみ削除可能
+    const statusCode = (request.statuses as unknown as { code: string })?.code;
+    if (statusCode !== 'draft' && statusCode !== 'pending') {
       return {
         success: false,
-        message: '下書き状態の申請のみ削除可能です',
+        message: '下書き状態または承認待ち状態の申請のみ削除可能です',
         error: 'Invalid status for deletion',
       };
     }
