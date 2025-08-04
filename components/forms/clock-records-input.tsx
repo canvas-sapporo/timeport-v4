@@ -48,11 +48,21 @@ export default function ClockRecordsInput({
   // 既存の勤怠データを取得
   useEffect(() => {
     const fetchExistingAttendance = async () => {
-      if (!workDate || !userId || clockRecords.length > 0) {
-        console.log('ClockRecordsInput - 既存データ取得をスキップ:', {
+      if (!workDate || !userId) {
+        console.log('ClockRecordsInput - 既存データ取得をスキップ（workDateまたはuserIdが不足）:', {
+          workDate,
+          userId,
+        });
+        return;
+      }
+
+      // 既にデータが設定されている場合はスキップ
+      if (clockRecords.length > 0 && clockRecords.some((record) => record.in_time)) {
+        console.log('ClockRecordsInput - 既存データ取得をスキップ（既にデータあり）:', {
           workDate,
           userId,
           clockRecordsLength: clockRecords.length,
+          hasInTime: clockRecords.some((record) => record.in_time),
         });
         return;
       }

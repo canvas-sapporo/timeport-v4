@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Plus, Eye, Send, Edit } from 'lucide-react';
+import { FileText, Plus, Eye, Send, Edit, Trash2 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
-import { updateRequestStatus } from '@/lib/actions/requests';
+import { updateRequestStatus, deleteRequest } from '@/lib/actions/requests';
 import { useToast } from '@/hooks/use-toast';
 import { getJSTDate } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,9 +47,28 @@ export default function MemberRequestsPage() {
   const router = useRouter();
   const [selectedRequestType, setSelectedRequestType] = useState<string>('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  // 申請種別が選択された時にwork_dateフィールドを初期化
+  useEffect(() => {
+    if (selectedRequestType) {
+      const requestForm = requestForms.find((rf) => rf.id === selectedRequestType);
+      if (requestForm) {
+        // work_dateフィールドがある場合は現在の日付で初期化
+        const workDateField = requestForm.form_config?.find((field) => field.name === 'work_date');
+        if (workDateField) {
+          const currentDate = getJSTDate();
+          setFormData((prev) => ({
+            ...prev,
+            work_date: currentDate,
+          }));
+        }
+      }
+    }
+  }, [selectedRequestType, requestForms]);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<{
     id: string;
     title?: string;
@@ -80,6 +99,10 @@ export default function MemberRequestsPage() {
     comments: unknown[];
     attachments: unknown[];
     status_id?: string;
+  } | null>(null);
+  const [requestToDelete, setRequestToDelete] = useState<{
+    id: string;
+    title?: string;
   } | null>(null);
   const [formData, setFormData] = useState<
     Record<string, string | number | boolean | Date | string[]>
@@ -298,6 +321,12 @@ export default function MemberRequestsPage() {
     setIsEditDialogOpen(true);
   }
 
+  function handleDeleteRequest(request: { id: string; title?: string }) {
+    console.log('handleDeleteRequest: 開始', request);
+    setRequestToDelete(request);
+    setIsDeleteDialogOpen(true);
+  }
+
   async function confirmSubmitRequest() {
     if (!requestToSubmit) return;
     console.log('confirmSubmitRequest: 開始', requestToSubmit);
@@ -326,6 +355,38 @@ export default function MemberRequestsPage() {
       toast({
         title: 'エラー',
         description: '申請の送信に失敗しました。',
+        variant: 'destructive',
+      });
+    }
+  }
+
+  async function confirmDeleteRequest() {
+    if (!requestToDelete) return;
+    console.log('confirmDeleteRequest: 開始', requestToDelete);
+    try {
+      const result = await deleteRequest(requestToDelete.id, user?.id);
+
+      if (result.success) {
+        toast({
+          title: '削除完了',
+          description: '申請を削除しました。',
+        });
+        setIsDeleteDialogOpen(false);
+        setRequestToDelete(null);
+        // 申請履歴を最新データに更新
+        await refreshRequests();
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.error || '申請の削除に失敗しました。',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('confirmDeleteRequest: エラー', error);
+      toast({
+        title: 'エラー',
+        description: '申請の削除に失敗しました。',
         variant: 'destructive',
       });
     }
@@ -752,6 +813,31 @@ export default function MemberRequestsPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* 削除確認ダイアログ */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>削除確認</DialogTitle>
+              <DialogDescription>{requestToDelete?.title}を削除しますか？</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-3 bg-red-50 rounded-md">
+                <p className="text-sm text-red-700">
+                  この操作は取り消せません。申請が完全に削除されます。
+                </p>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                  キャンセル
+                </Button>
+                <Button onClick={confirmDeleteRequest} variant="destructive">
+                  削除する
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* 申請編集ダイアログ */}
@@ -886,7 +972,11 @@ export default function MemberRequestsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleViewRequest(request)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewRequest(request)}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                       {/* 下書き状態の場合のみ編集ボタンと申請ボタンを表示 */}
@@ -908,6 +998,28 @@ export default function MemberRequestsPage() {
                           </Button>
                         </>
                       )}
+                      {/* 削除ボタン - 承認済みまたは却下の場合は非活性 */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteRequest(request)}
+                        disabled={
+                          (request as { statuses?: { code?: string } }).statuses?.code ===
+                            'approved' ||
+                          (request as { statuses?: { code?: string } }).statuses?.code ===
+                            'rejected'
+                        }
+                        className={
+                          (request as { statuses?: { code?: string } }).statuses?.code ===
+                            'approved' ||
+                          (request as { statuses?: { code?: string } }).statuses?.code ===
+                            'rejected'
+                            ? 'opacity-50 cursor-not-allowed'
+                            : ''
+                        }
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

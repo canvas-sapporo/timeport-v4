@@ -2818,6 +2818,7 @@ export async function getLatestAttendance(
       .select('*')
       .eq('user_id', userId)
       .eq('work_date', workDate)
+      .eq('is_current', true)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(1)
