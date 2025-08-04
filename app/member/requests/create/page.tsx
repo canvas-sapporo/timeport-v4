@@ -257,6 +257,7 @@ export default function CreateRequestPage() {
                 requestType={selectedRequestForm}
                 onSubmitAction={handleFormDataChange}
                 isLoading={isSubmitting}
+                userId={user?.id}
               />
             </CardContent>
           </Card>

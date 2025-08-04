@@ -411,7 +411,24 @@ export default function MemberRequestsPage() {
         ) {
           const metadata = field.metadata as { object_type: string; field_type?: string };
 
-          if (metadata.object_type === 'attendance' && metadata.field_type === 'clock_records') {
+          console.log('MemberRequestsPage - オブジェクトフィールド処理:', {
+            fieldName: field.name,
+            fieldType: field.type,
+            metadata: field.metadata,
+            objectType: metadata.object_type,
+            metadataFieldType: metadata.field_type,
+            isAttendance: metadata.object_type === 'attendance',
+          });
+
+          if (metadata.object_type === 'attendance') {
+            // work_dateフィールドから勤務日を取得
+            const workDate = (formData.work_date as string) || getJSTDate();
+
+            console.log('MemberRequestsPage - ClockRecordsInputを表示します:', {
+              workDate,
+              userId: user?.id,
+            });
+
             return (
               <ClockRecordsInput
                 value={
@@ -432,6 +449,8 @@ export default function MemberRequestsPage() {
                 }
                 error={undefined}
                 disabled={false}
+                workDate={workDate}
+                userId={user?.id}
               />
             );
           }

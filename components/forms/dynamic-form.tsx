@@ -26,6 +26,7 @@ interface DynamicFormProps {
   requestType: RequestForm;
   onSubmitAction: (data: Record<string, unknown>) => void;
   isLoading?: boolean;
+  userId?: string;
 }
 
 // バリデーションルールからZodスキーマを生成
@@ -110,17 +111,22 @@ const DynamicFormField = ({
   errors,
   setValue,
   watch,
+  userId,
 }: {
   field: FormFieldConfig;
   register: (name: string) => Record<string, unknown>;
   errors: FieldErrors<Record<string, unknown>>;
   setValue: (name: string, value: unknown) => void;
   watch: (name: string) => unknown;
+  userId?: string;
 }) => {
   const error = errors[field.name];
   const value = watch(field.name);
 
   const renderField = () => {
+    // work_dateフィールドの値を取得
+    const workDate = watch('work_date') as string;
+
     switch (field.type) {
       case 'textarea':
         return (
@@ -177,6 +183,20 @@ const DynamicFormField = ({
         );
 
       case 'object':
+        // デバッグ用：フィールドのメタデータをログ出力
+        console.log('DynamicForm - オブジェクトフィールド処理:', {
+          fieldName: field.name,
+          fieldType: field.type,
+          metadata: field.metadata,
+          hasMetadata: !!field.metadata,
+          isObject: typeof field.metadata === 'object',
+          hasObjectType: field.metadata && 'object_type' in field.metadata,
+          objectType:
+            field.metadata && typeof field.metadata === 'object' && 'object_type' in field.metadata
+              ? (field.metadata as { object_type: string }).object_type
+              : 'undefined',
+        });
+
         // オブジェクトタイプの処理
         if (
           field.metadata &&
@@ -185,17 +205,28 @@ const DynamicFormField = ({
         ) {
           const metadata = field.metadata as { object_type: string; field_type?: string };
 
-          if (metadata.object_type === 'attendance' && metadata.field_type === 'clock_records') {
+          console.log('DynamicForm - メタデータ解析:', {
+            metadata,
+            objectType: metadata.object_type,
+            isAttendance: metadata.object_type === 'attendance',
+          });
+
+          if (metadata.object_type === 'attendance') {
+            console.log('DynamicForm - ClockRecordsInputを表示します');
             return (
               <ClockRecordsInput
                 value={Array.isArray(value) ? value : []}
                 onChangeAction={(newValue) => setValue(field.name, newValue)}
                 error={error?.message}
                 disabled={false}
+                workDate={workDate}
+                userId={userId}
               />
             );
           }
         }
+
+        console.log('DynamicForm - フォールバック表示を使用します');
         return (
           <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
             オブジェクトタイプ:{' '}
@@ -237,7 +268,37 @@ const DynamicFormField = ({
   );
 };
 
-export default function DynamicForm({ requestType, onSubmitAction, isLoading }: DynamicFormProps) {
+export default function DynamicForm({
+  requestType,
+  onSubmitAction,
+  isLoading,
+  userId,
+}: DynamicFormProps) {
+  console.log('DynamicForm - コンポーネント開始:', {
+    requestTypeId: requestType.id,
+    requestTypeName: requestType.name,
+    formConfigLength: requestType.form_config?.length,
+    userId: userId,
+  });
+
+  // 各フィールドの詳細情報もログ出力
+  requestType.form_config?.forEach((field, index) => {
+    console.log(`DynamicForm - フィールド${index + 1}詳細:`, {
+      name: field.name,
+      type: field.type,
+      label: field.label,
+      metadata: field.metadata,
+      hasMetadata: !!field.metadata,
+      metadataType: typeof field.metadata,
+      isObjectType:
+        field.metadata && typeof field.metadata === 'object' && 'object_type' in field.metadata,
+      objectType:
+        field.metadata && typeof field.metadata === 'object' && 'object_type' in field.metadata
+          ? (field.metadata as { object_type: string }).object_type
+          : 'undefined',
+    });
+  });
+
   const sortedFields = [...requestType.form_config].sort((a, b) => a.order - b.order);
   const validationSchema = createValidationSchema(sortedFields);
 
@@ -273,6 +334,7 @@ export default function DynamicForm({ requestType, onSubmitAction, isLoading }: 
               errors={errors}
               setValue={setValue}
               watch={watch}
+              userId={userId}
             />
           ))}
 

@@ -18,6 +18,8 @@ interface ClockRecordsInputProps {
   onChangeAction: (value: ClockRecord[]) => void;
   error?: string;
   disabled?: boolean;
+  workDate?: string;
+  userId?: string;
 }
 
 export default function ClockRecordsInput({
@@ -25,12 +27,56 @@ export default function ClockRecordsInput({
   onChangeAction,
   error,
   disabled = false,
+  workDate,
+  userId,
 }: ClockRecordsInputProps) {
+  console.log('ClockRecordsInput - コンポーネント開始:', {
+    value,
+    workDate,
+    userId,
+    disabled,
+    error,
+  });
+
   const [clockRecords, setClockRecords] = useState<ClockRecord[]>(value || []);
 
   useEffect(() => {
+    console.log('ClockRecordsInput - useEffect (value):', { value });
     setClockRecords(value || []);
   }, [value]);
+
+  // 既存の勤怠データを取得
+  useEffect(() => {
+    const fetchExistingAttendance = async () => {
+      if (!workDate || !userId || clockRecords.length > 0) {
+        console.log('ClockRecordsInput - 既存データ取得をスキップ:', {
+          workDate,
+          userId,
+          clockRecordsLength: clockRecords.length,
+        });
+        return;
+      }
+
+      console.log('ClockRecordsInput - 既存データ取得開始:', { workDate, userId });
+
+      try {
+        const { getLatestAttendance } = await import('@/lib/actions/attendance');
+        const existingAttendance = await getLatestAttendance(userId, workDate);
+
+        console.log('ClockRecordsInput - 既存データ取得結果:', { existingAttendance });
+
+        if (existingAttendance && existingAttendance.clock_records) {
+          console.log('ClockRecordsInput - 既存データで初期化:', existingAttendance.clock_records);
+          setClockRecords(existingAttendance.clock_records);
+          onChangeAction(existingAttendance.clock_records);
+        }
+      } catch (error) {
+        console.error('ClockRecordsInput - 既存データ取得エラー:', error);
+      }
+    };
+
+    fetchExistingAttendance();
+  }, [workDate, userId, clockRecords.length, onChangeAction]);
 
   const updateClockRecords = (newRecords: ClockRecord[]) => {
     setClockRecords(newRecords);
