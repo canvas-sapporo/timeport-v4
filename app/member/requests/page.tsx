@@ -103,6 +103,8 @@ export default function MemberRequestsPage() {
   const [requestToDelete, setRequestToDelete] = useState<{
     id: string;
     title?: string;
+    statuses?: { name?: string; color?: string; code?: string };
+    deleted_at?: string | null;
   } | null>(null);
   const [formData, setFormData] = useState<
     Record<string, string | number | boolean | Date | string[]>
@@ -321,8 +323,19 @@ export default function MemberRequestsPage() {
     setIsEditDialogOpen(true);
   }
 
-  function handleDeleteRequest(request: { id: string; title?: string }) {
+  function handleDeleteRequest(request: {
+    id: string;
+    title?: string;
+    statuses?: { name?: string; color?: string; code?: string };
+    deleted_at?: string | null;
+  }) {
     console.log('handleDeleteRequest: 開始', request);
+    console.log('handleDeleteRequest: 申請の詳細情報', {
+      id: request.id,
+      title: request.title,
+      status: request.statuses,
+      deleted_at: request.deleted_at,
+    });
     setRequestToDelete(request);
     setIsDeleteDialogOpen(true);
   }
@@ -363,6 +376,12 @@ export default function MemberRequestsPage() {
   async function confirmDeleteRequest() {
     if (!requestToDelete) return;
     console.log('confirmDeleteRequest: 開始', requestToDelete);
+    console.log('confirmDeleteRequest: 削除対象の申請情報', {
+      id: requestToDelete.id,
+      title: requestToDelete.title,
+      status: requestToDelete.statuses,
+      deleted_at: requestToDelete.deleted_at,
+    });
     try {
       const result = await deleteRequest(requestToDelete.id, user?.id);
 
@@ -376,6 +395,7 @@ export default function MemberRequestsPage() {
         // 申請履歴を最新データに更新
         await refreshRequests();
       } else {
+        console.error('confirmDeleteRequest: 削除失敗', result);
         toast({
           title: 'エラー',
           description: result.error || '申請の削除に失敗しました。',

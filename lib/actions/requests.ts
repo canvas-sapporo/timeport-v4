@@ -1242,14 +1242,13 @@ export async function deleteRequest(
   });
 
   try {
-    const supabase = createServerClient();
+    const supabase = createAdminClient();
 
     // 申請の存在確認とステータスチェック
     const { data: request, error: fetchError } = await supabase
       .from('requests')
-      .select('user_id, status_id, statuses!requests_status_id_fkey(code)')
+      .select('user_id, status_id, deleted_at, statuses!requests_status_id_fkey(code)')
       .eq('id', requestId)
-      .is('deleted_at', null)
       .single();
 
     if (fetchError) {
@@ -1266,6 +1265,15 @@ export async function deleteRequest(
         success: false,
         message: '申請が見つかりません',
         error: 'NOT_FOUND',
+      };
+    }
+
+    // 既に削除済みの申請の場合
+    if (request.deleted_at) {
+      return {
+        success: false,
+        message: 'この申請は既に削除されています',
+        error: 'ALREADY_DELETED',
       };
     }
 
