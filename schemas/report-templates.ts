@@ -58,20 +58,20 @@ export const ReportFieldConfigSchema = z.object({
 });
 
 /**
- * 承認者設定スキーマ
+ * 確認者設定スキーマ
  */
-export const ApproverConfigSchema = z.object({
+export const ConfirmerConfigSchema = z.object({
   type: z.enum(['user', 'group']),
   user_id: z.string().uuid().optional(),
   group_id: z.string().uuid().optional(),
 });
 
 /**
- * 承認フロー設定スキーマ
+ * 確認フロー設定スキーマ
  */
-export const ApprovalFlowConfigSchema = z.object({
+export const ConfirmationFlowConfigSchema = z.object({
   type: z.enum(['static', 'dynamic']),
-  approvers: z.array(ApproverConfigSchema),
+  confirmers: z.array(ConfirmerConfigSchema),
 });
 
 /**
@@ -100,12 +100,38 @@ export const ReportTemplateSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   form_config: z.array(ReportFieldConfigSchema),
-  approval_flow: ApprovalFlowConfigSchema,
+  confirmation_flow: ConfirmationFlowConfigSchema,
   status_flow: StatusFlowConfigSchema,
   is_active: z.boolean(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   deleted_at: z.string().datetime().optional(),
+});
+
+/**
+ * レポートテンプレート更新スキーマ
+ */
+export const UpdateReportTemplateSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  group_id: z.string().uuid().optional(),
+  form_config: z.array(ReportFieldConfigSchema),
+  confirmation_flow: ConfirmationFlowConfigSchema,
+  status_flow: StatusFlowConfigSchema,
+  is_active: z.boolean(),
+});
+
+/**
+ * レポートテンプレート作成スキーマ
+ */
+export const CreateReportTemplateSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  group_id: z.string().uuid().optional(),
+  form_config: z.array(ReportFieldConfigSchema),
+  confirmation_flow: ConfirmationFlowConfigSchema,
+  status_flow: StatusFlowConfigSchema,
+  is_active: z.boolean(),
 });
 
 /**
@@ -298,8 +324,8 @@ export const DeleteReportTemplateResultSchema = z.object({
 export type ReportFieldType = z.infer<typeof ReportFieldTypeSchema>;
 export type ReportFieldOption = z.infer<typeof ReportFieldOptionSchema>;
 export type ReportFieldConfig = z.infer<typeof ReportFieldConfigSchema>;
-export type ApproverConfig = z.infer<typeof ApproverConfigSchema>;
-export type ApprovalFlowConfig = z.infer<typeof ApprovalFlowConfigSchema>;
+export type ConfirmerConfig = z.infer<typeof ConfirmerConfigSchema>;
+export type ConfirmationFlowConfig = z.infer<typeof ConfirmationFlowConfigSchema>;
 export type StatusTransition = z.infer<typeof StatusTransitionSchema>;
 export type StatusFlowConfig = z.infer<typeof StatusFlowConfigSchema>;
 export type ReportTemplateData = z.infer<typeof ReportTemplateSchema>;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, MoveUp, MoveDown } from 'lucide-react';
+import { Plus, Trash2, MoveUp, MoveDown } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,23 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from '@/hooks/use-toast';
-import { updateReportTemplate, getReportTemplate } from '@/lib/actions/admin/report-templates';
+import {
+  updateReportTemplate,
+  getReportTemplate,
+  updateReportTemplateStatus,
+} from '@/lib/actions/admin/report-templates';
 import { getGroups } from '@/lib/actions/admin/groups';
+import { getAdminUsers } from '@/lib/actions/admin/users';
 import { ReportTemplate, ReportFieldConfig, ReportFieldType } from '@/types';
 
 const fieldTypes: { value: ReportFieldType; label: string }[] = [
@@ -53,10 +67,27 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
     name: '',
     description: '',
     group_id: '',
+    is_active: true,
   });
+  const [openTargetGroupPopover, setOpenTargetGroupPopover] = useState(false);
 
   // フォーム設定
   const [formConfig, setFormConfig] = useState<ReportFieldConfig[]>([]);
+
+  // 確認フロー設定
+  const [confirmers, setConfirmers] = useState<
+    Array<{
+      type: 'user' | 'group';
+      user_id?: string;
+      group_id?: string;
+    }>
+  >([]);
+
+  // ユーザーとグループのデータ
+  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
+  const [allGroups, setAllGroups] = useState<Array<{ id: string; name: string }>>([]);
+  const [openUserPopover, setOpenUserPopover] = useState<number | null>(null);
+  const [openConfirmerGroupPopover, setOpenConfirmerGroupPopover] = useState<number | null>(null);
 
   useEffect(() => {
     async function initData() {
@@ -73,6 +104,31 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
   async function loadData(id: string) {
     try {
       setTemplateId(id);
+
+      // ユーザーとグループのデータを読み込み
+      const [usersResult, groupsResult] = await Promise.all([
+        getAdminUsers('', { limit: 1000 }),
+        getGroups('', { limit: 1000 }),
+      ]);
+
+      if (usersResult.success && usersResult.data) {
+        setUsers(
+          usersResult.data.users.map((user) => ({
+            id: user.id,
+            name: `${user.family_name} ${user.first_name}`,
+          }))
+        );
+      }
+
+      if (groupsResult.success && groupsResult.data) {
+        setAllGroups(
+          groupsResult.data.groups.map((group) => ({
+            id: group.id,
+            name: group.name,
+          }))
+        );
+      }
+
       // テンプレート情報を取得
       const templateResult = await getReportTemplate(id);
       if (templateResult.success && templateResult.data) {
@@ -81,8 +137,15 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
           name: templateResult.data.name,
           description: templateResult.data.description || '',
           group_id: templateResult.data.group_id || '',
+          is_active: templateResult.data.is_active,
         });
         setFormConfig(templateResult.data.form_config);
+
+        // 確認フロー設定を読み込み
+        if (templateResult.data.confirmation_flow) {
+          const confirmationFlow = templateResult.data.confirmation_flow;
+          setConfirmers(confirmationFlow.confirmers || []);
+        }
       } else {
         toast({
           title: 'エラー',
@@ -139,8 +202,15 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
       formDataObj.append('name', formData.name);
       formDataObj.append('description', formData.description);
       formDataObj.append('group_id', formData.group_id || '');
+      formDataObj.append('is_active', String(formData.is_active));
       formDataObj.append('form_config', JSON.stringify(formConfig));
-      formDataObj.append('approval_flow', JSON.stringify({ type: 'static', approvers: [] }));
+      formDataObj.append(
+        'confirmation_flow',
+        JSON.stringify({
+          type: 'static',
+          confirmers: confirmers,
+        })
+      );
       formDataObj.append(
         'status_flow',
         JSON.stringify({
@@ -235,6 +305,35 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
     setFormConfig(newConfig);
   }
 
+  // 確認者を追加
+  function addConfirmer() {
+    setConfirmers((prev) => [
+      ...prev,
+      {
+        type: 'user',
+        user_id: '',
+        group_id: undefined,
+      },
+    ]);
+  }
+
+  // 確認者を削除
+  function removeConfirmer(index: number) {
+    setConfirmers((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // 確認者を更新
+  function updateConfirmer(
+    index: number,
+    confirmer: {
+      type: 'user' | 'group';
+      user_id?: string;
+      group_id?: string;
+    }
+  ) {
+    setConfirmers((prev) => prev.map((c, i) => (i === index ? confirmer : c)));
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -266,7 +365,7 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
           <TabsList>
             <TabsTrigger value="basic">基本情報</TabsTrigger>
             <TabsTrigger value="form">フォーム項目</TabsTrigger>
-            <TabsTrigger value="approval">承認フロー</TabsTrigger>
+            <TabsTrigger value="approval">確認フロー</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4">
@@ -295,20 +394,66 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
                 </div>
                 <div>
                   <Label htmlFor="group_id">対象グループ</Label>
+                  <Popover open={openTargetGroupPopover} onOpenChange={setOpenTargetGroupPopover}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openTargetGroupPopover}
+                        className="w-full justify-between"
+                      >
+                        {formData.group_id
+                          ? allGroups.find((group) => group.id === formData.group_id)?.name
+                          : '全グループ'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="グループを検索..." />
+                        <CommandList>
+                          <CommandEmpty>グループが見つかりません。</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="all"
+                              onSelect={() => {
+                                setFormData({ ...formData, group_id: '' });
+                                setOpenTargetGroupPopover(false);
+                              }}
+                            >
+                              全グループ
+                            </CommandItem>
+                            {allGroups.map((group) => (
+                              <CommandItem
+                                key={group.id}
+                                value={group.name}
+                                onSelect={() => {
+                                  setFormData({ ...formData, group_id: group.id });
+                                  setOpenTargetGroupPopover(false);
+                                }}
+                              >
+                                {group.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="is_active">ステータス</Label>
                   <Select
-                    value={formData.group_id}
-                    onValueChange={(value) => setFormData({ ...formData, group_id: value })}
+                    value={String(formData.is_active)}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, is_active: value === 'true' })
+                    }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="全グループ" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">全グループ</SelectItem>
-                      {groups.map((group) => (
-                        <SelectItem key={group.id} value={group.id}>
-                          {group.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="true">有効</SelectItem>
+                      <SelectItem value="false">無効</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -429,11 +574,154 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
           <TabsContent value="approval" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>承認フロー</CardTitle>
+                <CardTitle>確認フロー設定</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  承認フローの設定は後で実装予定です。
+                <div className="space-y-6">
+                  <div>
+                    <Label className="text-base font-medium">確認者設定</Label>
+                    <p className="text-sm text-gray-500 mt-1">
+                      レポートの確認を行う確認者を設定してください
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {confirmers.map((confirmer, index) => (
+                      <Card key={index} className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-medium">確認者 {index + 1}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeConfirmer(index)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label>確認者タイプ</Label>
+                            <Select
+                              value={confirmer.type}
+                              onValueChange={(value: 'user' | 'group') =>
+                                updateConfirmer(index, { ...confirmer, type: value })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">ユーザー</SelectItem>
+                                <SelectItem value="group">グループ</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>確認者</Label>
+                            {confirmer.type === 'user' ? (
+                              <Popover
+                                open={openUserPopover === index}
+                                onOpenChange={(open) => setOpenUserPopover(open ? index : null)}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openUserPopover === index}
+                                    className="w-full justify-between"
+                                  >
+                                    {confirmer.user_id
+                                      ? users.find((user) => user.id === confirmer.user_id)?.name
+                                      : 'ユーザーを選択...'}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0">
+                                  <Command>
+                                    <CommandInput placeholder="ユーザーを検索..." />
+                                    <CommandList>
+                                      <CommandEmpty>ユーザーが見つかりません。</CommandEmpty>
+                                      <CommandGroup>
+                                        {users.map((user) => (
+                                          <CommandItem
+                                            key={user.id}
+                                            value={user.name}
+                                            onSelect={() => {
+                                              updateConfirmer(index, {
+                                                ...confirmer,
+                                                user_id: user.id,
+                                                group_id: undefined,
+                                              });
+                                              setOpenUserPopover(null);
+                                            }}
+                                          >
+                                            {user.name}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              <Popover
+                                open={openConfirmerGroupPopover === index}
+                                onOpenChange={(open) =>
+                                  setOpenConfirmerGroupPopover(open ? index : null)
+                                }
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openConfirmerGroupPopover === index}
+                                    className="w-full justify-between"
+                                  >
+                                    {confirmer.group_id
+                                      ? allGroups.find((group) => group.id === confirmer.group_id)
+                                          ?.name
+                                      : 'グループを選択...'}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0">
+                                  <Command>
+                                    <CommandInput placeholder="グループを検索..." />
+                                    <CommandList>
+                                      <CommandEmpty>グループが見つかりません。</CommandEmpty>
+                                      <CommandGroup>
+                                        {allGroups.map((group) => (
+                                          <CommandItem
+                                            key={group.id}
+                                            value={group.name}
+                                            onSelect={() => {
+                                              updateConfirmer(index, {
+                                                ...confirmer,
+                                                group_id: group.id,
+                                                user_id: undefined,
+                                              });
+                                              setOpenConfirmerGroupPopover(null);
+                                            }}
+                                          >
+                                            {group.name}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+
+                  <Button type="button" variant="outline" onClick={addConfirmer} className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    確認者を追加
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -441,9 +729,6 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
         </Tabs>
 
         <div className="flex justify-end space-x-4 pt-6">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
-            キャンセル
-          </Button>
           <Button type="submit" disabled={isSaving}>
             {isSaving ? '更新中...' : '更新'}
           </Button>

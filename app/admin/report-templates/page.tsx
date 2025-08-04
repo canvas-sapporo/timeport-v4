@@ -27,7 +27,11 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getReportTemplates, deleteReportTemplate } from '@/lib/actions/admin/report-templates';
+import {
+  getReportTemplates,
+  deleteReportTemplate,
+  updateReportTemplateStatus,
+} from '@/lib/actions/admin/report-templates';
 import type { ReportTemplate } from '@/schemas/report';
 import { formatDateTimeForDisplay } from '@/lib/utils';
 
@@ -36,6 +40,7 @@ export default function ReportTemplatesPage() {
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
   const { toast } = useToast();
 
   // テンプレート一覧を取得
@@ -93,6 +98,39 @@ export default function ReportTemplatesPage() {
       });
     } finally {
       setIsDeleting(null);
+    }
+  }
+
+  // ステータス変更
+  async function handleStatusChange(id: string, currentStatus: boolean) {
+    try {
+      setIsUpdatingStatus(id);
+      const newStatus = !currentStatus;
+
+      const result = await updateReportTemplateStatus(id, newStatus);
+
+      if (result.success) {
+        toast({
+          title: '成功',
+          description: `テンプレートを${newStatus ? '有効' : '無効'}にしました`,
+        });
+        fetchTemplates(); // 一覧を再取得
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.error || 'ステータスの変更に失敗しました',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('ステータス変更エラー:', error);
+      toast({
+        title: 'エラー',
+        description: 'ステータスの変更に失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingStatus(null);
     }
   }
 
@@ -154,62 +192,6 @@ export default function ReportTemplatesPage() {
         </Card>
       </div>
 
-      {/* ログ監視 */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <FileText className="w-5 h-5" />
-            <span>ログ監視</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center space-x-2 mb-2">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <span className="font-semibold">テンプレート作成</span>
-              </div>
-              <div className="text-2xl font-bold text-blue-600">12</div>
-              <div className="text-sm text-gray-600">今月の作成数</div>
-            </div>
-            <div className="p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center space-x-2 mb-2">
-                <Edit className="w-5 h-5 text-green-600" />
-                <span className="font-semibold">テンプレート編集</span>
-              </div>
-              <div className="text-2xl font-bold text-green-600">8</div>
-              <div className="text-sm text-gray-600">今月の編集数</div>
-            </div>
-            <div className="p-4 bg-red-50 rounded-lg">
-              <div className="flex items-center space-x-2 mb-2">
-                <Trash2 className="w-5 h-5 text-red-600" />
-                <span className="font-semibold">テンプレート削除</span>
-              </div>
-              <div className="text-2xl font-bold text-red-600">2</div>
-              <div className="text-sm text-gray-600">今月の削除数</div>
-            </div>
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <div className="flex items-center space-x-2 mb-2">
-                <Eye className="w-5 h-5 text-purple-600" />
-                <span className="font-semibold">プレビュー表示</span>
-              </div>
-              <div className="text-2xl font-bold text-purple-600">45</div>
-              <div className="text-sm text-gray-600">今月の表示数</div>
-            </div>
-          </div>
-
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              最終更新: {new Date().toLocaleString('ja-JP')}
-            </div>
-            <Button variant="outline" size="sm">
-              <FileText className="w-4 h-4 mr-2" />
-              詳細ログを表示
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* テンプレート一覧 */}
       <Card>
         <CardHeader>
@@ -245,9 +227,20 @@ export default function ReportTemplatesPage() {
                     <TableCell>{template.description || '-'}</TableCell>
                     <TableCell>{template.group_id ? '特定グループ' : '全グループ'}</TableCell>
                     <TableCell>
-                      <Badge variant={template.is_active ? 'default' : 'secondary'}>
+                      <button
+                        onClick={() => handleStatusChange(template.id, template.is_active)}
+                        disabled={isUpdatingStatus === template.id}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                          template.is_active
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                        } ${isUpdatingStatus === template.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        {isUpdatingStatus === template.id ? (
+                          <span className="animate-spin mr-1">⟳</span>
+                        ) : null}
                         {template.is_active ? '有効' : '無効'}
-                      </Badge>
+                      </button>
                     </TableCell>
                     <TableCell>
                       {new Date(template.created_at).toLocaleDateString('ja-JP')}
