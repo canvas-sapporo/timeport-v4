@@ -200,7 +200,7 @@ export default function ReportTemplatesPage() {
 
           <div className="mt-4 flex justify-between items-center">
             <div className="text-sm text-gray-600">
-              最終更新: {formatDateTimeForDisplay(new Date())}
+              最終更新: {new Date().toLocaleString('ja-JP')}
             </div>
             <Button variant="outline" size="sm">
               <FileText className="w-4 h-4 mr-2" />
