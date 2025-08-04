@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -20,8 +19,19 @@ export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
+    // iOS Safariかどうかを判定
+    const checkIOS = () => {
+      const userAgent = navigator.userAgent;
+      const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent);
+      const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+      setIsIOS(isIOSDevice && isSafari);
+    };
+
+    checkIOS();
+
     // PWAがインストールされているかチェック
     const checkIfInstalled = () => {
       if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -38,7 +48,7 @@ export default function InstallPrompt() {
 
     checkIfInstalled();
 
-    // beforeinstallpromptイベントの監視
+    // beforeinstallpromptイベントの監視（Android/PC用）
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -52,6 +62,15 @@ export default function InstallPrompt() {
       setDeferredPrompt(null);
     };
 
+    // iOS Safariの場合は、一定時間後にインストール促進UIを表示
+    if (isIOS && !isInstalled) {
+      const timer = setTimeout(() => {
+        setShowPrompt(true);
+      }, 3000); // 3秒後に表示
+
+      return () => clearTimeout(timer);
+    }
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
@@ -59,9 +78,18 @@ export default function InstallPrompt() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [isIOS, isInstalled]);
 
   const handleInstall = async () => {
+    if (isIOS) {
+      // iOS Safariの場合は、インストール手順を説明
+      alert(
+        'Safariの共有ボタン（四角から矢印が出ているアイコン）をタップして「ホーム画面に追加」を選択してください。'
+      );
+      setShowPrompt(false);
+      return;
+    }
+
     if (!deferredPrompt) return;
 
     try {
@@ -106,14 +134,16 @@ export default function InstallPrompt() {
             </Button>
           </div>
           <CardDescription className="text-xs">
-            ホーム画面に追加して、より快適にご利用ください
+            {isIOS
+              ? 'Safariの共有ボタンからホーム画面に追加できます'
+              : 'ホーム画面に追加して、より快適にご利用ください'}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex gap-2">
             <Button onClick={handleInstall} size="sm" className="flex-1">
               <Download className="w-4 h-4 mr-2" />
-              インストール
+              {isIOS ? 'インストール方法' : 'インストール'}
             </Button>
             <Button onClick={handleDismiss} variant="outline" size="sm">
               後で
