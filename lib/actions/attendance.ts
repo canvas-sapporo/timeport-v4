@@ -3118,17 +3118,46 @@ export async function updateAttendanceWithClockEdit(
     }
 
     // 新しいレコード用のデータを準備
-    const newRecordData = {
+    const newRecordData: {
+      user_id: string;
+      work_date: string;
+      work_type_id?: string;
+      description?: string;
+      approved_by?: string | null;
+      approved_at?: string | null;
+      source_id: string;
+      edit_reason: string;
+      edited_by?: string;
+      attendance_status_id?: string;
+      clock_in_time?: string;
+      clock_out_time?: string | null;
+      clock_records: {
+        in_time: string;
+        out_time?: string;
+        breaks: { break_start: string; break_end: string }[];
+      }[];
+      actual_work_minutes?: number;
+      overtime_minutes?: number;
+      late_minutes?: number;
+      early_leave_minutes?: number;
+    } = {
       user_id: existingRecord.user_id,
       work_date: existingRecord.work_date,
       work_type_id: updateData.work_type_id || existingRecord.work_type_id,
       description: updateData.description || existingRecord.description,
-      approved_by: updateData.approved_by || existingRecord.approved_by,
-      approved_at: updateData.approved_at || existingRecord.approved_at,
+      approved_by: updateData.approved_by ?? existingRecord.approved_by ?? null,
+      approved_at: updateData.approved_at ?? existingRecord.approved_at ?? null,
       source_id: attendanceId, // 複製元のID
       edit_reason: updateData.edit_reason,
       edited_by: currentUserId,
       attendance_status_id: existingRecord.attendance_status_id,
+      clock_in_time: existingRecord.clock_in_time,
+      clock_out_time: existingRecord.clock_out_time,
+      clock_records: existingRecord.clock_records,
+      actual_work_minutes: existingRecord.actual_work_minutes,
+      overtime_minutes: existingRecord.overtime_minutes,
+      late_minutes: existingRecord.late_minutes,
+      early_leave_minutes: existingRecord.early_leave_minutes,
     };
 
     // clock_recordsが更新された場合、旧カラムも同期
@@ -3217,7 +3246,7 @@ export async function updateAttendanceWithClockEdit(
             action_type: 'clock_edit',
             source_id: attendanceId,
             edit_reason: updateData.edit_reason,
-            edited_by: currentUserId,
+            edited_by: currentUserId || '',
             updated_fields: Object.keys(updateData).filter((key) => key !== 'edit_reason'),
           },
           ip_address: clientInfo.ip_address,

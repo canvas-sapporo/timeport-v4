@@ -102,6 +102,7 @@ export default function AttendanceEditDialog({
           status: result.attendance.status,
           auto_calculated: result.attendance.auto_calculated,
           clock_records: result.attendance.clock_records || [],
+          edit_reason: '',
         });
       } else {
         // UUID形式エラーの場合は適切なメッセージを表示
