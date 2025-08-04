@@ -11,6 +11,15 @@ const STATIC_FILES = [
   '/favicon-16x16.png',
 ];
 
+// キャッシュ可能なスキームかどうかをチェック
+function isCacheableRequest(request) {
+  const url = new URL(request.url);
+  // chrome-extension、chrome、moz-extension、safari-extensionスキームはキャッシュしない
+  return !['chrome-extension:', 'chrome:', 'moz-extension:', 'safari-extension:'].includes(
+    url.protocol
+  );
+}
+
 // インストール時の処理
 self.addEventListener('install', (event) => {
   console.log('Service Worker: Installing...');
@@ -55,6 +64,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // キャッシュ不可能なリクエストはスキップ
+  if (!isCacheableRequest(request)) {
+    return;
+  }
 
   // APIリクエストの場合はネットワークファースト
   if (url.pathname.startsWith('/api/')) {
