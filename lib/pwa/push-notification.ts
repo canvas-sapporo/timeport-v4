@@ -53,6 +53,8 @@ export async function sendPushNotification(
 // 特定ユーザーにプッシュ通知を送信
 async function sendPushToUser(userId: string, notificationData: any) {
   try {
+    console.log('sendPushToUser: 開始', { userId, notificationData });
+
     // ユーザーのプッシュ購読情報を取得
     const { data: subscriptions, error } = await supabase
       .from('push_subscriptions')
@@ -65,18 +67,36 @@ async function sendPushToUser(userId: string, notificationData: any) {
       return false;
     }
 
+    console.log('sendPushToUser: 購読情報取得結果', {
+      subscriptions,
+      count: subscriptions?.length,
+    });
+
     if (!subscriptions || subscriptions.length === 0) {
       console.log('No push subscriptions found for user:', userId);
       return false;
     }
 
     // 各購読にプッシュ通知を送信
+    console.log('sendPushToUser: プッシュ通知送信開始', {
+      subscriptionCount: subscriptions.length,
+    });
+
     const results = await Promise.allSettled(
       subscriptions.map((subscription) => sendPushToSubscription(subscription, notificationData))
     );
 
     const successCount = results.filter((result) => result.status === 'fulfilled').length;
     console.log(`Push notification sent to ${successCount}/${subscriptions.length} subscriptions`);
+
+    // 詳細な結果をログ出力
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(`Subscription ${index} failed:`, result.reason);
+      } else {
+        console.log(`Subscription ${index} succeeded`);
+      }
+    });
 
     return successCount > 0;
   } catch (error) {
@@ -148,7 +168,7 @@ export async function sendRequestApprovalNotification(
   return sendPushNotification(
     approverId,
     '新しいリクエスト',
-    `新しいリクエスト「${requestTitle}」が作成されました。承認をお願いします。`,
+    `「${requestTitle}」が作成されました。承認をお願いします。`,
     'request_created',
     `/admin/requests/${requestId}`,
     'normal',

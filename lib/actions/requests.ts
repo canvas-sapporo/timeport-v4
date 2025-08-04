@@ -6,6 +6,10 @@ import { revalidatePath } from 'next/cache';
 import { createServerClient, createAdminClient } from '@/lib/supabase';
 import { validateAttendanceObject } from '@/lib/utils/attendance-validation';
 import { logAudit, logSystem } from '@/lib/utils/log-system';
+import {
+  sendRequestApprovalNotification,
+  sendRequestStatusNotification,
+} from '@/lib/pwa/push-notification';
 import type {
   RequestForm,
   ObjectMetadata,
@@ -235,6 +239,32 @@ export async function createRequest(
       }
     } else {
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
+    }
+
+    // プッシュ通知を送信
+    try {
+      // リクエストフォームの承認フローを取得して最初の承認者に通知
+      const { data: requestForm } = await supabase
+        .from('request_forms')
+        .select('approval_flow')
+        .eq('id', requestData.request_form_id)
+        .single();
+
+      if (
+        requestForm?.approval_flow &&
+        Array.isArray(requestForm.approval_flow) &&
+        requestForm.approval_flow.length > 0
+      ) {
+        const firstApproverId = requestForm.approval_flow[0]?.approver_id;
+        if (firstApproverId) {
+          console.log('プッシュ通知送信開始:', { requestId: data.id, approverId: firstApproverId });
+          await sendRequestApprovalNotification(data.id, firstApproverId, data.title);
+          console.log('プッシュ通知送信完了');
+        }
+      }
+    } catch (pushError) {
+      console.error('プッシュ通知送信エラー:', pushError);
+      // プッシュ通知の失敗はリクエスト作成の成功を妨げない
     }
 
     // キャッシュを再検証
@@ -656,6 +686,23 @@ export async function updateRequestStatus(
       console.log('現在のユーザーIDが提供されていないため、監査ログを記録しません');
     }
 
+    // プッシュ通知を送信（却下の場合のみ）
+    if (newStatusCode === 'rejected') {
+      try {
+        console.log('プッシュ通知送信開始:', { requestId, requesterId: currentRequest.user_id });
+        await sendRequestStatusNotification(
+          requestId,
+          currentRequest.user_id,
+          currentRequest.title,
+          'rejected'
+        );
+        console.log('プッシュ通知送信完了');
+      } catch (pushError) {
+        console.error('プッシュ通知送信エラー:', pushError);
+        // プッシュ通知の失敗はステータス更新の成功を妨げない
+      }
+    }
+
     revalidatePath('/member/requests');
 
     return {
@@ -879,6 +926,16 @@ export async function approveRequest(
         resource_id: requestId,
         error_message: error instanceof Error ? error.message : 'Unknown error',
       });
+    }
+
+    // プッシュ通知を送信
+    try {
+      console.log('プッシュ通知送信開始:', { requestId, requesterId: request.user_id });
+      await sendRequestStatusNotification(requestId, request.user_id, request.title, 'approved');
+      console.log('プッシュ通知送信完了');
+    } catch (pushError) {
+      console.error('プッシュ通知送信エラー:', pushError);
+      // プッシュ通知の失敗は承認の成功を妨げない
     }
 
     console.log('approveRequest 成功');
