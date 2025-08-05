@@ -51,54 +51,61 @@ export default function ClockRecordsInput({
     }
   }, [value]);
 
-  // 既存の勤怠データを取得
+  // 勤務日変更時の処理を改善
   useEffect(() => {
-    const fetchExistingAttendance = async () => {
+    const fetchAttendanceData = async () => {
       if (!workDate || !userId) {
-        console.log('ClockRecordsInput - 既存データ取得をスキップ（workDateまたはuserIdが不足）:', {
+        console.log('ClockRecordsInput - データ取得をスキップ（workDateまたはuserIdが不足）:', {
           workDate,
           userId,
         });
         return;
       }
 
-      console.log('ClockRecordsInput - 既存データ取得開始:', { workDate, userId });
+      console.log('ClockRecordsInput - 勤務日変更時のデータ取得開始:', { workDate, userId });
 
       try {
         const { getLatestAttendance, getUserWorkTypeDetail } = await import(
           '@/lib/actions/attendance'
         );
+
+        // 1. まずattendancesテーブルから既存データを取得
         const existingAttendance = await getLatestAttendance(userId, workDate);
 
         console.log('ClockRecordsInput - 既存データ取得結果:', { existingAttendance });
 
-        if (existingAttendance && existingAttendance.clock_records) {
+        if (
+          existingAttendance &&
+          existingAttendance.clock_records &&
+          existingAttendance.clock_records.length > 0
+        ) {
+          // attendancesテーブルにデータがある場合：そのデータを使用
           console.log('ClockRecordsInput - 既存データで初期化:', existingAttendance.clock_records);
           setClockRecords(existingAttendance.clock_records);
           onChangeAction(existingAttendance.clock_records);
         } else {
-          // 既存データがない場合、ユーザーの勤務タイプの詳細情報を取得
+          // attendancesテーブルにデータがない場合：work_typesテーブルの設定を使用
           console.log('ClockRecordsInput - 既存データなし、ユーザーの勤務タイプ詳細を取得');
-
-          if (!userId) {
-            console.error('ClockRecordsInput - userIdが設定されていません');
-            // userIdがない場合は従来のデフォルト値を使用
-            const defaultRecord = createDefaultClockRecord(workDate);
-            setClockRecords([defaultRecord]);
-            onChangeAction([defaultRecord]);
-            return;
-          }
 
           const workTypeDetail = await getUserWorkTypeDetail(userId);
           console.log('ClockRecordsInput - 勤務タイプ詳細:', workTypeDetail);
 
-          // ユーザーの勤務タイプの設定を使用してデフォルトセッションを作成
-          const defaultRecord = createDefaultClockRecord(workDate, workTypeDetail || undefined);
-          setClockRecords([defaultRecord]);
-          onChangeAction([defaultRecord]);
+          if (workTypeDetail) {
+            // work_typesテーブルの勤務開始・終了時刻を使用してデフォルトセッションを作成
+            const defaultRecord = createDefaultClockRecord(workDate, workTypeDetail);
+            console.log('ClockRecordsInput - work_types設定で初期化:', defaultRecord);
+            setClockRecords([defaultRecord]);
+            onChangeAction([defaultRecord]);
+          } else {
+            // 勤務タイプが設定されていない場合：従来のデフォルト値を使用
+            console.log('ClockRecordsInput - 勤務タイプ未設定、従来のデフォルト値を使用');
+            const defaultRecord = createDefaultClockRecord(workDate);
+            setClockRecords([defaultRecord]);
+            onChangeAction([defaultRecord]);
+          }
         }
       } catch (error) {
-        console.error('ClockRecordsInput - 既存データ取得エラー:', error);
+        console.error('ClockRecordsInput - データ取得エラー:', error);
         // エラーの場合もデフォルトセッションを作成
         const defaultRecord = createDefaultClockRecord(workDate);
         setClockRecords([defaultRecord]);
@@ -106,16 +113,8 @@ export default function ClockRecordsInput({
       }
     };
 
-    // 現在のclockRecordsの状態をチェックして、既にデータがある場合はスキップ
-    if (clockRecords.length > 0) {
-      console.log(
-        'ClockRecordsInput - 既にデータがあるため、既存データ取得をスキップ:',
-        clockRecords
-      );
-      return;
-    }
-
-    fetchExistingAttendance();
+    // 勤務日が変更された場合は常にデータを取得する
+    fetchAttendanceData();
   }, [workDate, userId]); // onChangeActionを依存関係から削除
 
   const updateClockRecords = useCallback(
