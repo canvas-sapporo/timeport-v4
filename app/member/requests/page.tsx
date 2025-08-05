@@ -46,6 +46,7 @@ export default function MemberRequestsPage() {
   const { user } = useAuth();
   const { requests, requestForms, createRequest, users, refreshRequests } = useData();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedRequestType, setSelectedRequestType] = useState<string>('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
@@ -120,6 +121,13 @@ export default function MemberRequestsPage() {
       return;
     }
   }, [user, router]);
+
+  // データ読み込み状態を管理
+  useEffect(() => {
+    if (requests.length > 0 || requestForms.length > 0) {
+      setIsLoading(false);
+    }
+  }, [requests, requestForms]);
 
   if (!user || (user.role !== 'member' && user.role !== 'admin')) {
     return null;
@@ -949,144 +957,155 @@ export default function MemberRequestsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {userRequests.map((request) => (
-                <TableRow key={request.id}>
-                  <TableCell>{request.title}</TableCell>
-                  <TableCell>
-                    {request.created_at
-                      ? new Date(request.created_at).toLocaleDateString('ja-JP')
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {request.target_date
-                      ? new Date(request.target_date).toLocaleDateString('ja-JP')
-                      : request.start_date && request.end_date
-                        ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date).toLocaleDateString('ja-JP')}`
-                        : request.start_date
-                          ? new Date(request.start_date).toLocaleDateString('ja-JP')
-                          : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(
-                      (request as { statuses?: { name?: string; color?: string; code?: string } })
-                        .statuses
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {(() => {
-                      // 承認フローから現在の承認者を取得
-                      const requestForm = requestForms.find(
-                        (rf) => rf.id === request.request_form_id
-                      );
-
-                      if (
-                        requestForm?.approval_flow &&
-                        requestForm.approval_flow.length > 0 &&
-                        request.current_approval_step
-                      ) {
-                        const currentStep = requestForm.approval_flow.find(
-                          (step) => step.step === request.current_approval_step
-                        );
-                        if (currentStep && currentStep.approver_id) {
-                          // 承認者IDからユーザー情報を取得
-                          const approver = users.find((u) => u.id === currentStep.approver_id);
-                          if (approver) {
-                            return `${approver.family_name} ${approver.first_name}`;
-                          }
-                        }
-                      }
-                      return '-';
-                    })()}
-                  </TableCell>
-                  <TableCell>
-                    <TooltipProvider>
-                      <div className="flex space-x-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewRequest(request)}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>プレビュー</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        {/* 下書き状態の場合のみ編集ボタンと申請ボタンを表示 */}
-                        {(request as { statuses?: { code?: string } }).statuses?.code ===
-                          'draft' && (
-                          <>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditRequest(request)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>編集</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleSubmitRequest(request)}
-                                >
-                                  <Send className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>申請</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </>
-                        )}
-                        {/* 削除ボタン - 承認済みまたは却下の場合は非活性 */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteRequest(request)}
-                              disabled={
-                                (request as { statuses?: { code?: string } }).statuses?.code ===
-                                  'approved' ||
-                                (request as { statuses?: { code?: string } }).statuses?.code ===
-                                  'rejected'
-                              }
-                              className={
-                                (request as { statuses?: { code?: string } }).statuses?.code ===
-                                  'approved' ||
-                                (request as { statuses?: { code?: string } }).statuses?.code ===
-                                  'rejected'
-                                  ? 'opacity-50 cursor-not-allowed'
-                                  : ''
-                              }
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>削除</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TooltipProvider>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                      <span className="text-gray-500">データを読み込み中...</span>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                userRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell>{request.title}</TableCell>
+                    <TableCell>
+                      {request.created_at
+                        ? new Date(request.created_at).toLocaleDateString('ja-JP')
+                        : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {request.target_date
+                        ? new Date(request.target_date).toLocaleDateString('ja-JP')
+                        : request.start_date && request.end_date
+                          ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date).toLocaleDateString('ja-JP')}`
+                          : request.start_date
+                            ? new Date(request.start_date).toLocaleDateString('ja-JP')
+                            : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(
+                        (request as { statuses?: { name?: string; color?: string; code?: string } })
+                          .statuses
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        // 承認フローから現在の承認者を取得
+                        const requestForm = requestForms.find(
+                          (rf) => rf.id === request.request_form_id
+                        );
+
+                        if (
+                          requestForm?.approval_flow &&
+                          requestForm.approval_flow.length > 0 &&
+                          request.current_approval_step
+                        ) {
+                          const currentStep = requestForm.approval_flow.find(
+                            (step) => step.step === request.current_approval_step
+                          );
+                          if (currentStep && currentStep.approver_id) {
+                            // 承認者IDからユーザー情報を取得
+                            const approver = users.find((u) => u.id === currentStep.approver_id);
+                            if (approver) {
+                              return `${approver.family_name} ${approver.first_name}`;
+                            }
+                          }
+                        }
+                        return '-';
+                      })()}
+                    </TableCell>
+                    <TableCell>
+                      <TooltipProvider>
+                        <div className="flex space-x-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewRequest(request)}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>プレビュー</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          {/* 下書き状態の場合のみ編集ボタンと申請ボタンを表示 */}
+                          {(request as { statuses?: { code?: string } }).statuses?.code ===
+                            'draft' && (
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEditRequest(request)}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>編集</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSubmitRequest(request)}
+                                  >
+                                    <Send className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>申請</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </>
+                          )}
+                          {/* 削除ボタン - 承認済みまたは却下の場合は非活性 */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteRequest(request)}
+                                disabled={
+                                  (request as { statuses?: { code?: string } }).statuses?.code ===
+                                    'approved' ||
+                                  (request as { statuses?: { code?: string } }).statuses?.code ===
+                                    'rejected'
+                                }
+                                className={
+                                  (request as { statuses?: { code?: string } }).statuses?.code ===
+                                    'approved' ||
+                                  (request as { statuses?: { code?: string } }).statuses?.code ===
+                                    'rejected'
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : ''
+                                }
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>削除</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
 
-          {userRequests.length === 0 && (
+          {!isLoading && userRequests.length === 0 && (
             <div className="text-center py-8">
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">申請履歴がありません</p>
