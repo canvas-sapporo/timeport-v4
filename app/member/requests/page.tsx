@@ -100,6 +100,7 @@ export default function MemberRequestsPage() {
     comments: unknown[];
     attachments: unknown[];
     status_id?: string;
+    statuses?: { id: string; code: string; name: string; color: string; category: string };
   } | null>(null);
   const [requestToDelete, setRequestToDelete] = useState<{
     id: string;
@@ -301,6 +302,7 @@ export default function MemberRequestsPage() {
     comments: unknown[];
     attachments: unknown[];
     status_id?: string;
+    statuses?: { id: string; code: string; name: string; color: string; category: string };
   }) {
     console.log('handleEditRequest: 開始', request);
     setRequestToEdit(
@@ -319,6 +321,7 @@ export default function MemberRequestsPage() {
         comments: Array<unknown>;
         attachments: Array<unknown>;
         status_id?: string;
+        statuses?: { id: string; code: string; name: string; color: string; category: string };
       }
     );
     setIsEditDialogOpen(true);
@@ -917,6 +920,7 @@ export default function MemberRequestsPage() {
               uploaded_at: string;
             }>;
             status_id?: string;
+            statuses?: { id: string; code: string; name: string; color: string; category: string };
           }
         }
         requestForms={requestForms}
