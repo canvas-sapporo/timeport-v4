@@ -37,6 +37,9 @@ import type {
 interface FormBuilderProps {
   formConfig: FormFieldConfig[];
   onFormConfigChangeAction: (config: FormFieldConfig[]) => void;
+  onObjectTypeSettingsOpen?: (fieldId?: string) => void;
+  onAddObjectField?: (field: FormFieldConfig) => void;
+  onTempFieldChange?: (field: FormFieldConfig | null) => void;
 }
 
 const FIELD_TYPES: { value: FormFieldType; label: string; icon: string }[] = [
@@ -77,13 +80,22 @@ const WIDTH_OPTIONS = [
   { value: 'quarter', label: '1/4幅' },
 ];
 
-export default function FormBuilder({ formConfig, onFormConfigChangeAction }: FormBuilderProps) {
+export default function FormBuilder({
+  formConfig,
+  onFormConfigChangeAction,
+  onObjectTypeSettingsOpen,
+  onAddObjectField,
+  onTempFieldChange,
+}: FormBuilderProps) {
   const [selectedField, setSelectedField] = useState<FormFieldConfig | null>(null);
   const [fieldSettingsOpen, setFieldSettingsOpen] = useState(false);
   const [calculationSettingsOpen, setCalculationSettingsOpen] = useState(false);
 
-  // フィールドを追加
-  const addField = useCallback(
+  // フィールド追加用の一時的なフィールド
+  const [tempField, setTempField] = useState<FormFieldConfig | null>(null);
+
+  // フィールド追加ダイアログを開く
+  const openFieldDialog = useCallback(
     (type: FormFieldType) => {
       const newField: FormFieldConfig = {
         id: `field_${Date.now()}`,
@@ -96,15 +108,34 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
         width: 'full',
       };
 
-      const newConfig = [...formConfig, newField];
-      onFormConfigChangeAction(newConfig);
-      setSelectedField(newField);
-      // 少し遅延を入れてダイアログを開く
-      setTimeout(() => {
-        setFieldSettingsOpen(true);
-      }, 10);
+      // オブジェクトタイプの場合はオブジェクトタイプ設定ダイアログを開く
+      if (type === 'object' && onObjectTypeSettingsOpen) {
+        setTempField(newField);
+        onTempFieldChange?.(newField);
+        onObjectTypeSettingsOpen(newField.id);
+        // オブジェクトフィールドの場合はselectedFieldを設定しない
+      } else {
+        // オブジェクト以外の場合は通常のフィールド設定ダイアログを開く
+        setSelectedField(newField);
+        setTempField(newField);
+        // 少し遅延を入れてダイアログを開く
+        setTimeout(() => {
+          setFieldSettingsOpen(true);
+        }, 10);
+      }
     },
-    [formConfig.length, onFormConfigChangeAction]
+    [formConfig.length, onObjectTypeSettingsOpen]
+  );
+
+  // フィールドを実際に追加
+  const addField = useCallback(
+    (field: FormFieldConfig) => {
+      const newConfig = [...formConfig, field];
+      onFormConfigChangeAction(newConfig);
+      setTempField(null);
+      onTempFieldChange?.(null);
+    },
+    [formConfig, onFormConfigChangeAction, onTempFieldChange]
   );
 
   // フィールドを削除
@@ -142,12 +173,19 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
   // フィールド設定を更新
   const updateField = useCallback(
     (fieldId: string, updates: Partial<FormFieldConfig>) => {
+      // 新しいフィールドの場合はselectedFieldを更新
+      if (selectedField && selectedField.id === fieldId) {
+        setSelectedField({ ...selectedField, ...updates });
+        return;
+      }
+
+      // 既存フィールドの場合はformConfigを更新
       const newConfig = formConfig.map((field) =>
         field.id === fieldId ? { ...field, ...updates } : field
       );
       onFormConfigChangeAction(newConfig);
     },
-    [formConfig, onFormConfigChangeAction]
+    [formConfig, selectedField, onFormConfigChangeAction]
   );
 
   // ドラッグ&ドロップで順序を変更
@@ -178,6 +216,14 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
         message: '',
       };
 
+      // 新しいフィールドの場合はselectedFieldを更新
+      if (selectedField && selectedField.id === fieldId) {
+        const newRules = [...selectedField.validation_rules, newRule];
+        setSelectedField({ ...selectedField, validation_rules: newRules });
+        return;
+      }
+
+      // 既存フィールドの場合はformConfigを更新
       const field = formConfig.find((f) => f.id === fieldId);
       if (field) {
         const newRules = [...field.validation_rules, newRule];
@@ -187,12 +233,20 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
         onFormConfigChangeAction(newConfig);
       }
     },
-    [formConfig, onFormConfigChangeAction]
+    [formConfig, selectedField, onFormConfigChangeAction]
   );
 
   // バリデーションルールを削除
   const removeValidationRule = useCallback(
     (fieldId: string, ruleIndex: number) => {
+      // 新しいフィールドの場合はselectedFieldを更新
+      if (selectedField && selectedField.id === fieldId) {
+        const newRules = selectedField.validation_rules.filter((_, index) => index !== ruleIndex);
+        setSelectedField({ ...selectedField, validation_rules: newRules });
+        return;
+      }
+
+      // 既存フィールドの場合はformConfigを更新
       const field = formConfig.find((f) => f.id === fieldId);
       if (field) {
         const newRules = field.validation_rules.filter((_, index) => index !== ruleIndex);
@@ -202,7 +256,7 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
         onFormConfigChangeAction(newConfig);
       }
     },
-    [formConfig, onFormConfigChangeAction]
+    [formConfig, selectedField, onFormConfigChangeAction]
   );
 
   // 条件表示ロジックを追加
@@ -215,6 +269,14 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
         action: 'show',
       };
 
+      // 新しいフィールドの場合はselectedFieldを更新
+      if (selectedField && selectedField.id === fieldId) {
+        const newLogicList = [...(selectedField.conditional_logic || []), newLogic];
+        setSelectedField({ ...selectedField, conditional_logic: newLogicList });
+        return;
+      }
+
+      // 既存フィールドの場合はformConfigを更新
       const field = formConfig.find((f) => f.id === fieldId);
       if (field) {
         const newLogicList = [...(field.conditional_logic || []), newLogic];
@@ -224,12 +286,22 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
         onFormConfigChangeAction(newConfig);
       }
     },
-    [formConfig, onFormConfigChangeAction]
+    [formConfig, selectedField, onFormConfigChangeAction]
   );
 
   // 条件表示ロジックを削除
   const removeConditionalLogic = useCallback(
     (fieldId: string, logicIndex: number) => {
+      // 新しいフィールドの場合はselectedFieldを更新
+      if (selectedField && selectedField.id === fieldId) {
+        const newLogicList = (selectedField.conditional_logic || []).filter(
+          (_, index) => index !== logicIndex
+        );
+        setSelectedField({ ...selectedField, conditional_logic: newLogicList });
+        return;
+      }
+
+      // 既存フィールドの場合はformConfigを更新
       const field = formConfig.find((f) => f.id === fieldId);
       if (field && field.conditional_logic) {
         const newLogicList = field.conditional_logic.filter((_, index) => index !== logicIndex);
@@ -239,7 +311,7 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
         onFormConfigChangeAction(newConfig);
       }
     },
-    [formConfig, onFormConfigChangeAction]
+    [formConfig, selectedField, onFormConfigChangeAction]
   );
 
   return (
@@ -262,7 +334,7 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  addField(fieldType.value);
+                  openFieldDialog(fieldType.value);
                 }}
               >
                 <span className="text-lg">{fieldType.icon}</span>
@@ -316,8 +388,14 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  setSelectedField(field);
-                                  setFieldSettingsOpen(true);
+                                  // オブジェクトタイプの場合はオブジェクトタイプ設定ダイアログを開く
+                                  if (field.type === 'object' && onObjectTypeSettingsOpen) {
+                                    onObjectTypeSettingsOpen(field.id);
+                                    // オブジェクトフィールドの場合はselectedFieldを設定しない
+                                  } else {
+                                    setSelectedField(field);
+                                    setFieldSettingsOpen(true);
+                                  }
                                 }}
                               >
                                 <Settings className="w-4 h-4" />
@@ -373,7 +451,17 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
             // フィールドが選択されている場合は、明示的に閉じる操作のみ許可
             setFieldSettingsOpen(false);
             setSelectedField(null);
+            setTempField(null);
+            onTempFieldChange?.(null);
           } else if (open) {
+            // オブジェクトフィールドの場合はfieldSettingsOpenを開かない
+            if (selectedField && selectedField.type === 'object') {
+              setFieldSettingsOpen(false);
+              setSelectedField(null);
+              setTempField(null);
+              onTempFieldChange?.(null);
+              return;
+            }
             setFieldSettingsOpen(true);
           }
         }}
@@ -400,9 +488,9 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
 
           {selectedField &&
             (() => {
-              // formConfigから最新のフィールド情報を取得
-              const currentField = formConfig.find((f) => f.id === selectedField.id);
-              if (!currentField) return null;
+              // 新しいフィールドの場合はselectedFieldを直接使用、既存フィールドの場合はformConfigから取得
+              const currentField =
+                formConfig.find((f) => f.id === selectedField.id) || selectedField;
 
               return (
                 <>
@@ -806,7 +894,15 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
 
                   {/* 操作ボタン */}
                   <div className="flex justify-end space-x-2 pt-4 border-t">
-                    <Button variant="outline" onClick={() => setFieldSettingsOpen(false)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setFieldSettingsOpen(false);
+                        setSelectedField(null);
+                        setTempField(null);
+                        onTempFieldChange?.(null);
+                      }}
+                    >
                       キャンセル
                     </Button>
                     <Button
@@ -823,8 +919,11 @@ export default function FormBuilder({ formConfig, onFormConfigChangeAction }: Fo
                           alert('ラベルを入力してください');
                           return;
                         }
+                        // フィールドを実際に追加
+                        addField(currentField);
                         setFieldSettingsOpen(false);
                         setSelectedField(null);
+                        onTempFieldChange?.(null);
                       }}
                       disabled={!currentField?.name.trim() || !currentField?.label.trim()}
                     >

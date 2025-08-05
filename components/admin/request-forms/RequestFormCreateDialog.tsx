@@ -74,6 +74,9 @@ export default function RequestFormCreateDialog({
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const [objectTypeSettingsOpen, setObjectTypeSettingsOpen] = useState(false);
   const [objectMetadata, setObjectMetadata] = useState<ObjectMetadata | null>(null);
+  const [lastAddedObjectFieldId, setLastAddedObjectFieldId] = useState<string | null>(null);
+  const [editingObjectFieldId, setEditingObjectFieldId] = useState<string | null>(null);
+  const [tempField, setTempField] = useState<FormFieldConfig | null>(null);
 
   const {
     register,
@@ -250,6 +253,8 @@ export default function RequestFormCreateDialog({
         setFormConfig([]);
         setApprovalFlow([]);
         setObjectMetadata(null);
+        setLastAddedObjectFieldId(null);
+        setEditingObjectFieldId(null);
         setActiveTab('basic');
         onOpenChangeAction(false);
         onSuccessAction();
@@ -279,6 +284,9 @@ export default function RequestFormCreateDialog({
     setFormConfig([]);
     setApprovalFlow([]);
     setObjectMetadata(null);
+    setLastAddedObjectFieldId(null);
+    setEditingObjectFieldId(null);
+    setTempField(null);
     setActiveTab('basic');
     onOpenChangeAction(false);
   };
@@ -405,55 +413,49 @@ export default function RequestFormCreateDialog({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">フォーム項目設定</h3>
-                  <div className="flex items-center space-x-2">
-                    {selectedCategory === 'attendance_correction' && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setObjectTypeSettingsOpen(true)}
-                      >
-                        オブジェクトタイプ設定
-                      </Button>
-                    )}
-                    {selectedCategory && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (selectedCategory === 'attendance_correction' && objectMetadata) {
-                            setFormConfig(getDefaultFormConfig(selectedCategory));
-                          } else {
-                            setFormConfig(getDefaultFormConfig(selectedCategory));
-                          }
-                        }}
-                      >
-                        デフォルト設定を適用
-                      </Button>
-                    )}
-                  </div>
                 </div>
-                <FormBuilder formConfig={formConfig} onFormConfigChangeAction={setFormConfig} />
+                <FormBuilder
+                  formConfig={formConfig}
+                  onFormConfigChangeAction={(newConfig) => {
+                    setFormConfig(newConfig);
+                    // 最新のオブジェクトフィールドのIDを保存
+                    const objectFields = newConfig.filter((field) => field.type === 'object');
+                    if (objectFields.length > 0) {
+                      const latestObjectField = objectFields[objectFields.length - 1];
+                      setLastAddedObjectFieldId(latestObjectField.id);
+                    }
+                  }}
+                  onObjectTypeSettingsOpen={(fieldId) => {
+                    if (fieldId) {
+                      // 指定されたフィールドIDでオブジェクトフィールドを編集
+                      const selectedField = formConfig.find((field) => field.id === fieldId);
+                      if (selectedField) {
+                        setEditingObjectFieldId(fieldId);
+                        // 既存のメタデータがあれば設定
+                        if (selectedField.metadata && 'object_type' in selectedField.metadata) {
+                          setObjectMetadata(selectedField.metadata as ObjectMetadata);
+                        } else {
+                          // 新規フィールドの場合はデフォルトメタデータを設定
+                          setObjectMetadata(null);
+                        }
+                      }
+                    }
+                    setObjectTypeSettingsOpen(true);
+                  }}
+                  onAddObjectField={(field) => {
+                    // オブジェクトフィールドを追加
+                    const newConfig = [...formConfig, field];
+                    setFormConfig(newConfig);
+                  }}
+                  onTempFieldChange={(field) => {
+                    setTempField(field);
+                  }}
+                />
               </div>
             </TabsContent>
 
             <TabsContent value="approval" className="space-y-4">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  {selectedCategory && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setApprovalFlow(getDefaultApprovalFlow(selectedCategory));
-                      }}
-                    >
-                      デフォルト設定を適用
-                    </Button>
-                  )}
-                </div>
                 <ApprovalFlowBuilder
                   approvalFlow={approvalFlow}
                   onApprovalFlowChangeAction={setApprovalFlow}
@@ -508,9 +510,55 @@ export default function RequestFormCreateDialog({
         {/* オブジェクトタイプ設定ダイアログ */}
         <ObjectTypeSettingsDialog
           open={objectTypeSettingsOpen}
-          onOpenChangeAction={setObjectTypeSettingsOpen}
+          onOpenChangeAction={(open) => {
+            setObjectTypeSettingsOpen(open);
+            if (!open) {
+              // ダイアログが閉じられた際にIDをリセット
+              setLastAddedObjectFieldId(null);
+              setEditingObjectFieldId(null);
+              setTempField(null);
+            }
+          }}
           metadata={objectMetadata}
-          onMetadataChangeAction={setObjectMetadata}
+          onMetadataChangeAction={(newMetadata) => {
+            setObjectMetadata(newMetadata);
+            // オブジェクトフィールドにメタデータを適用
+            if (newMetadata) {
+              const fieldIdToUpdate = editingObjectFieldId || lastAddedObjectFieldId;
+              if (fieldIdToUpdate) {
+                const updatedConfig = formConfig.map((field) => {
+                  if (field.id === fieldIdToUpdate) {
+                    return {
+                      ...field,
+                      metadata: newMetadata,
+                    };
+                  }
+                  return field;
+                });
+                setFormConfig(updatedConfig);
+              }
+            }
+          }}
+          onSaveObjectField={(field) => {
+            // オブジェクトフィールドを保存（新規追加または更新）
+            if (editingObjectFieldId) {
+              // 既存フィールドの更新
+              const updatedConfig = formConfig.map((f) =>
+                f.id === editingObjectFieldId ? field : f
+              );
+              setFormConfig(updatedConfig);
+            } else {
+              // 新規フィールドの追加
+              const newConfig = [...formConfig, field];
+              setFormConfig(newConfig);
+            }
+            setObjectTypeSettingsOpen(false);
+            setEditingObjectFieldId(null);
+            setLastAddedObjectFieldId(null);
+            setObjectMetadata(null);
+            setTempField(null);
+          }}
+          tempField={tempField}
         />
       </DialogContent>
     </Dialog>

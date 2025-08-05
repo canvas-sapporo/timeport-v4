@@ -30,6 +30,8 @@ interface ObjectTypeSettingsDialogProps {
   onOpenChangeAction: (open: boolean) => void;
   metadata: ObjectMetadata | null;
   onMetadataChangeAction: (metadata: ObjectMetadata | null) => void;
+  onSaveObjectField?: (field: any) => void;
+  tempField?: any;
 }
 
 export default function ObjectTypeSettingsDialog({
@@ -37,6 +39,8 @@ export default function ObjectTypeSettingsDialog({
   onOpenChangeAction,
   metadata,
   onMetadataChangeAction,
+  onSaveObjectField,
+  tempField,
 }: ObjectTypeSettingsDialogProps) {
   const [objectType, setObjectType] = useState<string>('');
   const [editableFields, setEditableFields] = useState<string[]>([]);
@@ -136,8 +140,21 @@ export default function ObjectTypeSettingsDialog({
         return;
     }
 
+    // メタデータを更新
     onMetadataChangeAction(newMetadata);
-    onOpenChangeAction(false);
+
+    // フィールドを保存
+    if (onSaveObjectField && tempField) {
+      const fieldToSave = {
+        ...tempField,
+        metadata: newMetadata,
+        label: '打刻修正', // デフォルトラベル
+        name: 'attendance_correction', // デフォルト名
+      };
+      onSaveObjectField(fieldToSave);
+    } else {
+      onOpenChangeAction(false);
+    }
   };
 
   const getFieldSettings = () => {
