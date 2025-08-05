@@ -38,6 +38,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ClockRecordsInput from '@/components/forms/clock-records-input';
 import { RequestEditDialog } from '@/components/member/request/RequestEditDialog';
 
@@ -994,56 +995,87 @@ export default function MemberRequestsPage() {
                     })()}
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewRequest(request)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {/* 下書き状態の場合のみ編集ボタンと申請ボタンを表示 */}
-                      {(request as { statuses?: { code?: string } }).statuses?.code === 'draft' && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditRequest(request)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSubmitRequest(request)}
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                      {/* 削除ボタン - 承認済みまたは却下の場合は非活性 */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteRequest(request)}
-                        disabled={
-                          (request as { statuses?: { code?: string } }).statuses?.code ===
-                            'approved' ||
-                          (request as { statuses?: { code?: string } }).statuses?.code ===
-                            'rejected'
-                        }
-                        className={
-                          (request as { statuses?: { code?: string } }).statuses?.code ===
-                            'approved' ||
-                          (request as { statuses?: { code?: string } }).statuses?.code ===
-                            'rejected'
-                            ? 'opacity-50 cursor-not-allowed'
-                            : ''
-                        }
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <TooltipProvider>
+                      <div className="flex space-x-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewRequest(request)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>プレビュー</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        {/* 下書き状態の場合のみ編集ボタンと申請ボタンを表示 */}
+                        {(request as { statuses?: { code?: string } }).statuses?.code ===
+                          'draft' && (
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditRequest(request)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>編集</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleSubmitRequest(request)}
+                                >
+                                  <Send className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>申請</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </>
+                        )}
+                        {/* 削除ボタン - 承認済みまたは却下の場合は非活性 */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteRequest(request)}
+                              disabled={
+                                (request as { statuses?: { code?: string } }).statuses?.code ===
+                                  'approved' ||
+                                (request as { statuses?: { code?: string } }).statuses?.code ===
+                                  'rejected'
+                              }
+                              className={
+                                (request as { statuses?: { code?: string } }).statuses?.code ===
+                                  'approved' ||
+                                (request as { statuses?: { code?: string } }).statuses?.code ===
+                                  'rejected'
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : ''
+                              }
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>削除</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))}
