@@ -424,6 +424,132 @@ export default function MemberRequestsPage() {
     }
   }
 
+  // 申請詳細ダイアログ用のフィールド表示関数
+  function renderDetailField(
+    field: {
+      id: string;
+      name: string;
+      type?: string;
+      label: string;
+      required?: boolean;
+      placeholder?: string;
+      options?: Array<{ value: string; label: string } | string>;
+      metadata?: { object_type?: string; field_type?: string };
+    },
+    formData: Record<string, unknown>
+  ) {
+    const fieldType = field.type || 'text';
+    const fieldValue = formData[field.name];
+
+    const formatValue = (value: unknown): string => {
+      if (value === null || value === undefined || value === '') {
+        return '-';
+      }
+
+      if (typeof value === 'string') {
+        // 日付形式の場合は日本語形式に変換
+        if (value.match(/^\d{4}-\d{2}-\d{2}/)) {
+          return new Date(value).toLocaleDateString('ja-JP');
+        }
+        // 日時形式の場合は日本語形式に変換
+        if (value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+          return new Date(value).toLocaleString('ja-JP');
+        }
+        return value;
+      }
+
+      if (Array.isArray(value)) {
+        if (value.length === 0) return '-';
+        // オブジェクトの配列の場合（例：clock_records）
+        if (typeof value[0] === 'object' && value[0] !== null) {
+          return `${value.length}件のレコード`;
+        }
+        return value.join(', ');
+      }
+
+      return String(value);
+    };
+
+    switch (fieldType) {
+      case 'object':
+        // オブジェクトタイプの処理
+        if (
+          field.metadata &&
+          typeof field.metadata === 'object' &&
+          'object_type' in field.metadata
+        ) {
+          const metadata = field.metadata as { object_type: string; field_type?: string };
+
+          if (metadata.object_type === 'attendance') {
+            const clockRecords = fieldValue as
+              | Array<{
+                  in_time: string;
+                  breaks: { break_start: string; break_end: string }[];
+                  out_time?: string;
+                }>
+              | undefined;
+
+            if (!clockRecords || clockRecords.length === 0) {
+              return (
+                <div className="p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm text-gray-600">打刻記録がありません</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-3">
+                {clockRecords.map((record, index) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-md space-y-2">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-600">出勤時刻:</span>
+                        <span className="ml-2 text-gray-800">
+                          {record.in_time ? new Date(record.in_time).toLocaleString('ja-JP') : '-'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">退勤時刻:</span>
+                        <span className="ml-2 text-gray-800">
+                          {record.out_time
+                            ? new Date(record.out_time).toLocaleString('ja-JP')
+                            : '-'}
+                        </span>
+                      </div>
+                    </div>
+                    {record.breaks && record.breaks.length > 0 && (
+                      <div>
+                        <div className="font-medium text-gray-600 text-sm mb-1">休憩記録:</div>
+                        <div className="space-y-1">
+                          {record.breaks.map((breakRecord, breakIndex) => (
+                            <div key={breakIndex} className="text-sm text-gray-700 pl-2">
+                              {new Date(breakRecord.break_start).toLocaleString('ja-JP')} -{' '}
+                              {new Date(breakRecord.break_end).toLocaleString('ja-JP')}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+        }
+        return (
+          <div className="p-3 bg-gray-50 rounded-md">
+            <p className="text-sm text-gray-600">{formatValue(fieldValue)}</p>
+          </div>
+        );
+      default:
+        return (
+          <div className="p-3 bg-gray-50 rounded-md">
+            <p className="text-sm text-gray-600">{formatValue(fieldValue)}</p>
+          </div>
+        );
+    }
+  }
+
   function renderFormField(field: {
     id: string;
     name: string;
@@ -702,10 +828,47 @@ export default function MemberRequestsPage() {
                 {selectedRequest.form_data && Object.keys(selectedRequest.form_data).length > 0 && (
                   <div>
                     <Label className="font-medium">申請内容</Label>
-                    <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                      <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-                        {JSON.stringify(selectedRequest.form_data, null, 2)}
-                      </pre>
+                    <div className="mt-2 space-y-4">
+                      {(() => {
+                        const requestForm = requestForms.find(
+                          (f) => f.id === selectedRequest.request_form_id
+                        );
+
+                        if (!requestForm || !requestForm.form_config) {
+                          // フォーム設定が見つからない場合はJSON形式で表示
+                          return (
+                            <div className="p-3 bg-gray-50 rounded-md">
+                              <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                                {JSON.stringify(selectedRequest.form_data, null, 2)}
+                              </pre>
+                            </div>
+                          );
+                        }
+
+                        // フォーム設定に基づいて構造化表示
+                        return requestForm.form_config
+                          .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
+                          .map((field) => (
+                            <div key={field.id}>
+                              <Label className="text-sm font-medium text-gray-700">
+                                {field.label}
+                              </Label>
+                              {renderDetailField(
+                                field as {
+                                  id: string;
+                                  name: string;
+                                  type?: string;
+                                  label: string;
+                                  required?: boolean;
+                                  placeholder?: string;
+                                  options?: Array<{ value: string; label: string }>;
+                                  metadata?: { object_type?: string; field_type?: string };
+                                },
+                                selectedRequest.form_data || {}
+                              )}
+                            </div>
+                          ));
+                      })()}
                     </div>
                   </div>
                 )}
