@@ -114,7 +114,15 @@ export default function MemberChatPage() {
 
   // 機能チェック
   useEffect(() => {
+    console.log('機能チェック実行:', {
+      featuresLoading,
+      features,
+      chatEnabled: features?.chat,
+      userCompanyId: user?.company_id,
+    });
+
     if (!featuresLoading && features && !features.chat) {
+      console.log('チャット機能が無効です。リダイレクトします。');
       router.push('/member/feature-disabled');
       return;
     }
@@ -124,6 +132,7 @@ export default function MemberChatPage() {
     features,
     isLoading: featuresLoading,
     error,
+    userCompanyId: user?.company_id,
   });
 
   // データ読み込み
