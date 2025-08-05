@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Trash2, Clock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,10 @@ export default function ClockRecordsInput({
 
   useEffect(() => {
     console.log('ClockRecordsInput - useEffect (value):', { value });
-    setClockRecords(value || []);
+    // 外部から渡されたvalueが空でない場合のみ更新
+    if (value && value.length > 0) {
+      setClockRecords(value);
+    }
   }, [value]);
 
   // 既存の勤怠データを取得
@@ -62,7 +65,9 @@ export default function ClockRecordsInput({
       console.log('ClockRecordsInput - 既存データ取得開始:', { workDate, userId });
 
       try {
-        const { getLatestAttendance } = await import('@/lib/actions/attendance');
+        const { getLatestAttendance, getUserWorkTypeDetail } = await import(
+          '@/lib/actions/attendance'
+        );
         const existingAttendance = await getLatestAttendance(userId, workDate);
 
         console.log('ClockRecordsInput - 既存データ取得結果:', { existingAttendance });
@@ -72,9 +77,23 @@ export default function ClockRecordsInput({
           setClockRecords(existingAttendance.clock_records);
           onChangeAction(existingAttendance.clock_records);
         } else {
-          // 既存データがない場合、デフォルトのセッションを作成
-          console.log('ClockRecordsInput - 既存データなし、デフォルトセッション作成');
-          const defaultRecord = createDefaultClockRecord(workDate);
+          // 既存データがない場合、ユーザーの勤務タイプの詳細情報を取得
+          console.log('ClockRecordsInput - 既存データなし、ユーザーの勤務タイプ詳細を取得');
+
+          if (!userId) {
+            console.error('ClockRecordsInput - userIdが設定されていません');
+            // userIdがない場合は従来のデフォルト値を使用
+            const defaultRecord = createDefaultClockRecord(workDate);
+            setClockRecords([defaultRecord]);
+            onChangeAction([defaultRecord]);
+            return;
+          }
+
+          const workTypeDetail = await getUserWorkTypeDetail(userId);
+          console.log('ClockRecordsInput - 勤務タイプ詳細:', workTypeDetail);
+
+          // ユーザーの勤務タイプの設定を使用してデフォルトセッションを作成
+          const defaultRecord = createDefaultClockRecord(workDate, workTypeDetail || undefined);
           setClockRecords([defaultRecord]);
           onChangeAction([defaultRecord]);
         }
@@ -87,17 +106,53 @@ export default function ClockRecordsInput({
       }
     };
 
+    // 現在のclockRecordsの状態をチェックして、既にデータがある場合はスキップ
+    if (clockRecords.length > 0) {
+      console.log(
+        'ClockRecordsInput - 既にデータがあるため、既存データ取得をスキップ:',
+        clockRecords
+      );
+      return;
+    }
+
     fetchExistingAttendance();
-  }, [workDate, userId, onChangeAction]);
+  }, [workDate, userId]); // onChangeActionを依存関係から削除
 
-  const updateClockRecords = (newRecords: ClockRecord[]) => {
-    setClockRecords(newRecords);
-    onChangeAction(newRecords);
-  };
+  const updateClockRecords = useCallback(
+    (newRecords: ClockRecord[]) => {
+      setClockRecords(newRecords);
+      onChangeAction(newRecords);
+    },
+    [onChangeAction]
+  );
 
-  const addSession = () => {
-    const newRecords = [...clockRecords, createDefaultClockRecord(workDate)];
-    updateClockRecords(newRecords);
+  const addSession = async () => {
+    if (!userId) {
+      console.error('addSession - userIdが設定されていません');
+      // userIdがない場合は従来のデフォルト値を使用
+      const newRecords = [...clockRecords, createDefaultClockRecord(workDate)];
+      updateClockRecords(newRecords);
+      return;
+    }
+
+    try {
+      // ユーザーの勤務タイプの詳細情報を取得
+      const { getUserWorkTypeDetail } = await import('@/lib/actions/attendance');
+      const workTypeDetail = await getUserWorkTypeDetail(userId);
+      console.log('addSession - 勤務タイプ詳細:', workTypeDetail);
+
+      // ユーザーの勤務タイプの設定を使用してデフォルトセッションを作成
+      const newRecords = [
+        ...clockRecords,
+        createDefaultClockRecord(workDate, workTypeDetail || undefined),
+      ];
+      updateClockRecords(newRecords);
+    } catch (error) {
+      console.error('addSession - 勤務タイプ詳細取得エラー:', error);
+      // エラーの場合は従来のデフォルト値を使用
+      const newRecords = [...clockRecords, createDefaultClockRecord(workDate)];
+      updateClockRecords(newRecords);
+    }
   };
 
   const removeSession = (index: number) => {
@@ -107,7 +162,19 @@ export default function ClockRecordsInput({
 
   const updateSession = (index: number, field: keyof ClockRecord, value: string) => {
     const newRecords = [...clockRecords];
-    newRecords[index] = { ...newRecords[index], [field]: value };
+
+    if ((field === 'in_time' || field === 'out_time') && value) {
+      // ユーザーが入力した時刻はJST時刻として扱う
+      // datetime-local入力から取得した値は"YYYY-MM-DDTHH:mm"形式のJST時刻
+      // JST時刻をUTC時刻に変換
+      const jstDate = new Date(value);
+      const jstOffset = 9 * 60; // JSTはUTC+9
+      const utcDate = new Date(jstDate.getTime() - jstOffset * 60 * 1000);
+      newRecords[index] = { ...newRecords[index], [field]: utcDate.toISOString() };
+    } else {
+      newRecords[index] = { ...newRecords[index], [field]: value };
+    }
+
     updateClockRecords(newRecords);
   };
 
@@ -133,10 +200,25 @@ export default function ClockRecordsInput({
     value: string
   ) => {
     const newRecords = [...clockRecords];
-    newRecords[sessionIndex].breaks[breakIndex] = {
-      ...newRecords[sessionIndex].breaks[breakIndex],
-      [field]: value,
-    };
+
+    if ((field === 'break_start' || field === 'break_end') && value) {
+      // ユーザーが入力した時刻はJST時刻として扱う
+      // datetime-local入力から取得した値は"YYYY-MM-DDTHH:mm"形式のJST時刻
+      // JST時刻をUTC時刻に変換
+      const jstDate = new Date(value);
+      const jstOffset = 9 * 60; // JSTはUTC+9
+      const utcDate = new Date(jstDate.getTime() - jstOffset * 60 * 1000);
+      newRecords[sessionIndex].breaks[breakIndex] = {
+        ...newRecords[sessionIndex].breaks[breakIndex],
+        [field]: utcDate.toISOString(),
+      };
+    } else {
+      newRecords[sessionIndex].breaks[breakIndex] = {
+        ...newRecords[sessionIndex].breaks[breakIndex],
+        [field]: value,
+      };
+    }
+
     updateClockRecords(newRecords);
   };
 
@@ -145,11 +227,18 @@ export default function ClockRecordsInput({
     if (!dateTimeString) return '';
     try {
       const date = new Date(dateTimeString);
-      // JST時間で時刻部分を抽出（HH:mm:ss）
+      // UTC時刻からJST時刻を抽出（HH:mm:ss）
       const jstOffset = 9 * 60; // JSTはUTC+9
       const jstTime = new Date(date.getTime() + jstOffset * 60 * 1000);
       const timeString = jstTime.toISOString().split('T')[1].split('.')[0];
-      const result = `${newWorkDate}T${timeString}`;
+
+      // 新しい勤務日でJST時刻を再構築
+      const newJstDateTime = new Date(`${newWorkDate}T${timeString}`);
+
+      // JST時刻をUTC時刻に変換
+      const newUtcDateTime = new Date(newJstDateTime.getTime() - jstOffset * 60 * 1000);
+
+      const result = newUtcDateTime.toISOString();
       console.log('updateDateTimeWithNewWorkDate:', {
         original: dateTimeString,
         newWorkDate,

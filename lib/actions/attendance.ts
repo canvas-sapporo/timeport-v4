@@ -1464,6 +1464,57 @@ export async function getUserWorkType(userId: string): Promise<string | undefine
 }
 
 /**
+ * ユーザーの勤務タイプの詳細情報を取得
+ */
+export async function getUserWorkTypeDetail(userId: string): Promise<{
+  id: string;
+  name: string;
+  work_start_time: string;
+  work_end_time: string;
+} | null> {
+  try {
+    console.log('getUserWorkTypeDetail 開始:', { userId });
+
+    // ユーザーのプロフィールから現在の勤務タイプを取得
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('current_work_type_id')
+      .eq('id', userId)
+      .is('deleted_at', null)
+      .single();
+
+    if (profileError) {
+      console.error('ユーザープロフィール取得エラー:', profileError);
+      return null;
+    }
+
+    if (!userProfile?.current_work_type_id) {
+      console.log('ユーザーに勤務タイプが設定されていません');
+      return null;
+    }
+
+    // 勤務タイプの詳細情報を取得
+    const { data: workType, error: workTypeError } = await supabaseAdmin
+      .from('work_types')
+      .select('id, name, work_start_time, work_end_time')
+      .eq('id', userProfile.current_work_type_id)
+      .is('deleted_at', null)
+      .single();
+
+    if (workTypeError) {
+      console.error('勤務タイプ詳細取得エラー:', workTypeError);
+      return null;
+    }
+
+    console.log('getUserWorkTypeDetail 取得成功:', workType);
+    return workType;
+  } catch (error) {
+    console.error('getUserWorkTypeDetail エラー:', error);
+    return null;
+  }
+}
+
+/**
  * 管理者用：全メンバーの勤怠記録一覧を取得
  */
 export async function getAllAttendance(
@@ -2813,6 +2864,8 @@ export async function getLatestAttendance(
   workDate: string
 ): Promise<Attendance | null> {
   try {
+    console.log('getLatestAttendance 開始:', { userId, workDate });
+
     const { data, error } = await supabaseAdmin
       .from('attendances')
       .select('*')
@@ -2825,10 +2878,16 @@ export async function getLatestAttendance(
       .single();
 
     if (error) {
+      // データが見つからない場合は正常なケースとして扱う
+      if (error.code === 'PGRST116') {
+        console.log('getLatestAttendance - データが見つかりません:', { userId, workDate });
+        return null;
+      }
       console.error('最新勤怠記録取得エラー:', error);
       return null;
     }
 
+    console.log('getLatestAttendance 取得成功:', data);
     return data;
   } catch (error) {
     console.error('getLatestAttendance エラー:', error);

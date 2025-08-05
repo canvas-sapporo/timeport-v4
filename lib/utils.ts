@@ -283,12 +283,30 @@ export function getJSTDateFromString(dateString: string): string {
 export function formatDateTimeForInput(dateTimeString: string): string {
   if (!dateTimeString) return '';
   try {
+    console.log('formatDateTimeForInput 開始:', { dateTimeString });
+    
     const date = new Date(dateTimeString);
+    console.log('formatDateTimeForInput - 元のDate:', { 
+      date: date.toISOString(),
+      dateString: date.toString(),
+      timezoneOffset: date.getTimezoneOffset()
+    });
+    
     // JSTオフセット（+9時間）を適用
     const jstOffset = 9 * 60; // JSTはUTC+9
     const jstTime = new Date(date.getTime() + jstOffset * 60 * 1000);
-    return jstTime.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
-  } catch {
+    
+    console.log('formatDateTimeForInput - JST変換後:', { 
+      jstTime: jstTime.toISOString(),
+      jstTimeString: jstTime.toString()
+    });
+    
+    const result = jstTime.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
+    console.log('formatDateTimeForInput 完了:', { result });
+    
+    return result;
+  } catch (error) {
+    console.error('formatDateTimeForInput エラー:', error);
     return '';
   }
 }

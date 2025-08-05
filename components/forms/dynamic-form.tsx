@@ -3,6 +3,7 @@
 import { useForm, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useState, useEffect } from 'react';
 
 import { RequestForm, FormFieldConfig } from '@/schemas/request';
 import { Button } from '@/components/ui/button';
@@ -120,8 +121,17 @@ const DynamicFormField = ({
   watch: (name: string) => unknown;
   userId?: string;
 }) => {
+  const [workDate, setWorkDate] = useState<string>('');
   const error = errors[field.name];
   const value = watch(field.name);
+
+  // work_dateフィールドの値を監視してworkDateの状態を更新
+  useEffect(() => {
+    const workDateValue = watch('work_date') as string;
+    if (workDateValue && workDateValue !== workDate) {
+      setWorkDate(workDateValue);
+    }
+  }, [watch('work_date'), workDate]);
 
   const renderField = () => {
     // work_dateフィールドの値を取得
@@ -221,7 +231,10 @@ const DynamicFormField = ({
                 disabled={false}
                 workDate={workDate}
                 userId={userId}
-                onWorkDateChange={(newWorkDate) => setValue('work_date', newWorkDate)}
+                onWorkDateChange={(newWorkDate) => {
+                  setWorkDate(newWorkDate);
+                  setValue('work_date', newWorkDate);
+                }}
               />
             );
           }
