@@ -25,13 +25,23 @@ import { Badge } from '@/components/ui/badge';
 import type { ObjectMetadata } from '@/schemas/request';
 import { getObjectTypeOptions, getAttendanceObjectFields } from '@/lib/utils/request-type-utils';
 
+// オブジェクトフィールドの型定義
+interface ObjectField {
+  id: string;
+  type: string;
+  label: string;
+  name: string;
+  metadata?: ObjectMetadata;
+  [key: string]: unknown;
+}
+
 interface ObjectTypeSettingsDialogProps {
   open: boolean;
   onOpenChangeAction: (open: boolean) => void;
   metadata: ObjectMetadata | null;
   onMetadataChangeAction: (metadata: ObjectMetadata | null) => void;
-  onSaveObjectField?: (field: any) => void;
-  tempField?: any;
+  onSaveObjectField?: (field: ObjectField) => void;
+  tempField?: ObjectField;
 }
 
 export default function ObjectTypeSettingsDialog({

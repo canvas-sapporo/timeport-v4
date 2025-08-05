@@ -56,7 +56,12 @@ export default function PreviewReportTemplatePage({ params }: { params: Promise<
       // テンプレート情報を取得
       const templateResult = await getReportTemplate(id);
       if (templateResult.success && templateResult.data) {
-        setTemplate(templateResult.data);
+        // confirmation_flowをapproval_flowにマッピング
+        const templateWithApprovalFlow = {
+          ...templateResult.data,
+          approval_flow: templateResult.data.confirmation_flow,
+        };
+        setTemplate(templateWithApprovalFlow as unknown as ReportTemplate);
 
         // プレビュー成功ログ記録
         console.log('レポートテンプレートプレビュー成功:', {

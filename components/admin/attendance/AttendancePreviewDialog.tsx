@@ -35,7 +35,58 @@ import {
   getAttendanceChanges,
   formatDateTimeForDisplay,
 } from '@/lib/utils';
-import type { AttendanceData, AttendanceStatusData, ClockBreakRecord } from '@/schemas/attendance';
+// 勤怠データの型定義
+interface AttendanceData {
+  id: string;
+  user_id: string;
+  work_date: string;
+  clock_in_time?: string;
+  clock_out_time?: string;
+  break_records: Array<{
+    break_start: string;
+    break_end: string;
+  }>;
+  clock_records?: Array<{
+    in_time?: string;
+    out_time?: string;
+    breaks?: Array<{
+      break_start: string;
+      break_end: string;
+    }>;
+  }>;
+  user_name?: string;
+  work_type_name?: string;
+  work_type_id?: string;
+  attendance_status_id?: string;
+  approved_by?: string;
+  actual_work_minutes?: number;
+  overtime_minutes?: number;
+  late_minutes?: number;
+  early_leave_minutes?: number;
+  has_edit_history?: boolean;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+  approved_at?: string;
+  source_id?: string;
+  edit_reason?: string;
+  editor_name?: string;
+  [key: string]: unknown;
+}
+
+interface AttendanceStatusData {
+  id: string;
+  name: string;
+  display_name: string;
+  color: string;
+  font_color: string;
+  background_color: string;
+}
+
+interface ClockBreakRecord {
+  break_start: string;
+  break_end: string;
+}
 
 interface AttendancePreviewDialogProps {
   open: boolean;
@@ -474,7 +525,11 @@ export default function AttendancePreviewDialog({
 
             {/* 休憩時間 */}
             {(() => {
-              const allBreaks: Array<{ sessionIndex: number; breakIndex: number; break: any }> = [];
+              const allBreaks: Array<{
+                sessionIndex: number;
+                breakIndex: number;
+                break: { break_start: string; break_end: string };
+              }> = [];
 
               // 全セッションから休憩時間を収集
               attendance.clock_records?.forEach((session, sessionIndex) => {

@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FormFieldConfig, RequestForm } from '@/schemas/request';
-import DynamicForm from '@/components/forms/dynamic-form';
+import DynamicForm from '@/components/forms/DynamicForm';
 import { supabase } from '@/lib/supabase';
 
 // 基本的なバリデーションスキーマ

@@ -1,5 +1,32 @@
 import { supabase } from '@/lib/supabase';
 
+// 通知メタデータの型定義
+type NotificationMetadata = Record<string, string | number | boolean>;
+
+// 通知データの型定義
+interface NotificationData {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  link_url?: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  metadata?: NotificationMetadata;
+}
+
+// プッシュ購読の型定義
+interface PushSubscription {
+  user_id: string;
+  subscription_data: {
+    endpoint: string;
+    keys: {
+      p256dh: string;
+      auth: string;
+    };
+  };
+  is_active: boolean;
+}
+
 // プッシュ通知の送信
 export async function sendPushNotification(
   userId: string,
@@ -8,7 +35,7 @@ export async function sendPushNotification(
   type: string,
   linkUrl?: string,
   priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal',
-  metadata?: Record<string, any>
+  metadata?: NotificationMetadata
 ) {
   try {
     // 1. データベースに通知を保存
@@ -51,7 +78,7 @@ export async function sendPushNotification(
 }
 
 // 特定ユーザーにプッシュ通知を送信
-async function sendPushToUser(userId: string, notificationData: any) {
+async function sendPushToUser(userId: string, notificationData: NotificationData) {
   try {
     console.log('sendPushToUser: 開始', { userId, notificationData });
 
@@ -106,7 +133,10 @@ async function sendPushToUser(userId: string, notificationData: any) {
 }
 
 // 特定の購読にプッシュ通知を送信
-async function sendPushToSubscription(subscription: any, notificationData: any) {
+async function sendPushToSubscription(
+  subscription: PushSubscription,
+  notificationData: NotificationData
+) {
   try {
     const response = await fetch('/api/push/send', {
       method: 'POST',
@@ -138,7 +168,7 @@ export async function sendBulkPushNotification(
   type: string,
   linkUrl?: string,
   priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal',
-  metadata?: Record<string, any>
+  metadata?: NotificationMetadata
 ) {
   try {
     const results = await Promise.allSettled(

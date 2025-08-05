@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-export default function PWAScript() {
+export default function PwaScript() {
   useEffect(() => {
     // Service Workerの登録
     if ('serviceWorker' in navigator) {

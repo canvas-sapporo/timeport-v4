@@ -49,7 +49,20 @@ import {
 } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import type { AttendanceData, ClockRecord } from '@/schemas/attendance';
+// 勤怠データの型定義
+interface AttendanceData {
+  id: string;
+  user_id: string;
+  work_date: string;
+  clock_in_time?: string;
+  clock_out_time?: string;
+  break_records: Array<{
+    id: string;
+    break_start_time: string;
+    break_end_time?: string;
+  }>;
+  [key: string]: unknown;
+}
 
 interface AttendanceEditDialogProps {
   open: boolean;
@@ -503,7 +516,11 @@ export default function AttendanceEditDialog({
 
           {/* 休憩時間 */}
           {(() => {
-            const allBreaks: Array<{ sessionIndex: number; breakIndex: number; break: any }> = [];
+            const allBreaks: Array<{
+              sessionIndex: number;
+              breakIndex: number;
+              break: { break_start: string; break_end?: string };
+            }> = [];
 
             // 全セッションから休憩時間を収集
             editData.clock_records?.forEach((session, sessionIndex) => {

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { createAdminClient } from '@/lib/supabase';
 
+// 監査ログデータの型定義
+type AuditLogData = Record<string, string | number | boolean | null> | null;
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -69,9 +72,10 @@ export async function GET(request: NextRequest) {
     };
 
     if (stats) {
-      stats.forEach((stat: any) => {
-        if (stat.action in actionStats) {
-          actionStats[stat.action as keyof typeof actionStats] = stat.count || 0;
+      stats.forEach((stat: unknown) => {
+        const statData = stat as { action: string; count: number };
+        if (statData.action in actionStats) {
+          actionStats[statData.action as keyof typeof actionStats] = statData.count || 0;
         }
       });
     }

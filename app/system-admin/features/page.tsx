@@ -56,7 +56,7 @@ export default function SuperAdminFeaturesPage() {
 
   // 企業データと機能データを取得
   useEffect(() => {
-    const fetchData = async () => {
+    async function fetchData() {
       try {
         // 企業データを取得
         const companiesResult = await getCompanies();
@@ -77,7 +77,7 @@ export default function SuperAdminFeaturesPage() {
           variant: 'destructive',
         });
       }
-    };
+    }
 
     fetchData();
   }, [toast]);
@@ -113,7 +113,7 @@ export default function SuperAdminFeaturesPage() {
   ];
 
   // 機能切り替えハンドラー
-  const handleFeatureToggle = async (companyId: string, featureCode: string, enabled: boolean) => {
+  async function handleFeatureToggle(companyId: string, featureCode: string, enabled: boolean) {
     const loadingKey = `${companyId}-${featureCode}`;
 
     // 少し遅延してからローディング状態を開始
@@ -166,13 +166,13 @@ export default function SuperAdminFeaturesPage() {
       clearTimeout(loadingTimeout);
       setLoadingStates((prev) => ({ ...prev, [loadingKey]: false }));
     }
-  };
+  }
 
   // 企業の機能データを取得
-  const getCompanyFeatures = (companyId: string) => {
+  function getCompanyFeatures(companyId: string) {
     const companyFeature = companyFeatures.find((cf) => cf.company_id === companyId);
     return companyFeature?.features || { chat: false, report: false, schedule: false };
-  };
+  }
 
   // 選択された企業のみを表示するかどうか
   const displayCompanies = selectedCompanyId

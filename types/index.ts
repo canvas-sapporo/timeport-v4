@@ -120,7 +120,6 @@ export type { AttendanceData } from '@/schemas/attendance';
 // レポート関連
 export type {
   ReportStatus,
-  ReportTemplate,
   ReportFieldType,
   ReportFieldConfig,
   ReportFieldOption,
@@ -137,3 +136,12 @@ export type {
   ReportDetail,
   ReportStatistics,
 } from '@/schemas/report';
+
+// レポートテンプレート関連
+export type {
+  ReportTemplateData as ReportTemplate,
+  ReportTemplateListResult,
+  ReportTemplateDetailResult,
+  UpdateReportTemplateResult,
+  DeleteReportTemplateResult,
+} from '@/schemas/report-templates';

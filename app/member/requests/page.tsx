@@ -39,10 +39,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import ClockRecordsInput from '@/components/forms/clock-records-input';
+import ClockRecordsInput from '@/components/forms/ClockRecordsInput';
 import { RequestEditDialog } from '@/components/member/request/RequestEditDialog';
 
-export default function MemberRequestsPage() {
+export function MemberRequestsPage() {
   const { user } = useAuth();
   const { requests, requestForms, createRequest, users, refreshRequests } = useData();
   const router = useRouter();
@@ -441,7 +441,7 @@ export default function MemberRequestsPage() {
     const fieldType = field.type || 'text';
     const fieldValue = formData[field.name];
 
-    const formatValue = (value: unknown): string => {
+    function formatValue(value: unknown): string {
       if (value === null || value === undefined || value === '') {
         return '-';
       }
@@ -468,7 +468,7 @@ export default function MemberRequestsPage() {
       }
 
       return String(value);
-    };
+    }
 
     switch (fieldType) {
       case 'object':
@@ -1282,3 +1282,5 @@ export default function MemberRequestsPage() {
     </div>
   );
 }
+
+export default MemberRequestsPage;

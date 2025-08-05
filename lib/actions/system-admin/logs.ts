@@ -3,6 +3,9 @@ import { revalidatePath } from 'next/cache';
 import { createClientAdminClient } from '@/lib/supabase';
 import { LogFilter, LogStats, LogSetting, LogSettingKey } from '@/schemas/database/log';
 
+// ログ設定値の型定義
+type LogSettingValue = string | number | boolean | string[];
+
 // ================================
 // システムログ取得
 // ================================
@@ -248,7 +251,7 @@ export async function getLogSettings(): Promise<LogSetting[]> {
 
 export async function updateLogSetting(
   key: LogSettingKey,
-  value: any,
+  value: LogSettingValue,
   description?: string
 ): Promise<void> {
   try {

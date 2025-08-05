@@ -5,8 +5,8 @@ import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/auth-context';
 import { DataProvider } from '@/contexts/data-context';
 import { PageTransitionProvider } from '@/contexts/page-transition-context';
-import MainLayout from '@/components/layout/main-layout';
-import PWAScript from '@/components/pwa/pwa-script';
+import MainLayout from '@/components/layout/MainLayout';
+import PwaScript from '@/components/pwa/PwaScript';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -64,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </DataProvider>
           </AuthProvider>
         </PageTransitionProvider>
-        <PWAScript />
+        <PwaScript />
       </body>
     </html>
   );

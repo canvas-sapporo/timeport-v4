@@ -191,9 +191,9 @@ export default function AdminSettingsPage() {
       // 設定値を更新
       setNotificationSettings((prev) => ({
         ...prev,
-        lateArrivalAlert: lateAlertResult?.enabled || false,
-        overtimeAlert: overtimeAlertResult?.enabled || false,
-        timeEditPermission: clockEditResult?.enabled || false,
+        lateArrivalAlert: (lateAlertResult as { enabled: boolean })?.enabled || false,
+        overtimeAlert: (overtimeAlertResult as { enabled: boolean })?.enabled || false,
+        timeEditPermission: (clockEditResult as { enabled: boolean })?.enabled || false,
       }));
     } catch (error) {
       console.error('勤怠ステータス取得エラー:', error);

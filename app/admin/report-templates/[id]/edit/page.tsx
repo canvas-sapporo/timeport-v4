@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, MoveUp, MoveDown } from 'lucide-react';
+import { Plus, Trash2, MoveUp, MoveDown, ArrowLeft } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -113,7 +113,7 @@ export default function EditReportTemplatePage({ params }: { params: Promise<{ i
 
       if (usersResult.success && usersResult.data) {
         setUsers(
-          usersResult.data.users.map((user) => ({
+          usersResult.data.map((user) => ({
             id: user.id,
             name: `${user.family_name} ${user.first_name}`,
           }))

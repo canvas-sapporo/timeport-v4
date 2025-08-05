@@ -233,7 +233,7 @@ export function createDefaultClockRecord(
     if (workTypeDetail) {
       // ユーザーの勤務タイプの設定を使用（JST時刻として扱う）
       // work_start_timeとwork_end_timeは"HH:mm:ss"形式のJST時刻
-      
+
       // JST時刻を正しく生成
       // new Date()で作成される時刻は既にローカルタイムゾーン（JST）として解釈される
       const jstInTime = new Date(`${workDate}T${workTypeDetail.work_start_time}`);
@@ -283,7 +283,7 @@ export function createDefaultClockRecord(
     // 現在の日付のJST時刻を生成
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    
+
     if (workTypeDetail) {
       // ユーザーの勤務タイプの設定を使用（JST時刻として扱う）
       const jstInTime = new Date(`${todayStr}T${workTypeDetail.work_start_time}`);

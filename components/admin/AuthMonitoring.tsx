@@ -54,7 +54,7 @@ interface AuthMonitoringProps {
   endDate?: string;
 }
 
-export function AuthMonitoring({ companyId, startDate, endDate }: AuthMonitoringProps) {
+export const AuthMonitoring = ({ companyId, startDate, endDate }: AuthMonitoringProps) => {
   const [data, setData] = useState<AuthMonitoringData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -353,4 +353,4 @@ export function AuthMonitoring({ companyId, startDate, endDate }: AuthMonitoring
       </Card>
     </div>
   );
-}
+};

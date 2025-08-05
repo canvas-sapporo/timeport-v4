@@ -20,6 +20,28 @@ import {
 } from '@/schemas/users';
 import { Group } from '@/schemas/group';
 
+// ユーザーグループの型定義
+interface UserGroup {
+  group_id: string;
+  groups: Group;
+}
+
+// ユーザー情報の型定義
+interface UserWithGroups {
+  id: string;
+  family_name: string;
+  first_name: string;
+  family_name_kana: string;
+  first_name_kana: string;
+  email: string;
+  code: string;
+  phone?: string;
+  role: string;
+  is_active: boolean;
+  [key: string]: unknown;
+  groups: Group[];
+}
+
 // 環境変数から設定を取得
 const DEFAULT_PASSWORD = process.env.NEXT_PUBLIC_DEFAULT_USER_PASSWORD || 'Passw0rd!';
 const REQUIRE_PASSWORD_CHANGE = process.env.NEXT_PUBLIC_REQUIRE_PASSWORD_CHANGE === 'true';
@@ -327,14 +349,15 @@ export async function getAdminUsers(
 
         return {
           ...user,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           groups: userGroups?.map((ug: any) => ug.groups).filter(Boolean) || [],
-        };
+        } as UserWithGroups;
       })
     );
 
     // 企業内のユーザーのみをフィルタリング
-    const companyUsers = usersWithGroupsData.filter((user) =>
-      user.groups.some((group: any) => group.company_id === companyId)
+    const companyUsers = usersWithGroupsData.filter((user: UserWithGroups) =>
+      user.groups.some((group: Group) => group.company_id === companyId)
     );
 
     console.log('企業内ユーザー:', companyUsers);
@@ -345,7 +368,7 @@ export async function getAdminUsers(
     console.log('フィルタリング前のユーザー数:', filteredUsers.length);
 
     if (params.search) {
-      filteredUsers = filteredUsers.filter((user: any) => {
+      filteredUsers = filteredUsers.filter((user: UserWithGroups) => {
         const fullName = `${user.family_name} ${user.first_name}`;
         const fullNameKana = `${user.family_name_kana} ${user.first_name_kana}`;
         return (
@@ -359,11 +382,13 @@ export async function getAdminUsers(
     }
 
     if (params.role) {
-      filteredUsers = filteredUsers.filter((user: any) => user.role === params.role);
+      filteredUsers = filteredUsers.filter((user: UserWithGroups) => user.role === params.role);
     }
 
     if (params.is_active !== undefined) {
-      filteredUsers = filteredUsers.filter((user: any) => user.is_active === params.is_active);
+      filteredUsers = filteredUsers.filter(
+        (user: UserWithGroups) => user.is_active === params.is_active
+      );
     }
 
     if (params.group_id) {

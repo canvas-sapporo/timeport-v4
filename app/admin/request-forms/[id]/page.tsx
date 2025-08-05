@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import DynamicForm from '@/components/forms/dynamic-form';
+import DynamicForm from '@/components/forms/DynamicForm';
 import {
   Dialog,
   DialogContent,

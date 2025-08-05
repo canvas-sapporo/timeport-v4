@@ -50,7 +50,12 @@ export default function ReportTemplatesPage() {
       const result = await getReportTemplates();
 
       if (result.success && result.data) {
-        setTemplates(result.data);
+        // confirmation_flowをapproval_flowにマッピング
+        const templatesWithApprovalFlow = result.data.map((template) => ({
+          ...template,
+          approval_flow: template.confirmation_flow,
+        }));
+        setTemplates(templatesWithApprovalFlow as unknown as ReportTemplate[]);
       } else {
         toast({
           title: 'エラー',

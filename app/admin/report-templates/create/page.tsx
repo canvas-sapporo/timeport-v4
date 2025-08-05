@@ -64,7 +64,7 @@ export default function CreateReportTemplatePage() {
         const usersResult = await getAdminUsers('', { limit: 1000 });
         if (usersResult.success && usersResult.data) {
           setUsers(
-            usersResult.data.users.map((user) => ({
+            usersResult.data.map((user) => ({
               id: user.id,
               name: `${user.family_name} ${user.first_name}`,
             }))

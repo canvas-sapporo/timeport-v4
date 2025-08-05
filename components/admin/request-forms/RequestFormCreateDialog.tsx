@@ -28,9 +28,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { createRequestForm } from '@/lib/actions/admin/request-forms';
 import { getDefaultFormConfig, getDefaultApprovalFlow } from '@/lib/utils/request-type-defaults';
-import FormBuilder from '@/components/forms/form-builder';
+import FormBuilder from '@/components/forms/FormBuilder';
 import ApprovalFlowBuilder from '@/components/admin/request-forms/ApprovalFlowBuilder';
-import ObjectTypeSettingsDialog from '@/components/forms/object-type-settings-dialog';
+import ObjectTypeSettingsDialog from '@/components/forms/ObjectTypeSettingsDialog';
 import type { FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/schemas/request';
 
 const requestTypeSchema = z.object({

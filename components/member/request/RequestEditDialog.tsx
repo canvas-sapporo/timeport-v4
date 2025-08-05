@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn, getJSTDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { updateRequest, updateRequestStatus } from '@/lib/actions/requests';
-import ClockRecordsInput from '@/components/forms/clock-records-input';
+import ClockRecordsInput from '@/components/forms/ClockRecordsInput';
 import { RequestData, FormFieldConfig } from '@/schemas/request';
 import { RequestFormData } from '@/schemas/request-forms';
 import { DynamicFormData } from '@/types/dynamic-data';

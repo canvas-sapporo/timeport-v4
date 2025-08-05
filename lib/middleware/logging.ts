@@ -188,6 +188,11 @@ async function getResponseSize(response: NextResponse): Promise<number> {
 // 監査ログ用ヘルパー
 // ================================
 
+// 監査ログデータの型定義
+type AuditData =
+  | Record<string, string | number | boolean | string[] | Record<string, unknown> | null>
+  | undefined;
+
 /**
  * 監査ログを記録（ユーザー操作）
  */
@@ -195,9 +200,9 @@ export async function logUserAction(
   action: string,
   targetType?: string,
   targetId?: string,
-  beforeData?: any,
-  afterData?: any,
-  details?: any
+  beforeData?: AuditData,
+  afterData?: AuditData,
+  details?: AuditData
 ) {
   try {
     const supabase = createAdminClient();
@@ -236,8 +241,8 @@ export async function logDatabaseOperation(
   operation: 'create' | 'update' | 'delete' | 'read',
   table: string,
   recordId?: string,
-  beforeData?: any,
-  afterData?: any
+  beforeData?: AuditData,
+  afterData?: AuditData
 ) {
   await logUserAction(`database_${operation}`, table, recordId, beforeData, afterData, {
     operation,

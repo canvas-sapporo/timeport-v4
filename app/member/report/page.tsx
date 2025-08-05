@@ -49,6 +49,14 @@ import {
 } from '@/lib/actions/report-templates';
 import type { ReportListItem, ReportTemplate, ReportFieldConfig } from '@/schemas/report';
 
+// 型の互換性のための拡張型
+type ExtendedReportTemplate = ReportTemplate & {
+  approval_flow: {
+    type: 'static' | 'dynamic';
+    confirmers: { type: 'user' | 'group'; group_id?: string; user_id?: string }[];
+  };
+};
+
 // Markdownエディタを動的インポート
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
 
@@ -60,9 +68,9 @@ export default function MemberReportPage() {
   // 機能チェック
   const { features, isLoading: featuresLoading } = useCompanyFeatures(user?.company_id);
   const [reports, setReports] = useState<ReportListItem[]>([]);
-  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
+  const [templates, setTemplates] = useState<ExtendedReportTemplate[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<ExtendedReportTemplate | null>(null);
   const [formData, setFormData] = useState<Record<string, string | number | boolean | string[]>>(
     {}
   );
@@ -99,7 +107,12 @@ export default function MemberReportPage() {
           }
 
           if (templatesResult.success && templatesResult.data) {
-            setTemplates(templatesResult.data);
+            // confirmation_flowをapproval_flowにマッピング
+            const templatesWithApprovalFlow = templatesResult.data.map((template) => ({
+              ...template,
+              approval_flow: template.confirmation_flow,
+            }));
+            setTemplates(templatesWithApprovalFlow as unknown as ExtendedReportTemplate[]);
           }
         } catch (error) {
           console.error('Error loading data:', error);
@@ -122,7 +135,12 @@ export default function MemberReportPage() {
       // テンプレートの詳細を取得
       const result = await getReportTemplateForMember(template.id);
       if (result.success && result.data) {
-        setSelectedTemplate(result.data);
+        // confirmation_flowをapproval_flowにマッピング
+        const templateWithApprovalFlow = {
+          ...result.data,
+          approval_flow: result.data.confirmation_flow,
+        };
+        setSelectedTemplate(templateWithApprovalFlow as unknown as ExtendedReportTemplate);
         const initialData: Record<string, string | number | boolean | string[]> = {};
         result.data.form_config.forEach((field) => {
           if (field.default_value !== undefined) {

@@ -45,42 +45,56 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
-// 型定義
-interface SystemLog {
+// ログデータの型定義
+interface LogData {
   id: string;
-  created_at: string;
   level: string;
   message: string;
-  path: string;
-  status_code: number;
-  response_time_ms: number;
-  company_id: string;
-  user_id: string;
-  feature_name: string;
-  resource_type: string;
-  resource_id: string;
-  environment: string;
-  app_version: string;
-  action_type: string;
-  metadata: any;
-  method: string;
-  memory_usage_mb: number;
-  error_stack: string;
-  session_id: string;
-  ip_address: string;
-  user_agent: string;
-  referer: string;
-  trace_id: string;
-  request_id: string;
-  companies?: {
-    id: string;
-    name: string;
-  };
-  user_profiles?: {
-    id: string;
-    family_name: string;
-    first_name: string;
-  };
+  created_at: string;
+  companies?: { name?: string } | null;
+  user_profiles?: { family_name?: string; first_name?: string } | null;
+  company_id?: string;
+  user_id?: string;
+  resource_id?: string;
+  target_id?: string;
+  feature_name?: string;
+  resource_type?: string;
+  environment?: string;
+  app_version?: string;
+  action_type?: string;
+  method?: string;
+  status_code?: number;
+  metadata?: { message?: string } | null;
+  error_stack?: string;
+  session_id?: string;
+  ip_address?: string;
+  user_agent?: string;
+  referer?: string;
+  trace_id?: string;
+  request_id?: string;
+  path?: string;
+  response_time_ms?: number;
+  memory_usage_mb?: number;
+  action?: string;
+  target_type?: string;
+  before_data?: Record<string, unknown> | null;
+  after_data?: Record<string, unknown> | null;
+  details?: {
+    email?: string;
+    login_method?: string;
+    failure_reason?: string;
+    [key: string]: unknown;
+  } | null;
+  [key: string]: unknown;
+}
+
+// ログ統計の型定義
+interface LogStats {
+  total_count: number;
+  level_counts: Record<string, number>;
+  daily_counts: Array<{ date: string; count: number }>;
+  error_rate: number;
+  avg_response_time?: number;
 }
 
 interface AuditLog {
@@ -91,9 +105,9 @@ interface AuditLog {
   action: string;
   target_type: string;
   target_id: string;
-  before_data: any;
-  after_data: any;
-  details: any;
+  before_data: Record<string, unknown> | null;
+  after_data: Record<string, unknown> | null;
+  details: Record<string, unknown> | null;
   ip_address: string;
   user_agent: string;
   session_id: string;
@@ -129,7 +143,7 @@ export default function SystemAdminLogsPage() {
   const [activeTab, setActiveTab] = useState('system-logs');
 
   // システムログ状態
-  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+  const [systemLogs, setSystemLogs] = useState<LogData[]>([]);
   const [systemLogsLoading, setSystemLogsLoading] = useState(true);
   const [systemLogsTotal, setSystemLogsTotal] = useState(0);
   const [systemLogsCurrentPage, setSystemLogsCurrentPage] = useState(1);
@@ -140,7 +154,7 @@ export default function SystemAdminLogsPage() {
   });
 
   // 監査ログ状態
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditLogs, setAuditLogs] = useState<LogData[]>([]);
   const [auditLogsLoading, setAuditLogsLoading] = useState(true);
   const [auditLogsTotal, setAuditLogsTotal] = useState(0);
   const [auditLogsCurrentPage, setAuditLogsCurrentPage] = useState(1);
@@ -197,6 +211,14 @@ export default function SystemAdminLogsPage() {
   const [isColumnSettingsDialogOpen, setIsColumnSettingsDialogOpen] = useState(false);
   const [columnSettingsType, setColumnSettingsType] = useState<'system' | 'audit'>('system');
 
+  // ログ統計の状態
+  const [logStats, setLogStats] = useState<LogStats>({
+    total_count: 0,
+    level_counts: {},
+    daily_counts: [],
+    error_rate: 0,
+  });
+
   useEffect(() => {
     if (!user || user.role !== 'system-admin') {
       router.push('/login');
@@ -223,7 +245,7 @@ export default function SystemAdminLogsPage() {
   }
 
   // システムログ関連の関数
-  const loadSystemLogs = async (): Promise<void> => {
+  async function loadSystemLogs(): Promise<void> {
     try {
       setSystemLogsLoading(true);
       const params = new URLSearchParams();
@@ -255,21 +277,21 @@ export default function SystemAdminLogsPage() {
     } finally {
       setSystemLogsLoading(false);
     }
-  };
+  }
 
-  const updateSystemLogsFilter = (updates: Partial<SystemLogsFilter>): void => {
+  function updateSystemLogsFilter(updates: Partial<SystemLogsFilter>): void {
     setSystemLogsFilter((prev) => ({
       ...prev,
       ...updates,
       page: 1,
     }));
-  };
+  }
 
-  const handleSystemLogsPageChange = (page: number): void => {
+  function handleSystemLogsPageChange(page: number): void {
     updateSystemLogsFilter({ page });
-  };
+  }
 
-  const handleSystemLogsExport = async (): Promise<void> => {
+  async function handleSystemLogsExport(): Promise<void> {
     try {
       toast({
         title: '成功',
@@ -282,10 +304,10 @@ export default function SystemAdminLogsPage() {
         variant: 'destructive',
       });
     }
-  };
+  }
 
   // 監査ログ関連の関数
-  const loadAuditLogs = async (): Promise<void> => {
+  async function loadAuditLogs(): Promise<void> {
     try {
       setAuditLogsLoading(true);
       const params = new URLSearchParams();
@@ -317,21 +339,21 @@ export default function SystemAdminLogsPage() {
     } finally {
       setAuditLogsLoading(false);
     }
-  };
+  }
 
-  const updateAuditLogsFilter = (updates: Partial<AuditLogsFilter>): void => {
+  function updateAuditLogsFilter(updates: Partial<AuditLogsFilter>): void {
     setAuditLogsFilter((prev) => ({
       ...prev,
       ...updates,
       page: 1,
     }));
-  };
+  }
 
-  const handleAuditLogsPageChange = (page: number): void => {
+  function handleAuditLogsPageChange(page: number): void {
     updateAuditLogsFilter({ page });
-  };
+  }
 
-  const handleAuditLogsExport = async (): Promise<void> => {
+  async function handleAuditLogsExport(): Promise<void> {
     try {
       toast({
         title: '成功',
@@ -344,10 +366,10 @@ export default function SystemAdminLogsPage() {
         variant: 'destructive',
       });
     }
-  };
+  }
 
   // ユーティリティ関数
-  const getLevelBadge = (level: string) => {
+  function getLevelBadge(level: string) {
     const variants: Record<string, 'secondary' | 'default' | 'destructive'> = {
       debug: 'secondary',
       info: 'default',
@@ -355,32 +377,27 @@ export default function SystemAdminLogsPage() {
       error: 'destructive',
       fatal: 'destructive',
     };
-
     return <Badge variant={variants[level] || 'default'}>{level?.toUpperCase()}</Badge>;
-  };
+  }
 
-  const getStatusBadge = (statusCode: number) => {
+  function getStatusBadge(statusCode: number) {
     if (!statusCode) return null;
-
     let variant: 'default' | 'destructive' | 'secondary' = 'default';
     if (statusCode >= 400) variant = 'destructive';
     else if (statusCode >= 300) variant = 'secondary';
+    return <Badge variant={variant as 'default' | 'destructive' | 'secondary'}>{statusCode}</Badge>;
+  }
 
-    return <Badge variant={variant as any}>{statusCode}</Badge>;
-  };
-
-  const getActionBadge = (action: string) => {
+  function getActionBadge(action: string) {
     let variant: 'default' | 'destructive' | 'secondary' = 'default';
-
     if (action?.includes('delete')) variant = 'destructive';
     else if (action?.includes('create')) variant = 'default';
     else if (action?.includes('update')) variant = 'secondary';
     else if (action?.includes('login')) variant = 'default';
     else if (action?.includes('logout')) variant = 'secondary';
     else if (action?.includes('failed')) variant = 'destructive';
-
-    return <Badge variant={variant as any}>{action}</Badge>;
-  };
+    return <Badge variant={variant as 'default' | 'destructive' | 'secondary'}>{action}</Badge>;
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -547,7 +564,9 @@ export default function SystemAdminLogsPage() {
                               <TableCell>
                                 {log.companies ? (
                                   <div className="space-y-1">
-                                    <div className="text-sm font-medium">{log.companies.name}</div>
+                                    <div className="text-sm font-medium">
+                                      {log.companies?.name || '-'}
+                                    </div>
                                     <div className="text-xs font-mono text-muted-foreground">
                                       {log.company_id ? log.company_id.slice(0, 8) + '...' : '-'}
                                     </div>
@@ -606,7 +625,7 @@ export default function SystemAdminLogsPage() {
                               </TableCell>
                             )}
                             {systemLogColumns.status_code && (
-                              <TableCell>{getStatusBadge(log.status_code)}</TableCell>
+                              <TableCell>{getStatusBadge(log.status_code || 0)}</TableCell>
                             )}
                             {systemLogColumns.message && (
                               <TableCell className="max-w-md">
@@ -900,7 +919,7 @@ export default function SystemAdminLogsPage() {
                             {auditLogColumns.action && (
                               <TableCell>
                                 <div className="space-y-1">
-                                  {getActionBadge(log.action)}
+                                  {getActionBadge(log.action || '')}
                                   {log.action === 'user_login' && (
                                     <div className="text-xs text-green-600">ログイン成功</div>
                                   )}

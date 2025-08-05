@@ -21,14 +21,32 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRequestForms, deleteRequestForm } from '@/lib/actions/admin/request-forms';
 import { getAdminRequests, updateRequestStatus } from '@/lib/actions/requests';
-import type { RequestForm, RequestData } from '@/schemas/request';
+import type { RequestForm } from '@/schemas/request';
 
 // 管理者画面用の拡張された申請データ型
-interface AdminRequestData extends RequestData {
+interface AdminRequestData {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  status_id: string;
   statuses?: {
     name?: string;
     code?: string;
     color?: string;
+  };
+  user_id: string;
+  request_form_id: string;
+  current_approval_step: number;
+  target_date?: string;
+  start_date?: string;
+  end_date?: string;
+  updated_at?: string;
+  submission_comment?: string;
+  form_data?: Record<string, string | number | boolean | string[] | Date>;
+  form?: RequestForm;
+  request_forms?: {
+    name?: string;
   };
 }
 import RequestFormEditDialog from '@/components/admin/request-forms/RequestFormEditDialog';
@@ -56,6 +74,15 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+
+// リクエストデータの型定義
+interface RequestData {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  [key: string]: unknown;
+}
 
 export default function AdminRequestsPage() {
   const { user } = useAuth();
@@ -142,7 +169,8 @@ export default function AdminRequestsPage() {
           unique: uniqueRequests.length,
         });
 
-        setRequests(uniqueRequests as AdminRequestData[]);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setRequests(uniqueRequests as any);
       } else {
         console.error('管理者申請データ取得失敗:', result.error);
       }
@@ -672,7 +700,8 @@ export default function AdminRequestsPage() {
                                       variant="ghost"
                                       className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                       onClick={() => openApprovalDialog(request.id)}
-                                      disabled={!canApprove(request as unknown as AdminRequestData)}
+                                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                      disabled={!canApprove(request as any)}
                                     >
                                       <Check className="w-4 h-4" />
                                     </Button>
@@ -690,7 +719,8 @@ export default function AdminRequestsPage() {
                                       variant="ghost"
                                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                       onClick={() => openRejectionDialog(request.id)}
-                                      disabled={!canReject(request as unknown as AdminRequestData)}
+                                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                      disabled={!canReject(request as any)}
                                     >
                                       <X className="w-4 h-4" />
                                     </Button>
@@ -960,9 +990,7 @@ export default function AdminRequestsPage() {
                   </div>
                   <div>
                     <Label className="font-medium">申請種別</Label>
-                    <p className="text-gray-700">
-                      {(selectedRequest as any)?.request_forms?.name || '-'}
-                    </p>
+                    <p className="text-gray-700">{selectedRequest?.request_forms?.name || '-'}</p>
                   </div>
                   <div>
                     <Label className="font-medium">申請日</Label>
@@ -979,9 +1007,9 @@ export default function AdminRequestsPage() {
                         <div className="mt-1 space-y-2">
                           {Object.entries(selectedRequest.form_data).map(([key, value]) => {
                             // フォーム設定からフィールドのラベルを取得
-                            const formConfig = (selectedRequest as any)?.form?.form_config;
+                            const formConfig = selectedRequest?.form?.form_config;
                             const fieldConfig = formConfig?.find(
-                              (field: any) => field.name === key
+                              (field: { name: string; label?: string }) => field.name === key
                             );
                             const fieldLabel = fieldConfig?.label || key;
 
@@ -1046,9 +1074,7 @@ export default function AdminRequestsPage() {
                   </div>
                   <div>
                     <Label className="font-medium">申請種別</Label>
-                    <p className="text-gray-700">
-                      {(selectedRequest as any)?.request_forms?.name || '-'}
-                    </p>
+                    <p className="text-gray-700">{selectedRequest?.request_forms?.name || '-'}</p>
                   </div>
                   <div>
                     <Label className="font-medium">申請日</Label>
@@ -1065,9 +1091,9 @@ export default function AdminRequestsPage() {
                         <div className="mt-1 space-y-2">
                           {Object.entries(selectedRequest.form_data).map(([key, value]) => {
                             // フォーム設定からフィールドのラベルを取得
-                            const formConfig = (selectedRequest as any)?.form?.form_config;
+                            const formConfig = selectedRequest?.form?.form_config;
                             const fieldConfig = formConfig?.find(
-                              (field: any) => field.name === key
+                              (field: { name: string; label?: string }) => field.name === key
                             );
                             const fieldLabel = fieldConfig?.label || key;
 

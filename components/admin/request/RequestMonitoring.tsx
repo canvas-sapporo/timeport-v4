@@ -52,7 +52,7 @@ interface RequestMonitoringProps {
   endDate?: string;
 }
 
-export function RequestMonitoring({ companyId, startDate, endDate }: RequestMonitoringProps) {
+export const RequestMonitoring = ({ companyId, startDate, endDate }: RequestMonitoringProps) => {
   const [data, setData] = useState<RequestMonitoringData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -277,4 +277,4 @@ export function RequestMonitoring({ companyId, startDate, endDate }: RequestMoni
       </Card>
     </div>
   );
-}
+};

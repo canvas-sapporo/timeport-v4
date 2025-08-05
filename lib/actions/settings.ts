@@ -15,6 +15,9 @@ import type {
   DeleteSettingResult,
 } from '@/schemas/setting';
 
+// 設定値の型定義
+type SettingValue = string | number | boolean | Record<string, unknown> | null;
+
 /**
  * クライアント情報を取得
  */
@@ -435,7 +438,7 @@ export async function getClockRecordEditSetting(companyId?: string): Promise<boo
 export async function getAttendanceSettingValue(
   companyId: string,
   settingKey: string
-): Promise<any> {
+): Promise<SettingValue> {
   const supabase = createServerClient();
 
   try {
@@ -493,7 +496,7 @@ export async function getAttendanceSettingValue(
 export async function saveAttendanceSetting(
   companyId: string,
   settingKey: string,
-  settingValue: any,
+  settingValue: SettingValue,
   currentUserId?: string
 ): Promise<{ success: boolean; message: string; error?: string }> {
   const supabase = createServerClient();

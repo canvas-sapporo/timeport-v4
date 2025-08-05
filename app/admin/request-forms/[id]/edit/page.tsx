@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
-import FormBuilder from '@/components/forms/form-builder';
+import FormBuilder from '@/components/forms/FormBuilder';
 import { FormFieldConfig, RequestForm } from '@/schemas/request';
 
 export default function EditRequestTypePage() {

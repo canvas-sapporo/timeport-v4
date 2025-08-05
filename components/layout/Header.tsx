@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import NotificationSystem from '@/components/notifications/notification-system';
+import NotificationSystem from '@/components/notifications/NotificationSystem';
 
 interface HeaderProps {
   onMenuClick?: () => void;

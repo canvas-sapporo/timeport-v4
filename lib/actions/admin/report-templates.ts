@@ -15,8 +15,8 @@ import {
   type ReportFieldConfig,
   type ConfirmationFlowConfig,
   type StatusFlowConfig,
+  type ReportTemplateData,
 } from '@/schemas/report-templates';
-import { type ReportTemplateData } from '@/schemas/report-templates';
 
 // ================================
 // バリデーションスキーマ
@@ -113,12 +113,11 @@ export async function createReportTemplate(formData: FormData) {
     const validatedData = CreateReportTemplateSchema.parse(rawData);
 
     // レポートテンプレートを作成
-    const { company_id, ...rest } = validatedData;
     const { data, error } = await supabaseClient
       .from('report_templates')
       .insert({
         company_id: profile.company_id,
-        ...rest,
+        ...validatedData,
       })
       .select()
       .single();
@@ -663,9 +662,9 @@ export async function updateReportTemplateStatus(id: string, isActive: boolean) 
     // ステータスを更新
     const { data, error } = await supabaseClient
       .from('report_templates')
-      .update({ 
+      .update({
         is_active: isActive,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', id)
       .eq('company_id', profile.company_id)

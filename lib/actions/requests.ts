@@ -1085,11 +1085,13 @@ export async function updateRequest(
     // 申請が下書き状態かチェック
     const { data: request, error: fetchError } = await supabase
       .from('requests')
-      .select(`
+      .select(
+        `
         user_id, 
         status_id, 
         statuses!requests_status_id_fkey(code)
-      `)
+      `
+      )
       .eq('id', requestId)
       .single();
 

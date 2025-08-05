@@ -1,6 +1,9 @@
 import { createClientAdminClient } from '@/lib/supabase';
 import { LogLevel, SystemLog, AuditLog, LogSettingKey } from '@/schemas/database/log';
 
+// ログ設定値の型定義
+type LogSettingValue = string | number | boolean | string[];
+
 // ================================
 // ログバッファクラス
 // ================================
@@ -9,7 +12,7 @@ class LogBuffer {
   private systemLogs: Partial<SystemLog>[] = [];
   private auditLogs: Partial<AuditLog>[] = [];
   private timer: NodeJS.Timeout | null = null;
-  private settings: Record<string, any> = {};
+  private settings: Record<string, LogSettingValue> = {};
   private settingsLoaded = false;
 
   constructor() {
@@ -30,7 +33,7 @@ class LogBuffer {
             acc[setting.setting_key] = setting.setting_value;
             return acc;
           },
-          {} as Record<string, any>
+          {} as Record<string, LogSettingValue>
         );
       }
       this.settingsLoaded = true;
@@ -52,8 +55,8 @@ class LogBuffer {
   /**
    * 設定を取得
    */
-  private getSetting<T>(key: LogSettingKey, defaultValue: T): T {
-    return this.settings[key] ?? defaultValue;
+  private getSetting<T extends LogSettingValue>(key: LogSettingKey, defaultValue: T): T {
+    return (this.settings[key] as T) ?? defaultValue;
   }
 
   /**

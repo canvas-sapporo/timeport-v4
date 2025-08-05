@@ -5,12 +5,12 @@ import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { Toaster } from '@/components/ui/toaster';
-import OfflineIndicator from '@/components/pwa/offline-indicator';
-import InstallPrompt from '@/components/pwa/install-prompt';
+import OfflineIndicator from '@/components/pwa/OfflineIndicator';
+import InstallPrompt from '@/components/pwa/InstallPrompt';
 
-import Sidebar from './sidebar';
-import Header from './header';
-import PageTransitionLoader from './page-transition-loader';
+import Sidebar from './Sidebar';
+import Header from './Header';
+import PageTransitionLoader from './PageTransitionLoader';
 
 interface MainLayoutProps {
   children: React.ReactNode;

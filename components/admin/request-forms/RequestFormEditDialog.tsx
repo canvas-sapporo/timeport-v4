@@ -27,7 +27,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { updateRequestForm } from '@/lib/actions/admin/request-forms';
-import FormBuilder from '@/components/forms/form-builder';
+import FormBuilder from '@/components/forms/FormBuilder';
 import ApprovalFlowBuilder from '@/components/admin/request-forms/ApprovalFlowBuilder';
 import type { RequestForm, FormFieldConfig, ApprovalStep } from '@/schemas/request';
 
