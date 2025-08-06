@@ -21,8 +21,19 @@ export default function InstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isPC, setIsPC] = useState(false);
 
   useEffect(() => {
+    // PCかどうかを判定
+    const checkPC = () => {
+      const userAgent = navigator.userAgent;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        userAgent
+      );
+      const isTablet = /iPad|Android(?=.*\bMobile\b)(?=.*\bSafari\b)/i.test(userAgent);
+      setIsPC(!isMobile && !isTablet);
+    };
+
     // iOS Safariかどうかを判定
     const checkIOS = () => {
       const userAgent = navigator.userAgent;
@@ -31,6 +42,7 @@ export default function InstallPrompt() {
       setIsIOS(isIOSDevice && isSafari);
     };
 
+    checkPC();
     checkIOS();
 
     // PWAがインストールされているかチェック
@@ -119,8 +131,8 @@ export default function InstallPrompt() {
     setDeferredPrompt(null);
   };
 
-  // インストール済みまたはプロンプトが表示されていない場合は何も表示しない
-  if (isInstalled || !showPrompt) {
+  // PCの場合は表示しない、またはインストール済みまたはプロンプトが表示されていない場合は何も表示しない
+  if (isPC || isInstalled || !showPrompt) {
     return null;
   }
 
