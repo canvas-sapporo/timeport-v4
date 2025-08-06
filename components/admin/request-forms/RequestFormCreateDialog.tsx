@@ -33,6 +33,16 @@ import ApprovalFlowBuilder from '@/components/admin/request-forms/ApprovalFlowBu
 import ObjectTypeSettingsDialog from '@/components/forms/ObjectTypeSettingsDialog';
 import type { FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/schemas/request';
 
+// ObjectField型を定義（ObjectTypeSettingsDialogと同じ）
+interface ObjectField {
+  id: string;
+  type: string;
+  label: string;
+  name: string;
+  metadata?: ObjectMetadata;
+  [key: string]: unknown;
+}
+
 const requestTypeSchema = z.object({
   name: z.string().min(1, '申請フォーム名は必須です'),
   description: z.string().optional(),
@@ -535,7 +545,7 @@ export default function RequestFormCreateDialog({
                   }
                   return field;
                 });
-                setFormConfig(updatedConfig);
+                setFormConfig(updatedConfig as unknown as FormFieldConfig[]);
               }
             }
           }}
@@ -546,11 +556,11 @@ export default function RequestFormCreateDialog({
               const updatedConfig = formConfig.map((f) =>
                 f.id === editingObjectFieldId ? field : f
               );
-              setFormConfig(updatedConfig);
+              setFormConfig(updatedConfig as unknown as FormFieldConfig[]);
             } else {
               // 新規フィールドの追加
               const newConfig = [...formConfig, field];
-              setFormConfig(newConfig);
+              setFormConfig(newConfig as unknown as FormFieldConfig[]);
             }
             setObjectTypeSettingsOpen(false);
             setEditingObjectFieldId(null);
@@ -558,7 +568,7 @@ export default function RequestFormCreateDialog({
             setObjectMetadata(null);
             setTempField(null);
           }}
-          tempField={tempField}
+          tempField={tempField as unknown as ObjectField}
         />
       </DialogContent>
     </Dialog>

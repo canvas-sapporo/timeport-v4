@@ -42,7 +42,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import ClockRecordsInput from '@/components/forms/ClockRecordsInput';
 import { RequestEditDialog } from '@/components/member/request/RequestEditDialog';
 
-export function MemberRequestsPage() {
+export default function MemberRequestsPage() {
   const { user } = useAuth();
   const { requests, requestForms, createRequest, users, refreshRequests } = useData();
   const router = useRouter();
@@ -1282,5 +1282,3 @@ export function MemberRequestsPage() {
     </div>
   );
 }
-
-export default MemberRequestsPage;

@@ -49,6 +49,7 @@ import {
 } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
+import { ClockRecord } from '@/schemas/attendance';
 // 勤怠データの型定義
 interface AttendanceData {
   id: string;
@@ -57,10 +58,19 @@ interface AttendanceData {
   clock_in_time?: string;
   clock_out_time?: string;
   break_records: Array<{
-    id: string;
-    break_start_time: string;
-    break_end_time?: string;
+    break_start: string;
+    break_end: string;
   }>;
+  clock_records?: ClockRecord[];
+  work_type_id?: string;
+  work_type_name?: string;
+  user_name?: string;
+  actual_work_minutes?: number | null;
+  overtime_minutes?: number | null;
+  late_minutes?: number | null;
+  early_leave_minutes?: number | null;
+  status: 'normal' | 'late' | 'early_leave' | 'absent';
+  description?: string;
   [key: string]: unknown;
 }
 
@@ -168,7 +178,7 @@ export default function AttendanceEditDialog({
       // ユーザーから企業IDを取得
       if (user?.company_id) {
         const settingValue = await getAttendanceSettingValue(user.company_id, 'clock_record_edit');
-        setClockEditEnabled(settingValue?.enabled || false);
+        setClockEditEnabled((settingValue as any)?.enabled || false);
       } else {
         setClockEditEnabled(false);
       }
@@ -479,7 +489,8 @@ export default function AttendanceEditDialog({
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-600">実勤務時間</span>
                   <span className="text-sm">
-                    {attendance.actual_work_minutes !== undefined
+                    {attendance.actual_work_minutes !== undefined &&
+                    attendance.actual_work_minutes !== null
                       ? formatMinutes(attendance.actual_work_minutes)
                       : '--:--'}
                   </span>
@@ -489,7 +500,8 @@ export default function AttendanceEditDialog({
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-600">残業時間</span>
                   <span className="text-sm">
-                    {attendance.overtime_minutes !== undefined
+                    {attendance.overtime_minutes !== undefined &&
+                    attendance.overtime_minutes !== null
                       ? formatMinutes(attendance.overtime_minutes)
                       : '--:--'}
                   </span>
@@ -497,7 +509,7 @@ export default function AttendanceEditDialog({
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-600">遅刻時間</span>
                   <span className="text-sm">
-                    {attendance.late_minutes !== undefined
+                    {attendance.late_minutes !== undefined && attendance.late_minutes !== null
                       ? formatMinutes(attendance.late_minutes)
                       : '--:--'}
                   </span>
@@ -505,7 +517,8 @@ export default function AttendanceEditDialog({
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-600">早退時間</span>
                   <span className="text-sm">
-                    {attendance.early_leave_minutes !== undefined
+                    {attendance.early_leave_minutes !== undefined &&
+                    attendance.early_leave_minutes !== null
                       ? formatMinutes(attendance.early_leave_minutes)
                       : '--:--'}
                   </span>
@@ -696,12 +709,12 @@ export default function AttendanceEditDialog({
                               編集 {editHistory.length - index}
                             </span>
                             <Badge variant="outline" className="text-xs">
-                              {formatDateTimeForDisplay(record.updated_at)}
+                              {formatDateTimeForDisplay(record.updated_at as string)}
                             </Badge>
                           </div>
-                          {record.editor_name && (
+                          {(record.editor_name as string) && (
                             <span className="text-xs text-gray-600">
-                              編集者: {record.editor_name}
+                              編集者: {record.editor_name as string}
                             </span>
                           )}
                         </div>
@@ -723,10 +736,12 @@ export default function AttendanceEditDialog({
                           <div className="text-sm text-gray-500">変更された項目はありません</div>
                         )}
 
-                        {record.edit_reason && (
+                        {(record.edit_reason as string) && (
                           <div className="mt-3 p-2 bg-blue-50 rounded border-l-4 border-blue-400">
                             <div className="text-xs text-blue-800 font-medium">編集理由:</div>
-                            <div className="text-sm text-blue-700">{record.edit_reason}</div>
+                            <div className="text-sm text-blue-700">
+                              {record.edit_reason as string}
+                            </div>
                           </div>
                         )}
                       </div>
