@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Info, Clock, Coffee, Calendar, AlertCircle } from 'lucide-react';
+import {
+  Info,
+  Clock,
+  Coffee,
+  Calendar,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  CalendarDays,
+} from 'lucide-react';
 
 import {
   Dialog,
@@ -35,6 +44,9 @@ interface WorkTypeDetail {
   overtime_threshold_minutes: number;
   late_threshold_minutes: number;
   description?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export default function WorkTypeDetailDialog({
@@ -80,13 +92,34 @@ export default function WorkTypeDetailDialog({
     return `${mins}分`;
   };
 
+  const formatDateTime = (dateTime: string) => {
+    if (!dateTime) return '--';
+    return new Date(dateTime).toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // 標準勤務時間を計算（休憩時間を除く）
+  const calculateStandardWorkMinutes = () => {
+    if (!workTypeDetail) return 0;
+
+    const startTime = new Date(`2000-01-01T${workTypeDetail.work_start_time}`);
+    const endTime = new Date(`2000-01-01T${workTypeDetail.work_end_time}`);
+    const totalMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+    return Math.max(0, totalMinutes - workTypeDetail.break_duration_minutes);
+  };
+
   if (!workTypeDetail && !isLoading) {
     return null;
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChangeAction}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Info className="w-5 h-5 text-blue-600" />
@@ -122,6 +155,26 @@ export default function WorkTypeDetailDialog({
                   <div className="text-sm mt-1">{workTypeDetail.description}</div>
                 </div>
               )}
+              {/* 状態表示 */}
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-500 text-sm">状態</span>
+                <Badge
+                  variant={workTypeDetail.is_active !== false ? 'default' : 'secondary'}
+                  className="flex items-center space-x-1"
+                >
+                  {workTypeDetail.is_active !== false ? (
+                    <>
+                      <CheckCircle className="w-3 h-3" />
+                      <span>有効</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-3 h-3" />
+                      <span>無効</span>
+                    </>
+                  )}
+                </Badge>
+              </div>
             </div>
 
             <Separator />
@@ -140,6 +193,18 @@ export default function WorkTypeDetailDialog({
                 <div>
                   <span className="text-gray-500">終了時刻</span>
                   <div className="font-medium">{formatTime(workTypeDetail.work_end_time)}</div>
+                </div>
+              </div>
+              {/* 標準勤務時間の表示 */}
+              <div className="bg-blue-50 rounded-lg p-3">
+                <div className="text-sm">
+                  <span className="text-gray-600 font-medium">標準勤務時間</span>
+                  <div className="text-blue-700 font-semibold text-lg">
+                    {formatMinutes(calculateStandardWorkMinutes())}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    （休憩時間 {formatMinutes(workTypeDetail.break_duration_minutes)} を除く）
+                  </div>
                 </div>
               </div>
             </div>
@@ -232,6 +297,37 @@ export default function WorkTypeDetailDialog({
                 </div>
               </div>
             </div>
+
+            {/* 作成・更新日時 */}
+            {(workTypeDetail.created_at || workTypeDetail.updated_at) && (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-900 flex items-center space-x-2">
+                    <CalendarDays className="w-4 h-4" />
+                    <span>履歴</span>
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    {workTypeDetail.created_at && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">作成日時</span>
+                        <span className="font-medium">
+                          {formatDateTime(workTypeDetail.created_at)}
+                        </span>
+                      </div>
+                    )}
+                    {workTypeDetail.updated_at && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">更新日時</span>
+                        <span className="font-medium">
+                          {formatDateTime(workTypeDetail.updated_at)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500">

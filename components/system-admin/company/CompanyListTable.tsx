@@ -18,6 +18,8 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/action-button';
+import { StandardButton } from '@/components/ui/standard-button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -246,16 +248,22 @@ export default function CompanyListTable({
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" onClick={handleReset}>
+            <StandardButton buttonType="reset" variant="outline" onClick={handleReset}>
               リセット
-            </Button>
+            </StandardButton>
           </div>
         </CardContent>
       </Card>
 
       {/* 企業一覧テーブル */}
       <div className="bg-white rounded-lg shadow p-4">
-        <h2 className="text-lg font-semibold mb-4">企業一覧</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">企業一覧</h2>
+          <StandardButton buttonType="create" onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            新規企業作成
+          </StandardButton>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -353,34 +361,22 @@ export default function CompanyListTable({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <CompanyPreviewDialog company={company}>
-                              <Button variant="ghost" size="icon" className="mr-2">
-                                <Eye size={16} />
-                              </Button>
+                              <ActionButton action="view" />
                             </CompanyPreviewDialog>
                           </TooltipTrigger>
                           <TooltipContent>企業情報をプレビュー</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="mr-2"
-                        onClick={() => handleEditClick(company)}
-                      >
-                        <Pencil size={16} />
-                      </Button>
+                      <ActionButton action="edit" onClick={() => handleEditClick(company)} />
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
+                              <ActionButton
+                                action="delete"
                                 onClick={() => handleDeleteClick(company)}
                                 disabled={company.is_active}
-                              >
-                                <Trash2 size={16} className="text-destructive" />
-                              </Button>
+                              />
                             </span>
                           </TooltipTrigger>
                           {company.is_active && (
@@ -390,14 +386,15 @@ export default function CompanyListTable({
                       </TooltipProvider>
                     </td>
                     <td className="px-4 py-2 text-center">
-                      <Button
+                      <StandardButton
+                        buttonType="reset"
                         variant="outline"
                         size="sm"
                         onClick={() => handleFeaturesClick(company)}
                       >
                         <Settings className="w-4 h-4 mr-1" />
                         機能管理
-                      </Button>
+                      </StandardButton>
                     </td>
                   </tr>
                 ))

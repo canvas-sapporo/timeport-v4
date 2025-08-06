@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { getJSTDate } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/action-button';
+import { StandardButton } from '@/components/ui/standard-button';
 import {
   Select,
   SelectContent,
@@ -1184,13 +1186,10 @@ export default function MemberRequestsPage() {
                         <div className="flex space-x-1">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
+                              <ActionButton
+                                action="view"
                                 onClick={() => handleViewRequest(request)}
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
+                              />
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>プレビュー</p>
@@ -1202,13 +1201,10 @@ export default function MemberRequestsPage() {
                             <>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
+                                  <ActionButton
+                                    action="edit"
                                     onClick={() => handleEditRequest(request)}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
+                                  />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>編集</p>
@@ -1216,13 +1212,10 @@ export default function MemberRequestsPage() {
                               </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
+                                  <ActionButton
+                                    action="submit"
                                     onClick={() => handleSubmitRequest(request)}
-                                  >
-                                    <Send className="w-4 h-4" />
-                                  </Button>
+                                  />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>申請</p>
@@ -1233,9 +1226,8 @@ export default function MemberRequestsPage() {
                           {/* 削除ボタン - 承認済みまたは却下の場合は非活性 */}
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
+                              <ActionButton
+                                action="delete"
                                 onClick={() => handleDeleteRequest(request)}
                                 disabled={
                                   (request as { statuses?: { code?: string } }).statuses?.code ===
@@ -1243,17 +1235,7 @@ export default function MemberRequestsPage() {
                                   (request as { statuses?: { code?: string } }).statuses?.code ===
                                     'rejected'
                                 }
-                                className={
-                                  (request as { statuses?: { code?: string } }).statuses?.code ===
-                                    'approved' ||
-                                  (request as { statuses?: { code?: string } }).statuses?.code ===
-                                    'rejected'
-                                    ? 'opacity-50 cursor-not-allowed'
-                                    : ''
-                                }
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              />
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>削除</p>

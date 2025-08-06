@@ -28,6 +28,8 @@ import {
 } from '@/lib/actions/attendance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/action-button';
+import { StandardButton } from '@/components/ui/standard-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Combobox } from '@/components/ui/combobox';
@@ -808,10 +810,10 @@ export default function AdminAttendancePage() {
           <p className="text-gray-600">全メンバーの勤怠記録を管理できます</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={handleResetFilters}>
+          <StandardButton buttonType="reset" onClick={handleResetFilters}>
             <X className="w-4 h-4 mr-2" />
             フィルターリセット
-          </Button>
+          </StandardButton>
           <Button variant="outline" size="sm" onClick={() => setIsColumnSettingsDialogOpen(true)}>
             <Settings className="w-4 h-4 mr-2" />
             表示項目
@@ -822,10 +824,10 @@ export default function AdminAttendancePage() {
           </Button>
           <Dialog>
             <DialogTrigger asChild>
-              <Button size="sm">
+              <StandardButton buttonType="create" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 勤怠記録作成
-              </Button>
+              </StandardButton>
             </DialogTrigger>
             <DialogContent className="dialog-scrollbar">
               <DialogHeader>
@@ -860,8 +862,10 @@ export default function AdminAttendancePage() {
                   </div>
                 </div>
                 <div className="flex justify-end space-x-2">
-                  <Button variant="outline">キャンセル</Button>
-                  <Button>作成</Button>
+                  <StandardButton buttonType="cancel" variant="outline">
+                    キャンセル
+                  </StandardButton>
+                  <StandardButton buttonType="save">作成</StandardButton>
                 </div>
               </div>
             </DialogContent>
@@ -1266,31 +1270,18 @@ export default function AdminAttendancePage() {
                           <span className="text-gray-400 text-sm">-</span>
                         ) : (
                           <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            <ActionButton
+                              action="view"
                               onClick={() => handlePreviewClick(record.id)}
-                              title="プレビュー"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            />
+                            <ActionButton
+                              action="edit"
                               onClick={() => handleEditClick(record.id)}
-                              title="編集"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600 hover:text-red-800"
+                            />
+                            <ActionButton
+                              action="delete"
                               onClick={() => handleDeleteClick(record.id)}
-                              title="削除"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            />
                           </div>
                         )}
                       </TableCell>

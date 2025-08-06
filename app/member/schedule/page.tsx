@@ -21,6 +21,8 @@ import { getJSTDate } from '@/lib/utils';
 // import GlobalLoading from '@/components/ui/global-loading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/action-button';
+import { StandardButton } from '@/components/ui/standard-button';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -678,19 +680,34 @@ export default function MemberSchedulePage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => navigateDate('prev')}>
+                    <StandardButton
+                      buttonType="reset"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigateDate('prev')}
+                    >
                       <ChevronLeft className="w-4 h-4" />
-                    </Button>
+                    </StandardButton>
                     <h3 className="text-lg font-medium">{getDisplayTitle()}</h3>
-                    <Button variant="outline" size="sm" onClick={() => navigateDate('next')}>
+                    <StandardButton
+                      buttonType="reset"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigateDate('next')}
+                    >
                       <ChevronRight className="w-4 h-4" />
-                    </Button>
+                    </StandardButton>
                   </div>
                   <div className="flex items-center space-x-2">
                     {calendarView !== 'day' && (
-                      <Button variant="outline" size="sm" onClick={goToToday}>
+                      <StandardButton
+                        buttonType="reset"
+                        variant="outline"
+                        size="sm"
+                        onClick={goToToday}
+                      >
                         {getTodayButtonText()}
-                      </Button>
+                      </StandardButton>
                     )}
                     {calendarView === 'day' && (
                       <Input
@@ -754,9 +771,7 @@ export default function MemberSchedulePage() {
                                     </div>
                                   )}
                                 </div>
-                                <Button variant="ghost" size="sm">
-                                  <Eye className="w-4 h-4" />
-                                </Button>
+                                <ActionButton action="view" />
                               </div>
                             </div>
                           ))}
@@ -813,9 +828,7 @@ export default function MemberSchedulePage() {
                                     </div>
                                   )}
                                 </div>
-                                <Button variant="ghost" size="sm">
-                                  <Eye className="w-4 h-4" />
-                                </Button>
+                                <ActionButton action="view" />
                               </div>
                             </div>
                           ))}

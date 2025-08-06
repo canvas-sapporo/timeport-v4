@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Save, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { StandardButton } from '@/components/ui/standard-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -371,10 +372,10 @@ export default function CreateReportTemplatePage() {
             新しいレポートテンプレートを作成します。基本情報、フォーム項目、確認フローを設定できます。
           </p>
         </div>
-        <Button onClick={handleSubmit} disabled={isSubmitting}>
+        <StandardButton buttonType="create" onClick={handleSubmit} disabled={isSubmitting}>
           <Save className="h-4 w-4 mr-2" />
           {isSubmitting ? '作成中...' : '作成'}
-        </Button>
+        </StandardButton>
       </div>
 
       {/* タブ */}

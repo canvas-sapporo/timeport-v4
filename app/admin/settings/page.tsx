@@ -24,6 +24,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/action-button';
+import { StandardButton } from '@/components/ui/standard-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -966,21 +968,14 @@ export default function AdminSettingsPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                              <ActionButton
+                                action="edit"
                                 onClick={() => handleEditEmploymentType(type)}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600"
+                              />
+                              <ActionButton
+                                action="delete"
                                 onClick={() => handleDeleteEmploymentType(type)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              />
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1083,21 +1078,14 @@ export default function AdminSettingsPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                              <ActionButton
+                                action="edit"
                                 onClick={() => handleEditWorkType(type)}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600"
+                              />
+                              <ActionButton
+                                action="delete"
                                 onClick={() => handleDeleteWorkType(type)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              />
                             </div>
                           </TableCell>
                         </TableRow>

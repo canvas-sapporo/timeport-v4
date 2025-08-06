@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Plus, Edit, Trash2, Eye, FileText } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/action-button';
+import { StandardButton } from '@/components/ui/standard-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -161,12 +163,12 @@ export default function ReportTemplatesPage() {
           <h1 className="text-3xl font-bold">レポート管理</h1>
           <p className="text-muted-foreground mt-2">レポートテンプレートの作成・管理を行います</p>
         </div>
-        <Button asChild>
+        <StandardButton buttonType="create" asChild>
           <a href="/admin/report-templates/create">
             <Plus className="mr-2 h-4 w-4" />
             新規テンプレート作成
           </a>
-        </Button>
+        </StandardButton>
       </div>
 
       {/* 統計カード */}
@@ -206,12 +208,12 @@ export default function ReportTemplatesPage() {
           {templates.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-muted-foreground mb-4">テンプレートがありません</div>
-              <Button asChild>
+              <StandardButton buttonType="create" asChild>
                 <a href="/admin/report-templates/create">
                   <Plus className="mr-2 h-4 w-4" />
                   最初のテンプレートを作成
                 </a>
-              </Button>
+              </StandardButton>
             </div>
           ) : (
             <Table>
@@ -252,31 +254,19 @@ export default function ReportTemplatesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        <ActionButton
+                          action="view"
                           onClick={() =>
                             router.push(`/admin/report-templates/${template.id}/preview`)
                           }
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        />
+                        <ActionButton
+                          action="edit"
                           onClick={() => router.push(`/admin/report-templates/${template.id}/edit`)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        />
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={isDeleting === template.id}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <ActionButton action="delete" disabled={isDeleting === template.id} />
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>

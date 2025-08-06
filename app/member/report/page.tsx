@@ -10,6 +10,8 @@ import { useCompanyFeatures } from '@/hooks/use-company-features';
 import { getJSTDate } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/action-button';
+import { StandardButton } from '@/components/ui/standard-button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -543,25 +545,13 @@ export default function MemberReportPage() {
                   <TableCell>{report.approver_name || '-'}</TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {report.current_status.name === 'draft' && (
-                        <Button variant="ghost" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {report.current_status.name === 'draft' && (
-                        <Button variant="ghost" size="sm">
-                          <Send className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <ActionButton action="view" />
+                      {report.current_status.name === 'draft' && <ActionButton action="edit" />}
+                      {report.current_status.name === 'draft' && <ActionButton action="submit" />}
                       {report.current_status.name === 'draft' && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <ActionButton action="delete" />
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -614,23 +604,28 @@ export default function MemberReportPage() {
                 </div>
               ))}
               <div className="flex justify-end space-x-2 pt-4">
-                <Button
+                <StandardButton
+                  buttonType="cancel"
                   variant="outline"
                   onClick={() => setIsCreateOpen(false)}
                   disabled={isSubmitting}
                 >
                   キャンセル
-                </Button>
-                <Button onClick={() => handleCreateReport('draft')} disabled={isSubmitting}>
+                </StandardButton>
+                <StandardButton
+                  buttonType="save"
+                  onClick={() => handleCreateReport('draft')}
+                  disabled={isSubmitting}
+                >
                   下書き保存
-                </Button>
-                <Button
+                </StandardButton>
+                <StandardButton
+                  buttonType="submit"
                   onClick={() => handleCreateReport('submit')}
                   disabled={isSubmitting}
-                  className="bg-blue-600 hover:bg-blue-700"
                 >
                   提出
-                </Button>
+                </StandardButton>
               </div>
             </div>
           )}

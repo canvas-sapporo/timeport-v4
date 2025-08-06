@@ -20,6 +20,7 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { StandardButton } from '@/components/ui/standard-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -168,10 +169,10 @@ export default function SuperAdminSystemPage() {
           <h1 className="text-3xl font-bold text-gray-900">システム管理</h1>
           <p className="text-gray-600 mt-2">システム全体の設定と監視を行います</p>
         </div>
-        <Button onClick={handleSaveSettings} disabled={isLoading}>
+        <StandardButton buttonType="save" onClick={handleSaveSettings} disabled={isLoading}>
           <Save className="w-4 h-4 mr-2" />
           設定保存
-        </Button>
+        </StandardButton>
       </div>
 
       {/* システム概要 */}

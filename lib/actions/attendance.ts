@@ -2570,6 +2570,9 @@ export async function getWorkTypeDetail(workTypeId: string): Promise<{
   overtime_threshold_minutes: number;
   late_threshold_minutes: number;
   description?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }> {
   try {
     console.log('getWorkTypeDetail 開始:', workTypeId);
@@ -2591,7 +2594,10 @@ export async function getWorkTypeDetail(workTypeId: string): Promise<{
         core_end_time,
         overtime_threshold_minutes,
         late_threshold_minutes,
-        description
+        description,
+        is_active,
+        created_at,
+        updated_at
       `
       )
       .eq('id', workTypeId)

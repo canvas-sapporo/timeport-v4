@@ -12,7 +12,7 @@ import {
   createDefaultClockRecord,
   createDefaultBreakRecord,
 } from '@/lib/utils/attendance-validation';
-import { formatDateTimeForInput } from '@/lib/utils';
+import { formatDateTimeForInput, getJSTDate } from '@/lib/utils';
 
 interface ClockRecordsInputProps {
   value: ClockRecord[];
@@ -65,49 +65,31 @@ export default function ClockRecordsInput({
       console.log('ClockRecordsInput - 勤務日変更時のデータ取得開始:', { workDate, userId });
 
       try {
-        const { getLatestAttendance, getUserWorkTypeDetail } = await import(
-          '@/lib/actions/attendance'
-        );
+        const { getUserWorkTypeDetail } = await import('@/lib/actions/attendance');
 
-        // 1. まずattendancesテーブルから既存データを取得
-        const existingAttendance = await getLatestAttendance(userId, workDate);
+        // 新規申請作成時は、勤務形態の設定を優先して使用
+        console.log('ClockRecordsInput - ユーザーの勤務タイプ詳細を取得');
 
-        console.log('ClockRecordsInput - 既存データ取得結果:', { existingAttendance });
+        const workTypeDetail = await getUserWorkTypeDetail(userId);
+        console.log('ClockRecordsInput - 勤務タイプ詳細:', workTypeDetail);
 
-        if (
-          existingAttendance &&
-          existingAttendance.clock_records &&
-          existingAttendance.clock_records.length > 0
-        ) {
-          // attendancesテーブルにデータがある場合：そのデータを使用
-          console.log('ClockRecordsInput - 既存データで初期化:', existingAttendance.clock_records);
-          setClockRecords(existingAttendance.clock_records);
-          onChangeAction(existingAttendance.clock_records);
+        if (workTypeDetail) {
+          // work_typesテーブルの勤務開始・終了時刻を使用してデフォルトセッションを作成
+          const defaultRecord = createDefaultClockRecord(workDate, workTypeDetail);
+          console.log('ClockRecordsInput - work_types設定で初期化:', defaultRecord);
+          setClockRecords([defaultRecord]);
+          onChangeAction([defaultRecord]);
         } else {
-          // attendancesテーブルにデータがない場合：work_typesテーブルの設定を使用
-          console.log('ClockRecordsInput - 既存データなし、ユーザーの勤務タイプ詳細を取得');
-
-          const workTypeDetail = await getUserWorkTypeDetail(userId);
-          console.log('ClockRecordsInput - 勤務タイプ詳細:', workTypeDetail);
-
-          if (workTypeDetail) {
-            // work_typesテーブルの勤務開始・終了時刻を使用してデフォルトセッションを作成
-            const defaultRecord = createDefaultClockRecord(workDate, workTypeDetail);
-            console.log('ClockRecordsInput - work_types設定で初期化:', defaultRecord);
-            setClockRecords([defaultRecord]);
-            onChangeAction([defaultRecord]);
-          } else {
-            // 勤務タイプが設定されていない場合：従来のデフォルト値を使用
-            console.log('ClockRecordsInput - 勤務タイプ未設定、従来のデフォルト値を使用');
-            const defaultRecord = createDefaultClockRecord(workDate);
-            setClockRecords([defaultRecord]);
-            onChangeAction([defaultRecord]);
-          }
+          // 勤務タイプが設定されていない場合：従来のデフォルト値を使用
+          console.log('ClockRecordsInput - 勤務タイプ未設定、従来のデフォルト値を使用');
+          const defaultRecord = createDefaultClockRecord(workDate || getJSTDate());
+          setClockRecords([defaultRecord]);
+          onChangeAction([defaultRecord]);
         }
       } catch (error) {
         console.error('ClockRecordsInput - データ取得エラー:', error);
         // エラーの場合もデフォルトセッションを作成
-        const defaultRecord = createDefaultClockRecord(workDate);
+        const defaultRecord = createDefaultClockRecord(workDate || getJSTDate());
         setClockRecords([defaultRecord]);
         onChangeAction([defaultRecord]);
       }
@@ -129,7 +111,7 @@ export default function ClockRecordsInput({
     if (!userId) {
       console.error('addSession - userIdが設定されていません');
       // userIdがない場合は従来のデフォルト値を使用
-      const newRecords = [...clockRecords, createDefaultClockRecord(workDate)];
+      const newRecords = [...clockRecords, createDefaultClockRecord(workDate || getJSTDate())];
       updateClockRecords(newRecords);
       return;
     }
@@ -143,13 +125,13 @@ export default function ClockRecordsInput({
       // ユーザーの勤務タイプの設定を使用してデフォルトセッションを作成
       const newRecords = [
         ...clockRecords,
-        createDefaultClockRecord(workDate, workTypeDetail || undefined),
+        createDefaultClockRecord(workDate || getJSTDate(), workTypeDetail || undefined),
       ];
       updateClockRecords(newRecords);
     } catch (error) {
       console.error('addSession - 勤務タイプ詳細取得エラー:', error);
       // エラーの場合は従来のデフォルト値を使用
-      const newRecords = [...clockRecords, createDefaultClockRecord(workDate)];
+      const newRecords = [...clockRecords, createDefaultClockRecord(workDate || getJSTDate())];
       updateClockRecords(newRecords);
     }
   };
@@ -251,6 +233,88 @@ export default function ClockRecordsInput({
     }
   };
 
+  // 日付と時刻を独立して処理するためのヘルパー関数
+  const getDateFromDateTime = (dateTimeString: string): string => {
+    if (!dateTimeString) return workDate || '';
+    try {
+      const date = new Date(dateTimeString);
+      return date.toISOString().split('T')[0];
+    } catch (error) {
+      return workDate || '';
+    }
+  };
+
+  const getTimeFromDateTime = (dateTimeString: string): string => {
+    if (!dateTimeString) return '';
+    try {
+      const date = new Date(dateTimeString);
+      return date.toISOString().split('T')[1].substring(0, 5); // HH:mm形式
+    } catch (error) {
+      return '';
+    }
+  };
+
+  const createDateTimeFromDateAndTime = (date: string, time: string): string => {
+    if (!date || !time) return '';
+    return `${date}T${time}:00.000Z`;
+  };
+
+  // 勤務形態の時刻を日本時間でISO形式に変換する関数
+  const createJSTDateTimeFromWorkTypeTime = (workDate: string, workTypeTime: string): string => {
+    if (!workDate || !workTypeTime) return '';
+
+    // 勤務形態の時刻はHH:mm:ss形式なので、HH:mm部分のみを抽出
+    const timeOnly = workTypeTime.substring(0, 5); // HH:mm形式に変換
+
+    // 勤務日と時刻を組み合わせて日本時間のISO形式を作成
+    const jstDateTime = `${workDate}T${timeOnly}:00`;
+
+    console.log('createJSTDateTimeFromWorkTypeTime:', {
+      workDate,
+      workTypeTime,
+      timeOnly,
+      jstDateTime,
+    });
+
+    // 日本時間をUTC時間に変換
+    const jstDate = new Date(jstDateTime);
+
+    // 日付が有効かチェック
+    if (isNaN(jstDate.getTime())) {
+      console.error('無効な日付が作成されました:', { jstDateTime, jstDate });
+      return '';
+    }
+
+    const utcDate = new Date(jstDate.getTime() - 9 * 60 * 60 * 1000); // JSTからUTCに変換（-9時間）
+
+    return utcDate.toISOString();
+  };
+
+  // デフォルトのClockRecordを作成する関数（勤務形態の設定を使用）
+  const createDefaultClockRecord = (
+    workDate: string,
+    workTypeDetail?: {
+      id: string;
+      name: string;
+      work_start_time: string;
+      work_end_time: string;
+    }
+  ): ClockRecord => {
+    const defaultInTime = workTypeDetail
+      ? createJSTDateTimeFromWorkTypeTime(workDate, workTypeDetail.work_start_time)
+      : createDateTimeFromDateAndTime(workDate, '09:00');
+
+    const defaultOutTime = workTypeDetail
+      ? createJSTDateTimeFromWorkTypeTime(workDate, workTypeDetail.work_end_time)
+      : createDateTimeFromDateAndTime(workDate, '18:00');
+
+    return {
+      in_time: defaultInTime,
+      out_time: defaultOutTime,
+      breaks: [],
+    };
+  };
+
   // 勤務日変更時の処理
   const handleWorkDateChange = (newWorkDate: string) => {
     console.log('handleWorkDateChange 開始:', {
@@ -326,28 +390,76 @@ export default function ClockRecordsInput({
                 <Label htmlFor={`in_time_${sessionIndex}`} className="text-sm">
                   出勤時刻 *
                 </Label>
-                <Input
-                  id={`in_time_${sessionIndex}`}
-                  type="datetime-local"
-                  value={formatDateTimeForInput(session.in_time)}
-                  onChange={(e) => updateSession(sessionIndex, 'in_time', e.target.value)}
-                  disabled={disabled}
-                  required
-                />
+                <div className="grid grid-cols-[2fr,1fr] gap-2">
+                  <Input
+                    id={`in_date_${sessionIndex}`}
+                    type="date"
+                    value={getDateFromDateTime(session.in_time)}
+                    onChange={(e) => {
+                      const currentTime = getTimeFromDateTime(session.in_time);
+                      const newDateTime = createDateTimeFromDateAndTime(
+                        e.target.value,
+                        currentTime
+                      );
+                      updateSession(sessionIndex, 'in_time', newDateTime);
+                    }}
+                    disabled={disabled}
+                    required
+                  />
+                  <Input
+                    id={`in_time_${sessionIndex}`}
+                    type="time"
+                    value={getTimeFromDateTime(session.in_time)}
+                    onChange={(e) => {
+                      const currentDate = getDateFromDateTime(session.in_time);
+                      const newDateTime = createDateTimeFromDateAndTime(
+                        currentDate,
+                        e.target.value
+                      );
+                      updateSession(sessionIndex, 'in_time', newDateTime);
+                    }}
+                    disabled={disabled}
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor={`out_time_${sessionIndex}`} className="text-sm">
                   退勤時刻
                   {sessionIndex === clockRecords.length - 1 && ' *'}
                 </Label>
-                <Input
-                  id={`out_time_${sessionIndex}`}
-                  type="datetime-local"
-                  value={formatDateTimeForInput(session.out_time || '')}
-                  onChange={(e) => updateSession(sessionIndex, 'out_time', e.target.value)}
-                  disabled={disabled}
-                  required={sessionIndex === clockRecords.length - 1}
-                />
+                <div className="grid grid-cols-[2fr,1fr] gap-2">
+                  <Input
+                    id={`out_date_${sessionIndex}`}
+                    type="date"
+                    value={getDateFromDateTime(session.out_time || '')}
+                    onChange={(e) => {
+                      const currentTime = getTimeFromDateTime(session.out_time || '');
+                      const newDateTime = createDateTimeFromDateAndTime(
+                        e.target.value,
+                        currentTime
+                      );
+                      updateSession(sessionIndex, 'out_time', newDateTime);
+                    }}
+                    disabled={disabled}
+                    required={sessionIndex === clockRecords.length - 1}
+                  />
+                  <Input
+                    id={`out_time_${sessionIndex}`}
+                    type="time"
+                    value={getTimeFromDateTime(session.out_time || '')}
+                    onChange={(e) => {
+                      const currentDate = getDateFromDateTime(session.out_time || '');
+                      const newDateTime = createDateTimeFromDateAndTime(
+                        currentDate,
+                        e.target.value
+                      );
+                      updateSession(sessionIndex, 'out_time', newDateTime);
+                    }}
+                    disabled={disabled}
+                    required={sessionIndex === clockRecords.length - 1}
+                  />
+                </div>
               </div>
             </div>
 
@@ -374,27 +486,73 @@ export default function ClockRecordsInput({
                       <div className="flex-1 grid grid-cols-2 gap-3">
                         <div className="space-y-1">
                           <Label className="text-xs">開始時刻</Label>
-                          <Input
-                            type="datetime-local"
-                            value={formatDateTimeForInput(breakRecord.break_start)}
-                            onChange={(e) =>
-                              updateBreak(sessionIndex, breakIndex, 'break_start', e.target.value)
-                            }
-                            disabled={disabled}
-                            size={1}
-                          />
+                          <div className="grid grid-cols-[2fr,1fr] gap-1">
+                            <Input
+                              id={`break_start_date_${sessionIndex}_${breakIndex}`}
+                              type="date"
+                              value={getDateFromDateTime(breakRecord.break_start)}
+                              onChange={(e) => {
+                                const currentTime = getTimeFromDateTime(breakRecord.break_start);
+                                const newDateTime = createDateTimeFromDateAndTime(
+                                  e.target.value,
+                                  currentTime
+                                );
+                                updateBreak(sessionIndex, breakIndex, 'break_start', newDateTime);
+                              }}
+                              disabled={disabled}
+                              required
+                            />
+                            <Input
+                              id={`break_start_time_${sessionIndex}_${breakIndex}`}
+                              type="time"
+                              value={getTimeFromDateTime(breakRecord.break_start)}
+                              onChange={(e) => {
+                                const currentDate = getDateFromDateTime(breakRecord.break_start);
+                                const newDateTime = createDateTimeFromDateAndTime(
+                                  currentDate,
+                                  e.target.value
+                                );
+                                updateBreak(sessionIndex, breakIndex, 'break_start', newDateTime);
+                              }}
+                              disabled={disabled}
+                              required
+                            />
+                          </div>
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">終了時刻</Label>
-                          <Input
-                            type="datetime-local"
-                            value={formatDateTimeForInput(breakRecord.break_end)}
-                            onChange={(e) =>
-                              updateBreak(sessionIndex, breakIndex, 'break_end', e.target.value)
-                            }
-                            disabled={disabled}
-                            size={1}
-                          />
+                          <div className="grid grid-cols-[2fr,1fr] gap-1">
+                            <Input
+                              id={`break_end_date_${sessionIndex}_${breakIndex}`}
+                              type="date"
+                              value={getDateFromDateTime(breakRecord.break_end)}
+                              onChange={(e) => {
+                                const currentTime = getTimeFromDateTime(breakRecord.break_end);
+                                const newDateTime = createDateTimeFromDateAndTime(
+                                  e.target.value,
+                                  currentTime
+                                );
+                                updateBreak(sessionIndex, breakIndex, 'break_end', newDateTime);
+                              }}
+                              disabled={disabled}
+                              required
+                            />
+                            <Input
+                              id={`break_end_time_${sessionIndex}_${breakIndex}`}
+                              type="time"
+                              value={getTimeFromDateTime(breakRecord.break_end)}
+                              onChange={(e) => {
+                                const currentDate = getDateFromDateTime(breakRecord.break_end);
+                                const newDateTime = createDateTimeFromDateAndTime(
+                                  currentDate,
+                                  e.target.value
+                                );
+                                updateBreak(sessionIndex, breakIndex, 'break_end', newDateTime);
+                              }}
+                              disabled={disabled}
+                              required
+                            />
+                          </div>
                         </div>
                       </div>
                       <Button

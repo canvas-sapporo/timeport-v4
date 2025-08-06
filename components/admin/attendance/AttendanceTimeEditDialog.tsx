@@ -326,25 +326,65 @@ export const AttendanceTimeEditDialog = ({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor={`in-time-${sessionIndex}`}>出勤時刻 *</Label>
-                        <Input
-                          id={`in-time-${sessionIndex}`}
-                          type="datetime-local"
-                          value={formatDateTimeForInputLocal(session.in_time)}
-                          onChange={(e) =>
-                            updateClockRecord(sessionIndex, 'in_time', e.target.value)
-                          }
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            id={`in-date-${sessionIndex}`}
+                            type="date"
+                            value={formatDateTimeForInputLocal(session.in_time).split('T')[0]}
+                            onChange={(e) => {
+                              const currentTime = formatDateTimeForInputLocal(
+                                session.in_time
+                              ).split('T')[1];
+                              const newDateTime = `${e.target.value}T${currentTime}`;
+                              updateClockRecord(sessionIndex, 'in_time', newDateTime);
+                            }}
+                          />
+                          <Input
+                            id={`in-time-${sessionIndex}`}
+                            type="time"
+                            value={formatDateTimeForInputLocal(session.in_time).split('T')[1]}
+                            onChange={(e) => {
+                              const currentDate = formatDateTimeForInputLocal(
+                                session.in_time
+                              ).split('T')[0];
+                              const newDateTime = `${currentDate}T${e.target.value}`;
+                              updateClockRecord(sessionIndex, 'in_time', newDateTime);
+                            }}
+                          />
+                        </div>
                       </div>
                       <div>
                         <Label htmlFor={`out-time-${sessionIndex}`}>退勤時刻 *</Label>
-                        <Input
-                          id={`out-time-${sessionIndex}`}
-                          type="datetime-local"
-                          value={formatDateTimeForInputLocal(session.out_time || '')}
-                          onChange={(e) =>
-                            updateClockRecord(sessionIndex, 'out_time', e.target.value)
-                          }
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            id={`out-date-${sessionIndex}`}
+                            type="date"
+                            value={
+                              formatDateTimeForInputLocal(session.out_time || '').split('T')[0]
+                            }
+                            onChange={(e) => {
+                              const currentTime = formatDateTimeForInputLocal(
+                                session.out_time || ''
+                              ).split('T')[1];
+                              const newDateTime = `${e.target.value}T${currentTime}`;
+                              updateClockRecord(sessionIndex, 'out_time', newDateTime);
+                            }}
+                          />
+                          <Input
+                            id={`out-time-${sessionIndex}`}
+                            type="time"
+                            value={
+                              formatDateTimeForInputLocal(session.out_time || '').split('T')[1]
+                            }
+                            onChange={(e) => {
+                              const currentDate = formatDateTimeForInputLocal(
+                                session.out_time || ''
+                              ).split('T')[0];
+                              const newDateTime = `${currentDate}T${e.target.value}`;
+                              updateClockRecord(sessionIndex, 'out_time', newDateTime);
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -353,33 +393,87 @@ export const AttendanceTimeEditDialog = ({
                       <Label>休憩時間</Label>
                       {session.breaks?.map((breakRecord, breakIndex) => (
                         <div key={breakIndex} className="flex items-center gap-2">
-                          <Input
-                            type="datetime-local"
-                            value={formatDateTimeForInputLocal(breakRecord.break_start)}
-                            onChange={(e) =>
-                              updateBreakRecord(
-                                sessionIndex,
-                                breakIndex,
-                                'break_start',
-                                e.target.value
-                              )
-                            }
-                            placeholder="開始時刻"
-                          />
+                          <div className="grid grid-cols-2 gap-1">
+                            <Input
+                              type="date"
+                              value={
+                                formatDateTimeForInputLocal(breakRecord.break_start).split('T')[0]
+                              }
+                              onChange={(e) => {
+                                const currentTime = formatDateTimeForInputLocal(
+                                  breakRecord.break_start
+                                ).split('T')[1];
+                                const newDateTime = `${e.target.value}T${currentTime}`;
+                                updateBreakRecord(
+                                  sessionIndex,
+                                  breakIndex,
+                                  'break_start',
+                                  newDateTime
+                                );
+                              }}
+                              placeholder="開始日"
+                            />
+                            <Input
+                              type="time"
+                              value={
+                                formatDateTimeForInputLocal(breakRecord.break_start).split('T')[1]
+                              }
+                              onChange={(e) => {
+                                const currentDate = formatDateTimeForInputLocal(
+                                  breakRecord.break_start
+                                ).split('T')[0];
+                                const newDateTime = `${currentDate}T${e.target.value}`;
+                                updateBreakRecord(
+                                  sessionIndex,
+                                  breakIndex,
+                                  'break_start',
+                                  newDateTime
+                                );
+                              }}
+                              placeholder="開始時刻"
+                            />
+                          </div>
                           <span>～</span>
-                          <Input
-                            type="datetime-local"
-                            value={formatDateTimeForInputLocal(breakRecord.break_end)}
-                            onChange={(e) =>
-                              updateBreakRecord(
-                                sessionIndex,
-                                breakIndex,
-                                'break_end',
-                                e.target.value
-                              )
-                            }
-                            placeholder="終了時刻"
-                          />
+                          <div className="grid grid-cols-2 gap-1">
+                            <Input
+                              type="date"
+                              value={
+                                formatDateTimeForInputLocal(breakRecord.break_end).split('T')[0]
+                              }
+                              onChange={(e) => {
+                                const currentTime = formatDateTimeForInputLocal(
+                                  breakRecord.break_end
+                                ).split('T')[1];
+                                const newDateTime = `${e.target.value}T${currentTime}`;
+                                updateBreakRecord(
+                                  sessionIndex,
+                                  breakIndex,
+                                  'break_end',
+                                  newDateTime
+                                );
+                              }}
+                              placeholder="終了日"
+                            />
+                            <Input
+                              type="time"
+                              value={
+                                formatDateTimeForInputLocal(breakRecord.break_end).split('T')[1]
+                              }
+                              onChange={(e) => {
+                                const currentDate = formatDateTimeForInputLocal(
+                                  breakRecord.break_end
+                                ).split('T')[0];
+                                const newDateTime = `${currentDate}T${e.target.value}`;
+                                updateBreakRecord(
+                                  sessionIndex,
+                                  breakIndex,
+                                  'break_end',
+                                  newDateTime
+                                );
+                              }}
+                              placeholder="終了時刻"
+                            />
+                          </div>
                           <Button
                             type="button"
                             variant="outline"
@@ -412,25 +506,65 @@ export const AttendanceTimeEditDialog = ({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor={`in-time-${sessionIndex}`}>出勤時刻 *</Label>
-                        <Input
-                          id={`in-time-${sessionIndex}`}
-                          type="datetime-local"
-                          value={formatDateTimeForInputLocal(session.in_time)}
-                          onChange={(e) =>
-                            updateClockRecord(sessionIndex, 'in_time', e.target.value)
-                          }
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            id={`in-date-${sessionIndex}`}
+                            type="date"
+                            value={formatDateTimeForInputLocal(session.in_time).split('T')[0]}
+                            onChange={(e) => {
+                              const currentTime = formatDateTimeForInputLocal(
+                                session.in_time
+                              ).split('T')[1];
+                              const newDateTime = `${e.target.value}T${currentTime}`;
+                              updateClockRecord(sessionIndex, 'in_time', newDateTime);
+                            }}
+                          />
+                          <Input
+                            id={`in-time-${sessionIndex}`}
+                            type="time"
+                            value={formatDateTimeForInputLocal(session.in_time).split('T')[1]}
+                            onChange={(e) => {
+                              const currentDate = formatDateTimeForInputLocal(
+                                session.in_time
+                              ).split('T')[0];
+                              const newDateTime = `${currentDate}T${e.target.value}`;
+                              updateClockRecord(sessionIndex, 'in_time', newDateTime);
+                            }}
+                          />
+                        </div>
                       </div>
                       <div>
                         <Label htmlFor={`out-time-${sessionIndex}`}>退勤時刻 *</Label>
-                        <Input
-                          id={`out-time-${sessionIndex}`}
-                          type="datetime-local"
-                          value={formatDateTimeForInputLocal(session.out_time || '')}
-                          onChange={(e) =>
-                            updateClockRecord(sessionIndex, 'out_time', e.target.value)
-                          }
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            id={`out-date-${sessionIndex}`}
+                            type="date"
+                            value={
+                              formatDateTimeForInputLocal(session.out_time || '').split('T')[0]
+                            }
+                            onChange={(e) => {
+                              const currentTime = formatDateTimeForInputLocal(
+                                session.out_time || ''
+                              ).split('T')[1];
+                              const newDateTime = `${e.target.value}T${currentTime}`;
+                              updateClockRecord(sessionIndex, 'out_time', newDateTime);
+                            }}
+                          />
+                          <Input
+                            id={`out-time-${sessionIndex}`}
+                            type="time"
+                            value={
+                              formatDateTimeForInputLocal(session.out_time || '').split('T')[1]
+                            }
+                            onChange={(e) => {
+                              const currentDate = formatDateTimeForInputLocal(
+                                session.out_time || ''
+                              ).split('T')[0];
+                              const newDateTime = `${currentDate}T${e.target.value}`;
+                              updateClockRecord(sessionIndex, 'out_time', newDateTime);
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -439,33 +573,87 @@ export const AttendanceTimeEditDialog = ({
                       <Label>休憩時間</Label>
                       {session.breaks?.map((breakRecord, breakIndex) => (
                         <div key={breakIndex} className="flex items-center gap-2">
-                          <Input
-                            type="datetime-local"
-                            value={formatDateTimeForInputLocal(breakRecord.break_start)}
-                            onChange={(e) =>
-                              updateBreakRecord(
-                                sessionIndex,
-                                breakIndex,
-                                'break_start',
-                                e.target.value
-                              )
-                            }
-                            placeholder="開始時刻"
-                          />
+                          <div className="grid grid-cols-2 gap-1">
+                            <Input
+                              type="date"
+                              value={
+                                formatDateTimeForInputLocal(breakRecord.break_start).split('T')[0]
+                              }
+                              onChange={(e) => {
+                                const currentTime = formatDateTimeForInputLocal(
+                                  breakRecord.break_start
+                                ).split('T')[1];
+                                const newDateTime = `${e.target.value}T${currentTime}`;
+                                updateBreakRecord(
+                                  sessionIndex,
+                                  breakIndex,
+                                  'break_start',
+                                  newDateTime
+                                );
+                              }}
+                              placeholder="開始日"
+                            />
+                            <Input
+                              type="time"
+                              value={
+                                formatDateTimeForInputLocal(breakRecord.break_start).split('T')[1]
+                              }
+                              onChange={(e) => {
+                                const currentDate = formatDateTimeForInputLocal(
+                                  breakRecord.break_start
+                                ).split('T')[0];
+                                const newDateTime = `${currentDate}T${e.target.value}`;
+                                updateBreakRecord(
+                                  sessionIndex,
+                                  breakIndex,
+                                  'break_start',
+                                  newDateTime
+                                );
+                              }}
+                              placeholder="開始時刻"
+                            />
+                          </div>
                           <span>～</span>
-                          <Input
-                            type="datetime-local"
-                            value={formatDateTimeForInputLocal(breakRecord.break_end)}
-                            onChange={(e) =>
-                              updateBreakRecord(
-                                sessionIndex,
-                                breakIndex,
-                                'break_end',
-                                e.target.value
-                              )
-                            }
-                            placeholder="終了時刻"
-                          />
+                          <div className="grid grid-cols-2 gap-1">
+                            <Input
+                              type="date"
+                              value={
+                                formatDateTimeForInputLocal(breakRecord.break_end).split('T')[0]
+                              }
+                              onChange={(e) => {
+                                const currentTime = formatDateTimeForInputLocal(
+                                  breakRecord.break_end
+                                ).split('T')[1];
+                                const newDateTime = `${e.target.value}T${currentTime}`;
+                                updateBreakRecord(
+                                  sessionIndex,
+                                  breakIndex,
+                                  'break_end',
+                                  newDateTime
+                                );
+                              }}
+                              placeholder="終了日"
+                            />
+                            <Input
+                              type="time"
+                              value={
+                                formatDateTimeForInputLocal(breakRecord.break_end).split('T')[1]
+                              }
+                              onChange={(e) => {
+                                const currentDate = formatDateTimeForInputLocal(
+                                  breakRecord.break_end
+                                ).split('T')[0];
+                                const newDateTime = `${currentDate}T${e.target.value}`;
+                                updateBreakRecord(
+                                  sessionIndex,
+                                  breakIndex,
+                                  'break_end',
+                                  newDateTime
+                                );
+                              }}
+                              placeholder="終了時刻"
+                            />
+                          </div>
                           <Button
                             type="button"
                             variant="outline"
