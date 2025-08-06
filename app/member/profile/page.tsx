@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import UserSettings from '@/components/member/settings/UserSettings';
 import { getCompanyInfo, getUserProfile } from '@/lib/actions/user-settings';
 import { getUserCompanyId } from '@/lib/actions/user';
+import { getEmploymentTypes } from '@/lib/actions/admin/employment-types';
+import { getWorkTypes } from '@/lib/actions/admin/work-types';
 import type { CompanyInfo } from '@/schemas/user_profile';
 
 export default function MemberProfilePage() {
@@ -23,6 +25,9 @@ export default function MemberProfilePage() {
   const [editData, setEditData] = useState({
     family_name: '',
     first_name: '',
+    family_name_kana: '',
+    first_name_kana: '',
+    phone: '',
   });
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [userProfile, setUserProfile] = useState<{
@@ -41,6 +46,8 @@ export default function MemberProfilePage() {
     created_at: string;
     updated_at: string;
   } | null>(null);
+  const [employmentTypes, setEmploymentTypes] = useState<{ id: string; name: string }[]>([]);
+  const [workTypes, setWorkTypes] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     if (!user || (user.role !== 'member' && user.role !== 'admin')) {
@@ -85,6 +92,22 @@ export default function MemberProfilePage() {
         const company = await getCompanyInfo(companyId);
         console.log('取得した企業情報:', company);
         setCompanyInfo(company);
+
+        // 雇用形態と勤務体系のデータを取得
+        const [employmentResult, workTypesResult] = await Promise.all([
+          getEmploymentTypes(companyId),
+          getWorkTypes(companyId),
+        ]);
+
+        if (employmentResult.success) {
+          setEmploymentTypes(
+            employmentResult.data.employment_types.map((et) => ({ id: et.id, name: et.name }))
+          );
+        }
+
+        if (workTypesResult.success) {
+          setWorkTypes(workTypesResult.data.work_types.map((wt) => ({ id: wt.id, name: wt.name })));
+        }
       } catch (error) {
         console.error('Error loading company info:', error);
       }
@@ -97,13 +120,17 @@ export default function MemberProfilePage() {
     return null;
   }
 
-  // const userGroup = groups.find((g) => g.id === user.primary_group_id);
+  // 雇用形態の名前を取得
+  const getEmploymentTypeName = (id: string) => {
+    const employmentType = employmentTypes.find((et) => et.id === id);
+    return employmentType ? employmentType.name : '-';
+  };
 
-  function getGroupPath(groupId: string) {
-    const group = groups.find((g) => g.id === groupId);
-    if (!group) return '';
-    return group.name;
-  }
+  // 勤務体系の名前を取得
+  const getWorkTypeName = (id: string) => {
+    const workType = workTypes.find((wt) => wt.id === id);
+    return workType ? workType.name : '-';
+  };
 
   // ユーザーが所属するグループを取得
   const userGroups = groups.filter((group) => group.id === user?.primary_group_id);
@@ -112,6 +139,9 @@ export default function MemberProfilePage() {
     setEditData({
       family_name: userProfile?.family_name || '',
       first_name: userProfile?.first_name || '',
+      family_name_kana: userProfile?.family_name_kana || '',
+      first_name_kana: userProfile?.first_name_kana || '',
+      phone: userProfile?.phone || '',
     });
     setIsEditing(true);
   }
@@ -196,203 +226,259 @@ export default function MemberProfilePage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="w-5 h-5" />
-              <span>基本情報</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>個人コード</Label>
-              <div className="mt-1 text-sm text-gray-900">{userProfile?.code || '-'}</div>
-            </div>
+      {/* 基本情報 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <User className="w-5 h-5" />
+            <span>基本情報</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>個人コード</Label>
+            <div className="mt-1 text-sm text-gray-900">{userProfile?.code || '-'}</div>
+          </div>
 
-            <div>
-              <Label htmlFor="family_name">姓</Label>
-              {isEditing ? (
-                <Input
-                  id="family_name"
-                  value={editData.family_name}
-                  onChange={(e) =>
-                    setEditData((prev) => ({ ...prev, family_name: e.target.value }))
-                  }
-                />
-              ) : (
-                <div className="mt-1 text-sm text-gray-900">{userProfile?.family_name || '-'}</div>
-              )}
-            </div>
+          <div>
+            <Label htmlFor="family_name">姓</Label>
+            {isEditing ? (
+              <Input
+                id="family_name"
+                value={editData.family_name}
+                onChange={(e) => setEditData((prev) => ({ ...prev, family_name: e.target.value }))}
+              />
+            ) : (
+              <div className="mt-1 text-sm text-gray-900">{userProfile?.family_name || '-'}</div>
+            )}
+          </div>
 
-            <div>
-              <Label htmlFor="first_name">名</Label>
-              {isEditing ? (
-                <Input
-                  id="first_name"
-                  value={editData.first_name}
-                  onChange={(e) => setEditData((prev) => ({ ...prev, first_name: e.target.value }))}
-                />
-              ) : (
-                <div className="mt-1 text-sm text-gray-900">{userProfile?.first_name || '-'}</div>
-              )}
-            </div>
+          <div>
+            <Label htmlFor="first_name">名</Label>
+            {isEditing ? (
+              <Input
+                id="first_name"
+                value={editData.first_name}
+                onChange={(e) => setEditData((prev) => ({ ...prev, first_name: e.target.value }))}
+              />
+            ) : (
+              <div className="mt-1 text-sm text-gray-900">{userProfile?.first_name || '-'}</div>
+            )}
+          </div>
 
-            <div>
-              <Label>姓（カナ）</Label>
+          <div>
+            <Label htmlFor="family_name_kana">姓（カナ）</Label>
+            {isEditing ? (
+              <Input
+                id="family_name_kana"
+                value={editData.family_name_kana}
+                onChange={(e) =>
+                  setEditData((prev) => ({ ...prev, family_name_kana: e.target.value }))
+                }
+              />
+            ) : (
               <div className="mt-1 text-sm text-gray-900">
                 {userProfile?.family_name_kana || '-'}
               </div>
-            </div>
+            )}
+          </div>
 
-            <div>
-              <Label>名（カナ）</Label>
+          <div>
+            <Label htmlFor="first_name_kana">名（カナ）</Label>
+            {isEditing ? (
+              <Input
+                id="first_name_kana"
+                value={editData.first_name_kana}
+                onChange={(e) =>
+                  setEditData((prev) => ({ ...prev, first_name_kana: e.target.value }))
+                }
+              />
+            ) : (
               <div className="mt-1 text-sm text-gray-900">
                 {userProfile?.first_name_kana || '-'}
               </div>
-            </div>
+            )}
+          </div>
 
-            <div>
-              <Label>メールアドレス</Label>
-              <div className="mt-1 text-sm text-gray-900">{userProfile?.email || '-'}</div>
-            </div>
+          <div>
+            <Label>メールアドレス</Label>
+            <div className="mt-1 text-sm text-gray-900">{userProfile?.email || '-'}</div>
+          </div>
 
-            <div>
-              <Label>電話番号</Label>
+          <div>
+            <Label htmlFor="phone">電話番号</Label>
+            {isEditing ? (
+              <Input
+                id="phone"
+                value={editData.phone}
+                onChange={(e) => setEditData((prev) => ({ ...prev, phone: e.target.value }))}
+              />
+            ) : (
               <div className="mt-1 text-sm text-gray-900">{userProfile?.phone || '-'}</div>
-            </div>
+            )}
+          </div>
 
-            <div>
-              <Label>権限</Label>
-              <div className="mt-1 text-sm text-gray-900">
-                {userProfile?.role === 'admin'
-                  ? '管理者'
-                  : userProfile?.role === 'member'
-                    ? 'メンバー'
-                    : userProfile?.role === 'system-admin'
-                      ? 'システム管理者'
-                      : '-'}
-              </div>
+          <div>
+            <Label>権限</Label>
+            <div
+              className={`mt-1 text-sm ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-900'}`}
+            >
+              {userProfile?.role === 'admin'
+                ? '管理者'
+                : userProfile?.role === 'member'
+                  ? 'メンバー'
+                  : userProfile?.role === 'system-admin'
+                    ? 'システム管理者'
+                    : '-'}
+              {isEditing && <span className="ml-2 text-xs text-gray-500">（編集不可）</span>}
             </div>
+          </div>
 
-            <div>
-              <Label>雇用形態</Label>
-              <div className="mt-1 text-sm text-gray-900">
-                {userProfile?.employment_type_id || '-'}
-              </div>
+          <div>
+            <Label>雇用形態</Label>
+            <div
+              className={`mt-1 text-sm ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-900'}`}
+            >
+              {userProfile?.employment_type_id
+                ? getEmploymentTypeName(userProfile.employment_type_id)
+                : '-'}
+              {isEditing && <span className="ml-2 text-xs text-gray-500">（編集不可）</span>}
             </div>
+          </div>
 
-            <div>
-              <Label>現在の勤務形態</Label>
-              <div className="mt-1 text-sm text-gray-900">
-                {userProfile?.current_work_type_id || '-'}
-              </div>
+          <div>
+            <Label>現在の勤務形態</Label>
+            <div
+              className={`mt-1 text-sm ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-900'}`}
+            >
+              {userProfile?.current_work_type_id
+                ? getWorkTypeName(userProfile.current_work_type_id)
+                : '-'}
+              {isEditing && <span className="ml-2 text-xs text-gray-500">（編集不可）</span>}
             </div>
+          </div>
 
-            <div>
-              <Label>ステータス</Label>
-              <div className="mt-1 text-sm text-gray-900">
-                {userProfile?.is_active ? '有効' : '無効'}
-              </div>
+          <div>
+            <Label>ステータス</Label>
+            <div
+              className={`mt-1 text-sm ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-900'}`}
+            >
+              {userProfile?.is_active ? '有効' : '無効'}
+              {isEditing && <span className="ml-2 text-xs text-gray-500">（編集不可）</span>}
             </div>
+          </div>
 
-            <div>
-              <Label>作成日</Label>
-              <div className="mt-1 text-sm text-gray-900">
-                {userProfile?.created_at
-                  ? new Date(userProfile.created_at).toLocaleDateString('ja-JP')
-                  : '-'}
-              </div>
+          <div>
+            <Label>作成日</Label>
+            <div
+              className={`mt-1 text-sm ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-900'}`}
+            >
+              {userProfile?.created_at
+                ? new Date(userProfile.created_at).toLocaleDateString('ja-JP')
+                : '-'}
+              {isEditing && <span className="ml-2 text-xs text-gray-500">（編集不可）</span>}
             </div>
+          </div>
 
-            <div>
-              <Label>編集日</Label>
-              <div className="mt-1 text-sm text-gray-900">
-                {userProfile?.updated_at
-                  ? new Date(userProfile.updated_at).toLocaleDateString('ja-JP')
-                  : '-'}
-              </div>
+          <div>
+            <Label>編集日</Label>
+            <div
+              className={`mt-1 text-sm ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-900'}`}
+            >
+              {userProfile?.updated_at
+                ? new Date(userProfile.updated_at).toLocaleDateString('ja-JP')
+                : '-'}
+              {isEditing && <span className="ml-2 text-xs text-gray-500">（編集不可）</span>}
             </div>
+          </div>
 
-            <div className="flex space-x-2">
-              {isEditing ? (
-                <>
-                  <Button onClick={handleSave} size="sm">
-                    保存
-                  </Button>
-                  <Button onClick={handleCancel} variant="outline" size="sm">
-                    キャンセル
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={handleEdit} size="sm">
-                  編集
+          <div className="flex space-x-2">
+            {isEditing ? (
+              <>
+                <Button
+                  onClick={handleSave}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  保存
                 </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                <Button onClick={handleCancel} variant="outline" size="sm">
+                  キャンセル
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={handleEdit}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                編集
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="w-5 h-5" />
-              <span>グループ情報</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {userGroups.length > 0 ? (
-              <div className="space-y-4">
-                {userGroups.map((group) => (
-                  <div key={group.id} className="border rounded-md p-4 space-y-3">
-                    <div>
-                      <Label>グループコード</Label>
-                      <div className="mt-1 text-sm text-gray-900">{group.code || '-'}</div>
-                    </div>
+      {/* グループ情報 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <User className="w-5 h-5" />
+            <span>グループ情報</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {userGroups.length > 0 ? (
+            <div className="space-y-4">
+              {userGroups.map((group) => (
+                <div key={group.id} className="border rounded-md p-4 space-y-3">
+                  <div>
+                    <Label>グループコード</Label>
+                    <div className="mt-1 text-sm text-gray-900">{group.code || '-'}</div>
+                  </div>
 
-                    <div>
-                      <Label>グループ名</Label>
-                      <div className="mt-1 text-sm text-gray-900">{group.name || '-'}</div>
-                    </div>
+                  <div>
+                    <Label>グループ名</Label>
+                    <div className="mt-1 text-sm text-gray-900">{group.name || '-'}</div>
+                  </div>
 
-                    <div>
-                      <Label>説明</Label>
-                      <div className="mt-1 text-sm text-gray-900">{group.description || '-'}</div>
-                    </div>
+                  <div>
+                    <Label>説明</Label>
+                    <div className="mt-1 text-sm text-gray-900">{group.description || '-'}</div>
+                  </div>
 
-                    <div>
-                      <Label>ステータス</Label>
-                      <div className="mt-1 text-sm text-gray-900">
-                        {group.is_active ? '有効' : '無効'}
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>作成日</Label>
-                      <div className="mt-1 text-sm text-gray-900">
-                        {group.created_at
-                          ? new Date(group.created_at).toLocaleDateString('ja-JP')
-                          : '-'}
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>編集日</Label>
-                      <div className="mt-1 text-sm text-gray-900">
-                        {group.updated_at
-                          ? new Date(group.updated_at).toLocaleDateString('ja-JP')
-                          : '-'}
-                      </div>
+                  <div>
+                    <Label>ステータス</Label>
+                    <div className="mt-1 text-sm text-gray-900">
+                      {group.is_active ? '有効' : '無効'}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-gray-900">所属グループがありません</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+
+                  <div>
+                    <Label>作成日</Label>
+                    <div className="mt-1 text-sm text-gray-900">
+                      {group.created_at
+                        ? new Date(group.created_at).toLocaleDateString('ja-JP')
+                        : '-'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>編集日</Label>
+                    <div className="mt-1 text-sm text-gray-900">
+                      {group.updated_at
+                        ? new Date(group.updated_at).toLocaleDateString('ja-JP')
+                        : '-'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-900">所属グループがありません</div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
