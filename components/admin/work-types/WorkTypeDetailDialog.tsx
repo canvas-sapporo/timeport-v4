@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { getWorkTypeDetail } from '@/lib/actions/attendance';
+import { formatTime } from '@/lib/utils';
 
 interface WorkTypeDetailDialogProps {
   open: boolean;
@@ -76,11 +77,6 @@ export default function WorkTypeDetailDialog({
       fetchWorkTypeDetail();
     }
   }, [open, workTypeId, fetchWorkTypeDetail]);
-
-  const formatTime = (time: string) => {
-    if (!time) return '--:--';
-    return time.substring(0, 5); // HH:MM形式で表示
-  };
 
   const formatMinutes = (minutes: number) => {
     if (minutes === 0) return '0分';

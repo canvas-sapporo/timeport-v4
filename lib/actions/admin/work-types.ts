@@ -221,6 +221,71 @@ function validateWorkTypeTimes(form: CreateWorkTypeFormData | EditWorkTypeFormDa
 // ================================
 
 /**
+ * JST時刻をUTC時刻に変換する関数
+ * @param jstTime JST時刻（HH:mm:ss形式またはHH:mm形式）
+ * @returns UTC時刻（HH:mm:ss形式）
+ */
+function convertJSTTimeToUTC(jstTime: string): string {
+  console.log('convertJSTTimeToUTC 入力:', jstTime);
+  
+  if (!jstTime || jstTime.trim() === '') {
+    console.log('convertJSTTimeToUTC 空文字列を返す');
+    return '';
+  }
+  
+  // JST時刻を時、分、秒に分解
+  const timeParts = jstTime.split(':');
+  const hours = parseInt(timeParts[0], 10);
+  const minutes = parseInt(timeParts[1], 10);
+  const seconds = timeParts.length > 2 ? parseInt(timeParts[2], 10) : 0;
+  
+  console.log('convertJSTTimeToUTC 分解結果:', { hours, minutes, seconds });
+  
+  // 数値が不正な場合は空文字列を返す
+  if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
+    console.log('convertJSTTimeToUTC 不正な数値、空文字列を返す');
+    return '';
+  }
+  
+  // JST時刻から9時間を引いてUTC時刻を計算
+  let utcHours = hours - 9;
+  
+  // 日付をまたぐ場合の処理
+  if (utcHours < 0) {
+    utcHours += 24;
+  }
+  
+  // UTC時刻をHH:mm:ss形式で返す
+  const result = `${String(utcHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  console.log('convertJSTTimeToUTC 結果:', result);
+  return result;
+}
+
+/**
+ * 勤務形態の時刻フィールドをUTC時刻に変換する関数
+ * @param form フォームデータ
+ * @returns UTC時刻に変換されたフォームデータ
+ */
+function convertWorkTypeTimesToUTC<T extends {
+  work_start_time: string;
+  work_end_time: string;
+  flex_start_time?: string | null;
+  flex_end_time?: string | null;
+  core_start_time?: string | null;
+  core_end_time?: string | null;
+}>(form: T): T {
+  return {
+    ...form,
+    work_start_time: convertJSTTimeToUTC(form.work_start_time),
+    work_end_time: convertJSTTimeToUTC(form.work_end_time),
+    flex_start_time: form.flex_start_time ? convertJSTTimeToUTC(form.flex_start_time) : null,
+    flex_end_time: form.flex_end_time ? convertJSTTimeToUTC(form.flex_end_time) : null,
+    core_start_time: form.core_start_time ? convertJSTTimeToUTC(form.core_start_time) : null,
+    core_end_time: form.core_end_time ? convertJSTTimeToUTC(form.core_end_time) : null,
+  };
+}
+
+/**
  * 勤務形態コードの重複チェック
  */
 async function checkWorkTypeCodeExists(
@@ -372,14 +437,14 @@ export async function createWorkType(
         company_id: companyId,
         code: form.code || null,
         name: form.name,
-        work_start_time: form.work_start_time,
-        work_end_time: form.work_end_time,
+        work_start_time: convertJSTTimeToUTC(form.work_start_time),
+        work_end_time: convertJSTTimeToUTC(form.work_end_time),
         break_duration_minutes: form.break_duration_minutes,
         is_flexible: form.is_flexible,
-        flex_start_time: form.flex_start_time || null,
-        flex_end_time: form.flex_end_time || null,
-        core_start_time: form.core_start_time || null,
-        core_end_time: form.core_end_time || null,
+        flex_start_time: form.flex_start_time ? convertJSTTimeToUTC(form.flex_start_time) : null,
+        flex_end_time: form.flex_end_time ? convertJSTTimeToUTC(form.flex_end_time) : null,
+        core_start_time: form.core_start_time ? convertJSTTimeToUTC(form.core_start_time) : null,
+        core_end_time: form.core_end_time ? convertJSTTimeToUTC(form.core_end_time) : null,
         overtime_threshold_minutes: form.overtime_threshold_minutes,
         description: form.description || null,
         settings: {},
@@ -455,14 +520,14 @@ export async function updateWorkType(
       .update({
         code: form.code || null,
         name: form.name,
-        work_start_time: form.work_start_time,
-        work_end_time: form.work_end_time,
+        work_start_time: convertJSTTimeToUTC(form.work_start_time),
+        work_end_time: convertJSTTimeToUTC(form.work_end_time),
         break_duration_minutes: form.break_duration_minutes,
         is_flexible: form.is_flexible,
-        flex_start_time: form.flex_start_time || null,
-        flex_end_time: form.flex_end_time || null,
-        core_start_time: form.core_start_time || null,
-        core_end_time: form.core_end_time || null,
+        flex_start_time: form.flex_start_time ? convertJSTTimeToUTC(form.flex_start_time) : null,
+        flex_end_time: form.flex_end_time ? convertJSTTimeToUTC(form.flex_end_time) : null,
+        core_start_time: form.core_start_time ? convertJSTTimeToUTC(form.core_start_time) : null,
+        core_end_time: form.core_end_time ? convertJSTTimeToUTC(form.core_end_time) : null,
         overtime_threshold_minutes: form.overtime_threshold_minutes,
         description: form.description || null,
         updated_at: new Date().toISOString(),

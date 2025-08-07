@@ -31,6 +31,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { updateWorkType, toggleWorkTypeStatus } from '@/lib/actions/admin/work-types';
 import { useToast } from '@/hooks/use-toast';
 import type { WorkType, EditWorkTypeFormData } from '@/schemas/employment-type';
+import { convertUTCTimeToJST } from '@/lib/utils';
 
 const editWorkTypeSchema = z
   .object({
@@ -150,14 +151,18 @@ export default function WorkTypeEditDialog({
       form.reset({
         code: workType.code || '',
         name: workType.name,
-        work_start_time: workType.work_start_time,
-        work_end_time: workType.work_end_time,
+        work_start_time: convertUTCTimeToJST(workType.work_start_time),
+        work_end_time: convertUTCTimeToJST(workType.work_end_time),
         break_duration_minutes: workType.break_duration_minutes,
         is_flexible: workType.is_flexible,
-        flex_start_time: workType.flex_start_time || '',
-        flex_end_time: workType.flex_end_time || '',
-        core_start_time: workType.core_start_time || '',
-        core_end_time: workType.core_end_time || '',
+        flex_start_time: workType.flex_start_time
+          ? convertUTCTimeToJST(workType.flex_start_time)
+          : '',
+        flex_end_time: workType.flex_end_time ? convertUTCTimeToJST(workType.flex_end_time) : '',
+        core_start_time: workType.core_start_time
+          ? convertUTCTimeToJST(workType.core_start_time)
+          : '',
+        core_end_time: workType.core_end_time ? convertUTCTimeToJST(workType.core_end_time) : '',
         overtime_threshold_minutes: workType.overtime_threshold_minutes,
         late_threshold_minutes: workType.late_threshold_minutes || 15,
         description: workType.description || '',

@@ -267,7 +267,10 @@ export default function ClockRecordsInput({
     if (!dateTimeString) return workDate || '';
     try {
       const date = new Date(dateTimeString);
-      return date.toISOString().split('T')[0];
+      // UTC時刻をJST時刻に変換して表示
+      const jstOffset = 9 * 60; // JSTはUTC+9
+      const jstDate = new Date(date.getTime() + jstOffset * 60 * 1000);
+      return jstDate.toISOString().split('T')[0];
     } catch (error) {
       return workDate || '';
     }
@@ -277,7 +280,10 @@ export default function ClockRecordsInput({
     if (!dateTimeString) return '';
     try {
       const date = new Date(dateTimeString);
-      return date.toISOString().split('T')[1].substring(0, 5); // HH:mm形式
+      // UTC時刻をJST時刻に変換して表示
+      const jstOffset = 9 * 60; // JSTはUTC+9
+      const jstDate = new Date(date.getTime() + jstOffset * 60 * 1000);
+      return jstDate.toISOString().split('T')[1].substring(0, 5); // HH:mm形式
     } catch (error) {
       return '';
     }
@@ -285,63 +291,12 @@ export default function ClockRecordsInput({
 
   const createDateTimeFromDateAndTime = (date: string, time: string): string => {
     if (!date || !time) return '';
-    return `${date}T${time}:00.000Z`;
-  };
-
-  // 勤務形態の時刻を日本時間でISO形式に変換する関数
-  const createJSTDateTimeFromWorkTypeTime = (workDate: string, workTypeTime: string): string => {
-    if (!workDate || !workTypeTime) return '';
-
-    // 勤務形態の時刻はHH:mm:ss形式なので、HH:mm部分のみを抽出
-    const timeOnly = workTypeTime.substring(0, 5); // HH:mm形式に変換
-
-    // 勤務日と時刻を組み合わせて日本時間のISO形式を作成
-    const jstDateTime = `${workDate}T${timeOnly}:00`;
-
-    console.log('createJSTDateTimeFromWorkTypeTime:', {
-      workDate,
-      workTypeTime,
-      timeOnly,
-      jstDateTime,
-    });
-
-    // 日本時間をUTC時間に変換
+    // JST時刻をUTC時刻に変換
+    const jstDateTime = `${date}T${time}:00`;
     const jstDate = new Date(jstDateTime);
-
-    // 日付が有効かチェック
-    if (isNaN(jstDate.getTime())) {
-      console.error('無効な日付が作成されました:', { jstDateTime, jstDate });
-      return '';
-    }
-
-    const utcDate = new Date(jstDate.getTime() - 9 * 60 * 60 * 1000); // JSTからUTCに変換（-9時間）
-
+    const jstOffset = 9 * 60; // JSTはUTC+9
+    const utcDate = new Date(jstDate.getTime() - jstOffset * 60 * 1000);
     return utcDate.toISOString();
-  };
-
-  // デフォルトのClockRecordを作成する関数（勤務形態の設定を使用）
-  const createDefaultClockRecord = (
-    workDate: string,
-    workTypeDetail?: {
-      id: string;
-      name: string;
-      work_start_time: string;
-      work_end_time: string;
-    }
-  ): ClockRecord => {
-    const defaultInTime = workTypeDetail
-      ? createJSTDateTimeFromWorkTypeTime(workDate, workTypeDetail.work_start_time)
-      : createDateTimeFromDateAndTime(workDate, '09:00');
-
-    const defaultOutTime = workTypeDetail
-      ? createJSTDateTimeFromWorkTypeTime(workDate, workTypeDetail.work_end_time)
-      : createDateTimeFromDateAndTime(workDate, '18:00');
-
-    return {
-      in_time: defaultInTime,
-      out_time: defaultOutTime,
-      breaks: [],
-    };
   };
 
   // 勤務日変更時の処理

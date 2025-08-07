@@ -48,21 +48,37 @@ export function formatDateTime(
  * @returns フォーマットされた時刻文字列
  */
 export function formatTime(time: string | Date | null | undefined): string {
-  if (!time) return '--:--';
+  console.log('formatTime 入力:', time, '型:', typeof time);
+  
+  if (!time) {
+    console.log('formatTime 空の値、--:--を返す');
+    return '--:--';
+  }
 
   try {
+    // 時刻のみの文字列（HH:mm:ss形式）の場合
+    if (typeof time === 'string' && time.match(/^\d{2}:\d{2}:\d{2}$/)) {
+      console.log('formatTime UTC時刻として処理:', time);
+      const jstTime = convertUTCTimeToJST(time);
+      console.log('formatTime JST時刻に変換:', jstTime);
+      return jstTime.substring(0, 5); // HH:mm形式で返す
+    }
+
+    // 日付付きの文字列またはDateオブジェクトの場合
     const dateObj = typeof time === 'string' ? new Date(time) : time;
 
     if (isNaN(dateObj.getTime())) {
+      console.log('formatTime 無効な日付、--:--を返す');
       return '--:--';
     }
 
     const hours = String(dateObj.getHours()).padStart(2, '0');
     const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-
-    return `${hours}:${minutes}`;
+    const result = `${hours}:${minutes}`;
+    console.log('formatTime 通常の時刻処理:', result);
+    return result;
   } catch (error) {
-    console.error('時刻フォーマットエラー:', error);
+    console.error('formatTime エラー:', error);
     return '--:--';
   }
 }
@@ -353,4 +369,35 @@ export function formatDateForDisplay(dateTime: string | Date | null | undefined)
     month: '2-digit',
     day: '2-digit',
   });
+}
+
+/**
+ * UTC時刻をJST時刻に変換する関数
+ * @param utcTime UTC時刻（HH:mm:ss形式またはHH:mm形式）
+ * @returns JST時刻（HH:mm:ss形式）
+ */
+export function convertUTCTimeToJST(utcTime: string): string {
+  if (!utcTime || utcTime.trim() === '') return '';
+  
+  // UTC時刻を時、分、秒に分解
+  const timeParts = utcTime.split(':');
+  const hours = parseInt(timeParts[0], 10);
+  const minutes = parseInt(timeParts[1], 10);
+  const seconds = timeParts.length > 2 ? parseInt(timeParts[2], 10) : 0;
+  
+  // 数値が不正な場合は空文字列を返す
+  if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
+    return '';
+  }
+  
+  // UTC時刻に9時間を足してJST時刻を計算
+  let jstHours = hours + 9;
+  
+  // 日付をまたぐ場合の処理
+  if (jstHours >= 24) {
+    jstHours -= 24;
+  }
+  
+  // JST時刻をHH:mm:ss形式で返す
+  return `${String(jstHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }

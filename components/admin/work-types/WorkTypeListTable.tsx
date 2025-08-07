@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { WorkType, WorkTypeSearchParams } from '@/schemas/employment-type';
+import { convertUTCTimeToJST } from '@/lib/utils';
 
 interface WorkTypeListTableProps {
   workTypes: WorkType[];
@@ -96,8 +97,12 @@ export default function WorkTypeListTable({
   };
 
   const formatWorkHours = (startTime: string, endTime: string, breakMinutes: number) => {
-    const start = new Date(`2000-01-01T${startTime}`);
-    const end = new Date(`2000-01-01T${endTime}`);
+    // UTC時刻をJST時刻に変換
+    const jstStartTime = convertUTCTimeToJST(startTime);
+    const jstEndTime = convertUTCTimeToJST(endTime);
+
+    const start = new Date(`2000-01-01T${jstStartTime}`);
+    const end = new Date(`2000-01-01T${jstEndTime}`);
     const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
     const workMinutes = totalMinutes - breakMinutes;
     const hours = Math.floor(workMinutes / 60);

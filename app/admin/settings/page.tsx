@@ -57,13 +57,7 @@ import type { EmploymentType, WorkType } from '@/schemas/employment-type';
 import type { AttendanceStatusData } from '@/schemas/attendance';
 import type { Company } from '@/schemas/company';
 import type { CompanyInfo } from '@/schemas/user_profile';
-import { formatDateTimeForDisplay } from '@/lib/utils';
-
-// 時刻フォーマット関数を追加
-function formatTime(time: string) {
-  if (!time) return '--:--';
-  return time.substring(0, 5); // HH:MM形式で表示
-}
+import { formatDateTimeForDisplay, formatTime } from '@/lib/utils';
 
 // 雇用形態管理用ダイアログコンポーネントをインポート
 import EmploymentTypeCreateDialog from '@/components/admin/employment-types/EmploymentTypeCreateDialog';
@@ -233,7 +227,7 @@ export default function AdminSettingsPage() {
     }
   }
 
-  // 勤務形態データ取得
+  // 勤務形態取得
   async function fetchWorkTypes() {
     if (!user?.company_id) return;
 
@@ -245,6 +239,7 @@ export default function AdminSettingsPage() {
       ]);
 
       if (typesResult.success) {
+        console.log('勤務形態データ取得成功:', typesResult.data.work_types);
         setWorkTypes(typesResult.data.work_types);
       } else {
         console.error('勤務形態取得失敗:', typesResult.error);
@@ -1060,7 +1055,15 @@ export default function AdminSettingsPage() {
                             <Badge variant="outline">{type.code}</Badge>
                           </TableCell>
                           <TableCell>
-                            {formatTime(type.work_start_time)} - {formatTime(type.work_end_time)}
+                            {(() => {
+                              console.log(
+                                '勤務時間表示 - work_start_time:',
+                                type.work_start_time,
+                                'work_end_time:',
+                                type.work_end_time
+                              );
+                              return `${formatTime(type.work_start_time)} - ${formatTime(type.work_end_time)}`;
+                            })()}
                           </TableCell>
                           <TableCell>{type.break_duration_minutes}分</TableCell>
                           <TableCell>
