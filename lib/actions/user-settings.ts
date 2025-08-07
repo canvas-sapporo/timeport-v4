@@ -529,8 +529,10 @@ export async function updateUserProfile(
     const updateData: any = {};
     if (profileData.family_name !== undefined) updateData.family_name = profileData.family_name;
     if (profileData.first_name !== undefined) updateData.first_name = profileData.first_name;
-    if (profileData.family_name_kana !== undefined) updateData.family_name_kana = profileData.family_name_kana;
-    if (profileData.first_name_kana !== undefined) updateData.first_name_kana = profileData.first_name_kana;
+    if (profileData.family_name_kana !== undefined)
+      updateData.family_name_kana = profileData.family_name_kana;
+    if (profileData.first_name_kana !== undefined)
+      updateData.first_name_kana = profileData.first_name_kana;
     if (profileData.phone !== undefined) updateData.phone = profileData.phone;
 
     // user_profilesテーブルを更新

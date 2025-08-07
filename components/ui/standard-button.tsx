@@ -1,6 +1,8 @@
 import React from 'react';
-import { Button, ButtonProps } from './button';
+
 import { cn } from '@/lib/utils';
+
+import { Button, ButtonProps } from './button';
 
 type StandardButtonType = 'save' | 'create' | 'cancel' | 'reset' | 'submit';
 
