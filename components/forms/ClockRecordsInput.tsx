@@ -180,6 +180,14 @@ export default function ClockRecordsInput({
       const jstDate = new Date(value);
       const jstOffset = 9 * 60; // JSTはUTC+9
       const utcDate = new Date(jstDate.getTime() - jstOffset * 60 * 1000);
+
+      console.log('updateSession - 時刻更新:', {
+        field,
+        inputValue: value,
+        jstDate: jstDate.toISOString(),
+        utcDate: utcDate.toISOString(),
+      });
+
       newRecords[index] = { ...newRecords[index], [field]: utcDate.toISOString() };
     } else {
       newRecords[index] = { ...newRecords[index], [field]: value };
@@ -267,10 +275,11 @@ export default function ClockRecordsInput({
     if (!dateTimeString) return workDate || '';
     try {
       const date = new Date(dateTimeString);
-      // UTC時刻をJST時刻に変換して表示
-      const jstOffset = 9 * 60; // JSTはUTC+9
-      const jstDate = new Date(date.getTime() + jstOffset * 60 * 1000);
-      return jstDate.toISOString().split('T')[0];
+      // UTC時刻をJST時刻に変換して日付を取得
+      const jstDate = date.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' });
+      const jstDateOnly = jstDate.split(',')[0];
+      // 勤務日が指定されている場合は勤務日を優先、そうでなければJST時刻の日付を使用
+      return workDate || jstDateOnly;
     } catch (error) {
       return workDate || '';
     }
@@ -280,10 +289,14 @@ export default function ClockRecordsInput({
     if (!dateTimeString) return '';
     try {
       const date = new Date(dateTimeString);
-      // UTC時刻をJST時刻に変換して表示
-      const jstOffset = 9 * 60; // JSTはUTC+9
-      const jstDate = new Date(date.getTime() + jstOffset * 60 * 1000);
-      return jstDate.toISOString().split('T')[1].substring(0, 5); // HH:mm形式
+      // UTC時刻をJST時刻に変換して時刻を取得
+      const jstTime = date.toLocaleTimeString('ja-JP', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Asia/Tokyo',
+      });
+      return jstTime; // HH:mm形式
     } catch (error) {
       return '';
     }
@@ -291,11 +304,20 @@ export default function ClockRecordsInput({
 
   const createDateTimeFromDateAndTime = (date: string, time: string): string => {
     if (!date || !time) return '';
-    // JST時刻をUTC時刻に変換
+    // 指定された日付と時刻でJST時刻を作成し、UTC時刻に変換
     const jstDateTime = `${date}T${time}:00`;
     const jstDate = new Date(jstDateTime);
     const jstOffset = 9 * 60; // JSTはUTC+9
     const utcDate = new Date(jstDate.getTime() - jstOffset * 60 * 1000);
+
+    console.log('createDateTimeFromDateAndTime:', {
+      inputDate: date,
+      inputTime: time,
+      jstDateTime,
+      jstDate: jstDate.toISOString(),
+      utcDate: utcDate.toISOString(),
+    });
+
     return utcDate.toISOString();
   };
 

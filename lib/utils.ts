@@ -109,9 +109,9 @@ export function hiraganaToKatakana(text: string): string {
  * @returns YYYY-MM-DD形式の日本時間での日付文字列
  */
 export function getJSTDate(date: Date = new Date()): string {
-  const jstOffset = 9 * 60; // JSTはUTC+9
-  const jstTime = new Date(date.getTime() + jstOffset * 60 * 1000);
-  return jstTime.toISOString().split('T')[0];
+  // 日本時間のタイムゾーンで日付を取得
+  const jstDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+  return jstDate.toISOString().split('T')[0];
 }
 
 /**
