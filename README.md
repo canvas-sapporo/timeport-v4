@@ -387,15 +387,25 @@ dev/username/YYYYMMDD-XX (機能ブランチ)
 
 ### 開発フロー
 
+0. **コード整理**
+
+- pnpm buildでエラーが出なくなるまで、コード修正すること
+
+```bash
+ pnpm tsc --noEmit
+ pnpm build
+ npx eslint . --fix
+```
+
 1. **機能ブランチの作成**
 
-   ```bash
-   git checkout stage
-   git pull origin stage
-   git checkout -b dev/yourname/YYYYMMDD-XX
-   ```
+```bash
+git checkout stage
+git pull origin stage
+git checkout -b dev/yourname/YYYYMMDD-XX
+```
 
-   例：`dev/yonezawamasahiro/250731-00`
+例：`dev/yonezawamasahiro/250731-00`
 
 2. **開発・コミット**
 
