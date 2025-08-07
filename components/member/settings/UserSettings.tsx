@@ -15,6 +15,7 @@ export default function UserSettings() {
   const { toast } = useToast();
   const [chatSendKeyShiftEnter, setChatSendKeyShiftEnter] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSettingsLoaded, setIsSettingsLoaded] = useState<boolean>(false);
 
   // 初期設定を読み込み
   useEffect(() => {
@@ -24,8 +25,11 @@ export default function UserSettings() {
       try {
         const setting = await getChatSendKeySetting(user.id);
         setChatSendKeyShiftEnter(setting);
+        setIsSettingsLoaded(true);
       } catch (error) {
         console.error('Error loading settings:', error);
+        // エラー時はデフォルト値を使用（既にtrueに設定済み）
+        setIsSettingsLoaded(true);
         toast({
           title: 'エラー',
           description: '設定の読み込みに失敗しました',
@@ -90,17 +94,26 @@ export default function UserSettings() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm">メッセージ送信キー</Label>
-              <Switch
-                checked={chatSendKeyShiftEnter}
-                onCheckedChange={handleChatSendKeyChange}
-                disabled={isLoading}
-              />
+              {!isSettingsLoaded ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                  <span className="text-xs text-gray-500">読み込み中...</span>
+                </div>
+              ) : (
+                <Switch
+                  checked={chatSendKeyShiftEnter}
+                  onCheckedChange={handleChatSendKeyChange}
+                  disabled={isLoading}
+                />
+              )}
             </div>
 
             <p className="text-xs text-muted-foreground">
-              {chatSendKeyShiftEnter
-                ? 'Shift + Enter でメッセージを送信し、Enter で改行します'
-                : 'Enter でメッセージを送信し、Shift + Enter で改行します'}
+              {!isSettingsLoaded
+                ? '設定を読み込み中...'
+                : chatSendKeyShiftEnter
+                  ? 'Shift + Enter でメッセージを送信し、Enter で改行します'
+                  : 'Enter でメッセージを送信し、Shift + Enter で改行します'}
             </p>
           </div>
         </div>

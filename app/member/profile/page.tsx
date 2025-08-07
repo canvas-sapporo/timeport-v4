@@ -84,7 +84,11 @@ export default function MemberProfilePage() {
 
         console.log('プロフィールページ - 取得したプロフィール:', profile);
 
-        setUserProfile(profile);
+        if (profile) {
+          setUserProfile(profile);
+        } else {
+          console.warn('プロフィール情報が取得できませんでした');
+        }
       } catch (error) {
         console.error('Error loading user data:', error);
       }
@@ -109,7 +113,12 @@ export default function MemberProfilePage() {
         console.log('取得した企業ID:', companyId);
         const company = await getCompanyInfo(companyId);
         console.log('取得した企業情報:', company);
-        setCompanyInfo(company);
+
+        if (company) {
+          setCompanyInfo(company);
+        } else {
+          console.warn('企業情報が取得できませんでした');
+        }
 
         // 雇用形態と勤務体系のデータを取得
         const [employmentResult, workTypesResult] = await Promise.all([
@@ -117,14 +126,24 @@ export default function MemberProfilePage() {
           getWorkTypes(companyId),
         ]);
 
-        if (employmentResult.success) {
+        // employmentResultがundefinedの場合の安全な処理
+        if (!employmentResult) {
+          console.warn('雇用形態データ取得失敗: APIレスポンスがundefined');
+        } else if (employmentResult.success && employmentResult.data?.employment_types) {
           setEmploymentTypes(
             employmentResult.data.employment_types.map((et) => ({ id: et.id, name: et.name }))
           );
+        } else {
+          console.warn('雇用形態データの取得に失敗しました');
         }
 
-        if (workTypesResult.success) {
+        // workTypesResultがundefinedの場合の安全な処理
+        if (!workTypesResult) {
+          console.warn('勤務形態データ取得失敗: APIレスポンスがundefined');
+        } else if (workTypesResult.success && workTypesResult.data?.work_types) {
           setWorkTypes(workTypesResult.data.work_types.map((wt) => ({ id: wt.id, name: wt.name })));
+        } else {
+          console.warn('勤務形態データの取得に失敗しました');
         }
       } catch (error) {
         console.error('Error loading company info:', error);
@@ -188,6 +207,12 @@ export default function MemberProfilePage() {
     try {
       const result = await updateUserProfile(user.id, editData, user.id);
 
+      // resultがundefinedの場合の安全な処理
+      if (!result) {
+        console.error('プロフィール更新エラー: APIレスポンスがundefined');
+        return;
+      }
+
       if (result.success) {
         // プロフィール情報を再取得
         const updatedProfile = await getUserProfile(user.id);
@@ -196,7 +221,7 @@ export default function MemberProfilePage() {
         }
         setIsEditing(false);
       } else {
-        console.error('プロフィール更新エラー:', result.error);
+        console.error('プロフィール更新エラー:', result.error || 'Unknown error');
         // エラーハンドリング（必要に応じてトースト通知など）
       }
     } catch (error) {

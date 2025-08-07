@@ -178,18 +178,18 @@ export default function AdminSettingsPage() {
           getAttendanceSettingValue(user.company_id, 'clock_record_edit'),
         ]);
 
-      if (statusesResult.success && statusesResult.statuses) {
+      if (statusesResult?.success && statusesResult?.statuses) {
         setAttendanceStatuses(statusesResult.statuses);
       } else {
-        console.error('勤怠ステータス取得失敗:', statusesResult.error);
+        console.warn('勤怠ステータス取得失敗:', statusesResult?.error || 'Unknown error');
       }
 
-      // 設定値を更新
+      // 設定値を更新（安全な処理）
       setNotificationSettings((prev) => ({
         ...prev,
-        lateArrivalAlert: (lateAlertResult as { enabled: boolean })?.enabled || false,
-        overtimeAlert: (overtimeAlertResult as { enabled: boolean })?.enabled || false,
-        timeEditPermission: (clockEditResult as { enabled: boolean })?.enabled || false,
+        lateArrivalAlert: (lateAlertResult as { enabled: boolean })?.enabled ?? false,
+        overtimeAlert: (overtimeAlertResult as { enabled: boolean })?.enabled ?? false,
+        timeEditPermission: (clockEditResult as { enabled: boolean })?.enabled ?? false,
       }));
     } catch (error) {
       console.error('勤怠ステータス取得エラー:', error);
@@ -582,7 +582,7 @@ export default function AdminSettingsPage() {
                   <p className="text-sm text-gray-500">システムからのメール通知</p>
                 </div>
                 <Switch
-                  checked={notificationSettings.emailNotifications}
+                  checked={notificationSettings.emailNotifications ?? true}
                   onCheckedChange={(checked) =>
                     setNotificationSettings((prev) => ({ ...prev, emailNotifications: checked }))
                   }
@@ -595,7 +595,7 @@ export default function AdminSettingsPage() {
                   <p className="text-sm text-gray-500">セキュリティ関連の通知</p>
                 </div>
                 <Switch
-                  checked={notificationSettings.securityAlert || false}
+                  checked={notificationSettings.securityAlert ?? false}
                   onCheckedChange={(checked) =>
                     setNotificationSettings((prev) => ({ ...prev, securityAlert: checked }))
                   }
@@ -608,7 +608,7 @@ export default function AdminSettingsPage() {
                   <p className="text-sm text-gray-500">データバックアップの通知</p>
                 </div>
                 <Switch
-                  checked={notificationSettings.backupNotification || false}
+                  checked={notificationSettings.backupNotification ?? false}
                   onCheckedChange={(checked) =>
                     setNotificationSettings((prev) => ({ ...prev, backupNotification: checked }))
                   }
@@ -621,7 +621,7 @@ export default function AdminSettingsPage() {
                   <p className="text-sm text-gray-500">申請・承認の通知</p>
                 </div>
                 <Switch
-                  checked={notificationSettings.applicationAlert}
+                  checked={notificationSettings.applicationAlert ?? true}
                   onCheckedChange={(checked) =>
                     setNotificationSettings((prev) => ({ ...prev, applicationAlert: checked }))
                   }
@@ -634,7 +634,7 @@ export default function AdminSettingsPage() {
                   <p className="text-sm text-gray-500">メンテナンス情報の通知</p>
                 </div>
                 <Switch
-                  checked={notificationSettings.systemMaintenance}
+                  checked={notificationSettings.systemMaintenance ?? true}
                   onCheckedChange={(checked) =>
                     setNotificationSettings((prev) => ({ ...prev, systemMaintenance: checked }))
                   }
@@ -831,7 +831,7 @@ export default function AdminSettingsPage() {
                         <p className="text-sm text-gray-500">遅刻時の通知</p>
                       </div>
                       <Switch
-                        checked={notificationSettings.lateArrivalAlert}
+                        checked={notificationSettings.lateArrivalAlert ?? false}
                         onCheckedChange={(checked) =>
                           setNotificationSettings((prev) => ({
                             ...prev,
@@ -847,7 +847,7 @@ export default function AdminSettingsPage() {
                         <p className="text-sm text-gray-500">残業時間の通知</p>
                       </div>
                       <Switch
-                        checked={notificationSettings.overtimeAlert}
+                        checked={notificationSettings.overtimeAlert ?? false}
                         onCheckedChange={(checked) =>
                           setNotificationSettings((prev) => ({ ...prev, overtimeAlert: checked }))
                         }
@@ -860,7 +860,7 @@ export default function AdminSettingsPage() {
                         <p className="text-sm text-gray-500">管理者による打刻の編集許可</p>
                       </div>
                       <Switch
-                        checked={notificationSettings.timeEditPermission}
+                        checked={notificationSettings.timeEditPermission ?? false}
                         onCheckedChange={(checked) =>
                           setNotificationSettings((prev) => ({
                             ...prev,

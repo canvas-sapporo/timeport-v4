@@ -241,6 +241,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const fetchRequestForms = async () => {
       try {
         const result = await getRequestForms();
+
+        // resultがundefinedの場合の安全な処理
+        if (!result) {
+          console.warn('申請フォーム取得失敗: APIレスポンスがundefined');
+          return;
+        }
+
         if (result.success && result.data) {
           // deleted_atが設定されているフォームを除外
           const activeForms = result.data.filter((form: RequestForm) => !form.deleted_at);
@@ -257,6 +264,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           });
 
           setRequestForms(uniqueForms);
+        } else {
+          console.warn('申請フォーム取得失敗:', result.error || 'Unknown error');
         }
       } catch (error) {
         console.error('申請フォーム取得エラー:', error);
@@ -272,6 +281,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       try {
         const result = await getRequests(currentUserId || undefined);
 
+        // resultがundefinedの場合の安全な処理
+        if (!result) {
+          console.warn('申請データ取得失敗: APIレスポンスがundefined');
+          return;
+        }
+
         if (result.success && result.data) {
           // 重複を除去（IDでフィルタリング）
           const uniqueRequests = result.data.filter(
@@ -280,7 +295,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
           setRequests(uniqueRequests);
         } else {
-          console.error('申請データ取得失敗:', result.error);
+          console.warn('申請データ取得失敗:', result.error || 'Unknown error');
         }
       } catch (error) {
         console.error('申請データ取得エラー:', error);
@@ -337,6 +352,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       );
       console.log('data-context createRequest: 成功', result);
 
+      // resultがundefinedの場合の安全な処理
+      if (!result) {
+        console.warn('申請作成失敗: APIレスポンスがundefined');
+        return result;
+      }
+
       if (result.success && result.data) {
         // 成功した場合は申請リストを更新
         await refreshRequests();
@@ -355,11 +376,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const result = await getRequests(currentUserId || undefined);
       console.log('data-context refreshRequests: 結果:', result);
 
+      // resultがundefinedの場合の安全な処理
+      if (!result) {
+        console.warn('申請データ再取得失敗: APIレスポンスがundefined');
+        return;
+      }
+
       if (result.success && result.data) {
         console.log('data-context refreshRequests: 申請データ更新:', result.data);
         setRequests(result.data);
       } else {
-        console.error('申請データ再取得失敗:', result.error);
+        console.warn('申請データ再取得失敗:', result.error || 'Unknown error');
       }
     } catch (error) {
       console.error('申請データ再取得エラー:', error);
