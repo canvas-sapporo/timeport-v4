@@ -498,3 +498,92 @@ export async function getUserSettings(userId: string): Promise<UserSettings | nu
     return null;
   }
 }
+
+/**
+ * ユーザープロフィールを更新
+ */
+export async function updateUserProfile(
+  userId: string,
+  profileData: {
+    family_name?: string;
+    first_name?: string;
+    family_name_kana?: string;
+    first_name_kana?: string;
+    phone?: string;
+  },
+  currentUserId?: string
+): Promise<{ success: boolean; message: string; error?: string }> {
+  const supabase = createServerClient();
+
+  try {
+    console.log('updateUserProfile 開始:', { userId, profileData });
+
+    // 更新前のデータを取得（監査ログ用）
+    const { data: beforeData } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    // 更新データを準備
+    const updateData: any = {};
+    if (profileData.family_name !== undefined) updateData.family_name = profileData.family_name;
+    if (profileData.first_name !== undefined) updateData.first_name = profileData.first_name;
+    if (profileData.family_name_kana !== undefined) updateData.family_name_kana = profileData.family_name_kana;
+    if (profileData.first_name_kana !== undefined) updateData.first_name_kana = profileData.first_name_kana;
+    if (profileData.phone !== undefined) updateData.phone = profileData.phone;
+
+    // user_profilesテーブルを更新
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update(updateData)
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('プロフィール更新エラー:', updateError);
+      return {
+        success: false,
+        message: 'プロフィールの更新に失敗しました',
+        error: updateError.message,
+      };
+    }
+
+    console.log('プロフィール更新完了:', userId);
+
+    // 監査ログを記録
+    if (currentUserId) {
+      try {
+        const companyId = await getUserCompanyId(currentUserId);
+        const clientInfo = await getClientInfo();
+
+        await logAudit('user_profile_updated', {
+          user_id: currentUserId,
+          company_id: companyId || undefined,
+          target_type: 'user_profiles',
+          target_id: userId,
+          before_data: beforeData,
+          after_data: { ...beforeData, ...updateData },
+          details: { updated_fields: Object.keys(updateData) },
+          ip_address: clientInfo.ip_address,
+          user_agent: clientInfo.user_agent,
+          session_id: clientInfo.session_id,
+        });
+        console.log('監査ログ記録完了');
+      } catch (error) {
+        console.error('監査ログ記録エラー:', error);
+      }
+    }
+
+    return {
+      success: true,
+      message: 'プロフィールを更新しました',
+    };
+  } catch (error) {
+    console.error('updateUserProfile エラー:', error);
+    return {
+      success: false,
+      message: 'プロフィールの更新中にエラーが発生しました',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
