@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Clock } from 'lucide-react';
+import { Plus, Trash2, Clock, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -488,11 +488,24 @@ export default function ClockRecordsInput({
               {session.breaks && session.breaks.length > 0 && (
                 <div className="space-y-3">
                   {session.breaks.map((breakRecord, breakIndex) => (
-                    <div key={breakIndex} className="flex items-center gap-3 p-3 border rounded-lg">
-                      <div className="flex-1 grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">開始時刻</Label>
-                          <div className="grid grid-cols-[2fr,1fr] gap-1">
+                    <div key={breakIndex} className="space-y-3 p-3 border rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">休憩 {breakIndex + 1}</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeBreak(sessionIndex, breakIndex)}
+                          disabled={disabled}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">開始時刻</Label>
+                          <div className="grid grid-cols-2 gap-2">
                             <Input
                               id={`break_start_date_${sessionIndex}_${breakIndex}`}
                               type="date"
@@ -507,6 +520,7 @@ export default function ClockRecordsInput({
                               }}
                               disabled={disabled}
                               required
+                              className="text-sm"
                             />
                             <Input
                               id={`break_start_time_${sessionIndex}_${breakIndex}`}
@@ -522,12 +536,13 @@ export default function ClockRecordsInput({
                               }}
                               disabled={disabled}
                               required
+                              className="text-sm"
                             />
                           </div>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">終了時刻</Label>
-                          <div className="grid grid-cols-[2fr,1fr] gap-1">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">終了時刻</Label>
+                          <div className="grid grid-cols-2 gap-2">
                             <Input
                               id={`break_end_date_${sessionIndex}_${breakIndex}`}
                               type="date"
@@ -542,6 +557,7 @@ export default function ClockRecordsInput({
                               }}
                               disabled={disabled}
                               required
+                              className="text-sm"
                             />
                             <Input
                               id={`break_end_time_${sessionIndex}_${breakIndex}`}
@@ -557,20 +573,11 @@ export default function ClockRecordsInput({
                               }}
                               disabled={disabled}
                               required
+                              className="text-sm"
                             />
                           </div>
                         </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeBreak(sessionIndex, breakIndex)}
-                        disabled={disabled}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>
