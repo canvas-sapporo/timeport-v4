@@ -160,16 +160,16 @@ export default function MemberProfilePage() {
   }
 
   // 雇用形態の名前を取得
-  const getEmploymentTypeName = (id: string) => {
+  function getEmploymentTypeName(id: string) {
     const employmentType = employmentTypes.find((et) => et.id === id);
     return employmentType ? employmentType.name : '-';
-  };
+  }
 
   // 勤務体系の名前を取得
-  const getWorkTypeName = (id: string) => {
+  function getWorkTypeName(id: string) {
     const workType = workTypes.find((wt) => wt.id === id);
     return workType ? workType.name : '-';
-  };
+  }
 
   function handleEdit() {
     setEditData({
@@ -240,54 +240,56 @@ export default function MemberProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 左列 */}
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">企業名</div>
-                    <div className="text-base text-gray-600">{companyInfo?.name || '-'}</div>
-                  </div>
+              <div className="border rounded-md p-4 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* 左列 */}
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">企業名</div>
+                      <div className="text-base text-gray-600">{companyInfo?.name || '-'}</div>
+                    </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">コード</div>
-                    <div className="text-base text-gray-600">{companyInfo?.code || '-'}</div>
-                  </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">コード</div>
+                      <div className="text-base text-gray-600">{companyInfo?.code || '-'}</div>
+                    </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">住所</div>
-                    <div className="text-base text-gray-600">{companyInfo?.address || '-'}</div>
-                  </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">住所</div>
+                      <div className="text-base text-gray-600">{companyInfo?.address || '-'}</div>
+                    </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">電話番号</div>
-                    <div className="text-base text-gray-600">{companyInfo?.phone || '-'}</div>
-                  </div>
-                </div>
-
-                {/* 右列 */}
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">ステータス</div>
-                    <div className="text-base text-gray-600">
-                      {companyInfo?.is_active ? '有効' : '無効'}
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">電話番号</div>
+                      <div className="text-base text-gray-600">{companyInfo?.phone || '-'}</div>
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">作成日</div>
-                    <div className="text-base text-gray-600">
-                      {companyInfo?.created_at
-                        ? new Date(companyInfo.created_at).toLocaleDateString('ja-JP')
-                        : '-'}
+                  {/* 右列 */}
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">ステータス</div>
+                      <div className="text-base text-gray-600">
+                        {companyInfo?.is_active ? '有効' : '無効'}
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">編集日</div>
-                    <div className="text-base text-gray-600">
-                      {companyInfo?.updated_at
-                        ? new Date(companyInfo.updated_at).toLocaleDateString('ja-JP')
-                        : '-'}
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">作成日</div>
+                      <div className="text-base text-gray-600">
+                        {companyInfo?.created_at
+                          ? new Date(companyInfo.created_at).toLocaleDateString('ja-JP')
+                          : '-'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">編集日</div>
+                      <div className="text-base text-gray-600">
+                        {companyInfo?.updated_at
+                          ? new Date(companyInfo.updated_at).toLocaleDateString('ja-JP')
+                          : '-'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -305,218 +307,220 @@ export default function MemberProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 左列：編集可能項目 */}
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">個人コード</div>
-                    <div className="text-base text-gray-600">{userProfile?.code || '-'}</div>
+              <div className="border rounded-md p-4 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* 左列：編集可能項目 */}
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">個人コード</div>
+                      <div className="text-base text-gray-600">{userProfile?.code || '-'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">姓</div>
+                      {isEditing ? (
+                        <Input
+                          id="family_name"
+                          value={editData.family_name}
+                          onChange={(e) =>
+                            setEditData((prev) => ({ ...prev, family_name: e.target.value }))
+                          }
+                        />
+                      ) : (
+                        <div className="text-base text-gray-600">
+                          {userProfile?.family_name || '-'}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">名</div>
+                      {isEditing ? (
+                        <Input
+                          id="first_name"
+                          value={editData.first_name}
+                          onChange={(e) =>
+                            setEditData((prev) => ({ ...prev, first_name: e.target.value }))
+                          }
+                        />
+                      ) : (
+                        <div className="text-base text-gray-600">
+                          {userProfile?.first_name || '-'}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">姓（カナ）</div>
+                      {isEditing ? (
+                        <Input
+                          id="family_name_kana"
+                          value={editData.family_name_kana}
+                          onChange={(e) =>
+                            setEditData((prev) => ({ ...prev, family_name_kana: e.target.value }))
+                          }
+                        />
+                      ) : (
+                        <div className="text-base text-gray-600">
+                          {userProfile?.family_name_kana || '-'}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">名（カナ）</div>
+                      {isEditing ? (
+                        <Input
+                          id="first_name_kana"
+                          value={editData.first_name_kana}
+                          onChange={(e) =>
+                            setEditData((prev) => ({ ...prev, first_name_kana: e.target.value }))
+                          }
+                        />
+                      ) : (
+                        <div className="text-base text-gray-600">
+                          {userProfile?.first_name_kana || '-'}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">メールアドレス</div>
+                      <div className="text-base text-gray-600">{userProfile?.email || '-'}</div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">電話番号</div>
+                      {isEditing ? (
+                        <Input
+                          id="phone"
+                          value={editData.phone}
+                          onChange={(e) =>
+                            setEditData((prev) => ({ ...prev, phone: e.target.value }))
+                          }
+                        />
+                      ) : (
+                        <div className="text-base text-gray-600">{userProfile?.phone || '-'}</div>
+                      )}
+                    </div>
                   </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">姓</div>
-                    {isEditing ? (
-                      <Input
-                        id="family_name"
-                        value={editData.family_name}
-                        onChange={(e) =>
-                          setEditData((prev) => ({ ...prev, family_name: e.target.value }))
-                        }
-                      />
-                    ) : (
-                      <div className="text-base text-gray-600">
-                        {userProfile?.family_name || '-'}
+                  {/* 右列：編集不可項目 */}
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">権限</div>
+                      <div
+                        className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
+                      >
+                        {userProfile?.role === 'admin'
+                          ? '管理者'
+                          : userProfile?.role === 'member'
+                            ? 'メンバー'
+                            : userProfile?.role === 'system-admin'
+                              ? 'システム管理者'
+                              : '-'}
+                        {isEditing && (
+                          <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">名</div>
-                    {isEditing ? (
-                      <Input
-                        id="first_name"
-                        value={editData.first_name}
-                        onChange={(e) =>
-                          setEditData((prev) => ({ ...prev, first_name: e.target.value }))
-                        }
-                      />
-                    ) : (
-                      <div className="text-base text-gray-600">
-                        {userProfile?.first_name || '-'}
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">雇用形態</div>
+                      <div
+                        className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
+                      >
+                        {userProfile?.employment_type_id
+                          ? getEmploymentTypeName(userProfile.employment_type_id)
+                          : '-'}
+                        {isEditing && (
+                          <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">姓（カナ）</div>
-                    {isEditing ? (
-                      <Input
-                        id="family_name_kana"
-                        value={editData.family_name_kana}
-                        onChange={(e) =>
-                          setEditData((prev) => ({ ...prev, family_name_kana: e.target.value }))
-                        }
-                      />
-                    ) : (
-                      <div className="text-base text-gray-600">
-                        {userProfile?.family_name_kana || '-'}
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">勤務形態</div>
+                      <div
+                        className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
+                      >
+                        {userProfile?.current_work_type_id
+                          ? getWorkTypeName(userProfile.current_work_type_id)
+                          : '-'}
+                        {isEditing && (
+                          <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">名（カナ）</div>
-                    {isEditing ? (
-                      <Input
-                        id="first_name_kana"
-                        value={editData.first_name_kana}
-                        onChange={(e) =>
-                          setEditData((prev) => ({ ...prev, first_name_kana: e.target.value }))
-                        }
-                      />
-                    ) : (
-                      <div className="text-base text-gray-600">
-                        {userProfile?.first_name_kana || '-'}
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">ステータス</div>
+                      <div
+                        className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
+                      >
+                        {userProfile?.is_active ? '有効' : '無効'}
+                        {isEditing && (
+                          <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">メールアドレス</div>
-                    <div className="text-base text-gray-600">{userProfile?.email || '-'}</div>
-                  </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">作成日</div>
+                      <div
+                        className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
+                      >
+                        {userProfile?.created_at
+                          ? new Date(userProfile.created_at).toLocaleDateString('ja-JP')
+                          : '-'}
+                        {isEditing && (
+                          <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
+                        )}
+                      </div>
+                    </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">電話番号</div>
-                    {isEditing ? (
-                      <Input
-                        id="phone"
-                        value={editData.phone}
-                        onChange={(e) =>
-                          setEditData((prev) => ({ ...prev, phone: e.target.value }))
-                        }
-                      />
-                    ) : (
-                      <div className="text-base text-gray-600">{userProfile?.phone || '-'}</div>
-                    )}
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">編集日</div>
+                      <div
+                        className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
+                      >
+                        {userProfile?.updated_at
+                          ? new Date(userProfile.updated_at).toLocaleDateString('ja-JP')
+                          : '-'}
+                        {isEditing && (
+                          <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* 右列：編集不可項目 */}
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">権限</div>
-                    <div
-                      className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
-                    >
-                      {userProfile?.role === 'admin'
-                        ? '管理者'
-                        : userProfile?.role === 'member'
-                          ? 'メンバー'
-                          : userProfile?.role === 'system-admin'
-                            ? 'システム管理者'
-                            : '-'}
-                      {isEditing && (
-                        <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">雇用形態</div>
-                    <div
-                      className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
-                    >
-                      {userProfile?.employment_type_id
-                        ? getEmploymentTypeName(userProfile.employment_type_id)
-                        : '-'}
-                      {isEditing && (
-                        <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">現在の勤務形態</div>
-                    <div
-                      className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
-                    >
-                      {userProfile?.current_work_type_id
-                        ? getWorkTypeName(userProfile.current_work_type_id)
-                        : '-'}
-                      {isEditing && (
-                        <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">ステータス</div>
-                    <div
-                      className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
-                    >
-                      {userProfile?.is_active ? '有効' : '無効'}
-                      {isEditing && (
-                        <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">作成日</div>
-                    <div
-                      className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
-                    >
-                      {userProfile?.created_at
-                        ? new Date(userProfile.created_at).toLocaleDateString('ja-JP')
-                        : '-'}
-                      {isEditing && (
-                        <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 mb-1">編集日</div>
-                    <div
-                      className={`text-base ${isEditing ? 'text-gray-400 bg-gray-50 p-2 rounded' : 'text-gray-600'}`}
-                    >
-                      {userProfile?.updated_at
-                        ? new Date(userProfile.updated_at).toLocaleDateString('ja-JP')
-                        : '-'}
-                      {isEditing && (
-                        <span className="ml-2 text-xs text-gray-500">（編集不可）</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ボタンは右下に配置 */}
-              <div className="flex justify-end space-x-2 mt-6">
-                {isEditing ? (
-                  <>
-                    <Button onClick={handleCancel} variant="outline" size="sm">
-                      キャンセル
-                    </Button>
+                {/* ボタンは右下に配置 */}
+                <div className="flex justify-end space-x-2 mt-6">
+                  {isEditing ? (
+                    <>
+                      <Button onClick={handleCancel} variant="outline" size="sm">
+                        キャンセル
+                      </Button>
+                      <Button
+                        onClick={handleSave}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        保存
+                      </Button>
+                    </>
+                  ) : (
                     <Button
-                      onClick={handleSave}
+                      onClick={handleEdit}
                       size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      <Save className="w-4 h-4 mr-2" />
-                      保存
+                      編集
                     </Button>
-                  </>
-                ) : (
-                  <Button
-                    onClick={handleEdit}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    編集
-                  </Button>
-                )}
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
