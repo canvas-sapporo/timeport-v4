@@ -1065,7 +1065,20 @@ export default function AdminSettingsPage() {
                               return `${formatTime(type.work_start_time)} - ${formatTime(type.work_end_time)}`;
                             })()}
                           </TableCell>
-                          <TableCell>{type.break_duration_minutes}分</TableCell>
+                          <TableCell>
+                            {(() => {
+                              if (!type.break_times || type.break_times.length === 0) {
+                                return '0分';
+                              }
+                              const totalMinutes = type.break_times.reduce((total, breakTime) => {
+                                const start = new Date(`2000-01-01T${breakTime.start_time}:00`);
+                                const end = new Date(`2000-01-01T${breakTime.end_time}:00`);
+                                const diffMs = end.getTime() - start.getTime();
+                                return total + Math.floor(diffMs / (1000 * 60));
+                              }, 0);
+                              return `${totalMinutes}分`;
+                            })()}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={type.is_flexible ? 'default' : 'secondary'}>
                               {type.is_flexible ? 'フレックス' : '固定'}

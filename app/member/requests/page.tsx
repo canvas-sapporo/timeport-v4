@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Plus, Eye, Send, Edit, Trash2 } from 'lucide-react';
 
@@ -88,6 +88,32 @@ export default function MemberRequestsPage() {
     id: string;
     title?: string;
   } | null>(null);
+
+  // Memoized callbacks for ClockRecordsInput
+  const handleClockRecordsChange = useCallback(
+    (fieldName: string) =>
+      (
+        newValue: Array<{
+          in_time: string;
+          breaks: { break_start: string; break_end: string }[];
+          out_time?: string;
+        }>
+      ) => {
+        setFormData(
+          (prev) =>
+            ({ ...prev, [fieldName]: newValue }) as Record<
+              string,
+              string | number | boolean | Date | string[]
+            >
+        );
+      },
+    []
+  );
+
+  const handleWorkDateChange = useCallback((newWorkDate: string) => {
+    setFormData((prev) => ({ ...prev, work_date: newWorkDate }));
+  }, []);
+
   const [requestToEdit, setRequestToEdit] = useState<{
     id: string;
     created_at: string;
@@ -659,22 +685,12 @@ export default function MemberRequestsPage() {
                     out_time?: string;
                   }>) || []
                 }
-                onChangeAction={(newValue) =>
-                  setFormData(
-                    (prev) =>
-                      ({ ...prev, [field.name]: newValue }) as Record<
-                        string,
-                        string | number | boolean | Date | string[]
-                      >
-                  )
-                }
+                onChangeAction={handleClockRecordsChange(field.name)}
                 error={undefined}
                 disabled={false}
                 workDate={workDate}
                 userId={user?.id}
-                onWorkDateChange={(newWorkDate) =>
-                  setFormData((prev) => ({ ...prev, work_date: newWorkDate }))
-                }
+                onWorkDateChange={handleWorkDateChange}
               />
             );
           }

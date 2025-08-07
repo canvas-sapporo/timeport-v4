@@ -185,6 +185,17 @@ export const WorkTypeSettingsSchema = z.object({
 });
 
 /**
+ * 休息時刻設定スキーマ
+ */
+export const BreakTimeSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1, '休息名は必須です'),
+  start_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, '正しい時刻形式で入力してください（HH:MM）'),
+  end_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, '正しい時刻形式で入力してください（HH:MM）'),
+  order: z.number().int().min(0, '順番は0以上の整数で入力してください'),
+});
+
+/**
  * 勤務パターンエンティティスキーマ
  */
 export const WorkTypeSchema = z.object({
@@ -194,7 +205,7 @@ export const WorkTypeSchema = z.object({
   name: z.string(),
   work_start_time: z.string(),
   work_end_time: z.string(),
-  break_duration_minutes: z.number().int().min(0),
+  break_times: z.array(BreakTimeSchema).default([]),
   is_flexible: z.boolean(),
   flex_start_time: z.string().optional(),
   flex_end_time: z.string().optional(),
@@ -220,7 +231,7 @@ export const CreateWorkTypeInputSchema = z.object({
   name: z.string(),
   work_start_time: z.string(),
   work_end_time: z.string(),
-  break_duration_minutes: z.number().int().min(0).optional(),
+  break_times: z.array(BreakTimeSchema).optional().default([]),
   is_flexible: z.boolean().optional(),
   flex_start_time: z.string().optional(),
   flex_end_time: z.string().optional(),
@@ -241,7 +252,7 @@ export const UpdateWorkTypeInputSchema = z.object({
   name: z.string().optional(),
   work_start_time: z.string().optional(),
   work_end_time: z.string().optional(),
-  break_duration_minutes: z.number().int().min(0).optional(),
+  break_times: z.array(BreakTimeSchema).optional(),
   is_flexible: z.boolean().optional(),
   flex_start_time: z.string().optional(),
   flex_end_time: z.string().optional(),
@@ -262,7 +273,7 @@ export const CreateWorkTypeFormDataSchema = z.object({
   name: z.string().min(1, '勤務形態名は必須です'),
   work_start_time: z.string().min(1, '勤務開始時刻は必須です'),
   work_end_time: z.string().min(1, '勤務終了時刻は必須です'),
-  break_duration_minutes: z.number().int().min(0, '休憩時間は0分以上で入力してください'),
+  break_times: z.array(BreakTimeSchema).default([]),
   is_flexible: z.boolean(),
   flex_start_time: z.string().optional(),
   flex_end_time: z.string().optional(),
@@ -281,7 +292,7 @@ export const EditWorkTypeFormDataSchema = z.object({
   name: z.string().min(1, '勤務形態名は必須です'),
   work_start_time: z.string().min(1, '勤務開始時刻は必須です'),
   work_end_time: z.string().min(1, '勤務終了時刻は必須です'),
-  break_duration_minutes: z.number().int().min(0, '休憩時間は0分以上で入力してください'),
+  break_times: z.array(BreakTimeSchema).default([]),
   is_flexible: z.boolean(),
   flex_start_time: z.string().optional(),
   flex_end_time: z.string().optional(),
@@ -314,7 +325,7 @@ export const CreateWorkTypeResultSchema = z.object({
   name: z.string(),
   work_start_time: z.string(),
   work_end_time: z.string(),
-  break_duration_minutes: z.number().int().min(0),
+  break_times: z.array(BreakTimeSchema).default([]),
   is_flexible: z.boolean(),
   created_at: z.string().datetime(),
 });
@@ -328,7 +339,7 @@ export const UpdateWorkTypeResultSchema = z.object({
   name: z.string(),
   work_start_time: z.string(),
   work_end_time: z.string(),
-  break_duration_minutes: z.number().int().min(0),
+  break_times: z.array(BreakTimeSchema).default([]),
   is_flexible: z.boolean(),
   updated_at: z.string().datetime(),
 });
@@ -397,6 +408,7 @@ export type ToggleEmploymentTypeStatusResult = z.infer<
 export type EmploymentTypeValidationResult = z.infer<typeof EmploymentTypeValidationResultSchema>;
 
 // 勤務パターン関連
+export type BreakTime = z.infer<typeof BreakTimeSchema>;
 export type WorkTypeSettings = z.infer<typeof WorkTypeSettingsSchema>;
 export type WorkType = z.infer<typeof WorkTypeSchema>;
 export type CreateWorkTypeInput = z.infer<typeof CreateWorkTypeInputSchema>;

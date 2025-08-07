@@ -50,12 +50,21 @@ function validateCreateWorkTypeForm(form: CreateWorkTypeFormData): WorkTypeValid
   const workEndTimeError = validateRequired(form.work_end_time, '勤務終了時刻');
   if (workEndTimeError) errors.push(workEndTimeError);
 
-  if (form.break_duration_minutes < 0) {
-    errors.push({
-      field: 'break_duration_minutes',
-      message: '休憩時間は0分以上で入力してください',
-      code: 'INVALID_VALUE',
-    });
+  // break_timesのバリデーション
+  if (form.break_times && form.break_times.length > 0) {
+    for (let i = 0; i < form.break_times.length; i++) {
+      const breakTime = form.break_times[i];
+      const start = new Date(`2000-01-01T${breakTime.start_time}:00`);
+      const end = new Date(`2000-01-01T${breakTime.end_time}:00`);
+      
+      if (start >= end) {
+        errors.push({
+          field: `break_times.${i}.end_time`,
+          message: '休息終了時刻は開始時刻より後である必要があります',
+          code: 'INVALID_VALUE',
+        });
+      }
+    }
   }
 
   if (form.overtime_threshold_minutes < 0) {
@@ -120,12 +129,21 @@ function validateEditWorkTypeForm(form: EditWorkTypeFormData): WorkTypeValidatio
   const workEndTimeError = validateRequired(form.work_end_time, '勤務終了時刻');
   if (workEndTimeError) errors.push(workEndTimeError);
 
-  if (form.break_duration_minutes < 0) {
-    errors.push({
-      field: 'break_duration_minutes',
-      message: '休憩時間は0分以上で入力してください',
-      code: 'INVALID_VALUE',
-    });
+  // break_timesのバリデーション
+  if (form.break_times && form.break_times.length > 0) {
+    for (let i = 0; i < form.break_times.length; i++) {
+      const breakTime = form.break_times[i];
+      const start = new Date(`2000-01-01T${breakTime.start_time}:00`);
+      const end = new Date(`2000-01-01T${breakTime.end_time}:00`);
+      
+      if (start >= end) {
+        errors.push({
+          field: `break_times.${i}.end_time`,
+          message: '休息終了時刻は開始時刻より後である必要があります',
+          code: 'INVALID_VALUE',
+        });
+      }
+    }
   }
 
   if (form.overtime_threshold_minutes < 0) {
@@ -439,7 +457,7 @@ export async function createWorkType(
         name: form.name,
         work_start_time: convertJSTTimeToUTC(form.work_start_time),
         work_end_time: convertJSTTimeToUTC(form.work_end_time),
-        break_duration_minutes: form.break_duration_minutes,
+        break_times: form.break_times || [],
         is_flexible: form.is_flexible,
         flex_start_time: form.flex_start_time ? convertJSTTimeToUTC(form.flex_start_time) : null,
         flex_end_time: form.flex_end_time ? convertJSTTimeToUTC(form.flex_end_time) : null,
@@ -466,7 +484,7 @@ export async function createWorkType(
       name: workType.name,
       work_start_time: workType.work_start_time,
       work_end_time: workType.work_end_time,
-      break_duration_minutes: workType.break_duration_minutes,
+      break_times: workType.break_times || [],
       is_flexible: workType.is_flexible,
       created_at: workType.created_at,
     };
@@ -522,7 +540,7 @@ export async function updateWorkType(
         name: form.name,
         work_start_time: convertJSTTimeToUTC(form.work_start_time),
         work_end_time: convertJSTTimeToUTC(form.work_end_time),
-        break_duration_minutes: form.break_duration_minutes,
+        break_times: form.break_times || [],
         is_flexible: form.is_flexible,
         flex_start_time: form.flex_start_time ? convertJSTTimeToUTC(form.flex_start_time) : null,
         flex_end_time: form.flex_end_time ? convertJSTTimeToUTC(form.flex_end_time) : null,
@@ -548,7 +566,7 @@ export async function updateWorkType(
       name: workType.name,
       work_start_time: workType.work_start_time,
       work_end_time: workType.work_end_time,
-      break_duration_minutes: workType.break_duration_minutes,
+      break_times: workType.break_times || [],
       is_flexible: workType.is_flexible,
       updated_at: workType.updated_at,
     };

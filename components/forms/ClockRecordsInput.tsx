@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Plus, Trash2, Clock, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -42,21 +42,39 @@ export default function ClockRecordsInput({
   });
 
   const [clockRecords, setClockRecords] = useState<ClockRecord[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const isInitialMount = useRef(true);
+  const lastValueRef = useRef<ClockRecord[]>([]);
+  const onChangeActionRef = useRef(onChangeAction);
 
-  // 新規申請作成時は、外部から渡されたvalueを無視して勤務形態の設定を使用
-  // useEffect(() => {
-  //   console.log('ClockRecordsInput - useEffect (value):', { value });
-  //   // 外部から渡されたvalueが空でない場合のみ更新
-  //   if (value && value.length > 0) {
-  //     setClockRecords(value);
-  //   }
-  // }, [value]);
+  // 外部から渡されたvalueを初期値として設定（編集時）
+  useEffect(() => {
+    // 初回マウント時のみ実行
+    if (isInitialMount.current && value && value.length > 0) {
+      console.log('ClockRecordsInput - 外部valueで初期化:', value);
+      setClockRecords(value);
+      lastValueRef.current = value;
+      setIsInitialized(true);
+      isInitialMount.current = false;
+    }
+  }, []); // 依存関係を空配列に変更
 
   // 勤務日変更時の処理を改善
   useEffect(() => {
+    // 編集時（外部valueがある場合）はデータ取得をスキップ
+    if (value && value.length > 0) {
+      console.log('ClockRecordsInput - 編集時はデータ取得をスキップ');
+      return;
+    }
+
     const fetchAttendanceData = async () => {
       if (!userId) {
         console.log('ClockRecordsInput - データ取得をスキップ（userIdが不足）:', { userId });
+        // userIdがない場合はデフォルトセッションを作成
+        const targetWorkDate = workDate || getJSTDate();
+        const defaultRecord = createDefaultClockRecord(targetWorkDate);
+        setClockRecords([defaultRecord]);
+        setIsInitialized(true);
         return;
       }
 
@@ -88,7 +106,6 @@ export default function ClockRecordsInput({
             existingAttendance.clock_records
           );
           setClockRecords(existingAttendance.clock_records);
-          onChangeAction(existingAttendance.clock_records);
         } else {
           // attendancesテーブルにデータがない場合：work_typesテーブルの設定を使用
           console.log('ClockRecordsInput - attendancesデータなし、ユーザーの勤務タイプ詳細を取得');
@@ -101,35 +118,57 @@ export default function ClockRecordsInput({
             const defaultRecord = createDefaultClockRecord(targetWorkDate, workTypeDetail);
             console.log('ClockRecordsInput - work_types設定で初期化:', defaultRecord);
             setClockRecords([defaultRecord]);
-            onChangeAction([defaultRecord]);
           } else {
             // 勤務タイプが設定されていない場合：従来のデフォルト値を使用
             console.log('ClockRecordsInput - 勤務タイプ未設定、従来のデフォルト値を使用');
             const defaultRecord = createDefaultClockRecord(targetWorkDate);
             setClockRecords([defaultRecord]);
-            onChangeAction([defaultRecord]);
           }
         }
+        setIsInitialized(true);
       } catch (error) {
         console.error('ClockRecordsInput - データ取得エラー:', error);
         // エラーの場合もデフォルトセッションを作成
+        const targetWorkDate = workDate || getJSTDate();
         const defaultRecord = createDefaultClockRecord(targetWorkDate);
         setClockRecords([defaultRecord]);
-        onChangeAction([defaultRecord]);
+        setIsInitialized(true);
       }
     };
 
-    // 勤務日が変更された場合は常にデータを取得する
-    fetchAttendanceData();
-  }, [workDate, userId]); // onChangeActionを依存関係から削除
+    // 初期化されていない場合のみデータを取得する
+    if (!isInitialized) {
+      fetchAttendanceData();
+    }
+  }, [workDate, userId]); // valueとisInitializedを依存関係から削除
 
-  const updateClockRecords = useCallback(
-    (newRecords: ClockRecord[]) => {
-      setClockRecords(newRecords);
-      onChangeAction(newRecords);
-    },
-    [onChangeAction]
-  );
+  // onChangeActionRefを更新
+  useEffect(() => {
+    onChangeActionRef.current = onChangeAction;
+  }, [onChangeAction]);
+
+  // clockRecordsが変更されたときにonChangeActionを呼び出す（初期化後のみ）
+  useEffect(() => {
+    if (isInitialized && clockRecords.length > 0) {
+      // 前回の値と比較して、実際に変更があった場合のみonChangeActionを呼び出す
+      const currentValue = JSON.stringify(clockRecords);
+      const lastValue = JSON.stringify(lastValueRef.current);
+
+      if (currentValue !== lastValue) {
+        console.log('ClockRecordsInput - onChangeAction呼び出し:', clockRecords);
+        lastValueRef.current = clockRecords;
+        // onChangeActionを非同期で実行して無限ループを防ぐ
+        setTimeout(() => {
+          onChangeActionRef.current(clockRecords);
+        }, 0);
+      }
+    }
+  }, [clockRecords, isInitialized]); // onChangeActionを依存関係から削除
+
+  const updateClockRecords = useCallback((newRecords: ClockRecord[]) => {
+    console.log('ClockRecordsInput - updateClockRecords:', newRecords);
+    setClockRecords(newRecords);
+  }, []);
 
   const addSession = async () => {
     if (!userId) {
@@ -176,15 +215,20 @@ export default function ClockRecordsInput({
     if ((field === 'in_time' || field === 'out_time') && value) {
       // ユーザーが入力した時刻はJST時刻として扱う
       // datetime-local入力から取得した値は"YYYY-MM-DDTHH:mm"形式のJST時刻
-      // JST時刻をUTC時刻に変換
-      const jstDate = new Date(value);
-      const jstOffset = 9 * 60; // JSTはUTC+9
-      const utcDate = new Date(jstDate.getTime() - jstOffset * 60 * 1000);
+      // JST時刻をUTC時刻に変換（正しい方法）
+      const localDate = new Date(value);
+      const localOffset = localDate.getTimezoneOffset();
+      const jstOffset = -9 * 60; // JSTはUTC+9（-540分）
+      const adjustmentMinutes = localOffset - jstOffset;
+      const utcDate = new Date(localDate.getTime() + adjustmentMinutes * 60 * 1000);
 
       console.log('updateSession - 時刻更新:', {
         field,
         inputValue: value,
-        jstDate: jstDate.toISOString(),
+        localDate: localDate.toISOString(),
+        localOffset,
+        jstOffset,
+        adjustmentMinutes,
         utcDate: utcDate.toISOString(),
       });
 
@@ -222,10 +266,13 @@ export default function ClockRecordsInput({
     if ((field === 'break_start' || field === 'break_end') && value) {
       // ユーザーが入力した時刻はJST時刻として扱う
       // datetime-local入力から取得した値は"YYYY-MM-DDTHH:mm"形式のJST時刻
-      // JST時刻をUTC時刻に変換
-      const jstDate = new Date(value);
-      const jstOffset = 9 * 60; // JSTはUTC+9
-      const utcDate = new Date(jstDate.getTime() - jstOffset * 60 * 1000);
+      // JST時刻をUTC時刻に変換（正しい方法）
+      const localDate = new Date(value);
+      const localOffset = localDate.getTimezoneOffset();
+      const jstOffset = -9 * 60; // JSTはUTC+9（-540分）
+      const adjustmentMinutes = localOffset - jstOffset;
+      const utcDate = new Date(localDate.getTime() + adjustmentMinutes * 60 * 1000);
+
       newRecords[sessionIndex].breaks[breakIndex] = {
         ...newRecords[sessionIndex].breaks[breakIndex],
         [field]: utcDate.toISOString(),
@@ -251,16 +298,25 @@ export default function ClockRecordsInput({
       const timeString = jstTime.toISOString().split('T')[1].split('.')[0];
 
       // 新しい勤務日でJST時刻を再構築
-      const newJstDateTime = new Date(`${newWorkDate}T${timeString}`);
+      const newJstDateTimeStr = `${newWorkDate}T${timeString}`;
+      const localDateTime = new Date(newJstDateTimeStr);
 
-      // JST時刻をUTC時刻に変換
-      const newUtcDateTime = new Date(newJstDateTime.getTime() - jstOffset * 60 * 1000);
+      // JST時刻をUTC時刻に変換（正しい方法）
+      const localOffset = localDateTime.getTimezoneOffset();
+      const jstOffsetMinutes = -9 * 60; // JSTはUTC+9（-540分）
+      const adjustmentMinutes = localOffset - jstOffsetMinutes;
+      const newUtcDateTime = new Date(localDateTime.getTime() + adjustmentMinutes * 60 * 1000);
 
       const result = newUtcDateTime.toISOString();
       console.log('updateDateTimeWithNewWorkDate:', {
         original: dateTimeString,
         newWorkDate,
         timeString,
+        newJstDateTimeStr,
+        localDateTime: localDateTime.toISOString(),
+        localOffset,
+        jstOffsetMinutes,
+        adjustmentMinutes,
         result,
       });
       return result;
@@ -306,15 +362,22 @@ export default function ClockRecordsInput({
     if (!date || !time) return '';
     // 指定された日付と時刻でJST時刻を作成し、UTC時刻に変換
     const jstDateTime = `${date}T${time}:00`;
-    const jstDate = new Date(jstDateTime);
-    const jstOffset = 9 * 60; // JSTはUTC+9
-    const utcDate = new Date(jstDate.getTime() - jstOffset * 60 * 1000);
+    const localDate = new Date(jstDateTime);
+
+    // JST時刻をUTC時刻に変換（正しい方法）
+    const localOffset = localDate.getTimezoneOffset();
+    const jstOffset = -9 * 60; // JSTはUTC+9（-540分）
+    const adjustmentMinutes = localOffset - jstOffset;
+    const utcDate = new Date(localDate.getTime() + adjustmentMinutes * 60 * 1000);
 
     console.log('createDateTimeFromDateAndTime:', {
       inputDate: date,
       inputTime: time,
       jstDateTime,
-      jstDate: jstDate.toISOString(),
+      localDate: localDate.toISOString(),
+      localOffset,
+      jstOffset,
+      adjustmentMinutes,
       utcDate: utcDate.toISOString(),
     });
 
@@ -333,8 +396,30 @@ export default function ClockRecordsInput({
     // 親コンポーネントに勤務日変更を通知
     onWorkDateChange?.(newWorkDate);
 
-    // 勤務日が変更された場合、既存データの取得処理を実行
-    // useEffectが新しいworkDateで実行されるため、自動的に既存データが取得される
+    // 勤務日が変更された場合、既存の時刻データの日付部分を更新
+    if (clockRecords.length > 0) {
+      const updatedRecords = clockRecords.map((record) => ({
+        ...record,
+        in_time: updateDateTimeWithNewWorkDate(record.in_time, newWorkDate),
+        out_time: record.out_time
+          ? updateDateTimeWithNewWorkDate(record.out_time, newWorkDate)
+          : undefined,
+        breaks:
+          record.breaks?.map((breakRecord) => ({
+            ...breakRecord,
+            break_start: updateDateTimeWithNewWorkDate(breakRecord.break_start, newWorkDate),
+            break_end: updateDateTimeWithNewWorkDate(breakRecord.break_end, newWorkDate),
+          })) || [],
+      }));
+
+      console.log('handleWorkDateChange - 時刻データ更新:', {
+        originalRecords: clockRecords,
+        updatedRecords: updatedRecords,
+      });
+
+      setClockRecords(updatedRecords);
+      // onChangeActionは別のuseEffectで処理されるため、ここでは呼び出さない
+    }
   };
 
   return (

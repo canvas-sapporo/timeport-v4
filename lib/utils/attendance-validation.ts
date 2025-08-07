@@ -231,36 +231,81 @@ export function createDefaultClockRecord(
 
   if (workDate) {
     if (workTypeDetail) {
-      // work_start_timeとwork_end_timeは既にUTC時刻で保存されている
-      // 指定された勤務日と組み合わせてUTC ISO文字列を作成
-      defaultInTime = `${workDate}T${workTypeDetail.work_start_time}Z`;
-      defaultOutTime = `${workDate}T${workTypeDetail.work_end_time}Z`;
+      // work_start_timeとwork_end_timeはJST時刻（HH:MM:SS形式）
+      // 指定された勤務日と組み合わせてJST時刻を作成し、UTC時刻に変換
+      // 注意: new Date("YYYY-MM-DDTHH:mm:ss")はローカルタイムゾーンとして解釈される
+      // そのため、JST時刻を正しくUTCに変換するには、明示的にJSTとして扱う必要がある
+      
+      // JST時刻文字列を作成
+      const jstInTimeStr = `${workDate}T${workTypeDetail.work_start_time}`;
+      const jstOutTimeStr = `${workDate}T${workTypeDetail.work_end_time}`;
 
-      console.log('createDefaultClockRecord - UTC時刻生成:', {
+      console.log('createDefaultClockRecord - JST時刻文字列生成:', {
         work_start_time: workTypeDetail.work_start_time,
         work_end_time: workTypeDetail.work_end_time,
+        jstInTimeStr,
+        jstOutTimeStr,
+      });
+
+      // JST時刻をUTC時刻に変換（正しい方法）
+      // 1. JST時刻文字列をDateオブジェクトとして作成（ローカルタイムゾーンとして解釈される）
+      // 2. ローカルタイムゾーンとJSTの差分を計算してUTCに変換
+      const localInTime = new Date(jstInTimeStr);
+      const localOutTime = new Date(jstOutTimeStr);
+      
+      // ローカルタイムゾーンのオフセットを取得（分単位）
+      const localOffset = localInTime.getTimezoneOffset();
+      // JSTはUTC+9（-540分）
+      const jstOffset = -9 * 60;
+      // 調整量を計算（ローカルタイムゾーンからJSTへの変換）
+      const adjustmentMinutes = localOffset - jstOffset;
+      
+      // UTC時刻を計算
+      const utcInTime = new Date(localInTime.getTime() + adjustmentMinutes * 60 * 1000);
+      const utcOutTime = new Date(localOutTime.getTime() + adjustmentMinutes * 60 * 1000);
+
+      defaultInTime = utcInTime.toISOString();
+      defaultOutTime = utcOutTime.toISOString();
+
+      console.log('createDefaultClockRecord - JST→UTC変換:', {
+        localInTime: localInTime.toISOString(),
+        localOutTime: localOutTime.toISOString(),
+        localOffset,
+        jstOffset,
+        adjustmentMinutes,
         defaultInTime,
         defaultOutTime,
       });
     } else {
       // 従来のデフォルト値を使用（JST時刻として扱う）
-      const jstInTime = new Date(`${workDate}T09:00:00`);
-      const jstOutTime = new Date(`${workDate}T18:00:00`);
+      const jstInTimeStr = `${workDate}T09:00:00`;
+      const jstOutTimeStr = `${workDate}T18:00:00`;
 
-      console.log('createDefaultClockRecord - 従来のJST時刻生成:', {
-        jstInTime: jstInTime.toISOString(),
-        jstOutTime: jstOutTime.toISOString(),
+      console.log('createDefaultClockRecord - 従来のJST時刻文字列生成:', {
+        jstInTimeStr,
+        jstOutTimeStr,
       });
 
-      // JST時刻をUTC時刻に変換
-      const jstOffset = 9 * 60; // JSTはUTC+9
-      const utcInTime = new Date(jstInTime.getTime() - jstOffset * 60 * 1000);
-      const utcOutTime = new Date(jstOutTime.getTime() - jstOffset * 60 * 1000);
+      // JST時刻をUTC時刻に変換（正しい方法）
+      const localInTime = new Date(jstInTimeStr);
+      const localOutTime = new Date(jstOutTimeStr);
+      
+      const localOffset = localInTime.getTimezoneOffset();
+      const jstOffset = -9 * 60;
+      const adjustmentMinutes = localOffset - jstOffset;
+      
+      const utcInTime = new Date(localInTime.getTime() + adjustmentMinutes * 60 * 1000);
+      const utcOutTime = new Date(localOutTime.getTime() + adjustmentMinutes * 60 * 1000);
 
       defaultInTime = utcInTime.toISOString();
       defaultOutTime = utcOutTime.toISOString();
 
       console.log('createDefaultClockRecord - 従来のUTC時刻生成:', {
+        localInTime: localInTime.toISOString(),
+        localOutTime: localOutTime.toISOString(),
+        localOffset,
+        jstOffset,
+        adjustmentMinutes,
         defaultInTime,
         defaultOutTime,
       });
@@ -270,36 +315,71 @@ export function createDefaultClockRecord(
     const todayStr = getJSTDate();
 
     if (workTypeDetail) {
-      // work_start_timeとwork_end_timeは既にUTC時刻で保存されている
-      // 今日のJST日付と組み合わせてUTC ISO文字列を作成
-      defaultInTime = `${todayStr}T${workTypeDetail.work_start_time}Z`;
-      defaultOutTime = `${todayStr}T${workTypeDetail.work_end_time}Z`;
+      // work_start_timeとwork_end_timeはJST時刻（HH:MM:SS形式）
+      // 今日のJST日付と組み合わせてJST時刻を作成し、UTC時刻に変換
+      const jstInTimeStr = `${todayStr}T${workTypeDetail.work_start_time}`;
+      const jstOutTimeStr = `${todayStr}T${workTypeDetail.work_end_time}`;
 
-      console.log('createDefaultClockRecord - 今日のUTC時刻生成:', {
+      console.log('createDefaultClockRecord - 今日のJST時刻文字列生成:', {
         work_start_time: workTypeDetail.work_start_time,
         work_end_time: workTypeDetail.work_end_time,
+        jstInTimeStr,
+        jstOutTimeStr,
+      });
+
+      // JST時刻をUTC時刻に変換（正しい方法）
+      const localInTime = new Date(jstInTimeStr);
+      const localOutTime = new Date(jstOutTimeStr);
+      
+      const localOffset = localInTime.getTimezoneOffset();
+      const jstOffset = -9 * 60;
+      const adjustmentMinutes = localOffset - jstOffset;
+      
+      const utcInTime = new Date(localInTime.getTime() + adjustmentMinutes * 60 * 1000);
+      const utcOutTime = new Date(localOutTime.getTime() + adjustmentMinutes * 60 * 1000);
+
+      defaultInTime = utcInTime.toISOString();
+      defaultOutTime = utcOutTime.toISOString();
+
+      console.log('createDefaultClockRecord - 今日のJST→UTC変換:', {
+        localInTime: localInTime.toISOString(),
+        localOutTime: localOutTime.toISOString(),
+        localOffset,
+        jstOffset,
+        adjustmentMinutes,
         defaultInTime,
         defaultOutTime,
       });
     } else {
       // 従来のデフォルト値を使用（JST時刻として扱う）
-      const jstInTime = new Date(`${todayStr}T09:00:00`);
-      const jstOutTime = new Date(`${todayStr}T18:00:00`);
+      const jstInTimeStr = `${todayStr}T09:00:00`;
+      const jstOutTimeStr = `${todayStr}T18:00:00`;
 
-      console.log('createDefaultClockRecord - 今日の従来のJST時刻生成:', {
-        jstInTime: jstInTime.toISOString(),
-        jstOutTime: jstOutTime.toISOString(),
+      console.log('createDefaultClockRecord - 今日の従来のJST時刻文字列生成:', {
+        jstInTimeStr,
+        jstOutTimeStr,
       });
 
-      // JST時刻をUTC時刻に変換
-      const jstOffset = 9 * 60; // JSTはUTC+9
-      const utcInTime = new Date(jstInTime.getTime() - jstOffset * 60 * 1000);
-      const utcOutTime = new Date(jstOutTime.getTime() - jstOffset * 60 * 1000);
+      // JST時刻をUTC時刻に変換（正しい方法）
+      const localInTime = new Date(jstInTimeStr);
+      const localOutTime = new Date(jstOutTimeStr);
+      
+      const localOffset = localInTime.getTimezoneOffset();
+      const jstOffset = -9 * 60;
+      const adjustmentMinutes = localOffset - jstOffset;
+      
+      const utcInTime = new Date(localInTime.getTime() + adjustmentMinutes * 60 * 1000);
+      const utcOutTime = new Date(localOutTime.getTime() + adjustmentMinutes * 60 * 1000);
 
       defaultInTime = utcInTime.toISOString();
       defaultOutTime = utcOutTime.toISOString();
 
       console.log('createDefaultClockRecord - 今日の従来のUTC時刻生成:', {
+        localInTime: localInTime.toISOString(),
+        localOutTime: localOutTime.toISOString(),
+        localOffset,
+        jstOffset,
+        adjustmentMinutes,
         defaultInTime,
         defaultOutTime,
       });

@@ -30,8 +30,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { updateWorkType, toggleWorkTypeStatus } from '@/lib/actions/admin/work-types';
 import { useToast } from '@/hooks/use-toast';
-import type { WorkType, EditWorkTypeFormData } from '@/schemas/employment-type';
+import type { WorkTypeData, EditWorkTypeFormData, BreakTime } from '@/schemas/work-types';
 import { convertUTCTimeToJST } from '@/lib/utils';
+import BreakTimesInput from './BreakTimesInput';
 
 const editWorkTypeSchema = z
   .object({
@@ -42,7 +43,21 @@ const editWorkTypeSchema = z
       .max(255, '勤務形態名は255文字以内で入力してください'),
     work_start_time: z.string().min(1, '勤務開始時刻は必須です'),
     work_end_time: z.string().min(1, '勤務終了時刻は必須です'),
-    break_duration_minutes: z.number().min(0, '休憩時間は0分以上で入力してください'),
+    break_times: z
+      .array(
+        z.object({
+          id: z.string().uuid(),
+          name: z.string().min(1, '休息名は必須です'),
+          start_time: z
+            .string()
+            .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, '正しい時刻形式で入力してください（HH:MM）'),
+          end_time: z
+            .string()
+            .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, '正しい時刻形式で入力してください（HH:MM）'),
+          order: z.number().int().min(0, '順番は0以上の整数で入力してください'),
+        })
+      )
+      .default([]),
     is_flexible: z.boolean(),
     flex_start_time: z.string().optional(),
     flex_end_time: z.string().optional(),
@@ -107,7 +122,7 @@ const editWorkTypeSchema = z
 interface WorkTypeEditDialogProps {
   open: boolean;
   onOpenChangeAction: (open: boolean) => void;
-  workType: WorkType | null;
+  workType: WorkTypeData | null;
   companyId: string;
   onSuccessAction: () => void;
 }
@@ -130,7 +145,7 @@ export default function WorkTypeEditDialog({
       name: '',
       work_start_time: '09:00',
       work_end_time: '18:00',
-      break_duration_minutes: 60,
+      break_times: [],
       is_flexible: false,
       flex_start_time: '',
       flex_end_time: '',
@@ -153,7 +168,7 @@ export default function WorkTypeEditDialog({
         name: workType.name,
         work_start_time: convertUTCTimeToJST(workType.work_start_time),
         work_end_time: convertUTCTimeToJST(workType.work_end_time),
-        break_duration_minutes: workType.break_duration_minutes,
+        break_times: workType.break_times || [],
         is_flexible: workType.is_flexible,
         flex_start_time: workType.flex_start_time
           ? convertUTCTimeToJST(workType.flex_start_time)
@@ -315,7 +330,7 @@ export default function WorkTypeEditDialog({
                 勤務時間
               </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="work_start_time"
@@ -343,26 +358,28 @@ export default function WorkTypeEditDialog({
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="break_duration_minutes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>休憩時間（分）</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
+
+              {/* 休息時刻設定 */}
+              <FormField
+                control={form.control}
+                name="break_times"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>休息時刻設定</FormLabel>
+                    <FormControl>
+                      <BreakTimesInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        workStartTime={form.watch('work_start_time')}
+                        workEndTime={form.watch('work_end_time')}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* フレックス勤務設定 */}

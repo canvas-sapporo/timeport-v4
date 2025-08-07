@@ -3,7 +3,7 @@
 import { useForm, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { RequestForm, FormFieldConfig } from '@/schemas/request';
 import { Button } from '@/components/ui/button';
@@ -133,6 +133,20 @@ const DynamicFormField = ({
     }
   }, [watch('work_date'), workDate]);
 
+  // Memoized callbacks for ClockRecordsInput
+  const handleClockRecordsChange = useCallback(
+    (newValue: unknown) => setValue(field.name, newValue),
+    [field.name, setValue]
+  );
+
+  const handleWorkDateChange = useCallback(
+    (newWorkDate: string) => {
+      setWorkDate(newWorkDate);
+      setValue('work_date', newWorkDate);
+    },
+    [setWorkDate, setValue]
+  );
+
   const renderField = () => {
     // work_dateフィールドの値を取得
     const workDate = watch('work_date') as string;
@@ -223,18 +237,16 @@ const DynamicFormField = ({
 
           if (metadata.object_type === 'attendance') {
             console.log('DynamicForm - ClockRecordsInputを表示します');
+
             return (
               <ClockRecordsInput
                 value={Array.isArray(value) ? value : []}
-                onChangeAction={(newValue) => setValue(field.name, newValue)}
+                onChangeAction={handleClockRecordsChange}
                 error={error?.message}
                 disabled={false}
                 workDate={workDate}
                 userId={userId}
-                onWorkDateChange={(newWorkDate) => {
-                  setWorkDate(newWorkDate);
-                  setValue('work_date', newWorkDate);
-                }}
+                onWorkDateChange={handleWorkDateChange}
               />
             );
           }

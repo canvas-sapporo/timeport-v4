@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -59,6 +59,17 @@ const RequestEditDialog = ({
 
   const requestForm = requestForms.find(
     (form: RequestFormData) => (form as unknown as { id: string }).id === request?.request_form_id
+  );
+
+  // Memoized callbacks for ClockRecordsInput
+  const handleClockRecordsChange = useCallback(
+    (fieldName: string) => (value: unknown) => handleFormDataChange(fieldName, value),
+    []
+  );
+
+  const handleWorkDateChange = useCallback(
+    (newWorkDate: string) => handleFormDataChange('work_date', newWorkDate),
+    []
   );
 
   useEffect(() => {
@@ -324,11 +335,10 @@ const RequestEditDialog = ({
                             out_time?: string | undefined;
                           }[]) || []
                         }
-                        onChangeAction={(value) => handleFormDataChange(field.name, value)}
+                        onChangeAction={handleClockRecordsChange(field.name)}
                         workDate={formData.work_date as string}
-                        onWorkDateChange={(newWorkDate) =>
-                          handleFormDataChange('work_date', newWorkDate)
-                        }
+                        userId={currentUser?.id}
+                        onWorkDateChange={handleWorkDateChange}
                       />
                     ) : field.type === 'text' ? (
                       <Input
