@@ -14,12 +14,12 @@ export default function StatsCard({ title, value, change, icon }: StatsCardProps
   const isNegative = change && change < 0;
 
   return (
-    <Card className="stats-card-enhanced enhanced-hover relative overflow-hidden bg-gradient-to-br from-white via-gray-50/50 to-blue-50/30 border-0 shadow-lg">
-      <CardContent className="p-6">
+    <Card className="stats-card-enhanced enhanced-hover relative overflow-hidden bg-gradient-to-br from-white via-gray-50/50 to-blue-50/30 border-0 shadow-lg h-full">
+      <CardContent className="p-6 h-full flex flex-col justify-center">
         <div className="flex items-center justify-between">
-          <div className="space-y-2">
+          <div className="space-y-4">
             <p className="text-sm font-medium text-gray-600">{title}</p>
-            <p className="text-3xl font-bold text-gray-900">{value}</p>
+            <p className="text-4xl font-bold text-gray-900">{value}</p>
             {change !== undefined && (
               <div className="flex flex-col space-y-1">
                 {change === 0 ? (
@@ -47,7 +47,7 @@ export default function StatsCard({ title, value, change, icon }: StatsCardProps
               </div>
             )}
           </div>
-          <div className="w-14 h-14 bg-gradient-to-br from-blue-400/20 via-purple-500/20 to-pink-400/20 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/40 shadow-sm">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-400/20 via-purple-500/20 to-pink-400/20 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/40 shadow-sm">
             <div className="text-blue-600">{icon}</div>
           </div>
         </div>

@@ -9,8 +9,19 @@ import { useData } from '@/contexts/data-context';
 import { getJSTDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getWorkTypes } from '@/lib/actions/admin/work-types';
+import { generateWorkHoursGraphData, generateWorkHoursWithChatData } from '@/lib/mock';
 import StatsCard from '@/components/ui/stats-card';
+import WorkHoursChart from '@/components/ui/work-hours-chart';
+import WorkHoursChartSimple from '@/components/ui/work-hours-chart-simple';
+import WorkHoursChatChart from '@/components/ui/work-hours-chat-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -27,6 +38,9 @@ export default function AdminDashboard() {
   const { users, requests, attendanceRecords } = useData();
   const { toast } = useToast();
   const [hasCheckedWorkTypes, setHasCheckedWorkTypes] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('1month');
+  const [showSimpleChart, setShowSimpleChart] = useState(false);
+  const [showChatChart, setShowChatChart] = useState(false);
 
   async function checkWorkTypes() {
     if (!user?.company_id) return;
@@ -72,20 +86,8 @@ export default function AdminDashboard() {
 
   const stats = [
     {
-      title: '総ユーザー数',
-      value: activeUsers,
-      change: 2,
-      icon: <Users className="w-6 h-6" />,
-    },
-    {
-      title: '未承認申請',
-      value: pendingRequests,
-      change: -1,
-      icon: <FileText className="w-6 h-6" />,
-    },
-    {
-      title: '今日の出勤',
-      value: todayAttendance,
+      title: '今日の出勤率',
+      value: `${todayAttendance}/${activeUsers}`,
       change: 0,
       icon: <Clock className="w-6 h-6" />,
     },
@@ -99,6 +101,26 @@ export default function AdminDashboard() {
 
   const recentRequests = requests.slice(0, 5);
 
+  // データ生成を確実にするためにuseEffectを使用
+  const [graphData, setGraphData] = useState<any[]>([]);
+  const [chatGraphData, setChatGraphData] = useState<any[]>([]);
+
+  useEffect(() => {
+    const data = generateWorkHoursGraphData(selectedPeriod);
+    setGraphData(data);
+    console.log('Generated graph data:', data.length, 'records');
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    const data = generateWorkHoursWithChatData(selectedPeriod);
+    setChatGraphData(data);
+    console.log('Generated chat graph data:', data.length, 'records');
+  }, [selectedPeriod]);
+
+  const handlePeriodChange = (period: string) => {
+    setSelectedPeriod(period);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -106,17 +128,111 @@ export default function AdminDashboard() {
         <p className="text-gray-600">全社の勤怠状況を確認できます</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <StatsCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            change={stat.change}
-            icon={stat.icon}
-          />
-        ))}
+      {/* Stats Cards and Graph Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Graph Display Area */}
+        <div className="lg:col-span-3">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-white via-gray-50/50 to-blue-50/30 border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="w-5 h-5" />
+                  <span>勤務チャート</span>
+                </div>
+                <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1month">1か月</SelectItem>
+                    <SelectItem value="3months">3か月</SelectItem>
+                    <SelectItem value="6months">半年</SelectItem>
+                    <SelectItem value="1year">1年</SelectItem>
+                    <SelectItem value="3years">3年</SelectItem>
+                  </SelectContent>
+                </Select>
+              </CardTitle>
+              <div className="flex space-x-1 mt-2">
+                <button
+                  onClick={() => {
+                    setShowSimpleChart(true);
+                    setShowChatChart(false);
+                  }}
+                  className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                    showSimpleChart && !showChatChart
+                      ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'
+                      : 'text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                >
+                  シンプル
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSimpleChart(false);
+                    setShowChatChart(false);
+                  }}
+                  className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                    !showSimpleChart && !showChatChart
+                      ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'
+                      : 'text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                >
+                  TODO
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSimpleChart(false);
+                    setShowChatChart(true);
+                  }}
+                  className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                    showChatChart
+                      ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'
+                      : 'text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                >
+                  チャット
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {showChatChart ? (
+                <WorkHoursChatChart
+                  data={chatGraphData}
+                  onPeriodChange={handlePeriodChange}
+                  selectedPeriod={selectedPeriod}
+                />
+              ) : showSimpleChart ? (
+                <WorkHoursChartSimple
+                  data={graphData}
+                  onPeriodChange={handlePeriodChange}
+                  selectedPeriod={selectedPeriod}
+                />
+              ) : (
+                <WorkHoursChart
+                  data={graphData}
+                  onPeriodChange={handlePeriodChange}
+                  selectedPeriod={selectedPeriod}
+                />
+              )}
+            </CardContent>
+            {/* Bottom border with gradient */}
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400"></div>
+          </Card>
+        </div>
+
+        {/* Stats Cards - Vertical Layout */}
+        <div className="flex flex-col h-full space-y-6">
+          {stats.map((stat, index) => (
+            <div key={index} className="flex-1">
+              <StatsCard
+                title={stat.title}
+                value={stat.value}
+                change={stat.change}
+                icon={stat.icon}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
