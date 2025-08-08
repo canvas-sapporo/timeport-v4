@@ -225,19 +225,35 @@ export default function ClockRecordsInput({
   const updateSession = (index: number, field: keyof ClockRecord, value: string) => {
     const newRecords = [...clockRecords];
 
-    if ((field === 'in_time' || field === 'out_time') && value) {
-      // ユーザーが入力した時刻はJST時刻として扱う
-      // datetime-local入力から取得した値は"YYYY-MM-DDTHH:mm"形式のJST時刻
-      // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
-      const utcDateTime = convertJSTDateTimeToUTC(value + ':00');
+    if (field === 'in_time' || field === 'out_time') {
+      let nextValue = value;
+
+      // value が空ならそのまま設定
+      if (!value) {
+        newRecords[index] = { ...newRecords[index], [field]: value };
+        updateClockRecords(newRecords);
+        return;
+      }
+
+      // 既にISO(UTC)形式っぽい場合は再変換しない（例: 2025-08-07T01:00:00.000Z）
+      const isISOUTC = /Z$/.test(value) || /\d{2}:\d{2}:\d{2}/.test(value);
+
+      // JSTの "YYYY-MM-DDTHH:mm" 形式のみUTCへ変換
+      const isJstShort = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value);
+      if (isJstShort) {
+        nextValue = convertJSTDateTimeToUTC(value + ':00');
+      } else if (!isISOUTC) {
+        // どちらでもない不明な形式は安全のためそのまま格納
+        nextValue = value;
+      }
 
       console.log('updateSession - 時刻更新:', {
         field,
         inputValue: value,
-        utcDateTime,
+        nextValue,
       });
 
-      newRecords[index] = { ...newRecords[index], [field]: utcDateTime };
+      newRecords[index] = { ...newRecords[index], [field]: nextValue };
     } else {
       newRecords[index] = { ...newRecords[index], [field]: value };
     }
@@ -328,15 +344,22 @@ export default function ClockRecordsInput({
   ) => {
     const newRecords = [...clockRecords];
 
-    if ((field === 'break_start' || field === 'break_end') && value) {
-      // ユーザーが入力した時刻はJST時刻として扱う
-      // datetime-local入力から取得した値は"YYYY-MM-DDTHH:mm"形式のJST時刻
-      // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
-      const utcDateTime = convertJSTDateTimeToUTC(value + ':00');
+    if (field === 'break_start' || field === 'break_end') {
+      let nextValue = value;
+
+      if (value) {
+        const isISOUTC = /Z$/.test(value) || /\d{2}:\d{2}:\d{2}/.test(value);
+        const isJstShort = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value);
+        if (isJstShort) {
+          nextValue = convertJSTDateTimeToUTC(value + ':00');
+        } else if (!isISOUTC) {
+          nextValue = value;
+        }
+      }
 
       newRecords[sessionIndex].breaks[breakIndex] = {
         ...newRecords[sessionIndex].breaks[breakIndex],
-        [field]: utcDateTime,
+        [field]: nextValue,
       };
     } else {
       newRecords[sessionIndex].breaks[breakIndex] = {

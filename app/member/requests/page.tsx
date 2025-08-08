@@ -1131,7 +1131,6 @@ export default function MemberRequestsPage() {
               <TableRow>
                 <TableHead>申請種別</TableHead>
                 <TableHead>申請日</TableHead>
-                <TableHead>対象日</TableHead>
                 <TableHead>ステータス</TableHead>
                 <TableHead>承認者</TableHead>
                 <TableHead>操作</TableHead>
@@ -1140,7 +1139,7 @@ export default function MemberRequestsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     <div className="flex items-center justify-center space-x-2">
                       <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
                       <span className="text-gray-500">データを読み込み中...</span>
@@ -1155,15 +1154,6 @@ export default function MemberRequestsPage() {
                       {request.created_at
                         ? new Date(request.created_at).toLocaleDateString('ja-JP')
                         : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {request.target_date
-                        ? new Date(request.target_date).toLocaleDateString('ja-JP')
-                        : request.start_date && request.end_date
-                          ? `${new Date(request.start_date).toLocaleDateString('ja-JP')} - ${new Date(request.end_date).toLocaleDateString('ja-JP')}`
-                          : request.start_date
-                            ? new Date(request.start_date).toLocaleDateString('ja-JP')
-                            : '-'}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(
@@ -1186,13 +1176,7 @@ export default function MemberRequestsPage() {
                           const currentStep = requestForm.approval_flow.find(
                             (step) => step.step === request.current_approval_step
                           );
-                          if (currentStep && currentStep.approver_id) {
-                            // 承認者IDからユーザー情報を取得
-                            const approver = users.find((u) => u.id === currentStep.approver_id);
-                            if (approver) {
-                              return `${approver.family_name} ${approver.first_name}`;
-                            }
-                          }
+                          return currentStep?.name || '-';
                         }
                         return '-';
                       })()}
