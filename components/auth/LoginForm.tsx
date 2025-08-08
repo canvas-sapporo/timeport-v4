@@ -119,10 +119,12 @@ export const LoginForm = () => {
       // サーバーアクションで監査ログを記録
       try {
         const result = await loginAction(email, password);
-        if (result.error) {
+        if (result && result.error) {
           console.error('サーバーアクションエラー:', result.error);
-        } else {
+        } else if (result) {
           console.log('サーバーアクション監査ログ記録完了');
+        } else {
+          console.warn('サーバーアクションがundefinedを返しました');
         }
       } catch (serverError) {
         console.error('サーバーアクションエラー:', serverError);

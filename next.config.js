@@ -7,6 +7,16 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', '*.vercel.app'],
+      bodySizeLimit: '2mb',
+    },
+    // 開発時の安定性向上
+    turbo: {
+      rules: {
+        '*.css': {
+          loaders: ['css'],
+          as: '*.css',
+        },
+      },
     },
   },
 
