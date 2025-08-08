@@ -157,6 +157,7 @@ export default function SuperAdminDashboard() {
               value={errorLogsCount}
               change={errorLogsChange}
               icon={<AlertCircle className="w-6 h-6" />}
+              comparisonText="前日比較"
             />
           </div>
 
@@ -167,6 +168,7 @@ export default function SuperAdminDashboard() {
               value={auditLogsCount}
               change={auditLogsChange}
               icon={<Settings className="w-6 h-6" />}
+              comparisonText="前日比較"
             />
           </div>
         </div>

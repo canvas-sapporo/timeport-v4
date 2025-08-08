@@ -7,9 +7,16 @@ interface StatsCardProps {
   value: string | number;
   change?: number;
   icon: React.ReactNode;
+  comparisonText?: string;
 }
 
-export default function StatsCard({ title, value, change, icon }: StatsCardProps) {
+export default function StatsCard({
+  title,
+  value,
+  change,
+  icon,
+  comparisonText = '前月比較',
+}: StatsCardProps) {
   const isPositive = change && change > 0;
   const isNegative = change && change < 0;
 
@@ -43,7 +50,7 @@ export default function StatsCard({ title, value, change, icon }: StatsCardProps
                     </span>
                   </div>
                 )}
-                <span className="text-xs text-gray-500">前月比較</span>
+                <span className="text-xs text-gray-500">{comparisonText}</span>
               </div>
             )}
           </div>
