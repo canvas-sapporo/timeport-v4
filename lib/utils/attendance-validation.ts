@@ -353,13 +353,39 @@ export function createDefaultClockRecord(
         const jstBreakEndStr = `${targetDate}T${breakTime.end_time}:00`;
         
         // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
+        const breakStart = convertJSTDateTimeToUTC(jstBreakStartStr);
+        const breakEnd = convertJSTDateTimeToUTC(jstBreakEndStr);
+        
+        // 変換に失敗した場合はフォールバック値を使用
+        if (!breakStart || !breakEnd) {
+          console.warn('createDefaultClockRecord: 休憩時刻変換に失敗、フォールバック値を使用');
+          return {
+            break_start: `${targetDate}T${breakTime.start_time}:00`,
+            break_end: `${targetDate}T${breakTime.end_time}:00`,
+          };
+        }
+        
         return {
-          break_start: convertJSTDateTimeToUTC(jstBreakStartStr),
-          break_end: convertJSTDateTimeToUTC(jstBreakEndStr),
+          break_start: breakStart,
+          break_end: breakEnd,
         };
       });
     
     console.log('createDefaultClockRecord - デフォルト休憩記録生成:', defaultBreaks);
+  }
+
+  // 変換に失敗した場合のフォールバック
+  if (!defaultInTime || !defaultOutTime) {
+    console.warn('createDefaultClockRecord: 時刻変換に失敗、フォールバック値を使用');
+    const fallbackDate = workDate || getJSTDate();
+    const fallbackInTime = `${fallbackDate}T09:00:00`;
+    const fallbackOutTime = `${fallbackDate}T18:00:00`;
+    
+    return {
+      in_time: fallbackInTime,
+      out_time: fallbackOutTime,
+      breaks: defaultBreaks,
+    };
   }
 
   const result = {
@@ -396,6 +422,19 @@ export function createDefaultBreakRecord(workDate?: string): ClockBreakRecord {
     // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
     defaultBreakStart = convertJSTDateTimeToUTC(jstBreakStartStr);
     defaultBreakEnd = convertJSTDateTimeToUTC(jstBreakEndStr);
+  }
+
+  // 変換に失敗した場合のフォールバック
+  if (!defaultBreakStart || !defaultBreakEnd) {
+    console.warn('createDefaultBreakRecord: 時刻変換に失敗、フォールバック値を使用');
+    const fallbackDate = workDate || getJSTDateString();
+    const fallbackStart = `${fallbackDate}T12:00:00`;
+    const fallbackEnd = `${fallbackDate}T13:00:00`;
+    
+    return {
+      break_start: fallbackStart,
+      break_end: fallbackEnd,
+    };
   }
 
   return {

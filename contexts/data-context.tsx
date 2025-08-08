@@ -347,6 +347,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           start_date: request.start_date,
           end_date: request.end_date,
           submission_comment: request.submission_comment,
+          status_code: request.status_code,
         },
         currentUserId
       );

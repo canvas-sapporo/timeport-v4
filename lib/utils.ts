@@ -461,7 +461,20 @@ export function convertJSTDateTimeToUTC(jstDateTimeStr: string): string {
   if (!jstDateTimeStr) return '';
   
   try {
+    // 日時文字列の形式をチェック
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(jstDateTimeStr)) {
+      console.warn('convertJSTDateTimeToUTC: 無効な日時形式:', jstDateTimeStr);
+      return '';
+    }
+    
     const jstDate = new Date(jstDateTimeStr);
+    
+    // 無効な日付かチェック
+    if (isNaN(jstDate.getTime())) {
+      console.warn('convertJSTDateTimeToUTC: 無効な日付:', jstDateTimeStr);
+      return '';
+    }
+    
     const utcDate = fromZonedTime(jstDate, 'Asia/Tokyo');
     return utcDate.toISOString();
   } catch (error) {

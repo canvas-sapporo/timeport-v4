@@ -64,6 +64,7 @@ export async function createRequest(
     start_date?: string;
     end_date?: string;
     submission_comment?: string;
+    status_code?: string;
   },
   currentUserId?: string
 ): Promise<{ success: boolean; message: string; data?: Record<string, unknown>; error?: string }> {
@@ -100,11 +101,14 @@ export async function createRequest(
   try {
     const supabase = createAdminClient();
 
-    // デフォルトステータスを取得
+    // ステータスコードを決定（デフォルトは 'draft'）
+    const statusCode = requestData.status_code || 'draft';
+    
+    // 指定されたステータスを取得
     const { data: defaultStatus, error: statusError } = await supabase
       .from('statuses')
       .select('id')
-      .eq('code', 'draft')
+      .eq('code', statusCode)
       .eq('category', 'request')
       .single();
 

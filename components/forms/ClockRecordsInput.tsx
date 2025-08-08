@@ -300,12 +300,21 @@ export default function ClockRecordsInput({
           const jstBreakEndStr = `${targetDate}T${nextBreakTime.end_time}:00`;
 
           // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
-          newRecords[sessionIndex].breaks.push({
-            break_start: convertJSTDateTimeToUTC(jstBreakStartStr),
-            break_end: convertJSTDateTimeToUTC(jstBreakEndStr),
-          });
+          const breakStart = convertJSTDateTimeToUTC(jstBreakStartStr);
+          const breakEnd = convertJSTDateTimeToUTC(jstBreakEndStr);
 
-          console.log('addBreak - work_typesのbreak_times使用:', nextBreakTime);
+          // 変換が成功した場合のみ追加
+          if (breakStart && breakEnd) {
+            newRecords[sessionIndex].breaks.push({
+              break_start: breakStart,
+              break_end: breakEnd,
+            });
+            console.log('addBreak - work_typesのbreak_times使用:', nextBreakTime);
+          } else {
+            // 変換に失敗した場合は従来のデフォルト値を使用
+            const defaultBreak = createDefaultBreakRecord(workDate);
+            newRecords[sessionIndex].breaks.push(defaultBreak);
+          }
         } else {
           // 対応するbreak_timesがない場合は従来のデフォルト値を使用
           newRecords[sessionIndex].breaks.push(createDefaultBreakRecord(workDate));
@@ -432,7 +441,18 @@ export default function ClockRecordsInput({
   };
 
   const createDateTimeFromDateAndTime = (date: string, time: string): string => {
-    if (!date || !time) return '';
+    // 日付と時刻の両方が必要
+    if (!date || !time) {
+      console.log('createDateTimeFromDateAndTime: 日付または時刻が空', { date, time });
+      return '';
+    }
+
+    // 日付と時刻の形式をチェック
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
+      console.warn('createDateTimeFromDateAndTime: 無効な日付または時刻形式', { date, time });
+      return '';
+    }
+
     // 指定された日付と時刻でJST時刻を作成し、UTC時刻に変換
     const jstDateTime = `${date}T${time}:00`;
 
@@ -480,13 +500,51 @@ export default function ClockRecordsInput({
         console.log('handleWorkDateChange - attendances取得結果:', existingAttendance);
 
         if (existingAttendance?.clock_records && existingAttendance.clock_records.length > 0) {
-          // 取得できた打刻をそのまま反映（UTC想定）
-          setClockRecords(existingAttendance.clock_records);
+          // 既存のデータがある場合は、時刻の日付部分を新しい勤務日に更新
+          const updatedClockRecords = existingAttendance.clock_records.map((session) => {
+            const updatedInTime = updateDateTimeWithNewWorkDate(session.in_time || '', newWorkDate);
+            const updatedOutTime = updateDateTimeWithNewWorkDate(
+              session.out_time || '',
+              newWorkDate
+            );
+
+            const updatedBreaks =
+              session.breaks?.map((breakRecord) => {
+                const updatedBreakStart = updateDateTimeWithNewWorkDate(
+                  breakRecord.break_start || '',
+                  newWorkDate
+                );
+                const updatedBreakEnd = updateDateTimeWithNewWorkDate(
+                  breakRecord.break_end || '',
+                  newWorkDate
+                );
+
+                // 変換に失敗した場合は元の値を保持
+                return {
+                  ...breakRecord,
+                  break_start: updatedBreakStart || breakRecord.break_start || '',
+                  break_end: updatedBreakEnd || breakRecord.break_end || '',
+                };
+              }) || [];
+
+            return {
+              ...session,
+              in_time: updatedInTime || session.in_time || '',
+              out_time: updatedOutTime || session.out_time || '',
+              breaks: updatedBreaks,
+            };
+          });
+          setClockRecords(updatedClockRecords);
+          console.log(
+            'handleWorkDateChange - 既存データを新しい勤務日に更新:',
+            updatedClockRecords
+          );
         } else {
           // 取得できない場合は勤務タイプからデフォルト生成
           const workTypeDetail = await getUserWorkTypeDetail(userId);
           const defaultRecord = createDefaultClockRecord(newWorkDate, workTypeDetail || undefined);
           setClockRecords([defaultRecord]);
+          console.log('handleWorkDateChange - 勤務タイプからデフォルト生成:', defaultRecord);
         }
         setIsInitialized(true);
       } catch (error) {

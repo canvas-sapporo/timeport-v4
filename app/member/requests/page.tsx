@@ -285,6 +285,22 @@ export default function MemberRequestsPage() {
         status_id: statusId, // ステータスIDを追加
       });
       console.log('handleCreateRequest: リクエスト作成成功:', newRequest);
+
+      // 成功時のトーストメッセージを表示
+      if (statusCode === 'pending') {
+        toast({
+          title: '申請完了',
+          description: '申請が正常に提出されました。承認者の承認をお待ちください。',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: '下書き保存',
+          description: '下書きが正常に保存されました。',
+          variant: 'default',
+        });
+      }
+
       // フォームをリセット
       setFormData({});
       setSelectedRequestType('');
@@ -799,6 +815,7 @@ export default function MemberRequestsPage() {
                 <Button
                   onClick={() => handleCreateRequest('pending')}
                   disabled={!selectedRequestType}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   申請する
                 </Button>
