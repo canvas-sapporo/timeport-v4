@@ -231,48 +231,33 @@ export function createDefaultClockRecord(
 
   if (workDate) {
     if (workTypeDetail) {
-      // work_start_timeとwork_end_timeはJST時刻（HH:MM:SS形式）
-      // 指定された勤務日と組み合わせてJST時刻を作成し、UTC時刻に変換
-      // 注意: new Date("YYYY-MM-DDTHH:mm:ss")はローカルタイムゾーンとして解釈される
-      // そのため、JST時刻を正しくUTCに変換するには、明示的にJSTとして扱う必要がある
+      // work_start_timeとwork_end_timeはUTC時刻（HH:MM:SS形式）として保存されている
+      // 指定された勤務日と組み合わせてUTCタイムスタンプを生成する
 
-      // JST時刻文字列を作成
-      const jstInTimeStr = `${workDate}T${workTypeDetail.work_start_time}`;
-      const jstOutTimeStr = `${workDate}T${workTypeDetail.work_end_time}`;
-
-      console.log('createDefaultClockRecord - JST時刻文字列生成:', {
+      console.log('createDefaultClockRecord - work_types設定値:', {
         work_start_time: workTypeDetail.work_start_time,
         work_end_time: workTypeDetail.work_end_time,
-        jstInTimeStr,
-        jstOutTimeStr,
+        workDate,
       });
 
-      // JST時刻をUTC時刻に変換（正しい方法）
-      // 1. JST時刻文字列をDateオブジェクトとして作成（ローカルタイムゾーンとして解釈される）
-      // 2. ローカルタイムゾーンとJSTの差分を計算してUTCに変換
-      const localInTime = new Date(jstInTimeStr);
-      const localOutTime = new Date(jstOutTimeStr);
+      // work_typesテーブルの時刻はUTCとして保存されている
+      // 指定された日付と組み合わせてUTCタイムスタンプを生成
+      const [year, month, day] = workDate.split('-').map(Number);
+      const [inHours, inMinutes] = workTypeDetail.work_start_time.split(':').map(Number);
+      const [outHours, outMinutes] = workTypeDetail.work_end_time.split(':').map(Number);
 
-      // ローカルタイムゾーンのオフセットを取得（分単位）
-      const localOffset = localInTime.getTimezoneOffset();
-      // JSTはUTC+9（-540分）
-      const jstOffset = -9 * 60;
-      // 調整量を計算（ローカルタイムゾーンからJSTへの変換）
-      const adjustmentMinutes = localOffset - jstOffset;
-
-      // UTC時刻を計算
-      const utcInTime = new Date(localInTime.getTime() + adjustmentMinutes * 60 * 1000);
-      const utcOutTime = new Date(localOutTime.getTime() + adjustmentMinutes * 60 * 1000);
+      // UTCタイムスタンプを生成（work_typesの時刻はすでにUTCなのでそのまま使用）
+      const utcInTime = new Date(Date.UTC(year, month - 1, day, inHours, inMinutes));
+      const utcOutTime = new Date(Date.UTC(year, month - 1, day, outHours, outMinutes));
 
       defaultInTime = utcInTime.toISOString();
       defaultOutTime = utcOutTime.toISOString();
 
-      console.log('createDefaultClockRecord - JST→UTC変換:', {
-        localInTime: localInTime.toISOString(),
-        localOutTime: localOutTime.toISOString(),
-        localOffset,
-        jstOffset,
-        adjustmentMinutes,
+      console.log('createDefaultClockRecord - UTC時刻生成:', {
+        workStartTime: workTypeDetail.work_start_time,
+        workEndTime: workTypeDetail.work_end_time,
+        utcInTime: utcInTime.toISOString(),
+        utcOutTime: utcOutTime.toISOString(),
         defaultInTime,
         defaultOutTime,
       });
