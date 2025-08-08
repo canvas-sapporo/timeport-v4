@@ -428,40 +428,56 @@ export default function ClockRecordsInput({
 
   // 勤務日変更時の処理
   const handleWorkDateChange = (newWorkDate: string) => {
-    console.log('handleWorkDateChange 開始:', {
+    console.log('handleWorkDateChange 開始 (再取得モード):', {
       newWorkDate,
       currentWorkDate: workDate,
       clockRecordsLength: clockRecords.length,
-      clockRecords: clockRecords,
     });
 
     // 親コンポーネントに勤務日変更を通知
     onWorkDateChange?.(newWorkDate);
 
-    // 勤務日が変更された場合、既存の時刻データの日付部分を更新
-    if (clockRecords.length > 0) {
-      const updatedRecords = clockRecords.map((record) => ({
-        ...record,
-        in_time: updateDateTimeWithNewWorkDate(record.in_time, newWorkDate),
-        out_time: record.out_time
-          ? updateDateTimeWithNewWorkDate(record.out_time, newWorkDate)
-          : undefined,
-        breaks:
-          record.breaks?.map((breakRecord) => ({
-            ...breakRecord,
-            break_start: updateDateTimeWithNewWorkDate(breakRecord.break_start, newWorkDate),
-            break_end: updateDateTimeWithNewWorkDate(breakRecord.break_end, newWorkDate),
-          })) || [],
-      }));
+    const refreshByAttendance = async () => {
+      setIsLoading(true);
+      try {
+        // userId が無い場合は従来のデフォルト値
+        if (!userId) {
+          const defaultRecord = createDefaultClockRecord(newWorkDate);
+          setClockRecords([defaultRecord]);
+          setIsInitialized(true);
+          return;
+        }
 
-      console.log('handleWorkDateChange - 時刻データ更新:', {
-        originalRecords: clockRecords,
-        updatedRecords: updatedRecords,
-      });
+        // 対象日の勤怠を取得
+        const { getLatestAttendance, getUserWorkTypeDetail } = await import(
+          '@/lib/actions/attendance'
+        );
 
-      setClockRecords(updatedRecords);
-      // onChangeActionは別のuseEffectで処理されるため、ここでは呼び出さない
-    }
+        const existingAttendance = await getLatestAttendance(userId, newWorkDate);
+        console.log('handleWorkDateChange - attendances取得結果:', existingAttendance);
+
+        if (existingAttendance?.clock_records && existingAttendance.clock_records.length > 0) {
+          // 取得できた打刻をそのまま反映（UTC想定）
+          setClockRecords(existingAttendance.clock_records);
+        } else {
+          // 取得できない場合は勤務タイプからデフォルト生成
+          const workTypeDetail = await getUserWorkTypeDetail(userId);
+          const defaultRecord = createDefaultClockRecord(newWorkDate, workTypeDetail || undefined);
+          setClockRecords([defaultRecord]);
+        }
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('handleWorkDateChange - 再取得エラー:', error);
+        // エラー時もデフォルト
+        const defaultRecord = createDefaultClockRecord(newWorkDate);
+        setClockRecords([defaultRecord]);
+        setIsInitialized(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void refreshByAttendance();
   };
 
   return (
