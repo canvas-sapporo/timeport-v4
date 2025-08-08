@@ -187,25 +187,25 @@ export async function getLogsDataForPeriod(period: string) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // 1週間分のデータを取得するための時間範囲
+    // 3年間分のデータを取得するための時間範囲
     const now = getCurrentJST();
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const threeYearsAgo = new Date(now.getTime() - 3 * 365 * 24 * 60 * 60 * 1000);
 
     // 現在時刻をクエリの終了時刻として使用
     const queryEndDate = now;
 
     console.log('クエリ時間範囲:', {
-      oneWeekAgo: oneWeekAgo.toISOString(),
+      threeYearsAgo: threeYearsAgo.toISOString(),
       now: now.toISOString(),
       queryEndDate: queryEndDate.toISOString(),
       nowDate: now.toDateString(),
     });
 
-    // 1週間分のデータを取得（レベルフィルタリングなしで全データを取得）
+    // 3年間分のデータを取得（レベルフィルタリングなしで全データを取得）
     const { data: errorLogs, error: errorLogsError } = await supabaseAdmin
       .from('system_logs')
       .select('created_at, level')
-      .gte('created_at', oneWeekAgo.toISOString())
+      .gte('created_at', threeYearsAgo.toISOString())
       .lte('created_at', queryEndDate.toISOString())
       .in('level', ['error', 'fatal'])
       .order('created_at', { ascending: false })
@@ -276,7 +276,7 @@ export async function getLogsDataForPeriod(period: string) {
     const { data: auditLogs, error: auditLogsError } = await supabaseAdmin
       .from('audit_logs')
       .select('created_at, action')
-      .gte('created_at', oneWeekAgo.toISOString())
+      .gte('created_at', threeYearsAgo.toISOString())
       .lte('created_at', queryEndDate.toISOString())
       .order('created_at', { ascending: true })
       .limit(50000); // 制限を大幅に増やしてデータを確実に取得

@@ -164,7 +164,7 @@ export default function SuperAdminDashboard() {
           {/* Latest Day's Audit Log Count */}
           <div className="h-[180px]">
             <StatsCard
-              title="最新日の監査ログ数"
+              title="最新日の監査ログ"
               value={auditLogsCount}
               change={auditLogsChange}
               icon={<Settings className="w-6 h-6" />}
