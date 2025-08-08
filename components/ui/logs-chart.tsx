@@ -80,11 +80,11 @@ export default function LogsChart({ data, selectedPeriod }: LogsChartProps) {
             }}
           />
           <Legend
-            verticalAlign="top"
+            verticalAlign="bottom"
             height={36}
             iconType="line"
             wrapperStyle={{
-              paddingBottom: '10px',
+              paddingTop: '10px',
             }}
           />
           <Line
