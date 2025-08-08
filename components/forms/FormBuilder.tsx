@@ -2,7 +2,16 @@
 
 import { useState, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Plus, GripVertical, Trash2, Settings, Copy } from 'lucide-react';
+import {
+  Plus,
+  GripVertical,
+  Trash2,
+  Settings,
+  Copy,
+  Clock,
+  Calendar,
+  FileText,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,7 +66,28 @@ const FIELD_TYPES: { value: FormFieldType; label: string; icon: string }[] = [
   { value: 'checkbox', label: 'チェックボックス', icon: '☑️' },
   { value: 'file', label: 'ファイル', icon: '📎' },
   { value: 'hidden', label: '隠しフィールド', icon: '👻' },
-  { value: 'object', label: 'オブジェクト', icon: '🗂️' },
+];
+
+// 定型フォームの定義
+const TEMPLATE_FORMS = [
+  {
+    id: 'attendance_correction',
+    name: '勤怠修正',
+    description: '出勤・退勤時刻の修正申請',
+    icon: Clock,
+  },
+  {
+    id: 'overtime',
+    name: '残業',
+    description: '残業時間の申請',
+    icon: Clock,
+  },
+  {
+    id: 'paid_leave',
+    name: '有給',
+    description: '有給休暇の申請',
+    icon: Calendar,
+  },
 ];
 
 const VALIDATION_TYPES = [
@@ -345,6 +375,142 @@ export default function FormBuilder({
         </CardContent>
       </Card>
 
+      {/* 定型フォーム選択 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="w-5 h-5" />
+            <span>定型フォーム</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {TEMPLATE_FORMS.map((template) => (
+              <Button
+                key={template.id}
+                variant="outline"
+                className="h-20 flex flex-col items-center justify-center space-y-1"
+                onClick={() => {
+                  if (template.id === 'attendance_correction') {
+                    // 勤怠修正の定型フォーム
+                    const newFields: FormFieldConfig[] = [
+                      {
+                        id: `field_${Date.now()}_1`,
+                        name: 'work_date',
+                        type: 'date',
+                        label: '勤務日',
+                        required: true,
+                        validation_rules: [],
+                        order: 1,
+                        width: 'full',
+                      },
+                      {
+                        id: `field_${Date.now()}_2`,
+                        name: 'clock_records',
+                        type: 'object',
+                        label: '勤務記録',
+                        required: true,
+                        validation_rules: [],
+                        order: 2,
+                        width: 'full',
+                        metadata: {
+                          object_type: 'attendance',
+                        },
+                      },
+                    ];
+                    onFormConfigChangeAction(newFields);
+                  } else if (template.id === 'overtime') {
+                    // 残業の定型フォーム
+                    const newFields: FormFieldConfig[] = [
+                      {
+                        id: `field_${Date.now()}_1`,
+                        name: 'overtime_date',
+                        type: 'date',
+                        label: '残業日',
+                        required: true,
+                        validation_rules: [],
+                        order: 1,
+                        width: 'full',
+                      },
+                      {
+                        id: `field_${Date.now()}_2`,
+                        name: 'start_time',
+                        type: 'time',
+                        label: '開始時刻',
+                        required: true,
+                        validation_rules: [],
+                        order: 2,
+                        width: 'half',
+                      },
+                      {
+                        id: `field_${Date.now()}_3`,
+                        name: 'end_time',
+                        type: 'time',
+                        label: '終了時刻',
+                        required: true,
+                        validation_rules: [],
+                        order: 3,
+                        width: 'half',
+                      },
+                      {
+                        id: `field_${Date.now()}_4`,
+                        name: 'reason',
+                        type: 'textarea',
+                        label: '残業理由',
+                        required: true,
+                        validation_rules: [],
+                        order: 4,
+                        width: 'full',
+                      },
+                    ];
+                    onFormConfigChangeAction(newFields);
+                  } else if (template.id === 'paid_leave') {
+                    // 有給の定型フォーム
+                    const newFields: FormFieldConfig[] = [
+                      {
+                        id: `field_${Date.now()}_1`,
+                        name: 'start_date',
+                        type: 'date',
+                        label: '開始日',
+                        required: true,
+                        validation_rules: [],
+                        order: 1,
+                        width: 'half',
+                      },
+                      {
+                        id: `field_${Date.now()}_2`,
+                        name: 'end_date',
+                        type: 'date',
+                        label: '終了日',
+                        required: true,
+                        validation_rules: [],
+                        order: 2,
+                        width: 'half',
+                      },
+                      {
+                        id: `field_${Date.now()}_3`,
+                        name: 'reason',
+                        type: 'textarea',
+                        label: '申請理由',
+                        required: true,
+                        validation_rules: [],
+                        order: 3,
+                        width: 'full',
+                      },
+                    ];
+                    onFormConfigChangeAction(newFields);
+                  }
+                }}
+              >
+                <template.icon className="w-6 h-6" />
+                <span className="text-xs">{template.name}</span>
+                <p className="text-xs text-gray-500">{template.description}</p>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* フィールド一覧 */}
       <Card>
         <CardHeader>
@@ -436,7 +602,9 @@ export default function FormBuilder({
 
           {formConfig.length === 0 && (
             <div className="text-center py-8 text-gray-500">
-              <p>フィールドがありません。上記からフィールドを追加してください。</p>
+              <p>
+                フィールドがありません。上記からフィールドまたは定型フォームを追加してください。
+              </p>
             </div>
           )}
         </CardContent>

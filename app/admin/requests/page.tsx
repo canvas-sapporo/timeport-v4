@@ -130,7 +130,7 @@ export default function AdminRequestsPage() {
       const result = await getRequestForms();
       console.log('fetchRequestForms: 結果', result);
 
-      if (result.success && result.data) {
+      if (result?.success && result.data) {
         console.log('fetchRequestForms: データ設定', result.data);
 
         // 重複チェック
@@ -145,8 +145,10 @@ export default function AdminRequestsPage() {
         }
 
         setRequestForms(result.data);
+      } else if (result === undefined) {
+        console.warn('fetchRequestForms: APIレスポンスがundefinedです');
       } else {
-        console.error('申請フォーム取得失敗:', result.error);
+        console.error('申請フォーム取得失敗:', result?.error);
       }
     } catch (error) {
       console.error('申請フォームデータ取得エラー:', error);
@@ -163,7 +165,7 @@ export default function AdminRequestsPage() {
       const result = await getAdminRequests();
       console.log('fetchAdminRequests: 結果', result);
 
-      if (result.success && result.data) {
+      if (result?.success && result.data) {
         console.log('fetchAdminRequests: データ設定', result.data);
 
         // 重複を除去（IDでフィルタリング）
@@ -178,8 +180,10 @@ export default function AdminRequestsPage() {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setRequests(uniqueRequests as any);
+      } else if (result === undefined) {
+        console.warn('fetchAdminRequests: APIレスポンスがundefinedです');
       } else {
-        console.error('管理者申請データ取得失敗:', result.error);
+        console.error('管理者申請データ取得失敗:', result?.error);
       }
     } catch (error) {
       console.error('管理者申請データ取得エラー:', error);
