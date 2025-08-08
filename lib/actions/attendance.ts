@@ -1471,6 +1471,13 @@ export async function getUserWorkTypeDetail(userId: string): Promise<{
   name: string;
   work_start_time: string;
   work_end_time: string;
+  break_times?: Array<{
+    id: string;
+    name: string;
+    order: number;
+    start_time: string;
+    end_time: string;
+  }>;
 } | null> {
   try {
     console.log('getUserWorkTypeDetail 開始:', { userId });
@@ -1496,7 +1503,7 @@ export async function getUserWorkTypeDetail(userId: string): Promise<{
     // 勤務タイプの詳細情報を取得
     const { data: workType, error: workTypeError } = await supabaseAdmin
       .from('work_types')
-      .select('id, name, work_start_time, work_end_time')
+      .select('id, name, work_start_time, work_end_time, break_times')
       .eq('id', userProfile.current_work_type_id)
       .is('deleted_at', null)
       .single();

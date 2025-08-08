@@ -12,7 +12,13 @@ import {
   createDefaultClockRecord,
   createDefaultBreakRecord,
 } from '@/lib/utils/attendance-validation';
-import { formatDateTimeForInput, getJSTDate } from '@/lib/utils';
+import {
+  formatDateTimeForInput,
+  getJSTDate,
+  convertJSTDateTimeToUTC,
+  convertUTCDateTimeToJST,
+  formatDateTimeForInputJST,
+} from '@/lib/utils';
 
 interface ClockRecordsInputProps {
   value: ClockRecord[];
@@ -215,24 +221,16 @@ export default function ClockRecordsInput({
     if ((field === 'in_time' || field === 'out_time') && value) {
       // ユーザーが入力した時刻はJST時刻として扱う
       // datetime-local入力から取得した値は"YYYY-MM-DDTHH:mm"形式のJST時刻
-      // JST時刻をUTC時刻に変換（正しい方法）
-      const localDate = new Date(value);
-      const localOffset = localDate.getTimezoneOffset();
-      const jstOffset = -9 * 60; // JSTはUTC+9（-540分）
-      const adjustmentMinutes = localOffset - jstOffset;
-      const utcDate = new Date(localDate.getTime() + adjustmentMinutes * 60 * 1000);
+      // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
+      const utcDateTime = convertJSTDateTimeToUTC(value + ':00');
 
       console.log('updateSession - 時刻更新:', {
         field,
         inputValue: value,
-        localDate: localDate.toISOString(),
-        localOffset,
-        jstOffset,
-        adjustmentMinutes,
-        utcDate: utcDate.toISOString(),
+        utcDateTime,
       });
 
-      newRecords[index] = { ...newRecords[index], [field]: utcDate.toISOString() };
+      newRecords[index] = { ...newRecords[index], [field]: utcDateTime };
     } else {
       newRecords[index] = { ...newRecords[index], [field]: value };
     }
@@ -240,13 +238,70 @@ export default function ClockRecordsInput({
     updateClockRecords(newRecords);
   };
 
-  const addBreak = (sessionIndex: number) => {
-    const newRecords = [...clockRecords];
-    if (!newRecords[sessionIndex].breaks) {
-      newRecords[sessionIndex].breaks = [];
+  const addBreak = async (sessionIndex: number) => {
+    if (!userId) {
+      // userIdがない場合は従来のデフォルト値を使用
+      const newRecords = [...clockRecords];
+      if (!newRecords[sessionIndex].breaks) {
+        newRecords[sessionIndex].breaks = [];
+      }
+      newRecords[sessionIndex].breaks.push(createDefaultBreakRecord(workDate));
+      updateClockRecords(newRecords);
+      return;
     }
-    newRecords[sessionIndex].breaks.push(createDefaultBreakRecord(workDate));
-    updateClockRecords(newRecords);
+
+    try {
+      // ユーザーの勤務タイプの詳細情報を取得
+      const { getUserWorkTypeDetail } = await import('@/lib/actions/attendance');
+      const workTypeDetail = await getUserWorkTypeDetail(userId);
+      console.log('addBreak - 勤務タイプ詳細:', workTypeDetail);
+
+      const newRecords = [...clockRecords];
+      if (!newRecords[sessionIndex].breaks) {
+        newRecords[sessionIndex].breaks = [];
+      }
+
+      if (workTypeDetail?.break_times && workTypeDetail.break_times.length > 0) {
+        // work_typesのbreak_timesから次の休憩を追加
+        const existingBreakCount = newRecords[sessionIndex].breaks.length;
+        const nextBreakTime = workTypeDetail.break_times.find(
+          (bt) => bt.order === existingBreakCount
+        );
+
+        if (nextBreakTime) {
+          const targetDate = workDate || getJSTDate();
+
+          // break_timesの時刻はJST時刻として扱う
+          const jstBreakStartStr = `${targetDate}T${nextBreakTime.start_time}:00`;
+          const jstBreakEndStr = `${targetDate}T${nextBreakTime.end_time}:00`;
+
+          // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
+          newRecords[sessionIndex].breaks.push({
+            break_start: convertJSTDateTimeToUTC(jstBreakStartStr),
+            break_end: convertJSTDateTimeToUTC(jstBreakEndStr),
+          });
+
+          console.log('addBreak - work_typesのbreak_times使用:', nextBreakTime);
+        } else {
+          // 対応するbreak_timesがない場合は従来のデフォルト値を使用
+          newRecords[sessionIndex].breaks.push(createDefaultBreakRecord(workDate));
+        }
+      } else {
+        // break_timesがない場合は従来のデフォルト値を使用
+        newRecords[sessionIndex].breaks.push(createDefaultBreakRecord(workDate));
+      }
+
+      updateClockRecords(newRecords);
+    } catch (error) {
+      console.error('addBreak - 勤務タイプ詳細取得エラー:', error);
+      // エラーの場合は従来のデフォルト値を使用
+      const newRecords = [...clockRecords];
+      if (!newRecords[sessionIndex].breaks) {
+        newRecords[sessionIndex].breaks = [];
+      }
+      newRecords[sessionIndex].breaks.push(createDefaultBreakRecord(workDate));
+      updateClockRecords(newRecords);
+    }
   };
 
   const removeBreak = (sessionIndex: number, breakIndex: number) => {
@@ -266,16 +321,12 @@ export default function ClockRecordsInput({
     if ((field === 'break_start' || field === 'break_end') && value) {
       // ユーザーが入力した時刻はJST時刻として扱う
       // datetime-local入力から取得した値は"YYYY-MM-DDTHH:mm"形式のJST時刻
-      // JST時刻をUTC時刻に変換（正しい方法）
-      const localDate = new Date(value);
-      const localOffset = localDate.getTimezoneOffset();
-      const jstOffset = -9 * 60; // JSTはUTC+9（-540分）
-      const adjustmentMinutes = localOffset - jstOffset;
-      const utcDate = new Date(localDate.getTime() + adjustmentMinutes * 60 * 1000);
+      // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
+      const utcDateTime = convertJSTDateTimeToUTC(value + ':00');
 
       newRecords[sessionIndex].breaks[breakIndex] = {
         ...newRecords[sessionIndex].breaks[breakIndex],
-        [field]: utcDate.toISOString(),
+        [field]: utcDateTime,
       };
     } else {
       newRecords[sessionIndex].breaks[breakIndex] = {
@@ -291,32 +342,21 @@ export default function ClockRecordsInput({
   const updateDateTimeWithNewWorkDate = (dateTimeString: string, newWorkDate: string): string => {
     if (!dateTimeString) return '';
     try {
-      const date = new Date(dateTimeString);
-      // UTC時刻からJST時刻を抽出（HH:mm:ss）
-      const jstOffset = 9 * 60; // JSTはUTC+9
-      const jstTime = new Date(date.getTime() + jstOffset * 60 * 1000);
-      const timeString = jstTime.toISOString().split('T')[1].split('.')[0];
+      // UTC時刻をJST時刻に変換して時刻部分を抽出
+      const jstDateTime = convertUTCDateTimeToJST(dateTimeString);
+      const timeString = jstDateTime.split(' ')[1]; // HH:mm:ss部分を取得
 
       // 新しい勤務日でJST時刻を再構築
       const newJstDateTimeStr = `${newWorkDate}T${timeString}`;
-      const localDateTime = new Date(newJstDateTimeStr);
 
-      // JST時刻をUTC時刻に変換（正しい方法）
-      const localOffset = localDateTime.getTimezoneOffset();
-      const jstOffsetMinutes = -9 * 60; // JSTはUTC+9（-540分）
-      const adjustmentMinutes = localOffset - jstOffsetMinutes;
-      const newUtcDateTime = new Date(localDateTime.getTime() + adjustmentMinutes * 60 * 1000);
+      // JST時刻をUTC時刻に変換
+      const result = convertJSTDateTimeToUTC(newJstDateTimeStr);
 
-      const result = newUtcDateTime.toISOString();
       console.log('updateDateTimeWithNewWorkDate:', {
         original: dateTimeString,
         newWorkDate,
         timeString,
         newJstDateTimeStr,
-        localDateTime: localDateTime.toISOString(),
-        localOffset,
-        jstOffsetMinutes,
-        adjustmentMinutes,
         result,
       });
       return result;
@@ -362,26 +402,18 @@ export default function ClockRecordsInput({
     if (!date || !time) return '';
     // 指定された日付と時刻でJST時刻を作成し、UTC時刻に変換
     const jstDateTime = `${date}T${time}:00`;
-    const localDate = new Date(jstDateTime);
 
-    // JST時刻をUTC時刻に変換（正しい方法）
-    const localOffset = localDate.getTimezoneOffset();
-    const jstOffset = -9 * 60; // JSTはUTC+9（-540分）
-    const adjustmentMinutes = localOffset - jstOffset;
-    const utcDate = new Date(localDate.getTime() + adjustmentMinutes * 60 * 1000);
+    // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
+    const utcDateTime = convertJSTDateTimeToUTC(jstDateTime);
 
     console.log('createDateTimeFromDateAndTime:', {
       inputDate: date,
       inputTime: time,
       jstDateTime,
-      localDate: localDate.toISOString(),
-      localOffset,
-      jstOffset,
-      adjustmentMinutes,
-      utcDate: utcDate.toISOString(),
+      utcDateTime,
     });
 
-    return utcDate.toISOString();
+    return utcDateTime;
   };
 
   // 勤務日変更時の処理
@@ -562,7 +594,7 @@ export default function ClockRecordsInput({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => addBreak(sessionIndex)}
+                  onClick={async () => await addBreak(sessionIndex)}
                   disabled={disabled}
                 >
                   <Plus className="h-4 w-4 mr-2" />

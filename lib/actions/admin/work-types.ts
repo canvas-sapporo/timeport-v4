@@ -238,46 +238,7 @@ function validateWorkTypeTimes(form: CreateWorkTypeFormData | EditWorkTypeFormDa
 // ヘルパー関数
 // ================================
 
-/**
- * JST時刻をUTC時刻に変換する関数
- * @param jstTime JST時刻（HH:mm:ss形式またはHH:mm形式）
- * @returns UTC時刻（HH:mm:ss形式）
- */
-function convertJSTTimeToUTC(jstTime: string): string {
-  console.log('convertJSTTimeToUTC 入力:', jstTime);
-
-  if (!jstTime || jstTime.trim() === '') {
-    console.log('convertJSTTimeToUTC 空文字列を返す');
-    return '';
-  }
-
-  // JST時刻を時、分、秒に分解
-  const timeParts = jstTime.split(':');
-  const hours = parseInt(timeParts[0], 10);
-  const minutes = parseInt(timeParts[1], 10);
-  const seconds = timeParts.length > 2 ? parseInt(timeParts[2], 10) : 0;
-
-  console.log('convertJSTTimeToUTC 分解結果:', { hours, minutes, seconds });
-
-  // 数値が不正な場合は空文字列を返す
-  if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
-    console.log('convertJSTTimeToUTC 不正な数値、空文字列を返す');
-    return '';
-  }
-
-  // JST時刻から9時間を引いてUTC時刻を計算
-  let utcHours = hours - 9;
-
-  // 日付をまたぐ場合の処理
-  if (utcHours < 0) {
-    utcHours += 24;
-  }
-
-  // UTC時刻をHH:mm:ss形式で返す
-  const result = `${String(utcHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  console.log('convertJSTTimeToUTC 結果:', result);
-  return result;
-}
+import { convertJSTTimeToUTC } from '@/lib/utils';
 
 /**
  * 勤務形態の時刻フィールドをUTC時刻に変換する関数
