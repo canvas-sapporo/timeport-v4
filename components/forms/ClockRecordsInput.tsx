@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Plus, Trash2, Clock, X } from 'lucide-react';
+import { Plus, Trash2, Clock, X, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +49,7 @@ export default function ClockRecordsInput({
 
   const [clockRecords, setClockRecords] = useState<ClockRecord[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const isInitialMount = useRef(true);
   const lastValueRef = useRef<ClockRecord[]>([]);
   const onChangeActionRef = useRef(onChangeAction);
@@ -92,6 +93,7 @@ export default function ClockRecordsInput({
         userId,
       });
 
+      setIsLoading(true);
       try {
         const { getLatestAttendance, getUserWorkTypeDetail } = await import(
           '@/lib/actions/attendance'
@@ -139,6 +141,8 @@ export default function ClockRecordsInput({
         const defaultRecord = createDefaultClockRecord(targetWorkDate);
         setClockRecords([defaultRecord]);
         setIsInitialized(true);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -186,6 +190,7 @@ export default function ClockRecordsInput({
       return;
     }
 
+    setIsLoading(true);
     try {
       // ユーザーの勤務タイプの詳細情報を取得
       const { getUserWorkTypeDetail } = await import('@/lib/actions/attendance');
@@ -207,6 +212,8 @@ export default function ClockRecordsInput({
       const targetWorkDate = workDate || getJSTDate();
       const newRecords = [...clockRecords, createDefaultClockRecord(targetWorkDate)];
       updateClockRecords(newRecords);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -250,6 +257,7 @@ export default function ClockRecordsInput({
       return;
     }
 
+    setIsLoading(true);
     try {
       // ユーザーの勤務タイプの詳細情報を取得
       const { getUserWorkTypeDetail } = await import('@/lib/actions/attendance');
@@ -301,6 +309,8 @@ export default function ClockRecordsInput({
       }
       newRecords[sessionIndex].breaks.push(createDefaultBreakRecord(workDate));
       updateClockRecords(newRecords);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -473,13 +483,26 @@ export default function ClockRecordsInput({
 
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">勤務セッション</Label>
-        <Button type="button" variant="outline" size="sm" onClick={addSession} disabled={disabled}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addSession}
+          disabled={disabled || isLoading}
+        >
           <Plus className="h-4 w-4 mr-2" />
           セッション追加
         </Button>
       </div>
 
-      {clockRecords.length === 0 && (
+      {isLoading && (
+        <div className="text-center py-8">
+          <Loader2 className="h-8 w-8 mx-auto mb-2 text-primary" />
+          <p>勤務データを読み込み中...</p>
+        </div>
+      )}
+
+      {!isLoading && clockRecords.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
           <Clock className="h-8 w-8 mx-auto mb-2" />
           <p>勤務セッションがありません</p>
@@ -487,222 +510,223 @@ export default function ClockRecordsInput({
         </div>
       )}
 
-      {clockRecords.map((session, sessionIndex) => (
-        <Card key={sessionIndex} className="border-dashed">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">セッション {sessionIndex + 1}</CardTitle>
-              {clockRecords.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeSession(sessionIndex)}
-                  disabled={disabled}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* 出勤・退勤時刻 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`in_time_${sessionIndex}`} className="text-sm">
-                  出勤時刻 *
-                </Label>
-                <div className="grid grid-cols-[2fr,1fr] gap-2">
-                  <Input
-                    id={`in_date_${sessionIndex}`}
-                    type="date"
-                    value={getDateFromDateTime(session.in_time)}
-                    onChange={(e) => {
-                      const currentTime = getTimeFromDateTime(session.in_time);
-                      const newDateTime = createDateTimeFromDateAndTime(
-                        e.target.value,
-                        currentTime
-                      );
-                      updateSession(sessionIndex, 'in_time', newDateTime);
-                    }}
-                    disabled={disabled}
-                    required
-                  />
-                  <Input
-                    id={`in_time_${sessionIndex}`}
-                    type="time"
-                    value={getTimeFromDateTime(session.in_time)}
-                    onChange={(e) => {
-                      const currentDate = getDateFromDateTime(session.in_time);
-                      const newDateTime = createDateTimeFromDateAndTime(
-                        currentDate,
-                        e.target.value
-                      );
-                      updateSession(sessionIndex, 'in_time', newDateTime);
-                    }}
-                    disabled={disabled}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`out_time_${sessionIndex}`} className="text-sm">
-                  退勤時刻
-                  {sessionIndex === clockRecords.length - 1 && ' *'}
-                </Label>
-                <div className="grid grid-cols-[2fr,1fr] gap-2">
-                  <Input
-                    id={`out_date_${sessionIndex}`}
-                    type="date"
-                    value={getDateFromDateTime(session.out_time || '')}
-                    onChange={(e) => {
-                      const currentTime = getTimeFromDateTime(session.out_time || '');
-                      const newDateTime = createDateTimeFromDateAndTime(
-                        e.target.value,
-                        currentTime
-                      );
-                      updateSession(sessionIndex, 'out_time', newDateTime);
-                    }}
-                    disabled={disabled}
-                    required={sessionIndex === clockRecords.length - 1}
-                  />
-                  <Input
-                    id={`out_time_${sessionIndex}`}
-                    type="time"
-                    value={getTimeFromDateTime(session.out_time || '')}
-                    onChange={(e) => {
-                      const currentDate = getDateFromDateTime(session.out_time || '');
-                      const newDateTime = createDateTimeFromDateAndTime(
-                        currentDate,
-                        e.target.value
-                      );
-                      updateSession(sessionIndex, 'out_time', newDateTime);
-                    }}
-                    disabled={disabled}
-                    required={sessionIndex === clockRecords.length - 1}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 休憩記録 */}
-            <div className="space-y-3">
+      {!isLoading &&
+        clockRecords.map((session, sessionIndex) => (
+          <Card key={sessionIndex} className="border-dashed">
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">休憩記録</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => await addBreak(sessionIndex)}
-                  disabled={disabled}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  休憩追加
-                </Button>
+                <CardTitle className="text-sm">セッション {sessionIndex + 1}</CardTitle>
+                {clockRecords.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeSession(sessionIndex)}
+                    disabled={disabled}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* 出勤・退勤時刻 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor={`in_time_${sessionIndex}`} className="text-sm">
+                    出勤時刻 *
+                  </Label>
+                  <div className="grid grid-cols-[2fr,1fr] gap-2">
+                    <Input
+                      id={`in_date_${sessionIndex}`}
+                      type="date"
+                      value={getDateFromDateTime(session.in_time)}
+                      onChange={(e) => {
+                        const currentTime = getTimeFromDateTime(session.in_time);
+                        const newDateTime = createDateTimeFromDateAndTime(
+                          e.target.value,
+                          currentTime
+                        );
+                        updateSession(sessionIndex, 'in_time', newDateTime);
+                      }}
+                      disabled={disabled}
+                      required
+                    />
+                    <Input
+                      id={`in_time_${sessionIndex}`}
+                      type="time"
+                      value={getTimeFromDateTime(session.in_time)}
+                      onChange={(e) => {
+                        const currentDate = getDateFromDateTime(session.in_time);
+                        const newDateTime = createDateTimeFromDateAndTime(
+                          currentDate,
+                          e.target.value
+                        );
+                        updateSession(sessionIndex, 'in_time', newDateTime);
+                      }}
+                      disabled={disabled}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`out_time_${sessionIndex}`} className="text-sm">
+                    退勤時刻
+                    {sessionIndex === clockRecords.length - 1 && ' *'}
+                  </Label>
+                  <div className="grid grid-cols-[2fr,1fr] gap-2">
+                    <Input
+                      id={`out_date_${sessionIndex}`}
+                      type="date"
+                      value={getDateFromDateTime(session.out_time || '')}
+                      onChange={(e) => {
+                        const currentTime = getTimeFromDateTime(session.out_time || '');
+                        const newDateTime = createDateTimeFromDateAndTime(
+                          e.target.value,
+                          currentTime
+                        );
+                        updateSession(sessionIndex, 'out_time', newDateTime);
+                      }}
+                      disabled={disabled}
+                      required={sessionIndex === clockRecords.length - 1}
+                    />
+                    <Input
+                      id={`out_time_${sessionIndex}`}
+                      type="time"
+                      value={getTimeFromDateTime(session.out_time || '')}
+                      onChange={(e) => {
+                        const currentDate = getDateFromDateTime(session.out_time || '');
+                        const newDateTime = createDateTimeFromDateAndTime(
+                          currentDate,
+                          e.target.value
+                        );
+                        updateSession(sessionIndex, 'out_time', newDateTime);
+                      }}
+                      disabled={disabled}
+                      required={sessionIndex === clockRecords.length - 1}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {session.breaks && session.breaks.length > 0 && (
-                <div className="space-y-3">
-                  {session.breaks.map((breakRecord, breakIndex) => (
-                    <div key={breakIndex} className="space-y-3 p-3 border rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">休憩 {breakIndex + 1}</Label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeBreak(sessionIndex, breakIndex)}
-                          disabled={disabled}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">開始時刻</Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input
-                              id={`break_start_date_${sessionIndex}_${breakIndex}`}
-                              type="date"
-                              value={getDateFromDateTime(breakRecord.break_start)}
-                              onChange={(e) => {
-                                const currentTime = getTimeFromDateTime(breakRecord.break_start);
-                                const newDateTime = createDateTimeFromDateAndTime(
-                                  e.target.value,
-                                  currentTime
-                                );
-                                updateBreak(sessionIndex, breakIndex, 'break_start', newDateTime);
-                              }}
-                              disabled={disabled}
-                              required
-                              className="text-sm"
-                            />
-                            <Input
-                              id={`break_start_time_${sessionIndex}_${breakIndex}`}
-                              type="time"
-                              value={getTimeFromDateTime(breakRecord.break_start)}
-                              onChange={(e) => {
-                                const currentDate = getDateFromDateTime(breakRecord.break_start);
-                                const newDateTime = createDateTimeFromDateAndTime(
-                                  currentDate,
-                                  e.target.value
-                                );
-                                updateBreak(sessionIndex, breakIndex, 'break_start', newDateTime);
-                              }}
-                              disabled={disabled}
-                              required
-                              className="text-sm"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">終了時刻</Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input
-                              id={`break_end_date_${sessionIndex}_${breakIndex}`}
-                              type="date"
-                              value={getDateFromDateTime(breakRecord.break_end)}
-                              onChange={(e) => {
-                                const currentTime = getTimeFromDateTime(breakRecord.break_end);
-                                const newDateTime = createDateTimeFromDateAndTime(
-                                  e.target.value,
-                                  currentTime
-                                );
-                                updateBreak(sessionIndex, breakIndex, 'break_end', newDateTime);
-                              }}
-                              disabled={disabled}
-                              required
-                              className="text-sm"
-                            />
-                            <Input
-                              id={`break_end_time_${sessionIndex}_${breakIndex}`}
-                              type="time"
-                              value={getTimeFromDateTime(breakRecord.break_end)}
-                              onChange={(e) => {
-                                const currentDate = getDateFromDateTime(breakRecord.break_end);
-                                const newDateTime = createDateTimeFromDateAndTime(
-                                  currentDate,
-                                  e.target.value
-                                );
-                                updateBreak(sessionIndex, breakIndex, 'break_end', newDateTime);
-                              }}
-                              disabled={disabled}
-                              required
-                              className="text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              {/* 休憩記録 */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">休憩記録</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => await addBreak(sessionIndex)}
+                    disabled={disabled || isLoading}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    休憩追加
+                  </Button>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+
+                {session.breaks && session.breaks.length > 0 && (
+                  <div className="space-y-3">
+                    {session.breaks.map((breakRecord, breakIndex) => (
+                      <div key={breakIndex} className="space-y-3 p-3 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">休憩 {breakIndex + 1}</Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeBreak(sessionIndex, breakIndex)}
+                            disabled={disabled}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium">開始時刻</Label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                id={`break_start_date_${sessionIndex}_${breakIndex}`}
+                                type="date"
+                                value={getDateFromDateTime(breakRecord.break_start)}
+                                onChange={(e) => {
+                                  const currentTime = getTimeFromDateTime(breakRecord.break_start);
+                                  const newDateTime = createDateTimeFromDateAndTime(
+                                    e.target.value,
+                                    currentTime
+                                  );
+                                  updateBreak(sessionIndex, breakIndex, 'break_start', newDateTime);
+                                }}
+                                disabled={disabled}
+                                required
+                                className="text-sm"
+                              />
+                              <Input
+                                id={`break_start_time_${sessionIndex}_${breakIndex}`}
+                                type="time"
+                                value={getTimeFromDateTime(breakRecord.break_start)}
+                                onChange={(e) => {
+                                  const currentDate = getDateFromDateTime(breakRecord.break_start);
+                                  const newDateTime = createDateTimeFromDateAndTime(
+                                    currentDate,
+                                    e.target.value
+                                  );
+                                  updateBreak(sessionIndex, breakIndex, 'break_start', newDateTime);
+                                }}
+                                disabled={disabled}
+                                required
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium">終了時刻</Label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input
+                                id={`break_end_date_${sessionIndex}_${breakIndex}`}
+                                type="date"
+                                value={getDateFromDateTime(breakRecord.break_end)}
+                                onChange={(e) => {
+                                  const currentTime = getTimeFromDateTime(breakRecord.break_end);
+                                  const newDateTime = createDateTimeFromDateAndTime(
+                                    e.target.value,
+                                    currentTime
+                                  );
+                                  updateBreak(sessionIndex, breakIndex, 'break_end', newDateTime);
+                                }}
+                                disabled={disabled}
+                                required
+                                className="text-sm"
+                              />
+                              <Input
+                                id={`break_end_time_${sessionIndex}_${breakIndex}`}
+                                type="time"
+                                value={getTimeFromDateTime(breakRecord.break_end)}
+                                onChange={(e) => {
+                                  const currentDate = getDateFromDateTime(breakRecord.break_end);
+                                  const newDateTime = createDateTimeFromDateAndTime(
+                                    currentDate,
+                                    e.target.value
+                                  );
+                                  updateBreak(sessionIndex, breakIndex, 'break_end', newDateTime);
+                                }}
+                                disabled={disabled}
+                                required
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
 
       {error && <div className="text-sm text-destructive mt-2">{error}</div>}
     </div>
