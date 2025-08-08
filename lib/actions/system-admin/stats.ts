@@ -10,7 +10,7 @@ export async function getSystemErrorLogsCount() {
     return {
       todayCount: data.errorLogs.todayCount,
       yesterdayCount: data.errorLogs.yesterdayCount,
-      change: data.errorLogs.change
+      change: data.errorLogs.change,
     };
   } catch (error) {
     console.error('Error fetching error logs count:', error);
@@ -28,7 +28,7 @@ export async function getAuditLogsCount() {
     return {
       todayCount: data.auditLogs.todayCount,
       yesterdayCount: data.auditLogs.yesterdayCount,
-      change: data.auditLogs.change
+      change: data.auditLogs.change,
     };
   } catch (error) {
     console.error('Error fetching audit logs count:', error);

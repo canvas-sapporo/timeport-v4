@@ -4,10 +4,11 @@
 
 import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
 import type { ObjectValidationRule } from '@/schemas/request';
-import { 
-  getJSTDate, 
+import {
+  getJSTDate,
   convertJSTDateTimeToUTC,
-  getJSTDateString 
+  getJSTDateString,
+  convertJSTToUTC,
 } from '@/lib/utils';
 
 // ================================
@@ -210,8 +211,6 @@ export function validateAttendanceObject(
 // ヘルパー関数
 // ================================
 
-import { convertJSTToUTC } from '@/lib/utils';
-
 /**
  * clock_recordsのデフォルト構造を生成
  */
@@ -339,23 +338,23 @@ export function createDefaultClockRecord(
 
   // work_typesのbreak_timesを使用してデフォルトの休憩記録を作成
   let defaultBreaks: ClockBreakRecord[] = [];
-  
+
   if (workTypeDetail?.break_times && workTypeDetail.break_times.length > 0) {
     console.log('createDefaultClockRecord - break_times使用:', workTypeDetail.break_times);
-    
+
     defaultBreaks = workTypeDetail.break_times
       .sort((a, b) => a.order - b.order) // orderでソート
       .map((breakTime) => {
         const targetDate = workDate || getJSTDate();
-        
+
         // break_timesの時刻はJST時刻として扱う
         const jstBreakStartStr = `${targetDate}T${breakTime.start_time}:00`;
         const jstBreakEndStr = `${targetDate}T${breakTime.end_time}:00`;
-        
+
         // 新しい統一された関数を使用してJST時刻をUTC時刻に変換
         const breakStart = convertJSTDateTimeToUTC(jstBreakStartStr);
         const breakEnd = convertJSTDateTimeToUTC(jstBreakEndStr);
-        
+
         // 変換に失敗した場合はフォールバック値を使用
         if (!breakStart || !breakEnd) {
           console.warn('createDefaultClockRecord: 休憩時刻変換に失敗、フォールバック値を使用');
@@ -364,13 +363,13 @@ export function createDefaultClockRecord(
             break_end: `${targetDate}T${breakTime.end_time}:00`,
           };
         }
-        
+
         return {
           break_start: breakStart,
           break_end: breakEnd,
         };
       });
-    
+
     console.log('createDefaultClockRecord - デフォルト休憩記録生成:', defaultBreaks);
   }
 
@@ -380,7 +379,7 @@ export function createDefaultClockRecord(
     const fallbackDate = workDate || getJSTDate();
     const fallbackInTime = `${fallbackDate}T09:00:00`;
     const fallbackOutTime = `${fallbackDate}T18:00:00`;
-    
+
     return {
       in_time: fallbackInTime,
       out_time: fallbackOutTime,
@@ -430,7 +429,7 @@ export function createDefaultBreakRecord(workDate?: string): ClockBreakRecord {
     const fallbackDate = workDate || getJSTDateString();
     const fallbackStart = `${fallbackDate}T12:00:00`;
     const fallbackEnd = `${fallbackDate}T13:00:00`;
-    
+
     return {
       break_start: fallbackStart,
       break_end: fallbackEnd,

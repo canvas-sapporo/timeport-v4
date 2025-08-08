@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ObjectMetadataSchema } from '../request';
+
 import { BaseEntitySchema, UUIDSchema, DateStringSchema, DynamicDataSchema } from './base';
 
 // ================================
@@ -95,6 +97,8 @@ export const RequestFormSchema = BaseEntitySchema.extend({
   is_active: z.boolean(),
   /** 表示順序 */
   display_order: z.number(),
+  /** オブジェクト設定 */
+  object_config: ObjectMetadataSchema.optional(),
 });
 
 /**

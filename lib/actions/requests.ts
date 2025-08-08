@@ -169,7 +169,7 @@ export async function createRequest(
 
     // ステータスコードを決定（デフォルトは 'draft'）
     const statusCode = requestData.status_code || 'draft';
-    
+
     // 指定されたステータスを取得
     const { data: defaultStatus, error: statusError } = await supabase
       .from('statuses')
@@ -1146,8 +1146,14 @@ async function handleAttendanceObjectApproval(
     };
 
     // 勤務時間の自動計算（clock_recordsが更新された場合）
-    if (formData.clock_records && Array.isArray(formData.clock_records) && formData.clock_records.length > 0) {
-      const latestSession = formData.clock_records[formData.clock_records.length - 1] as unknown as ClockRecord;
+    if (
+      formData.clock_records &&
+      Array.isArray(formData.clock_records) &&
+      formData.clock_records.length > 0
+    ) {
+      const latestSession = formData.clock_records[
+        formData.clock_records.length - 1
+      ] as unknown as ClockRecord;
       if (latestSession.in_time && latestSession.out_time) {
         const { actualWorkMinutes, overtimeMinutes } = await calculateWorkTime(
           latestSession.in_time,
@@ -1179,7 +1185,7 @@ async function handleAttendanceObjectApproval(
     // 監査ログを記録
     try {
       const clientInfo = await getClientInfo();
-      
+
       // ユーザーの企業IDを取得
       const { data: userProfile } = await supabaseAdmin
         .from('user_profiles')
@@ -1294,7 +1300,7 @@ async function updateAttendanceFromCorrectionRequest(
 
     // clock_recordsデータの準備
     let clockRecords: any[] = [];
-    
+
     if (Array.isArray(attendanceCorrection)) {
       // 配列形式の場合
       clockRecords = attendanceCorrection.map((record: any) => ({
@@ -1418,7 +1424,7 @@ async function updateAttendanceFromCorrectionRequest(
     };
   } catch (error) {
     console.error('updateAttendanceFromCorrectionRequest エラー:', error);
-    
+
     // システムログを記録
     await logSystem('error', '打刻修正申請承認時の勤怠記録更新エラー', {
       feature_name: 'request_management',

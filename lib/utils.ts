@@ -311,7 +311,7 @@ export function formatDateTimeForInput(dateTimeString: string): string {
 
     // date-fns-tzを使用してJST時刻に変換
     const jstDate = toZonedTime(date, 'Asia/Tokyo');
-    const result = format(jstDate, 'yyyy-MM-dd\'T\'HH:mm', { timeZone: 'Asia/Tokyo' });
+    const result = format(jstDate, "yyyy-MM-dd'T'HH:mm", { timeZone: 'Asia/Tokyo' });
 
     console.log('formatDateTimeForInput - JST変換後:', {
       jstDate: jstDate.toISOString(),
@@ -381,14 +381,16 @@ export function convertUTCTimeToJST(utcTime: string): string {
   try {
     // 今日の日付と組み合わせてUTC日時を作成
     const today = new Date();
-    const utcDateTime = new Date(Date.UTC(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-      parseInt(utcTime.split(':')[0], 10),
-      parseInt(utcTime.split(':')[1], 10),
-      utcTime.split(':').length > 2 ? parseInt(utcTime.split(':')[2], 10) : 0
-    ));
+    const utcDateTime = new Date(
+      Date.UTC(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        parseInt(utcTime.split(':')[0], 10),
+        parseInt(utcTime.split(':')[1], 10),
+        utcTime.split(':').length > 2 ? parseInt(utcTime.split(':')[2], 10) : 0
+      )
+    );
 
     // date-fns-tzを使用してJST時刻に変換
     const jstDate = toZonedTime(utcDateTime, 'Asia/Tokyo');
@@ -459,22 +461,22 @@ export function convertJSTToUTC(jstDateTime: string | Date): Date {
  */
 export function convertJSTDateTimeToUTC(jstDateTimeStr: string): string {
   if (!jstDateTimeStr) return '';
-  
+
   try {
     // 日時文字列の形式をチェック
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(jstDateTimeStr)) {
       console.warn('convertJSTDateTimeToUTC: 無効な日時形式:', jstDateTimeStr);
       return '';
     }
-    
+
     const jstDate = new Date(jstDateTimeStr);
-    
+
     // 無効な日付かチェック
     if (isNaN(jstDate.getTime())) {
       console.warn('convertJSTDateTimeToUTC: 無効な日付:', jstDateTimeStr);
       return '';
     }
-    
+
     const utcDate = fromZonedTime(jstDate, 'Asia/Tokyo');
     return utcDate.toISOString();
   } catch (error) {
@@ -490,7 +492,7 @@ export function convertJSTDateTimeToUTC(jstDateTimeStr: string): string {
  */
 export function convertUTCDateTimeToJST(utcDateTimeStr: string): string {
   if (!utcDateTimeStr) return '';
-  
+
   try {
     const utcDate = new Date(utcDateTimeStr);
     const jstDate = toZonedTime(utcDate, 'Asia/Tokyo');
@@ -536,11 +538,11 @@ export function getJSTTimeString(date: Date = new Date()): string {
  */
 export function formatDateTimeForInputJST(utcDateTimeStr: string): string {
   if (!utcDateTimeStr) return '';
-  
+
   try {
     const utcDate = new Date(utcDateTimeStr);
     const jstDate = toZonedTime(utcDate, 'Asia/Tokyo');
-    return format(jstDate, 'yyyy-MM-dd\'T\'HH:mm', { timeZone: 'Asia/Tokyo' });
+    return format(jstDate, "yyyy-MM-dd'T'HH:mm", { timeZone: 'Asia/Tokyo' });
   } catch (error) {
     console.error('formatDateTimeForInputJST エラー:', error);
     return '';

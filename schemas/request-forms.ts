@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ObjectMetadataSchema } from './request';
+
 // ================================
 // 申請フォーム関連スキーマ
 // ================================
@@ -14,6 +16,7 @@ export const RequestFormSchema = z.object({
   form_config: z.array(z.any()).default([]),
   approval_flow: z.array(z.any()).default([]),
   is_active: z.boolean().default(true),
+  object_config: ObjectMetadataSchema.optional(),
 });
 
 /**
@@ -65,6 +68,7 @@ export const RequestFormDetailSchema = z.object({
   form_config: z.array(z.any()),
   approval_flow: z.array(z.any()),
   is_active: z.boolean(),
+  object_config: ObjectMetadataSchema.optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });

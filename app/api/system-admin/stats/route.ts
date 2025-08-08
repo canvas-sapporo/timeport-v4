@@ -6,19 +6,19 @@ function getJSTTodayRange() {
   const now = new Date();
   // 日本時間に変換（UTC+9）
   const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  
+
   // 本日の開始（日本時間 00:00:00）
   const todayStart = new Date(jstNow);
   todayStart.setHours(0, 0, 0, 0);
-  
+
   // 本日の終了（日本時間 23:59:59）
   const todayEnd = new Date(jstNow);
   todayEnd.setHours(23, 59, 59, 999);
-  
+
   // UTCに変換
   const todayStartUTC = new Date(todayStart.getTime() - 9 * 60 * 60 * 1000);
   const todayEndUTC = new Date(todayEnd.getTime() - 9 * 60 * 60 * 1000);
-  
+
   return { todayStart: todayStartUTC, todayEnd: todayEndUTC };
 }
 
@@ -27,21 +27,21 @@ function getJSTYesterdayRange() {
   const now = new Date();
   // 日本時間に変換（UTC+9）
   const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  
+
   // 前日の開始（日本時間 00:00:00）
   const yesterdayStart = new Date(jstNow);
   yesterdayStart.setDate(yesterdayStart.getDate() - 1);
   yesterdayStart.setHours(0, 0, 0, 0);
-  
+
   // 前日の終了（日本時間 23:59:59）
   const yesterdayEnd = new Date(jstNow);
   yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
   yesterdayEnd.setHours(23, 59, 59, 999);
-  
+
   // UTCに変換
   const yesterdayStartUTC = new Date(yesterdayStart.getTime() - 9 * 60 * 60 * 1000);
   const yesterdayEndUTC = new Date(yesterdayEnd.getTime() - 9 * 60 * 60 * 1000);
-  
+
   return { yesterdayStart: yesterdayStartUTC, yesterdayEnd: yesterdayEndUTC };
 }
 
@@ -49,9 +49,9 @@ function getJSTYesterdayRange() {
 function getDateRangeForPeriod(period: string) {
   const now = new Date();
   const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  
+
   let startDate: Date;
-  
+
   switch (period) {
     case '1month':
       startDate = new Date(jstNow.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -71,11 +71,11 @@ function getDateRangeForPeriod(period: string) {
     default:
       startDate = new Date(jstNow.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
-  
+
   // UTCに変換
   const startDateUTC = new Date(startDate.getTime() - 9 * 60 * 60 * 1000);
   const endDateUTC = new Date(now.getTime() - 9 * 60 * 60 * 1000);
-  
+
   return { startDate: startDateUTC, endDate: endDateUTC };
 }
 
@@ -126,7 +126,9 @@ export async function GET(request: NextRequest) {
       // エラーログの変化率を計算
       let errorChange = 0;
       if (yesterdayErrorCount && yesterdayErrorCount > 0) {
-        errorChange = Math.round(((todayErrorCount || 0) - yesterdayErrorCount) / yesterdayErrorCount * 100);
+        errorChange = Math.round(
+          (((todayErrorCount || 0) - yesterdayErrorCount) / yesterdayErrorCount) * 100
+        );
       } else if (todayErrorCount && todayErrorCount > 0) {
         errorChange = 100;
       }
@@ -134,7 +136,9 @@ export async function GET(request: NextRequest) {
       // 監査ログの変化率を計算
       let auditChange = 0;
       if (yesterdayAuditCount && yesterdayAuditCount > 0) {
-        auditChange = Math.round(((todayAuditCount || 0) - yesterdayAuditCount) / yesterdayAuditCount * 100);
+        auditChange = Math.round(
+          (((todayAuditCount || 0) - yesterdayAuditCount) / yesterdayAuditCount) * 100
+        );
       } else if (todayAuditCount && todayAuditCount > 0) {
         auditChange = 100;
       }
@@ -143,13 +147,13 @@ export async function GET(request: NextRequest) {
         errorLogs: {
           todayCount: todayErrorCount || 0,
           yesterdayCount: yesterdayErrorCount || 0,
-          change: errorChange
+          change: errorChange,
         },
         auditLogs: {
           todayCount: todayAuditCount || 0,
           yesterdayCount: yesterdayAuditCount || 0,
-          change: auditChange
-        }
+          change: auditChange,
+        },
       });
     } else if (type === 'graph' && period) {
       // グラフデータを取得
@@ -186,22 +190,22 @@ export async function GET(request: NextRequest) {
       const logsByDate = new Map<string, { errorCount: number; auditCount: number }>();
 
       // エラーログを集計
-      errorLogs?.forEach(log => {
+      errorLogs?.forEach((log) => {
         const date = new Date(log.created_at);
         const jstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
         const dateKey = jstDate.toISOString().split('T')[0];
-        
+
         const current = logsByDate.get(dateKey) || { errorCount: 0, auditCount: 0 };
         current.errorCount += 1;
         logsByDate.set(dateKey, current);
       });
 
       // 監査ログを集計
-      auditLogs?.forEach(log => {
+      auditLogs?.forEach((log) => {
         const date = new Date(log.created_at);
         const jstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
         const dateKey = jstDate.toISOString().split('T')[0];
-        
+
         const current = logsByDate.get(dateKey) || { errorCount: 0, auditCount: 0 };
         current.auditCount += 1;
         logsByDate.set(dateKey, current);

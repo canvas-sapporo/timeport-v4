@@ -225,6 +225,11 @@ export default function ClockRecordsInput({
   const updateSession = (index: number, field: keyof ClockRecord, value: string) => {
     const newRecords = [...clockRecords];
 
+    // breaksフィールドは配列なので特別な処理は不要
+    if (field === 'breaks') {
+      return;
+    }
+
     if (field === 'in_time' || field === 'out_time') {
       let nextValue = value;
 
