@@ -518,7 +518,7 @@ export function getCurrentJST(): Date {
  */
 export function getJSTDateString(date: Date = new Date()): string {
   const jstDate = toZonedTime(date, 'Asia/Tokyo');
-  return format(jstDate, 'yyyy-MM-dd', { timeZone: 'Asia/Tokyo' });
+  return format(jstDate, 'yyyy-MM-dd');
 }
 
 /**
@@ -528,7 +528,7 @@ export function getJSTDateString(date: Date = new Date()): string {
  */
 export function getJSTTimeString(date: Date = new Date()): string {
   const jstDate = toZonedTime(date, 'Asia/Tokyo');
-  return format(jstDate, 'HH:mm:ss', { timeZone: 'Asia/Tokyo' });
+  return format(jstDate, 'HH:mm:ss');
 }
 
 /**

@@ -44,21 +44,30 @@ export default function SuperAdminDashboard() {
     async function fetchLogsCount() {
       try {
         const [errorResult, auditResult] = await Promise.all([
-          getSystemErrorLogsCount(),
-          getAuditLogsCount(),
+          getSystemErrorLogsCount(selectedPeriod),
+          getAuditLogsCount(selectedPeriod),
         ]);
 
-        setErrorLogsCount(errorResult.todayCount);
-        setErrorLogsChange(errorResult.change);
-        setAuditLogsCount(auditResult.todayCount);
-        setAuditLogsChange(auditResult.change);
+        // エラーハンドリング: 結果がundefinedまたはnullの場合のデフォルト値
+        const safeErrorResult = errorResult || { todayCount: 0, yesterdayCount: 0, change: 0 };
+        const safeAuditResult = auditResult || { todayCount: 0, yesterdayCount: 0, change: 0 };
+
+        setErrorLogsCount(safeErrorResult.todayCount);
+        setErrorLogsChange(safeErrorResult.change);
+        setAuditLogsCount(safeAuditResult.todayCount);
+        setAuditLogsChange(safeAuditResult.change);
       } catch (error) {
         console.error('Error fetching logs count:', error);
+        // エラー時のデフォルト値設定
+        setErrorLogsCount(0);
+        setErrorLogsChange(0);
+        setAuditLogsCount(0);
+        setAuditLogsChange(0);
       }
     }
 
     fetchLogsCount();
-  }, []);
+  }, [selectedPeriod]);
 
   // グラフデータを取得
   useEffect(() => {
@@ -141,20 +150,20 @@ export default function SuperAdminDashboard() {
 
         {/* Right Side Stats */}
         <div className="h-[384px] flex flex-col justify-between">
-          {/* Today's Error Count */}
+          {/* Latest Day's Error Count */}
           <div className="h-[180px]">
             <StatsCard
-              title="本日のシステムエラーログ"
+              title="最新日のシステムエラーログ"
               value={errorLogsCount}
               change={errorLogsChange}
               icon={<AlertCircle className="w-6 h-6" />}
             />
           </div>
 
-          {/* Today's Audit Log Count */}
+          {/* Latest Day's Audit Log Count */}
           <div className="h-[180px]">
             <StatsCard
-              title="本日の監査ログ数"
+              title="最新日の監査ログ数"
               value={auditLogsCount}
               change={auditLogsChange}
               icon={<Settings className="w-6 h-6" />}
