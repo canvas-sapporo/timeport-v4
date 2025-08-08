@@ -18,6 +18,72 @@ import type {
   UpdateRequestResult,
   ApproveRequestResult,
 } from '@/schemas/request';
+import type { ClockBreakRecord, ClockRecord } from '@/schemas/attendance';
+
+// calculateWorkTime関数をインポート
+async function calculateWorkTime(
+  clockInTime: string,
+  clockOutTime: string,
+  breakRecords: ClockBreakRecord[],
+  workTypeId?: string
+): Promise<{ actualWorkMinutes: number; overtimeMinutes: number }> {
+  const supabaseAdmin = createAdminClient();
+  const clockIn = new Date(clockInTime);
+  const clockOut = new Date(clockOutTime);
+
+  // 総勤務時間（分）
+  const totalMinutes = Math.floor((clockOut.getTime() - clockIn.getTime()) / 60000);
+
+  // 休憩時間（分）の計算
+  const breakMinutes = breakRecords.reduce((total, br) => {
+    if (br.break_start && br.break_end) {
+      try {
+        const breakStart = new Date(br.break_start);
+        const breakEnd = new Date(br.break_end);
+
+        if (isNaN(breakStart.getTime()) || isNaN(breakEnd.getTime())) {
+          console.warn('無効な休憩時間:', { break_start: br.break_start, break_end: br.break_end });
+          return total;
+        }
+
+        const breakDuration = Math.floor((breakEnd.getTime() - breakStart.getTime()) / 60000);
+        return total + Math.max(0, breakDuration);
+      } catch (error) {
+        console.warn('休憩時間計算エラー:', error);
+        return total;
+      }
+    }
+    return total;
+  }, 0);
+
+  // 実勤務時間（分）
+  const actualWorkMinutes = Math.max(0, totalMinutes - breakMinutes);
+
+  // work_typeから残業閾値を取得
+  let overtimeThresholdMinutes = 480;
+
+  if (workTypeId) {
+    try {
+      const { data: workType, error } = await supabaseAdmin
+        .from('work_types')
+        .select('overtime_threshold_minutes')
+        .eq('id', workTypeId)
+        .is('deleted_at', null)
+        .single();
+
+      if (!error && workType?.overtime_threshold_minutes) {
+        overtimeThresholdMinutes = workType.overtime_threshold_minutes;
+      }
+    } catch (error) {
+      console.warn('work_type取得エラー:', error);
+    }
+  }
+
+  // 残業時間（分）
+  const overtimeMinutes = Math.max(0, actualWorkMinutes - overtimeThresholdMinutes);
+
+  return { actualWorkMinutes, overtimeMinutes };
+}
 
 /**
  * クライアント情報を取得
@@ -451,12 +517,9 @@ export async function getAdminRequests(): Promise<GetRequestsResult> {
           category
         ),
         request_forms!requests_request_form_id_fkey(
-          id,
-          name,
-          description,
+          *,
           form_config,
-          approval_flow,
-          category
+          approval_flow
         )
       `
       )
@@ -842,11 +905,28 @@ export async function approveRequest(
       }
     }
 
+    // 承認済みステータスのIDを取得
+    const { data: approvedStatus, error: statusError } = await supabase
+      .from('statuses')
+      .select('id')
+      .eq('code', 'approved')
+      .eq('category', 'request')
+      .single();
+
+    if (statusError || !approvedStatus) {
+      console.error('承認済みステータス取得エラー:', statusError);
+      return {
+        success: false,
+        message: '承認済みステータスの取得に失敗しました',
+        error: statusError?.message,
+      };
+    }
+
     // 申請ステータスを更新
     const { error: updateError } = await supabase
       .from('requests')
       .update({
-        status_id: 'approved', // 承認済みステータスID
+        status_id: approvedStatus.id, // 承認済みステータスID
         updated_at: new Date().toISOString(),
       })
       .eq('id', requestId);
@@ -983,6 +1063,7 @@ async function handleAttendanceObjectApproval(
 
   try {
     const supabase = createServerClient();
+    const supabaseAdmin = createAdminClient();
     const formData = request.form_data;
 
     // バリデーション
@@ -1001,7 +1082,7 @@ async function handleAttendanceObjectApproval(
     const workDate = formData.work_date;
     const userId = request.user_id;
 
-    const { data: existingAttendance, error: searchError } = await supabase
+    const { data: existingAttendance, error: searchError } = await supabaseAdmin
       .from('attendances')
       .select('*')
       .eq('user_id', userId)
@@ -1018,21 +1099,71 @@ async function handleAttendanceObjectApproval(
       };
     }
 
-    // 新しいattendanceレコードを作成
-    const newAttendanceData = {
+    if (!existingAttendance) {
+      return {
+        success: false,
+        message: '更新対象の勤怠記録が見つかりません',
+        error: 'ATTENDANCE_NOT_FOUND',
+      };
+    }
+
+    // 既存のレコードを非アクティブにする（is_current = false）
+    const { error: deactivateError } = await supabaseAdmin
+      .from('attendances')
+      .update({ is_current: false })
+      .eq('id', existingAttendance.id);
+
+    if (deactivateError) {
+      console.error('既存レコード非アクティブ化エラー:', deactivateError);
+      return {
+        success: false,
+        message: '勤怠記録の更新に失敗しました',
+        error: deactivateError.message,
+      };
+    }
+
+    // 新しいレコード用のデータを準備
+    const newRecordData = {
       user_id: userId,
       work_date: workDate,
-      clock_records: formData.clock_records || [],
-      source_id: existingAttendance?.id || null,
+      work_type_id: existingAttendance.work_type_id,
+      description: existingAttendance.description,
+      approved_by: approverId,
+      approved_at: new Date().toISOString(),
+      source_id: existingAttendance.id,
       edit_reason: `申請による修正 (申請ID: ${request.id})`,
       edited_by: approverId,
+      attendance_status_id: existingAttendance.attendance_status_id,
+      clock_records: formData.clock_records || existingAttendance.clock_records || [],
+      actual_work_minutes: existingAttendance.actual_work_minutes,
+      overtime_minutes: existingAttendance.overtime_minutes,
+      late_minutes: existingAttendance.late_minutes,
+      early_leave_minutes: existingAttendance.early_leave_minutes,
+      status: existingAttendance.status,
+      is_current: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    const { data: newAttendance, error: createError } = await supabase
+    // 勤務時間の自動計算（clock_recordsが更新された場合）
+    if (formData.clock_records && Array.isArray(formData.clock_records) && formData.clock_records.length > 0) {
+      const latestSession = formData.clock_records[formData.clock_records.length - 1] as unknown as ClockRecord;
+      if (latestSession.in_time && latestSession.out_time) {
+        const { actualWorkMinutes, overtimeMinutes } = await calculateWorkTime(
+          latestSession.in_time,
+          latestSession.out_time,
+          latestSession.breaks || [],
+          existingAttendance.work_type_id
+        );
+        newRecordData.actual_work_minutes = actualWorkMinutes;
+        newRecordData.overtime_minutes = overtimeMinutes;
+      }
+    }
+
+    // 新しいレコードを作成
+    const { data: newRecord, error: createError } = await supabaseAdmin
       .from('attendances')
-      .insert(newAttendanceData)
+      .insert(newRecordData)
       .select()
       .single();
 
@@ -1045,10 +1176,258 @@ async function handleAttendanceObjectApproval(
       };
     }
 
-    console.log('attendanceオブジェクト承認処理成功:', newAttendance);
+    // 監査ログを記録
+    try {
+      const clientInfo = await getClientInfo();
+      
+      // ユーザーの企業IDを取得
+      const { data: userProfile } = await supabaseAdmin
+        .from('user_profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      let companyId: string | undefined;
+      if (userProfile) {
+        const { data: userGroup } = await supabaseAdmin
+          .from('user_groups')
+          .select('groups(company_id)')
+          .eq('user_id', userId)
+          .is('deleted_at', null)
+          .single();
+        companyId = userGroup?.groups?.[0]?.company_id;
+      }
+
+      await logAudit('attendance_updated', {
+        user_id: userId,
+        company_id: companyId || undefined,
+        target_type: 'attendances',
+        target_id: newRecord.id,
+        before_data: existingAttendance,
+        after_data: newRecord,
+        details: {
+          action_type: 'request_approval',
+          updated_fields: ['clock_records'],
+          approved_by: approverId,
+          approved_at: new Date().toISOString(),
+          source_id: existingAttendance.id,
+          edit_reason: `申請による修正 (申請ID: ${request.id})`,
+          request_id: request.id,
+        },
+        ip_address: clientInfo.ip_address,
+        user_agent: clientInfo.user_agent,
+        session_id: clientInfo.session_id,
+      });
+      console.log('監査ログ記録完了: attendance_updated (request_approval)');
+    } catch (error) {
+      console.error('監査ログ記録エラー:', error);
+    }
+
+    console.log('attendanceオブジェクト承認処理成功:', newRecord);
     return { success: true, message: '勤怠記録を更新しました' };
   } catch (error) {
     console.error('handleAttendanceObjectApproval エラー:', error);
+    return {
+      success: false,
+      message: '勤怠記録の更新に失敗しました',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * 打刻修正申請の承認時にattendancesテーブルを更新
+ */
+async function updateAttendanceFromCorrectionRequest(
+  request: Request,
+  approverId: string
+): Promise<{ success: boolean; message: string; error?: string }> {
+  console.log('updateAttendanceFromCorrectionRequest 開始:', { requestId: request.id });
+
+  try {
+    const supabase = createAdminClient();
+    const formData = request.form_data;
+
+    // attendance_correctionデータの取得
+    const attendanceCorrection = formData?.attendance_correction as any;
+    if (!attendanceCorrection) {
+      console.log('attendance_correctionデータが見つかりません');
+      return {
+        success: false,
+        message: '打刻修正データが見つかりません',
+        error: 'NO_CORRECTION_DATA',
+      };
+    }
+
+    console.log('attendance_correctionデータ:', attendanceCorrection);
+
+    // 勤務日を取得
+    const workDate = formData?.work_date as string;
+    if (!workDate) {
+      console.log('work_dateが見つかりません');
+      return {
+        success: false,
+        message: '勤務日が見つかりません',
+        error: 'NO_WORK_DATE',
+      };
+    }
+
+    // 既存のattendanceレコードを検索
+    const { data: existingAttendance, error: searchError } = await supabase
+      .from('attendances')
+      .select('*')
+      .eq('user_id', request.user_id)
+      .eq('work_date', workDate)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (searchError && searchError.code !== 'PGRST116') {
+      console.error('attendance検索エラー:', searchError);
+      return {
+        success: false,
+        message: '既存の勤怠記録の検索に失敗しました',
+        error: searchError.message,
+      };
+    }
+
+    // clock_recordsデータの準備
+    let clockRecords: any[] = [];
+    
+    if (Array.isArray(attendanceCorrection)) {
+      // 配列形式の場合
+      clockRecords = attendanceCorrection.map((record: any) => ({
+        in_time: record.in_time,
+        out_time: record.out_time,
+        breaks: record.breaks || [],
+      }));
+    } else if (attendanceCorrection.clock_records) {
+      // オブジェクト形式の場合
+      clockRecords = attendanceCorrection.clock_records;
+    } else {
+      console.log('clock_recordsデータが見つかりません');
+      return {
+        success: false,
+        message: '打刻記録データが見つかりません',
+        error: 'NO_CLOCK_RECORDS',
+      };
+    }
+
+    console.log('更新するclock_records:', clockRecords);
+
+    if (existingAttendance) {
+      // 既存のレコードを非アクティブにする
+      const { error: deactivateError } = await supabase
+        .from('attendances')
+        .update({ is_current: false })
+        .eq('id', existingAttendance.id);
+
+      if (deactivateError) {
+        console.error('既存レコード非アクティブ化エラー:', deactivateError);
+        return {
+          success: false,
+          message: '勤怠記録の更新に失敗しました',
+          error: deactivateError.message,
+        };
+      }
+
+      // 新しいレコードを作成
+      const newAttendanceData = {
+        user_id: request.user_id,
+        work_date: workDate,
+        work_type_id: existingAttendance.work_type_id,
+        clock_records: clockRecords,
+        description: existingAttendance.description,
+        approved_by: approverId,
+        approved_at: new Date().toISOString(),
+        source_id: existingAttendance.id,
+        edit_reason: `打刻修正申請による承認 (申請ID: ${request.id})`,
+        edited_by: approverId,
+        is_current: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: newRecord, error: createError } = await supabase
+        .from('attendances')
+        .insert(newAttendanceData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('新しい勤怠記録作成エラー:', createError);
+        return {
+          success: false,
+          message: '勤怠記録の更新に失敗しました',
+          error: createError.message,
+        };
+      }
+
+      console.log('勤怠記録更新成功:', newRecord);
+    } else {
+      // 新しい勤怠記録を作成
+      const newAttendanceData = {
+        user_id: request.user_id,
+        work_date: workDate,
+        clock_records: clockRecords,
+        approved_by: approverId,
+        approved_at: new Date().toISOString(),
+        edit_reason: `打刻修正申請による承認 (申請ID: ${request.id})`,
+        edited_by: approverId,
+        is_current: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: newRecord, error: createError } = await supabase
+        .from('attendances')
+        .insert(newAttendanceData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('新しい勤怠記録作成エラー:', createError);
+        return {
+          success: false,
+          message: '勤怠記録の作成に失敗しました',
+          error: createError.message,
+        };
+      }
+
+      console.log('勤怠記録作成成功:', newRecord);
+    }
+
+    // システムログを記録
+    await logSystem('info', '打刻修正申請承認による勤怠記録更新', {
+      feature_name: 'request_management',
+      action_type: 'attendance_correction_approved',
+      user_id: approverId,
+      resource_id: request.id,
+      metadata: {
+        request_user_id: request.user_id,
+        work_date: workDate,
+        has_existing_attendance: !!existingAttendance,
+        clock_records_count: clockRecords.length,
+      },
+    });
+
+    return {
+      success: true,
+      message: '勤怠記録を更新しました',
+    };
+  } catch (error) {
+    console.error('updateAttendanceFromCorrectionRequest エラー:', error);
+    
+    // システムログを記録
+    await logSystem('error', '打刻修正申請承認時の勤怠記録更新エラー', {
+      feature_name: 'request_management',
+      action_type: 'attendance_correction_approved',
+      user_id: approverId,
+      resource_id: request.id,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+    });
+
     return {
       success: false,
       message: '勤怠記録の更新に失敗しました',

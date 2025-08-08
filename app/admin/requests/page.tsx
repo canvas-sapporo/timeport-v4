@@ -22,7 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRequestForms, deleteRequestForm } from '@/lib/actions/admin/request-forms';
-import { getAdminRequests, updateRequestStatus } from '@/lib/actions/requests';
+import { getAdminRequests, updateRequestStatus, approveRequest } from '@/lib/actions/requests';
 import type { RequestForm } from '@/schemas/request';
 import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
 
@@ -48,9 +48,7 @@ interface AdminRequestData {
   submission_comment?: string;
   form_data?: Record<string, string | number | boolean | string[] | Date>;
   form?: RequestForm;
-  request_forms?: {
-    name?: string;
-  };
+  request_forms?: RequestForm;
 }
 import RequestFormEditDialog from '@/components/admin/request-forms/RequestFormEditDialog';
 import RequestFormCreateDialog from '@/components/admin/request-forms/RequestFormCreateDialog';
@@ -204,14 +202,14 @@ export default function AdminRequestsPage() {
     if (user && user.role === 'admin') {
       console.log('AdminRequestsPage: 管理者ユーザー確認、データ取得開始');
       fetchAdminRequests();
-      fetchRequestForms(); // 申請フォームも取得
+      // fetchRequestForms(); // getAdminRequestsでrequest_formsも取得するため不要
     }
   }, [user]);
 
   // 申請フォームタブがアクティブになったときにデータを取得
   useEffect(() => {
     if (activeTab === 'forms') {
-      fetchRequestForms();
+      fetchRequestForms(); // 申請フォーム管理タブでは別途取得が必要
     }
   }, [activeTab]);
 
@@ -221,12 +219,7 @@ export default function AdminRequestsPage() {
 
   async function handleApprove(requestId: string) {
     try {
-      const result = await updateRequestStatus(
-        requestId,
-        'approved',
-        '管理者により承認されました',
-        user?.id
-      );
+      const result = await approveRequest(requestId, user?.id || '', '管理者により承認されました');
       if (result.success) {
         toast({
           title: '承認完了',
@@ -469,37 +462,26 @@ export default function AdminRequestsPage() {
   // デバッグ: データの状態をログ出力
   console.log('AdminRequestsPage: 現在の状態', {
     requestsCount: requests.length,
-    requests: requests,
+    requests: requests.map((req) => ({
+      id: req.id,
+      request_form_id: req.request_form_id,
+      hasRequestForms: !!req.request_forms,
+      requestFormsName: req.request_forms?.name,
+    })),
     usersCount: users.length,
     requestFormsCount: requestForms.length,
     isRequestsLoading,
     user: user?.id,
   });
 
-  // 申請データのrequest_form_idを確認
-  const missingRequestFormIds = requests
-    .map((req) => (req as { request_form_id: string }).request_form_id)
-    .filter((formId) => !requestForms.find((form) => form.id === formId));
-
-  console.log('AdminRequestsPage: 不足している申請フォームID', missingRequestFormIds);
+  // 申請データのrequest_form_idを確認（getAdminRequestsで取得したデータを使用）
+  const requestsWithMissingForms = requests.filter((req) => !req.request_forms);
+  console.log('AdminRequestsPage: request_formsデータが不足している申請', requestsWithMissingForms);
 
   // 「自分が承認者の申請」だけ抽出
   const myApprovalRequests = requests
     .map((req) => {
-      const request = req as {
-        id: string;
-        request_form_id: string;
-        current_approval_step: number;
-        user_id: string;
-        title?: string;
-        status_id: string;
-        statuses?: { name?: string; code?: string };
-        created_at?: string;
-        target_date?: string;
-        start_date?: string;
-        end_date?: string;
-        updated_at?: string;
-      };
+      const request = req as AdminRequestData;
 
       console.log('AdminRequestsPage: 申請データ処理', {
         requestId: request.id,
@@ -507,24 +489,42 @@ export default function AdminRequestsPage() {
         currentStep: request.current_approval_step,
         userId: request.user_id,
         title: request.title,
+        hasRequestForms: !!request.request_forms,
+        requestFormsName: request.request_forms?.name,
       });
 
-      const form = requestForms.find((f) => f.id === request.request_form_id);
-      if (!form) {
-        console.log('AdminRequestsPage: 申請フォームが見つかりません', request.request_form_id);
+      // getAdminRequestsで取得したrequest_formsデータを使用
+      if (!request.request_forms) {
+        console.log('AdminRequestsPage: 申請フォームデータがありません', request.request_form_id);
         return null;
       }
 
-      const step = form.approval_flow.find((s) => s.step === request.current_approval_step);
-      if (!step) {
-        console.log('AdminRequestsPage: 承認ステップが見つかりません', {
-          step: request.current_approval_step,
-          approvalFlow: form.approval_flow,
+      // request_formsのform_configとapproval_flowを取得
+      const formConfig = request.request_forms.form_config;
+      const approvalFlow = request.request_forms.approval_flow;
+
+      if (!approvalFlow || !Array.isArray(approvalFlow)) {
+        console.log('AdminRequestsPage: 承認フローがありません', {
+          requestFormId: request.request_form_id,
+          approvalFlow,
         });
         return null;
       }
 
-      return { ...request, approver_id: step.approver_id, form };
+      const step = approvalFlow.find((s) => s.step === request.current_approval_step);
+      if (!step) {
+        console.log('AdminRequestsPage: 承認ステップが見つかりません', {
+          step: request.current_approval_step,
+          approvalFlow,
+        });
+        return null;
+      }
+
+      return {
+        ...request,
+        approver_id: step.approver_id,
+        form: request.request_forms,
+      };
     })
     .filter(
       (req) =>
@@ -1077,22 +1077,168 @@ export default function AdminRequestsPage() {
                               typeof value === 'object' &&
                               value !== null
                             ) {
-                              const correctionData = value as {
-                                work_date?: string;
-                                clock_records?: ClockRecord[];
-                              };
-
                               // デバッグ用ログ
                               console.log('attendance_correction データ:', {
                                 key,
                                 value,
-                                correctionData,
-                                work_date: correctionData.work_date,
-                                clock_records: correctionData.clock_records,
-                                clock_records_length: correctionData.clock_records?.length,
-                                clock_records_type: typeof correctionData.clock_records,
-                                is_array: Array.isArray(correctionData.clock_records),
+                                value_type: typeof value,
+                                is_array: Array.isArray(value),
                               });
+
+                              // attendance_correction が配列の場合の処理
+                              if (Array.isArray(value)) {
+                                return (
+                                  <div key={key} className="space-y-4">
+                                    {/* セクションタイトル */}
+                                    <div className="border-b border-gray-200 pb-2">
+                                      <h4 className="text-blue-600 font-medium">打刻修正</h4>
+                                    </div>
+
+                                    {/* 勤務セッション */}
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-sm font-medium text-gray-700">
+                                          勤務セッション
+                                        </Label>
+                                      </div>
+
+                                      {(value as unknown as ClockRecord[]).map(
+                                        (record: ClockRecord, index: number) => (
+                                          <div
+                                            key={index}
+                                            className="border border-blue-200 rounded-lg p-4 bg-blue-50/30"
+                                          >
+                                            <div className="text-sm font-medium text-blue-800 mb-3">
+                                              セッション {index + 1}
+                                            </div>
+
+                                            <div className="space-y-3">
+                                              {/* 出勤時刻 */}
+                                              {record.in_time && (
+                                                <div className="space-y-1">
+                                                  <Label className="text-sm font-medium text-gray-700">
+                                                    出勤時刻
+                                                  </Label>
+                                                  <div className="p-2 bg-white rounded border">
+                                                    <span className="text-gray-800">
+                                                      {new Date(record.in_time).toLocaleString(
+                                                        'ja-JP',
+                                                        {
+                                                          year: 'numeric',
+                                                          month: '2-digit',
+                                                          day: '2-digit',
+                                                          hour: '2-digit',
+                                                          minute: '2-digit',
+                                                        }
+                                                      )}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* 退勤時刻 */}
+                                              {record.out_time && (
+                                                <div className="space-y-1">
+                                                  <Label className="text-sm font-medium text-gray-700">
+                                                    退勤時刻
+                                                  </Label>
+                                                  <div className="p-2 bg-white rounded border">
+                                                    <span className="text-gray-800">
+                                                      {new Date(record.out_time).toLocaleString(
+                                                        'ja-JP',
+                                                        {
+                                                          year: 'numeric',
+                                                          month: '2-digit',
+                                                          day: '2-digit',
+                                                          hour: '2-digit',
+                                                          minute: '2-digit',
+                                                        }
+                                                      )}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* 休憩記録 */}
+                                              <div className="space-y-2">
+                                                <Label className="text-sm font-medium text-gray-700">
+                                                  休憩記録
+                                                </Label>
+                                                {record.breaks &&
+                                                Array.isArray(record.breaks) &&
+                                                record.breaks.length > 0 ? (
+                                                  <div className="space-y-2">
+                                                    {record.breaks.map(
+                                                      (
+                                                        breakRecord: ClockBreakRecord,
+                                                        breakIndex: number
+                                                      ) => (
+                                                        <div
+                                                          key={breakIndex}
+                                                          className="border border-gray-200 rounded p-3 bg-white"
+                                                        >
+                                                          <div className="grid grid-cols-2 gap-3">
+                                                            {breakRecord.break_start && (
+                                                              <div className="space-y-1">
+                                                                <Label className="text-xs font-medium text-gray-600">
+                                                                  休憩開始
+                                                                </Label>
+                                                                <div className="p-2 bg-gray-50 rounded border">
+                                                                  <span className="text-sm text-gray-800">
+                                                                    {new Date(
+                                                                      breakRecord.break_start
+                                                                    ).toLocaleString('ja-JP', {
+                                                                      hour: '2-digit',
+                                                                      minute: '2-digit',
+                                                                    })}
+                                                                  </span>
+                                                                </div>
+                                                              </div>
+                                                            )}
+                                                            {breakRecord.break_end && (
+                                                              <div className="space-y-1">
+                                                                <Label className="text-xs font-medium text-gray-600">
+                                                                  休憩終了
+                                                                </Label>
+                                                                <div className="p-2 bg-gray-50 rounded border">
+                                                                  <span className="text-sm text-gray-800">
+                                                                    {new Date(
+                                                                      breakRecord.break_end
+                                                                    ).toLocaleString('ja-JP', {
+                                                                      hour: '2-digit',
+                                                                      minute: '2-digit',
+                                                                    })}
+                                                                  </span>
+                                                                </div>
+                                                              </div>
+                                                            )}
+                                                          </div>
+                                                        </div>
+                                                      )
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  <div className="p-2 bg-gray-50 rounded border">
+                                                    <span className="text-sm text-gray-600">
+                                                      休憩記録なし
+                                                    </span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              // 従来のオブジェクト形式の処理（後方互換性のため）
+                              const correctionData = value as {
+                                work_date?: string;
+                                clock_records?: ClockRecord[];
+                              };
 
                               return (
                                 <div key={key} className="space-y-4">
@@ -1190,65 +1336,71 @@ export default function AdminRequestsPage() {
                                                 )}
 
                                                 {/* 休憩記録 */}
-                                                {record.breaks &&
+                                                <div className="space-y-2">
+                                                  <Label className="text-sm font-medium text-gray-700">
+                                                    休憩記録
+                                                  </Label>
+                                                  {record.breaks &&
                                                   Array.isArray(record.breaks) &&
-                                                  record.breaks.length > 0 && (
+                                                  record.breaks.length > 0 ? (
                                                     <div className="space-y-2">
-                                                      <Label className="text-sm font-medium text-gray-700">
-                                                        休憩記録
-                                                      </Label>
-                                                      <div className="space-y-2">
-                                                        {record.breaks.map(
-                                                          (
-                                                            breakRecord: ClockBreakRecord,
-                                                            breakIndex: number
-                                                          ) => (
-                                                            <div
-                                                              key={breakIndex}
-                                                              className="border border-gray-200 rounded p-3 bg-white"
-                                                            >
-                                                              <div className="grid grid-cols-2 gap-3">
-                                                                {breakRecord.break_start && (
-                                                                  <div className="space-y-1">
-                                                                    <Label className="text-xs font-medium text-gray-600">
-                                                                      休憩開始
-                                                                    </Label>
-                                                                    <div className="p-2 bg-gray-50 rounded border">
-                                                                      <span className="text-sm text-gray-800">
-                                                                        {new Date(
-                                                                          breakRecord.break_start
-                                                                        ).toLocaleString('ja-JP', {
-                                                                          hour: '2-digit',
-                                                                          minute: '2-digit',
-                                                                        })}
-                                                                      </span>
-                                                                    </div>
+                                                      {record.breaks.map(
+                                                        (
+                                                          breakRecord: ClockBreakRecord,
+                                                          breakIndex: number
+                                                        ) => (
+                                                          <div
+                                                            key={breakIndex}
+                                                            className="border border-gray-200 rounded p-3 bg-white"
+                                                          >
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                              {breakRecord.break_start && (
+                                                                <div className="space-y-1">
+                                                                  <Label className="text-xs font-medium text-gray-600">
+                                                                    休憩開始
+                                                                  </Label>
+                                                                  <div className="p-2 bg-gray-50 rounded border">
+                                                                    <span className="text-sm text-gray-800">
+                                                                      {new Date(
+                                                                        breakRecord.break_start
+                                                                      ).toLocaleString('ja-JP', {
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                      })}
+                                                                    </span>
                                                                   </div>
-                                                                )}
-                                                                {breakRecord.break_end && (
-                                                                  <div className="space-y-1">
-                                                                    <Label className="text-xs font-medium text-gray-600">
-                                                                      休憩終了
-                                                                    </Label>
-                                                                    <div className="p-2 bg-gray-50 rounded border">
-                                                                      <span className="text-sm text-gray-800">
-                                                                        {new Date(
-                                                                          breakRecord.break_end
-                                                                        ).toLocaleString('ja-JP', {
-                                                                          hour: '2-digit',
-                                                                          minute: '2-digit',
-                                                                        })}
-                                                                      </span>
-                                                                    </div>
+                                                                </div>
+                                                              )}
+                                                              {breakRecord.break_end && (
+                                                                <div className="space-y-1">
+                                                                  <Label className="text-xs font-medium text-gray-600">
+                                                                    休憩終了
+                                                                  </Label>
+                                                                  <div className="p-2 bg-gray-50 rounded border">
+                                                                    <span className="text-sm text-gray-800">
+                                                                      {new Date(
+                                                                        breakRecord.break_end
+                                                                      ).toLocaleString('ja-JP', {
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                      })}
+                                                                    </span>
                                                                   </div>
-                                                                )}
-                                                              </div>
+                                                                </div>
+                                                              )}
                                                             </div>
-                                                          )
-                                                        )}
-                                                      </div>
+                                                          </div>
+                                                        )
+                                                      )}
+                                                    </div>
+                                                  ) : (
+                                                    <div className="p-2 bg-gray-50 rounded border">
+                                                      <span className="text-sm text-gray-600">
+                                                        休憩記録なし
+                                                      </span>
                                                     </div>
                                                   )}
+                                                </div>
                                               </div>
                                             </div>
                                           )
@@ -1876,22 +2028,168 @@ export default function AdminRequestsPage() {
                               typeof value === 'object' &&
                               value !== null
                             ) {
-                              const correctionData = value as {
-                                work_date?: string;
-                                clock_records?: ClockRecord[];
-                              };
-
                               // デバッグ用ログ
                               console.log('attendance_correction データ:', {
                                 key,
                                 value,
-                                correctionData,
-                                work_date: correctionData.work_date,
-                                clock_records: correctionData.clock_records,
-                                clock_records_length: correctionData.clock_records?.length,
-                                clock_records_type: typeof correctionData.clock_records,
-                                is_array: Array.isArray(correctionData.clock_records),
+                                value_type: typeof value,
+                                is_array: Array.isArray(value),
                               });
+
+                              // attendance_correction が配列の場合の処理
+                              if (Array.isArray(value)) {
+                                return (
+                                  <div key={key} className="space-y-4">
+                                    {/* セクションタイトル */}
+                                    <div className="border-b border-gray-200 pb-2">
+                                      <h4 className="text-blue-600 font-medium">打刻修正</h4>
+                                    </div>
+
+                                    {/* 勤務セッション */}
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-sm font-medium text-gray-700">
+                                          勤務セッション
+                                        </Label>
+                                      </div>
+
+                                      {(value as unknown as ClockRecord[]).map(
+                                        (record: ClockRecord, index: number) => (
+                                          <div
+                                            key={index}
+                                            className="border border-blue-200 rounded-lg p-4 bg-blue-50/30"
+                                          >
+                                            <div className="text-sm font-medium text-blue-800 mb-3">
+                                              セッション {index + 1}
+                                            </div>
+
+                                            <div className="space-y-3">
+                                              {/* 出勤時刻 */}
+                                              {record.in_time && (
+                                                <div className="space-y-1">
+                                                  <Label className="text-sm font-medium text-gray-700">
+                                                    出勤時刻
+                                                  </Label>
+                                                  <div className="p-2 bg-white rounded border">
+                                                    <span className="text-gray-800">
+                                                      {new Date(record.in_time).toLocaleString(
+                                                        'ja-JP',
+                                                        {
+                                                          year: 'numeric',
+                                                          month: '2-digit',
+                                                          day: '2-digit',
+                                                          hour: '2-digit',
+                                                          minute: '2-digit',
+                                                        }
+                                                      )}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* 退勤時刻 */}
+                                              {record.out_time && (
+                                                <div className="space-y-1">
+                                                  <Label className="text-sm font-medium text-gray-700">
+                                                    退勤時刻
+                                                  </Label>
+                                                  <div className="p-2 bg-white rounded border">
+                                                    <span className="text-gray-800">
+                                                      {new Date(record.out_time).toLocaleString(
+                                                        'ja-JP',
+                                                        {
+                                                          year: 'numeric',
+                                                          month: '2-digit',
+                                                          day: '2-digit',
+                                                          hour: '2-digit',
+                                                          minute: '2-digit',
+                                                        }
+                                                      )}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* 休憩記録 */}
+                                              <div className="space-y-2">
+                                                <Label className="text-sm font-medium text-gray-700">
+                                                  休憩記録
+                                                </Label>
+                                                {record.breaks &&
+                                                Array.isArray(record.breaks) &&
+                                                record.breaks.length > 0 ? (
+                                                  <div className="space-y-2">
+                                                    {record.breaks.map(
+                                                      (
+                                                        breakRecord: ClockBreakRecord,
+                                                        breakIndex: number
+                                                      ) => (
+                                                        <div
+                                                          key={breakIndex}
+                                                          className="border border-gray-200 rounded p-3 bg-white"
+                                                        >
+                                                          <div className="grid grid-cols-2 gap-3">
+                                                            {breakRecord.break_start && (
+                                                              <div className="space-y-1">
+                                                                <Label className="text-xs font-medium text-gray-600">
+                                                                  休憩開始
+                                                                </Label>
+                                                                <div className="p-2 bg-gray-50 rounded border">
+                                                                  <span className="text-sm text-gray-800">
+                                                                    {new Date(
+                                                                      breakRecord.break_start
+                                                                    ).toLocaleString('ja-JP', {
+                                                                      hour: '2-digit',
+                                                                      minute: '2-digit',
+                                                                    })}
+                                                                  </span>
+                                                                </div>
+                                                              </div>
+                                                            )}
+                                                            {breakRecord.break_end && (
+                                                              <div className="space-y-1">
+                                                                <Label className="text-xs font-medium text-gray-600">
+                                                                  休憩終了
+                                                                </Label>
+                                                                <div className="p-2 bg-gray-50 rounded border">
+                                                                  <span className="text-sm text-gray-800">
+                                                                    {new Date(
+                                                                      breakRecord.break_end
+                                                                    ).toLocaleString('ja-JP', {
+                                                                      hour: '2-digit',
+                                                                      minute: '2-digit',
+                                                                    })}
+                                                                  </span>
+                                                                </div>
+                                                              </div>
+                                                            )}
+                                                          </div>
+                                                        </div>
+                                                      )
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  <div className="p-2 bg-gray-50 rounded border">
+                                                    <span className="text-sm text-gray-600">
+                                                      休憩記録なし
+                                                    </span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              // 従来のオブジェクト形式の処理（後方互換性のため）
+                              const correctionData = value as {
+                                work_date?: string;
+                                clock_records?: ClockRecord[];
+                              };
 
                               return (
                                 <div key={key} className="space-y-4">
@@ -1989,65 +2287,71 @@ export default function AdminRequestsPage() {
                                                 )}
 
                                                 {/* 休憩記録 */}
-                                                {record.breaks &&
+                                                <div className="space-y-2">
+                                                  <Label className="text-sm font-medium text-gray-700">
+                                                    休憩記録
+                                                  </Label>
+                                                  {record.breaks &&
                                                   Array.isArray(record.breaks) &&
-                                                  record.breaks.length > 0 && (
+                                                  record.breaks.length > 0 ? (
                                                     <div className="space-y-2">
-                                                      <Label className="text-sm font-medium text-gray-700">
-                                                        休憩記録
-                                                      </Label>
-                                                      <div className="space-y-2">
-                                                        {record.breaks.map(
-                                                          (
-                                                            breakRecord: ClockBreakRecord,
-                                                            breakIndex: number
-                                                          ) => (
-                                                            <div
-                                                              key={breakIndex}
-                                                              className="border border-gray-200 rounded p-3 bg-white"
-                                                            >
-                                                              <div className="grid grid-cols-2 gap-3">
-                                                                {breakRecord.break_start && (
-                                                                  <div className="space-y-1">
-                                                                    <Label className="text-xs font-medium text-gray-600">
-                                                                      休憩開始
-                                                                    </Label>
-                                                                    <div className="p-2 bg-gray-50 rounded border">
-                                                                      <span className="text-sm text-gray-800">
-                                                                        {new Date(
-                                                                          breakRecord.break_start
-                                                                        ).toLocaleString('ja-JP', {
-                                                                          hour: '2-digit',
-                                                                          minute: '2-digit',
-                                                                        })}
-                                                                      </span>
-                                                                    </div>
+                                                      {record.breaks.map(
+                                                        (
+                                                          breakRecord: ClockBreakRecord,
+                                                          breakIndex: number
+                                                        ) => (
+                                                          <div
+                                                            key={breakIndex}
+                                                            className="border border-gray-200 rounded p-3 bg-white"
+                                                          >
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                              {breakRecord.break_start && (
+                                                                <div className="space-y-1">
+                                                                  <Label className="text-xs font-medium text-gray-600">
+                                                                    休憩開始
+                                                                  </Label>
+                                                                  <div className="p-2 bg-gray-50 rounded border">
+                                                                    <span className="text-sm text-gray-800">
+                                                                      {new Date(
+                                                                        breakRecord.break_start
+                                                                      ).toLocaleString('ja-JP', {
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                      })}
+                                                                    </span>
                                                                   </div>
-                                                                )}
-                                                                {breakRecord.break_end && (
-                                                                  <div className="space-y-1">
-                                                                    <Label className="text-xs font-medium text-gray-600">
-                                                                      休憩終了
-                                                                    </Label>
-                                                                    <div className="p-2 bg-gray-50 rounded border">
-                                                                      <span className="text-sm text-gray-800">
-                                                                        {new Date(
-                                                                          breakRecord.break_end
-                                                                        ).toLocaleString('ja-JP', {
-                                                                          hour: '2-digit',
-                                                                          minute: '2-digit',
-                                                                        })}
-                                                                      </span>
-                                                                    </div>
+                                                                </div>
+                                                              )}
+                                                              {breakRecord.break_end && (
+                                                                <div className="space-y-1">
+                                                                  <Label className="text-xs font-medium text-gray-600">
+                                                                    休憩終了
+                                                                  </Label>
+                                                                  <div className="p-2 bg-gray-50 rounded border">
+                                                                    <span className="text-sm text-gray-800">
+                                                                      {new Date(
+                                                                        breakRecord.break_end
+                                                                      ).toLocaleString('ja-JP', {
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                      })}
+                                                                    </span>
                                                                   </div>
-                                                                )}
-                                                              </div>
+                                                                </div>
+                                                              )}
                                                             </div>
-                                                          )
-                                                        )}
-                                                      </div>
+                                                          </div>
+                                                        )
+                                                      )}
+                                                    </div>
+                                                  ) : (
+                                                    <div className="p-2 bg-gray-50 rounded border">
+                                                      <span className="text-sm text-gray-600">
+                                                        休憩記録なし
+                                                      </span>
                                                     </div>
                                                   )}
+                                                </div>
                                               </div>
                                             </div>
                                           )

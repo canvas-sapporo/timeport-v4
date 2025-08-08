@@ -405,7 +405,6 @@ export const RequestFormSchema = z.object({
   default_status_id: z.string().uuid().optional(),
   is_active: z.boolean(),
   display_order: z.number().int().min(0),
-  object_config: ObjectMetadataSchema.optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   deleted_at: z.string().datetime().optional(),

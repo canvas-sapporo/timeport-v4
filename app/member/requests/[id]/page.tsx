@@ -34,6 +34,7 @@ import {
 import { RequestDetail, RequestComment, RequestAttachment, ApprovalStep } from '@/schemas/request';
 import { supabase } from '@/lib/supabase';
 import { formatDateTimeForDisplay } from '@/lib/utils';
+import { approveRequest, updateRequestStatus } from '@/lib/actions/requests';
 
 // コメント投稿スキーマ
 const commentSchema = z.object({
@@ -208,38 +209,18 @@ export default function RequestDetailPage() {
 
     setIsSubmitting(true);
     try {
-      const newStatus =
-        data.action === 'approve' ? 'approved' : data.action === 'reject' ? 'rejected' : 'pending';
-
-      // リクエストステータスを更新
-      updateRequest(request.id, {
-        status_id: newStatus,
-        current_approval_step:
-          data.action === 'approve'
-            ? request.current_approval_step + 1
-            : request.current_approval_step,
-      });
-
-      // 承認履歴を記録
-      await supabase.from('request_approval_history').insert({
-        request_id: request.id,
-        step_number: request.current_approval_step,
-        approver_id: user.id,
-        approver_name: user.full_name || '',
-        action: data.action,
-        comment: data.comment || '',
-        processed_at: new Date().toISOString(),
-      });
-
-      // コメントを追加
-      if (data.comment) {
-        await supabase.from('request_comments').insert({
-          request_id: request.id,
-          user_id: user.id,
-          user_name: user.full_name || '',
-          content: data.comment,
-          type: data.action === 'approve' ? 'approval' : 'rejection',
-        });
+      if (data.action === 'approve') {
+        // 承認処理
+        const result = await approveRequest(request.id, user.id, data.comment);
+        if (!result.success) {
+          throw new Error(result.error || '承認に失敗しました');
+        }
+      } else if (data.action === 'reject') {
+        // 却下処理
+        const result = await updateRequestStatus(request.id, 'rejected', data.comment, user.id);
+        if (!result.success) {
+          throw new Error(result.error || '却下に失敗しました');
+        }
       }
 
       setIsApprovalDialogOpen(false);
