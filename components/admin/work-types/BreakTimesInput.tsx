@@ -12,7 +12,7 @@ import type { BreakTime } from '@/schemas/work-types';
 
 // UUID生成関数
 const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
@@ -20,7 +20,7 @@ const generateUUID = (): string => {
 };
 
 interface BreakTimesInputProps {
-  value: BreakTime[];
+  value: BreakTime[] | undefined;
   onChange: (value: BreakTime[]) => void;
   workStartTime: string;
   workEndTime: string;
@@ -36,7 +36,7 @@ export default function BreakTimesInput({
   disabled = false,
   error,
 }: BreakTimesInputProps) {
-  const [localBreakTimes, setLocalBreakTimes] = useState<BreakTime[]>(value);
+  const [localBreakTimes, setLocalBreakTimes] = useState<BreakTime[]>(value || []);
 
   const addBreakTime = () => {
     const newBreakTime: BreakTime = {

@@ -184,111 +184,119 @@ export default function WorkTypeListTable({
                 </TableCell>
               </TableRow>
             ) : (
-              workTypes.map((workType) => (
-                <TableRow key={workType.id}>
-                  <TableCell className="font-mono text-sm">{workType.code || '-'}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{workType.name}</div>
-                      {workType.description && (
-                        <div className="text-sm text-gray-500 mt-1">{workType.description}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatTime(workType.work_start_time)} -{' '}
-                        {formatTime(workType.work_end_time)}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {formatWorkHours(
-                          workType.work_start_time,
-                          workType.work_end_time,
-                          workType.break_duration_minutes
+              workTypes.map((workType) => {
+                const breakMinutes = workType.break_times.reduce((total, breakTime) => {
+                  const start = new Date(`2000-01-01T${breakTime.start_time}:00`);
+                  const end = new Date(`2000-01-01T${breakTime.end_time}:00`);
+                  const diffMs = end.getTime() - start.getTime();
+                  return total + Math.floor(diffMs / (1000 * 60));
+                }, 0);
+                return (
+                  <TableRow key={workType.id}>
+                    <TableCell className="font-mono text-sm">{workType.code || '-'}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{workType.name}</div>
+                        {workType.description && (
+                          <div className="text-sm text-gray-500 mt-1">{workType.description}</div>
                         )}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">{workType.break_duration_minutes}分</TableCell>
-                  <TableCell>
-                    {workType.is_flexible ? (
-                      <Badge variant="secondary" className="text-xs">
-                        フレックス
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatTime(workType.work_start_time)} -{' '}
+                          {formatTime(workType.work_end_time)}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {formatWorkHours(
+                            workType.work_start_time,
+                            workType.work_end_time,
+                            breakMinutes
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">{breakMinutes}分</TableCell>
+                    <TableCell>
+                      {workType.is_flexible ? (
+                        <Badge variant="secondary" className="text-xs">
+                          フレックス
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          通常
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={workType.is_active ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {workType.is_active ? '有効' : '無効'}
                       </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">
-                        通常
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={workType.is_active ? 'default' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {workType.is_active ? '有効' : '無効'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onEditAction(workType)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>編集</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onEditAction(workType)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>編集</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
 
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onToggleStatusAction(workType)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Calendar className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {workType.is_active ? '無効化' : '有効化'}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onToggleStatusAction(workType)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Calendar className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {workType.is_active ? '無効化' : '有効化'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
 
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onDeleteAction(workType)}
-                              disabled={workType.is_active}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {workType.is_active ? '有効な勤務形態は削除できません' : '削除'}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onDeleteAction(workType)}
+                                disabled={workType.is_active}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {workType.is_active ? '有効な勤務形態は削除できません' : '削除'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>

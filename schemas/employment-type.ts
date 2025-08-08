@@ -190,8 +190,12 @@ export const WorkTypeSettingsSchema = z.object({
 export const BreakTimeSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1, '休息名は必須です'),
-  start_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, '正しい時刻形式で入力してください（HH:MM）'),
-  end_time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, '正しい時刻形式で入力してください（HH:MM）'),
+  start_time: z
+    .string()
+    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, '正しい時刻形式で入力してください（HH:MM）'),
+  end_time: z
+    .string()
+    .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, '正しい時刻形式で入力してください（HH:MM）'),
   order: z.number().int().min(0, '順番は0以上の整数で入力してください'),
 });
 

@@ -32,6 +32,7 @@ import { updateWorkType, toggleWorkTypeStatus } from '@/lib/actions/admin/work-t
 import { useToast } from '@/hooks/use-toast';
 import type { WorkTypeData, EditWorkTypeFormData, BreakTime } from '@/schemas/work-types';
 import { convertUTCTimeToJST } from '@/lib/utils';
+
 import BreakTimesInput from './BreakTimesInput';
 
 const editWorkTypeSchema = z
@@ -138,7 +139,7 @@ export default function WorkTypeEditDialog({
   const [isStatusLoading, setIsStatusLoading] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<EditWorkTypeFormData>({
+  const form = useForm({
     resolver: zodResolver(editWorkTypeSchema),
     defaultValues: {
       code: '',

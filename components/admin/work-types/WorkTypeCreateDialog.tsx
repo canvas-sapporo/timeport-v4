@@ -31,6 +31,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createWorkType } from '@/lib/actions/admin/work-types';
 import { useToast } from '@/hooks/use-toast';
 import type { CreateWorkTypeFormData, BreakTime } from '@/schemas/work-types';
+
 import BreakTimesInput from './BreakTimesInput';
 
 const createWorkTypeSchema = z
@@ -134,7 +135,7 @@ export default function WorkTypeCreateDialog({
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<CreateWorkTypeFormData>({
+  const form = useForm({
     resolver: zodResolver(createWorkTypeSchema),
     defaultValues: {
       code: '',

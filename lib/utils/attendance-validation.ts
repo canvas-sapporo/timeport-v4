@@ -235,7 +235,7 @@ export function createDefaultClockRecord(
       // 指定された勤務日と組み合わせてJST時刻を作成し、UTC時刻に変換
       // 注意: new Date("YYYY-MM-DDTHH:mm:ss")はローカルタイムゾーンとして解釈される
       // そのため、JST時刻を正しくUTCに変換するには、明示的にJSTとして扱う必要がある
-      
+
       // JST時刻文字列を作成
       const jstInTimeStr = `${workDate}T${workTypeDetail.work_start_time}`;
       const jstOutTimeStr = `${workDate}T${workTypeDetail.work_end_time}`;
@@ -252,14 +252,14 @@ export function createDefaultClockRecord(
       // 2. ローカルタイムゾーンとJSTの差分を計算してUTCに変換
       const localInTime = new Date(jstInTimeStr);
       const localOutTime = new Date(jstOutTimeStr);
-      
+
       // ローカルタイムゾーンのオフセットを取得（分単位）
       const localOffset = localInTime.getTimezoneOffset();
       // JSTはUTC+9（-540分）
       const jstOffset = -9 * 60;
       // 調整量を計算（ローカルタイムゾーンからJSTへの変換）
       const adjustmentMinutes = localOffset - jstOffset;
-      
+
       // UTC時刻を計算
       const utcInTime = new Date(localInTime.getTime() + adjustmentMinutes * 60 * 1000);
       const utcOutTime = new Date(localOutTime.getTime() + adjustmentMinutes * 60 * 1000);
@@ -289,11 +289,11 @@ export function createDefaultClockRecord(
       // JST時刻をUTC時刻に変換（正しい方法）
       const localInTime = new Date(jstInTimeStr);
       const localOutTime = new Date(jstOutTimeStr);
-      
+
       const localOffset = localInTime.getTimezoneOffset();
       const jstOffset = -9 * 60;
       const adjustmentMinutes = localOffset - jstOffset;
-      
+
       const utcInTime = new Date(localInTime.getTime() + adjustmentMinutes * 60 * 1000);
       const utcOutTime = new Date(localOutTime.getTime() + adjustmentMinutes * 60 * 1000);
 
@@ -330,11 +330,11 @@ export function createDefaultClockRecord(
       // JST時刻をUTC時刻に変換（正しい方法）
       const localInTime = new Date(jstInTimeStr);
       const localOutTime = new Date(jstOutTimeStr);
-      
+
       const localOffset = localInTime.getTimezoneOffset();
       const jstOffset = -9 * 60;
       const adjustmentMinutes = localOffset - jstOffset;
-      
+
       const utcInTime = new Date(localInTime.getTime() + adjustmentMinutes * 60 * 1000);
       const utcOutTime = new Date(localOutTime.getTime() + adjustmentMinutes * 60 * 1000);
 
@@ -363,11 +363,11 @@ export function createDefaultClockRecord(
       // JST時刻をUTC時刻に変換（正しい方法）
       const localInTime = new Date(jstInTimeStr);
       const localOutTime = new Date(jstOutTimeStr);
-      
+
       const localOffset = localInTime.getTimezoneOffset();
       const jstOffset = -9 * 60;
       const adjustmentMinutes = localOffset - jstOffset;
-      
+
       const utcInTime = new Date(localInTime.getTime() + adjustmentMinutes * 60 * 1000);
       const utcOutTime = new Date(localOutTime.getTime() + adjustmentMinutes * 60 * 1000);
 

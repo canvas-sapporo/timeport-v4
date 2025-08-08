@@ -362,13 +362,16 @@ export function generateAttendanceRecords(userId: string): AttendanceData[] {
     // 季節や月による変動を追加
     const month = date.getMonth();
     let seasonalVariation = 1;
-    
+
     // 年末年始や夏季は残業が増加する傾向
-    if (month === 11 || month === 0) { // 12月、1月
+    if (month === 11 || month === 0) {
+      // 12月、1月
       seasonalVariation = 1.3;
-    } else if (month === 6 || month === 7) { // 7月、8月
+    } else if (month === 6 || month === 7) {
+      // 7月、8月
       seasonalVariation = 1.2;
-    } else if (month === 2 || month === 3) { // 3月、4月（年度末・年度始め）
+    } else if (month === 2 || month === 3) {
+      // 3月、4月（年度末・年度始め）
       seasonalVariation = 1.4;
     }
 
@@ -397,8 +400,8 @@ export function generateAttendanceRecords(userId: string): AttendanceData[] {
 }
 
 // チャットメッセージ数生成関数
-export function generateChatMessageCounts(): Array<{date: string; messageCount: number}> {
-  const messageCounts: Array<{date: string; messageCount: number}> = [];
+export function generateChatMessageCounts(): Array<{ date: string; messageCount: number }> {
+  const messageCounts: Array<{ date: string; messageCount: number }> = [];
   const today = new Date();
 
   // 3年分（約1095日）のチャットメッセージ数を生成
@@ -410,33 +413,38 @@ export function generateChatMessageCounts(): Array<{date: string; messageCount: 
     if (date.getDay() === 0 || date.getDay() === 6) continue;
 
     const workDate = date.toISOString().split('T')[0];
-    
+
     // 1日あたり0-50個のメッセージをランダムに生成
     const messageCount = Math.floor(Math.random() * 51); // 0-50個
-    
+
     // 季節や曜日による変動を追加
     const month = date.getMonth();
     const dayOfWeek = date.getDay();
     let variation = 1;
-    
+
     // 月曜日と金曜日はメッセージが多くなる傾向
-    if (dayOfWeek === 1) { // 月曜日
+    if (dayOfWeek === 1) {
+      // 月曜日
       variation = 1.3;
-    } else if (dayOfWeek === 5) { // 金曜日
+    } else if (dayOfWeek === 5) {
+      // 金曜日
       variation = 1.2;
-    } else if (dayOfWeek === 3) { // 水曜日（週の真ん中）
+    } else if (dayOfWeek === 3) {
+      // 水曜日（週の真ん中）
       variation = 1.1;
     }
-    
+
     // 年末年始や夏季はメッセージが増加する傾向
-    if (month === 11 || month === 0) { // 12月、1月
+    if (month === 11 || month === 0) {
+      // 12月、1月
       variation *= 1.2;
-    } else if (month === 6 || month === 7) { // 7月、8月
+    } else if (month === 6 || month === 7) {
+      // 7月、8月
       variation *= 1.1;
     }
-    
+
     const adjustedMessageCount = Math.floor(messageCount * variation);
-    
+
     messageCounts.push({
       date: workDate,
       messageCount: adjustedMessageCount,
@@ -461,14 +469,14 @@ export function generateTodoRecords(): Todo[] {
     if (date.getDay() === 0 || date.getDay() === 6) continue;
 
     const workDate = date.toISOString().split('T')[0];
-    
+
     // 1日あたり0-12個のTODOをランダムに生成（よりランダムに）
     const todoCount = Math.floor(Math.random() * 13); // 0-12個
-    
+
     for (let j = 0; j < todoCount; j++) {
       const todoIdStr = `todo_${todoId + i * 10 + j}`;
       const isCompleted = Math.random() > 0.6; // 40%の確率で完了（より現実的に）
-      
+
       const todoTitles = [
         'コードレビュー',
         'ドキュメント作成',
@@ -479,11 +487,11 @@ export function generateTodoRecords(): Todo[] {
         '設計検討',
         'デプロイ作業',
         'パフォーマンス改善',
-        'セキュリティ対応'
+        'セキュリティ対応',
       ];
-      
+
       const randomTitle = todoTitles[Math.floor(Math.random() * todoTitles.length)];
-      
+
       todos.push({
         id: todoIdStr,
         user_id: 'user3', // デフォルトユーザー
@@ -1553,9 +1561,15 @@ export const mockChatMessages: ChatMessageData[] = [
 // ================================
 
 export function generateWorkHoursGraphData(period: string = '1month') {
-  const data: Array<{date: string; workHours: number; overtimeHours: number; completedTodos: number; pendingTodos: number}> = [];
+  const data: Array<{
+    date: string;
+    workHours: number;
+    overtimeHours: number;
+    completedTodos: number;
+    pendingTodos: number;
+  }> = [];
   const today = new Date();
-  
+
   // 期間に応じて日数を決定
   let days: number;
   switch (period) {
@@ -1577,54 +1591,58 @@ export function generateWorkHoursGraphData(period: string = '1month') {
     default:
       days = 30;
   }
-  
+
   // 指定された期間分のデータを生成
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    
+
     // 土日をスキップ
     if (date.getDay() === 0 || date.getDay() === 6) continue;
-    
+
     const workDate = date.toISOString().split('T')[0];
-    
+
     // その日の勤怠データを集計
-    const dayRecords = mockAttendanceRecords.filter(r => r.work_date === workDate);
-    
-    const totalWorkHours = dayRecords.reduce((sum, record) => {
-      return sum + (record.actual_work_minutes || 0);
-    }, 0) / 60; // 分から時間に変換
-    
-    const totalOvertimeHours = dayRecords.reduce((sum, record) => {
-      return sum + (record.overtime_minutes || 0);
-    }, 0) / 60; // 分から時間に変換
-    
+    const dayRecords = mockAttendanceRecords.filter((r) => r.work_date === workDate);
+
+    const totalWorkHours =
+      dayRecords.reduce((sum, record) => {
+        return sum + (record.actual_work_minutes || 0);
+      }, 0) / 60; // 分から時間に変換
+
+    const totalOvertimeHours =
+      dayRecords.reduce((sum, record) => {
+        return sum + (record.overtime_minutes || 0);
+      }, 0) / 60; // 分から時間に変換
+
     // その日のTODOデータを集計
-    const dayTodos = mockTodos.filter(todo => {
+    const dayTodos = mockTodos.filter((todo) => {
       const todoDate = new Date(todo.created_at).toISOString().split('T')[0];
       return todoDate === workDate;
     });
-    
-    const completedTodos = dayTodos.filter(todo => todo.status === 'completed').length;
-    const pendingTodos = dayTodos.filter(todo => todo.status !== 'completed').length;
-    
+
+    const completedTodos = dayTodos.filter((todo) => todo.status === 'completed').length;
+    const pendingTodos = dayTodos.filter((todo) => todo.status !== 'completed').length;
+
     // デバッグ用：最初の数日分のデータをログ出力
     if (i < 5) {
-      console.log(`Date: ${workDate}, Completed: ${completedTodos}, Pending: ${pendingTodos}, Total: ${dayTodos.length}`);
+      console.log(
+        `Date: ${workDate}, Completed: ${completedTodos}, Pending: ${pendingTodos}, Total: ${dayTodos.length}`
+      );
     }
-    
+
     // TODOデータをよりランダムに生成（表示のため最小値を設定）
     const finalCompletedTodos = Math.max(completedTodos, 1);
     const finalPendingTodos = Math.max(pendingTodos, 1);
-    
+
     // 長期間の場合は週次または月次で集計
     if (period === '3years' || period === '1year') {
       // 週次集計（同じ週のデータをまとめる）
       const weekStart = new Date(date);
       weekStart.setDate(date.getDate() - date.getDay() + 1); // 月曜日
       const weekKey = weekStart.toISOString().split('T')[0];
-      
-      const existingWeekData = data.find(d => d.date === weekKey);
+
+      const existingWeekData = data.find((d) => d.date === weekKey);
       if (existingWeekData) {
         existingWeekData.workHours += totalWorkHours;
         existingWeekData.overtimeHours += totalOvertimeHours;
@@ -1649,23 +1667,28 @@ export function generateWorkHoursGraphData(period: string = '1month') {
       });
     }
   }
-  
+
   // 週次データの場合は平均値を計算
   if (period === '3years' || period === '1year') {
-    data.forEach(weekData => {
+    data.forEach((weekData) => {
       weekData.workHours = Math.round(weekData.workHours * 10) / 10;
       weekData.overtimeHours = Math.round(weekData.overtimeHours * 10) / 10;
     });
   }
-  
+
   return data;
 }
 
 // チャットメッセージ数を含むグラフデータ生成関数
 export function generateWorkHoursWithChatData(period: string = '1month') {
-  const data: Array<{date: string; workHours: number; overtimeHours: number; chatMessages: number}> = [];
+  const data: Array<{
+    date: string;
+    workHours: number;
+    overtimeHours: number;
+    chatMessages: number;
+  }> = [];
   const today = new Date();
-  
+
   // 期間に応じて日数を決定
   let days: number;
   switch (period) {
@@ -1687,40 +1710,42 @@ export function generateWorkHoursWithChatData(period: string = '1month') {
     default:
       days = 30;
   }
-  
+
   // 指定された期間分のデータを生成
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    
+
     // 土日をスキップ
     if (date.getDay() === 0 || date.getDay() === 6) continue;
-    
+
     const workDate = date.toISOString().split('T')[0];
-    
+
     // その日の勤怠データを集計
-    const dayRecords = mockAttendanceRecords.filter(r => r.work_date === workDate);
-    
-    const totalWorkHours = dayRecords.reduce((sum, record) => {
-      return sum + (record.actual_work_minutes || 0);
-    }, 0) / 60; // 分から時間に変換
-    
-    const totalOvertimeHours = dayRecords.reduce((sum, record) => {
-      return sum + (record.overtime_minutes || 0);
-    }, 0) / 60; // 分から時間に変換
-    
+    const dayRecords = mockAttendanceRecords.filter((r) => r.work_date === workDate);
+
+    const totalWorkHours =
+      dayRecords.reduce((sum, record) => {
+        return sum + (record.actual_work_minutes || 0);
+      }, 0) / 60; // 分から時間に変換
+
+    const totalOvertimeHours =
+      dayRecords.reduce((sum, record) => {
+        return sum + (record.overtime_minutes || 0);
+      }, 0) / 60; // 分から時間に変換
+
     // その日のチャットメッセージ数を集計（生成されたデータを使用）
-    const dayMessageCount = generatedChatMessageCounts.find(msg => msg.date === workDate);
+    const dayMessageCount = generatedChatMessageCounts.find((msg) => msg.date === workDate);
     const chatMessageCount = dayMessageCount ? dayMessageCount.messageCount : 0;
-    
+
     // 長期間の場合は週次または月次で集計
     if (period === '3years' || period === '1year') {
       // 週次集計（同じ週のデータをまとめる）
       const weekStart = new Date(date);
       weekStart.setDate(date.getDate() - date.getDay() + 1); // 月曜日
       const weekKey = weekStart.toISOString().split('T')[0];
-      
-      const existingWeekData = data.find(d => d.date === weekKey);
+
+      const existingWeekData = data.find((d) => d.date === weekKey);
       if (existingWeekData) {
         existingWeekData.workHours += totalWorkHours;
         existingWeekData.overtimeHours += totalOvertimeHours;
@@ -1742,15 +1767,15 @@ export function generateWorkHoursWithChatData(period: string = '1month') {
       });
     }
   }
-  
+
   // 週次データの場合は平均値を計算
   if (period === '3years' || period === '1year') {
-    data.forEach(weekData => {
+    data.forEach((weekData) => {
       weekData.workHours = Math.round(weekData.workHours * 10) / 10;
       weekData.overtimeHours = Math.round(weekData.overtimeHours * 10) / 10;
     });
   }
-  
+
   return data;
 }
 

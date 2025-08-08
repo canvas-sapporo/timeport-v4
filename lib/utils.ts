@@ -49,7 +49,7 @@ export function formatDateTime(
  */
 export function formatTime(time: string | Date | null | undefined): string {
   console.log('formatTime 入力:', time, '型:', typeof time);
-  
+
   if (!time) {
     console.log('formatTime 空の値、--:--を返す');
     return '--:--';
@@ -378,26 +378,26 @@ export function formatDateForDisplay(dateTime: string | Date | null | undefined)
  */
 export function convertUTCTimeToJST(utcTime: string): string {
   if (!utcTime || utcTime.trim() === '') return '';
-  
+
   // UTC時刻を時、分、秒に分解
   const timeParts = utcTime.split(':');
   const hours = parseInt(timeParts[0], 10);
   const minutes = parseInt(timeParts[1], 10);
   const seconds = timeParts.length > 2 ? parseInt(timeParts[2], 10) : 0;
-  
+
   // 数値が不正な場合は空文字列を返す
   if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
     return '';
   }
-  
+
   // UTC時刻に9時間を足してJST時刻を計算
   let jstHours = hours + 9;
-  
+
   // 日付をまたぐ場合の処理
   if (jstHours >= 24) {
     jstHours -= 24;
   }
-  
+
   // JST時刻をHH:mm:ss形式で返す
   return `${String(jstHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
