@@ -22,7 +22,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRequestForms, deleteRequestForm } from '@/lib/actions/admin/request-forms';
-import { getAdminRequests, updateRequestStatus, approveRequest } from '@/lib/actions/requests';
+import {
+  getAdminRequests,
+  updateRequestStatus,
+  approveRequest,
+  getCurrentAttendance,
+} from '@/lib/actions/requests';
 import type { RequestForm } from '@/schemas/request';
 import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
 
@@ -101,10 +106,48 @@ export default function AdminRequestsPage() {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<AdminRequestData | null>(null);
   const [rejectionAction, setRejectionAction] = useState<'reject' | 'withdraw'>('reject');
+  const [currentAttendance, setCurrentAttendance] = useState<{
+    clock_records: {
+      in_time?: string;
+      out_time?: string;
+      breaks?: { break_start?: string; break_end?: string }[];
+    }[];
+  } | null>(null);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
 
   // 詳細確認ダイアログ用の状態
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedDetailRequest, setSelectedDetailRequest] = useState<AdminRequestData | null>(null);
+
+  // 承認ダイアログオープン時に現在の勤怠を取得
+  useEffect(() => {
+    (async () => {
+      if (!approvalDialogOpen || !selectedRequest) {
+        setCurrentAttendance(null);
+        return;
+      }
+      try {
+        setIsLoadingAttendance(true);
+        const workDate = String(
+          selectedRequest.form_data?.work_date || selectedRequest.target_date || ''
+        );
+        if (!selectedRequest.user_id || !workDate) {
+          setCurrentAttendance(null);
+          return;
+        }
+        const result = await getCurrentAttendance(selectedRequest.user_id, workDate);
+        if (result.success && !result.notFound && result.data) {
+          setCurrentAttendance({ clock_records: result.data.clock_records as any });
+        } else {
+          setCurrentAttendance(null);
+        }
+      } catch (e) {
+        setCurrentAttendance(null);
+      } finally {
+        setIsLoadingAttendance(false);
+      }
+    })();
+  }, [approvalDialogOpen, selectedRequest]);
 
   // 申請フォーム管理用の状態
   const [requestForms, setRequestForms] = useState<RequestForm[]>([]);
@@ -676,7 +719,7 @@ export default function AdminRequestsPage() {
                       <TableHead>申請者</TableHead>
                       <TableHead>種別</TableHead>
                       <TableHead>申請日</TableHead>
-                      <TableHead>対象日</TableHead>
+                      {/* <TableHead>対象日</TableHead> */}
                       <TableHead>ステータス</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
@@ -684,7 +727,7 @@ export default function AdminRequestsPage() {
                   <TableBody>
                     {myApprovalRequests.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-gray-400">
+                        <TableCell colSpan={5} className="text-center text-gray-400">
                           該当する申請はありません
                         </TableCell>
                       </TableRow>
@@ -701,15 +744,7 @@ export default function AdminRequestsPage() {
                           </TableCell>
                           <TableCell>{request.title}</TableCell>
                           <TableCell>{formatDate(request.created_at)}</TableCell>
-                          <TableCell>
-                            {request.target_date
-                              ? formatDate(request.target_date)
-                              : request.start_date && request.end_date
-                                ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
-                                : request.start_date
-                                  ? formatDate(request.start_date)
-                                  : '-'}
-                          </TableCell>
+                          {/* 対象日 列は非表示 */}
                           <TableCell>{getStatusBadge(request.statuses)}</TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
@@ -1000,7 +1035,7 @@ export default function AdminRequestsPage() {
 
       {/* 承認確認ダイアログ */}
       <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>申請を承認しますか？</DialogTitle>
             <DialogDescription>
@@ -1045,10 +1080,7 @@ export default function AdminRequestsPage() {
                     <Label className="font-medium">申請日</Label>
                     <p className="text-gray-700">{formatDate(selectedRequest.created_at)}</p>
                   </div>
-                  <div>
-                    <Label className="font-medium">対象日</Label>
-                    <p className="text-gray-700">{formatDate(selectedRequest.target_date)}</p>
-                  </div>
+                  {/* 対象日は非表示に変更 */}
                   {selectedRequest.form_data &&
                     Object.keys(selectedRequest.form_data).length > 0 && (
                       <div className="col-span-2">
@@ -1070,6 +1102,12 @@ export default function AdminRequestsPage() {
                               is_object: typeof value === 'object',
                               is_array: Array.isArray(value),
                             });
+
+                            // 既存の打刻修正/clock_records の個別表示は
+                            // 下部の比較ブロックに統合したため非表示にする
+                            if (key === 'attendance_correction' || key === 'clock_records') {
+                              return null;
+                            }
 
                             // attendance_correction オブジェクトの特別処理
                             if (
@@ -1240,7 +1278,7 @@ export default function AdminRequestsPage() {
                                 clock_records?: ClockRecord[];
                               };
 
-                              return (
+                              const comparison = (
                                 <div key={key} className="space-y-4">
                                   {/* セクションタイトル */}
                                   <div className="border-b border-gray-200 pb-2">
@@ -1613,6 +1651,234 @@ export default function AdminRequestsPage() {
                                   </div>
                                 </div>
                               );
+
+                              // ここに現在の勤怠との比較セクションを追加
+                              return (
+                                <div key={key} className="space-y-6">
+                                  {comparison}
+                                  <div>
+                                    <Label className="font-medium">
+                                      現在の勤怠 と 申請内容の比較
+                                    </Label>
+                                    <div className="mt-2 grid grid-cols-2 gap-4">
+                                      {/* 現在の勤怠 */}
+                                      <div className="border rounded-lg p-3 bg-white">
+                                        <h5 className="font-medium mb-2">現在の勤怠</h5>
+                                        {isLoadingAttendance ? (
+                                          <div className="text-gray-500">読み込み中...</div>
+                                        ) : currentAttendance &&
+                                          currentAttendance.clock_records &&
+                                          currentAttendance.clock_records.length > 0 ? (
+                                          <div className="space-y-3">
+                                            {currentAttendance.clock_records.map((session, idx) => (
+                                              <div
+                                                key={idx}
+                                                className="border border-gray-200 rounded p-3 bg-gray-50"
+                                              >
+                                                <div className="grid grid-cols-2 gap-3">
+                                                  <div>
+                                                    <Label className="text-xs text-gray-600">
+                                                      出勤時刻
+                                                    </Label>
+                                                    <div className="p-2 bg-white rounded border">
+                                                      <span className="text-sm text-gray-800">
+                                                        {session.in_time
+                                                          ? new Date(
+                                                              session.in_time
+                                                            ).toLocaleString('ja-JP', {
+                                                              year: 'numeric',
+                                                              month: '2-digit',
+                                                              day: '2-digit',
+                                                              hour: '2-digit',
+                                                              minute: '2-digit',
+                                                            })
+                                                          : '-'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  <div>
+                                                    <Label className="text-xs text-gray-600">
+                                                      退勤時刻
+                                                    </Label>
+                                                    <div className="p-2 bg-white rounded border">
+                                                      <span className="text-sm text-gray-800">
+                                                        {session.out_time
+                                                          ? new Date(
+                                                              session.out_time
+                                                            ).toLocaleString('ja-JP', {
+                                                              year: 'numeric',
+                                                              month: '2-digit',
+                                                              day: '2-digit',
+                                                              hour: '2-digit',
+                                                              minute: '2-digit',
+                                                            })
+                                                          : '-'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                                {Array.isArray(session.breaks) &&
+                                                  session.breaks.length > 0 && (
+                                                    <div className="mt-3 space-y-2">
+                                                      {session.breaks.map((br, bidx) => (
+                                                        <div
+                                                          key={bidx}
+                                                          className="grid grid-cols-2 gap-3"
+                                                        >
+                                                          <div>
+                                                            <Label className="text-xs text-gray-600">
+                                                              休憩開始
+                                                            </Label>
+                                                            <div className="p-2 bg-white rounded border">
+                                                              <span className="text-sm text-gray-800">
+                                                                {br.break_start
+                                                                  ? new Date(
+                                                                      br.break_start
+                                                                    ).toLocaleTimeString('ja-JP', {
+                                                                      hour: '2-digit',
+                                                                      minute: '2-digit',
+                                                                    })
+                                                                  : '-'}
+                                                              </span>
+                                                            </div>
+                                                          </div>
+                                                          <div>
+                                                            <Label className="text-xs text-gray-600">
+                                                              休憩終了
+                                                            </Label>
+                                                            <div className="p-2 bg-white rounded border">
+                                                              <span className="text-sm text-gray-800">
+                                                                {br.break_end
+                                                                  ? new Date(
+                                                                      br.break_end
+                                                                    ).toLocaleTimeString('ja-JP', {
+                                                                      hour: '2-digit',
+                                                                      minute: '2-digit',
+                                                                    })
+                                                                  : '-'}
+                                                              </span>
+                                                            </div>
+                                                          </div>
+                                                        </div>
+                                                      ))}
+                                                    </div>
+                                                  )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <div className="text-gray-500">
+                                            対象日の勤怠データがありません
+                                          </div>
+                                        )}
+                                      </div>
+                                      {/* 申請内容（簡略：clock_records 再表示） */}
+                                      <div className="border rounded-lg p-3 bg-white">
+                                        <h5 className="font-medium mb-2">申請内容</h5>
+                                        <div className="space-y-3">
+                                          {(correctionData.clock_records || []).map((rec, idx) => (
+                                            <div
+                                              key={idx}
+                                              className="border border-gray-200 rounded p-3 bg-gray-50"
+                                            >
+                                              <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                  <Label className="text-xs text-gray-600">
+                                                    出勤時刻
+                                                  </Label>
+                                                  <div className="p-2 bg-white rounded border">
+                                                    <span className="text-sm text-gray-800">
+                                                      {rec.in_time
+                                                        ? new Date(rec.in_time).toLocaleString(
+                                                            'ja-JP',
+                                                            {
+                                                              year: 'numeric',
+                                                              month: '2-digit',
+                                                              day: '2-digit',
+                                                              hour: '2-digit',
+                                                              minute: '2-digit',
+                                                            }
+                                                          )
+                                                        : '-'}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                                <div>
+                                                  <Label className="text-xs text-gray-600">
+                                                    退勤時刻
+                                                  </Label>
+                                                  <div className="p-2 bg-white rounded border">
+                                                    <span className="text-sm text-gray-800">
+                                                      {rec.out_time
+                                                        ? new Date(rec.out_time).toLocaleString(
+                                                            'ja-JP',
+                                                            {
+                                                              year: 'numeric',
+                                                              month: '2-digit',
+                                                              day: '2-digit',
+                                                              hour: '2-digit',
+                                                              minute: '2-digit',
+                                                            }
+                                                          )
+                                                        : '-'}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              {Array.isArray(rec.breaks) &&
+                                                rec.breaks.length > 0 && (
+                                                  <div className="mt-3 space-y-2">
+                                                    {rec.breaks.map((br: any, bidx: number) => (
+                                                      <div
+                                                        key={bidx}
+                                                        className="grid grid-cols-2 gap-3"
+                                                      >
+                                                        <div>
+                                                          <Label className="text-xs text-gray-600">
+                                                            休憩開始
+                                                          </Label>
+                                                          <div className="p-2 bg-white rounded border">
+                                                            <span className="text-sm text-gray-800">
+                                                              {br.break_start
+                                                                ? new Date(
+                                                                    br.break_start
+                                                                  ).toLocaleTimeString('ja-JP', {
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit',
+                                                                  })
+                                                                : '-'}
+                                                            </span>
+                                                          </div>
+                                                        </div>
+                                                        <div>
+                                                          <Label className="text-xs text-gray-600">
+                                                            休憩終了
+                                                          </Label>
+                                                          <div className="p-2 bg-white rounded border">
+                                                            <span className="text-sm text-gray-800">
+                                                              {br.break_end
+                                                                ? new Date(
+                                                                    br.break_end
+                                                                  ).toLocaleTimeString('ja-JP', {
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit',
+                                                                  })
+                                                                : '-'}
+                                                            </span>
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
                             }
 
                             // clock_records フィールドの特別処理（attendance_correction とは別）
@@ -1784,6 +2050,257 @@ export default function AdminRequestsPage() {
                       <div className="text-gray-700 mt-1">{selectedRequest.submission_comment}</div>
                     </div>
                   )}
+                  {/* 勤怠比較セクション（打刻修正系のみ表示） */}
+                  {(() => {
+                    const formData = (selectedRequest.form_data || {}) as Record<
+                      string,
+                      unknown
+                    > & {
+                      attendance_correction?: unknown;
+                      clock_records?: unknown;
+                      work_date?: unknown;
+                    };
+                    const isAttendanceCorrection =
+                      selectedRequest.request_forms?.category === 'attendance_correction' ||
+                      typeof formData.attendance_correction !== 'undefined' ||
+                      typeof formData.clock_records !== 'undefined';
+
+                    if (!isAttendanceCorrection) return null;
+
+                    const proposedRecords: any[] = Array.isArray(formData.attendance_correction)
+                      ? (formData.attendance_correction as any[])
+                      : Array.isArray(formData.clock_records)
+                        ? (formData.clock_records as any[])
+                        : [];
+
+                    return (
+                      <div className="col-span-2 border rounded-lg p-4 bg-blue-50/30 mt-2">
+                        <h4 className="font-medium text-gray-800 mb-3">勤務セッション</h4>
+                        {(() => {
+                          const currentSessions = (currentAttendance?.clock_records || []) as any[];
+                          const proposedSessions = (proposedRecords || []) as any[];
+                          const maxSessions = Math.max(
+                            currentSessions.length,
+                            proposedSessions.length,
+                            1
+                          );
+
+                          if (isLoadingAttendance)
+                            return <div className="text-gray-500">読み込み中...</div>;
+
+                          return (
+                            <div className="space-y-6">
+                              {Array.from({ length: maxSessions }).map((_, i) => {
+                                const cur = currentSessions[i];
+                                const prop = proposedSessions[i];
+                                return (
+                                  <div key={i} className="border rounded-md">
+                                    <div className="px-4 py-2 border-b text-sm text-gray-700">
+                                      セッション {i + 1}
+                                    </div>
+                                    <div className="p-4 grid grid-cols-2 gap-4">
+                                      <div className="rounded-md p-4">
+                                        <div className="font-medium mb-3 text-gray-800">
+                                          現在の勤怠
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-3">
+                                          <div>
+                                            <Label className="text-xs text-gray-600">
+                                              出勤時刻
+                                            </Label>
+                                            <div className="p-2 bg-white rounded border">
+                                              <span className="text-sm text-gray-800">
+                                                {cur?.in_time
+                                                  ? new Date(cur.in_time).toLocaleString('ja-JP', {
+                                                      year: 'numeric',
+                                                      month: '2-digit',
+                                                      day: '2-digit',
+                                                      hour: '2-digit',
+                                                      minute: '2-digit',
+                                                    })
+                                                  : '-'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs text-gray-600">
+                                              退勤時刻
+                                            </Label>
+                                            <div className="p-2 bg-white rounded border">
+                                              <span className="text-sm text-gray-800">
+                                                {cur?.out_time
+                                                  ? new Date(cur.out_time).toLocaleString('ja-JP', {
+                                                      year: 'numeric',
+                                                      month: '2-digit',
+                                                      day: '2-digit',
+                                                      hour: '2-digit',
+                                                      minute: '2-digit',
+                                                    })
+                                                  : '-'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="mt-4">
+                                          <Label className="text-xs text-gray-600">休憩記録</Label>
+                                          {Array.isArray(cur?.breaks) && cur.breaks.length > 0 ? (
+                                            <div className="mt-2 space-y-2">
+                                              {cur.breaks.map((br: any, bidx: number) => (
+                                                <div key={bidx} className="grid grid-cols-2 gap-3">
+                                                  <div>
+                                                    <Label className="text-xs text-gray-600">
+                                                      休憩開始
+                                                    </Label>
+                                                    <div className="p-2 bg-white rounded border">
+                                                      <span className="text-sm text-gray-800">
+                                                        {br?.break_start
+                                                          ? new Date(
+                                                              br.break_start
+                                                            ).toLocaleTimeString('ja-JP', {
+                                                              hour: '2-digit',
+                                                              minute: '2-digit',
+                                                            })
+                                                          : '-'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  <div>
+                                                    <Label className="text-xs text-gray-600">
+                                                      休憩終了
+                                                    </Label>
+                                                    <div className="p-2 bg-white rounded border">
+                                                      <span className="text-sm text-gray-800">
+                                                        {br?.break_end
+                                                          ? new Date(
+                                                              br.break_end
+                                                            ).toLocaleTimeString('ja-JP', {
+                                                              hour: '2-digit',
+                                                              minute: '2-digit',
+                                                            })
+                                                          : '-'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          ) : (
+                                            <div className="mt-2 text-sm text-gray-600">
+                                              休憩記録なし
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="rounded-md p-4">
+                                        <div className="font-medium mb-3 text-gray-800">
+                                          申請の内容
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-3">
+                                          <div>
+                                            <Label className="text-xs text-gray-600">
+                                              出勤時刻
+                                            </Label>
+                                            <div className="p-2 bg-white rounded border">
+                                              <span className="text-sm text-gray-800">
+                                                {prop?.in_time
+                                                  ? new Date(prop.in_time).toLocaleString('ja-JP', {
+                                                      year: 'numeric',
+                                                      month: '2-digit',
+                                                      day: '2-digit',
+                                                      hour: '2-digit',
+                                                      minute: '2-digit',
+                                                    })
+                                                  : '-'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs text-gray-600">
+                                              退勤時刻
+                                            </Label>
+                                            <div className="p-2 bg-white rounded border">
+                                              <span className="text-sm text-gray-800">
+                                                {prop?.out_time
+                                                  ? new Date(prop.out_time).toLocaleString(
+                                                      'ja-JP',
+                                                      {
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                      }
+                                                    )
+                                                  : '-'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="mt-4">
+                                          <Label className="text-xs text-gray-600">休憩記録</Label>
+                                          {Array.isArray(prop?.breaks) && prop.breaks.length > 0 ? (
+                                            <div className="mt-2 space-y-2">
+                                              {prop.breaks.map((br: any, bidx: number) => (
+                                                <div key={bidx} className="grid grid-cols-2 gap-3">
+                                                  <div>
+                                                    <Label className="text-xs text-gray-600">
+                                                      休憩開始
+                                                    </Label>
+                                                    <div className="p-2 bg-white rounded border">
+                                                      <span className="text-sm text-gray-800">
+                                                        {br?.break_start
+                                                          ? new Date(
+                                                              br.break_start
+                                                            ).toLocaleTimeString('ja-JP', {
+                                                              hour: '2-digit',
+                                                              minute: '2-digit',
+                                                            })
+                                                          : '-'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  <div>
+                                                    <Label className="text-xs text-gray-600">
+                                                      休憩終了
+                                                    </Label>
+                                                    <div className="p-2 bg-white rounded border">
+                                                      <span className="text-sm text-gray-800">
+                                                        {br?.break_end
+                                                          ? new Date(
+                                                              br.break_end
+                                                            ).toLocaleTimeString('ja-JP', {
+                                                              hour: '2-digit',
+                                                              minute: '2-digit',
+                                                            })
+                                                          : '-'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          ) : (
+                                            <div className="mt-2 text-sm text-gray-600">
+                                              休憩記録なし
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                        {!isLoadingAttendance &&
+                          !currentAttendance?.clock_records?.length &&
+                          !proposedRecords?.length && (
+                            <div className="text-gray-500">比較できる勤怠データがありません</div>
+                          )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1805,7 +2322,7 @@ export default function AdminRequestsPage() {
 
       {/* 却下・取り下げ確認ダイアログ */}
       <Dialog open={rejectionDialogOpen} onOpenChange={setRejectionDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>申請の処理</DialogTitle>
             <DialogDescription>この申請を却下または取り下げします。</DialogDescription>
@@ -1828,10 +2345,7 @@ export default function AdminRequestsPage() {
                     <Label className="font-medium">申請日</Label>
                     <p className="text-gray-700">{formatDate(selectedRequest.created_at)}</p>
                   </div>
-                  <div>
-                    <Label className="font-medium">対象日</Label>
-                    <p className="text-gray-700">{formatDate(selectedRequest.target_date)}</p>
-                  </div>
+                  {/* 対象日は非表示に変更 */}
                   {selectedRequest.form_data &&
                     Object.keys(selectedRequest.form_data).length > 0 && (
                       <div className="col-span-2">
@@ -1939,7 +2453,7 @@ export default function AdminRequestsPage() {
 
       {/* 詳細確認ダイアログ */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>申請詳細</DialogTitle>
             <DialogDescription>申請の詳細内容を確認できます。</DialogDescription>
@@ -1988,12 +2502,7 @@ export default function AdminRequestsPage() {
                       {formatDate(selectedDetailRequest.created_at)}
                     </div>
                   </div>
-                  <div>
-                    <Label className="font-medium">対象日</Label>
-                    <div className="text-gray-700">
-                      {formatDate(selectedDetailRequest.target_date)}
-                    </div>
-                  </div>
+                  {/* 対象日は非表示 */}
                   <div>
                     <Label className="font-medium">ステータス</Label>
                     <div className="text-gray-700">
