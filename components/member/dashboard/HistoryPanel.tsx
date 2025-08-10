@@ -1,7 +1,7 @@
 'use client';
 
 import React, { memo } from 'react';
-import ClockHistory from '@/components/member/ClockHistory';
+import ClockHistory from '@/components/member/dashboard/ClockHistory';
 import type { AttendanceData } from '@/schemas/attendance';
 
 interface HistoryPanelProps {
