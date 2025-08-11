@@ -863,6 +863,15 @@ export async function approveRequest(
       };
     }
 
+    // デバッグログ: リクエスト情報
+    console.log('approveRequest リクエスト情報:', {
+      requestId,
+      target_date: request.target_date,
+      form_data: request.form_data,
+      form_data_keys: request.form_data ? Object.keys(request.form_data) : [],
+      work_date_in_form: request.form_data?.work_date,
+    });
+
     // 申請フォーム情報を取得
     const requestForm = request.request_forms as RequestForm;
     if (!requestForm) {
@@ -1082,11 +1091,27 @@ async function handleAttendanceObjectApproval(
 
   try {
     const supabaseAdmin = createAdminClient();
-    const formData = request.form_data;
+    // Create a mutable copy of form_data to potentially add work_date for validation
+    const mutableFormData = { ...request.form_data };
+
+    // デバッグログを追加
+    console.log('handleAttendanceObjectApproval デバッグ:', {
+      formData: mutableFormData,
+      work_date_from_form: mutableFormData?.work_date,
+      target_date_from_request: request.target_date,
+      formData_keys: mutableFormData ? Object.keys(mutableFormData) : [],
+    });
+
+    // Determine workDate and ensure it's in mutableFormData for validation
+    let workDate = mutableFormData?.work_date;
+    if (!workDate && request.target_date) {
+      workDate = request.target_date;
+      mutableFormData.work_date = workDate; // Add work_date to the mutable copy
+    }
 
     // バリデーション
     if (metadata.validation_rules) {
-      const validationResult = validateAttendanceObject(formData, metadata.validation_rules);
+      const validationResult = validateAttendanceObject(mutableFormData, metadata.validation_rules);
       if (!validationResult.isValid) {
         return {
           success: false,
@@ -1097,7 +1122,22 @@ async function handleAttendanceObjectApproval(
     }
 
     // 既存のattendanceレコードを検索
-    const workDate = formData.work_date;
+    // 対象日（target_date）を勤務日（work_date）として使用
+
+    console.log('workDate 設定結果:', {
+      workDate,
+      formData_work_date: mutableFormData?.work_date,
+      request_target_date: request.target_date,
+      final_work_date: workDate,
+    });
+
+    if (!workDate) {
+      return {
+        success: false,
+        message: '勤務日が設定されていません',
+        error: '対象日または勤務日が必須です',
+      };
+    }
     const userId = request.user_id;
 
     const { data: existingAttendance, error: searchError } = await supabaseAdmin
@@ -1119,7 +1159,7 @@ async function handleAttendanceObjectApproval(
     }
 
     // 申請側のclock_recordsを抽出・正規化（attendance_correction または clock_records）
-    const rootForm = formData as Record<string, unknown>;
+    const rootForm = mutableFormData as Record<string, unknown>;
     const rawCandidate: unknown = Array.isArray(rootForm.clock_records)
       ? (rootForm.clock_records as unknown)
       : Array.isArray(rootForm.attendance_correction)
@@ -1323,11 +1363,13 @@ async function handleAttendanceObjectApproval(
 
     // 勤務時間の自動計算（clock_recordsが更新された場合）
     if (
-      formData.clock_records &&
-      Array.isArray(formData.clock_records) &&
-      formData.clock_records.length > 0
+      mutableFormData.clock_records &&
+      Array.isArray(mutableFormData.clock_records) &&
+      mutableFormData.clock_records.length > 0
     ) {
-      const last = formData.clock_records[formData.clock_records.length - 1] as unknown;
+      const last = mutableFormData.clock_records[
+        mutableFormData.clock_records.length - 1
+      ] as unknown;
       const latestSession = (last || {}) as ClockRecord;
       if (latestSession.in_time && latestSession.out_time) {
         const { actualWorkMinutes, overtimeMinutes } = await calculateWorkTime(
