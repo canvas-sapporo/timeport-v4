@@ -526,7 +526,12 @@ export async function updateUserProfile(
       .single();
 
     // 更新データを準備
-    const updateData: any = {};
+    const updateData: Partial<
+      Pick<
+        UserProfile,
+        'family_name' | 'first_name' | 'family_name_kana' | 'first_name_kana' | 'phone'
+      >
+    > = {};
     if (profileData.family_name !== undefined) updateData.family_name = profileData.family_name;
     if (profileData.first_name !== undefined) updateData.first_name = profileData.first_name;
     if (profileData.family_name_kana !== undefined)

@@ -39,14 +39,14 @@ const buttonConfig = {
   },
 };
 
-export function StandardButton({
+export const StandardButton = ({
   buttonType,
   className,
   disabled = false,
   variant,
   children,
   ...props
-}: StandardButtonProps) {
+}: StandardButtonProps) => {
   const config = buttonConfig[buttonType];
 
   return (
@@ -66,4 +66,4 @@ export function StandardButton({
       {children}
     </Button>
   );
-}
+};

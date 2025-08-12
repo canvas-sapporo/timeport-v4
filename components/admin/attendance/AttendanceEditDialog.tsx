@@ -39,7 +39,7 @@ import {
   getWorkTypes,
   getAttendanceEditHistory,
 } from '@/lib/actions/attendance';
-import { getAttendanceSettingValue } from '@/lib/actions/settings';
+import { getClockRecordEditSetting } from '@/lib/actions/settings';
 import {
   formatDate,
   formatTime,
@@ -175,13 +175,8 @@ export default function AttendanceEditDialog({
 
   const fetchClockEditSetting = async () => {
     try {
-      // ユーザーから企業IDを取得
-      if (user?.company_id) {
-        const settingValue = await getAttendanceSettingValue(user.company_id, 'clock_record_edit');
-        setClockEditEnabled((settingValue as any)?.enabled || false);
-      } else {
-        setClockEditEnabled(false);
-      }
+      const enabled = await getClockRecordEditSetting(user?.company_id);
+      setClockEditEnabled(enabled);
     } catch (err) {
       console.error('打刻編集設定取得エラー:', err);
       setClockEditEnabled(false);

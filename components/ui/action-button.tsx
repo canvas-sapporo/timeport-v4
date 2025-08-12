@@ -52,13 +52,13 @@ const actionConfig = {
   },
 };
 
-export function ActionButton({
+export const ActionButton = ({
   action,
   disabled = false,
   className,
   children,
   ...props
-}: ActionButtonProps) {
+}: ActionButtonProps) => {
   const config = actionConfig[action];
   const IconComponent = config.icon;
 
@@ -73,4 +73,4 @@ export function ActionButton({
       {children || <IconComponent className="w-4 h-4" />}
     </Button>
   );
-}
+};

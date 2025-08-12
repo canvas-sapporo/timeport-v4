@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Clock, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { Clock, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useData } from '@/contexts/data-context';
@@ -42,23 +42,37 @@ export default function AdminDashboard() {
   const [showSimpleChart, setShowSimpleChart] = useState(false);
   const [showChatChart, setShowChatChart] = useState(false);
 
-  async function checkWorkTypes() {
-    if (!user?.company_id) return;
-    try {
-      const result = await getWorkTypes(user.company_id, { page: 1, limit: 1 });
-      if (result.success && result.data.work_types.length === 0) {
-        toast({
-          title: '勤務形態が未設定です',
-          description: '勤務形態を設定してください。設定画面から勤務形態を追加できます。',
-          variant: 'destructive',
-        });
-      }
-      setHasCheckedWorkTypes(true);
-    } catch (error) {
-      console.error('勤務形態確認エラー:', error);
-      setHasCheckedWorkTypes(true);
-    }
+  // グラフ用データ型と状態をフックのトップレベルで宣言（早期returnより前）
+  interface ChartDataItem {
+    date: string;
+    workHours: number;
+    overtimeHours: number;
+    completedTodos: number;
+    pendingTodos: number;
   }
+  interface ChatChartDataItem {
+    date: string;
+    workHours: number;
+    overtimeHours: number;
+    chatMessages: number;
+  }
+
+  const [graphData, setGraphData] = useState<ChartDataItem[]>([]);
+  const [chatGraphData, setChatGraphData] = useState<ChatChartDataItem[]>([]);
+
+  useEffect(() => {
+    const data = generateWorkHoursGraphData(selectedPeriod) as ChartDataItem[];
+    setGraphData(data);
+    console.log('Generated graph data:', data.length, 'records');
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    const data = generateWorkHoursWithChatData(selectedPeriod) as ChatChartDataItem[];
+    setChatGraphData(data);
+    console.log('Generated chat graph data:', data.length, 'records');
+  }, [selectedPeriod]);
+
+  // 勤務形態の確認は useEffect 内で定義して実行（依存関係の安定化）
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -68,9 +82,24 @@ export default function AdminDashboard() {
 
     // 勤務形態の確認（一度だけ実行）
     if (user?.company_id && !hasCheckedWorkTypes) {
-      checkWorkTypes();
+      (async () => {
+        try {
+          const result = await getWorkTypes(user.company_id as string, { page: 1, limit: 1 });
+          if (result.success && result.data.work_types.length === 0) {
+            toast({
+              title: '勤務形態が未設定です',
+              description: '勤務形態を設定してください。設定画面から勤務形態を追加できます。',
+              variant: 'destructive',
+            });
+          }
+          setHasCheckedWorkTypes(true);
+        } catch (error) {
+          console.error('勤務形態確認エラー:', error);
+          setHasCheckedWorkTypes(true);
+        }
+      })();
     }
-  }, [user, router, hasCheckedWorkTypes, toast, checkWorkTypes]);
+  }, [user, router, hasCheckedWorkTypes, toast]);
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -101,25 +130,9 @@ export default function AdminDashboard() {
 
   const recentRequests = requests.slice(0, 5);
 
-  // データ生成を確実にするためにuseEffectを使用
-  const [graphData, setGraphData] = useState<any[]>([]);
-  const [chatGraphData, setChatGraphData] = useState<any[]>([]);
-
-  useEffect(() => {
-    const data = generateWorkHoursGraphData(selectedPeriod);
-    setGraphData(data);
-    console.log('Generated graph data:', data.length, 'records');
-  }, [selectedPeriod]);
-
-  useEffect(() => {
-    const data = generateWorkHoursWithChatData(selectedPeriod);
-    setChatGraphData(data);
-    console.log('Generated chat graph data:', data.length, 'records');
-  }, [selectedPeriod]);
-
-  const handlePeriodChange = (period: string) => {
+  function handlePeriodChange(period: string) {
     setSelectedPeriod(period);
-  };
+  }
 
   return (
     <div className="space-y-6">
