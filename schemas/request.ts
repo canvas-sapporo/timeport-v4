@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LeaveUnitSchema } from './leave';
 
 // ================================
 // 申請関連スキーマ
@@ -302,7 +303,7 @@ export const ObjectValidationRuleSchema = z.object({
 /**
  * オブジェクトメタデータスキーマ
  */
-export const ObjectMetadataSchema = z.object({
+export const AttendanceObjectMetadataSchema = z.object({
   object_type: z.literal('attendance'),
   editable_fields: z.array(z.string()),
   required_fields: z.array(z.string()),
@@ -320,6 +321,25 @@ export const ObjectMetadataSchema = z.object({
     )
     .optional(),
 });
+
+export const LeaveObjectMetadataSchema = z.object({
+  object_type: z.literal('leave'),
+  leave_type_id: z.string().uuid(),
+  allowed_units: z.array(LeaveUnitSchema).nonempty(),
+  min_booking_unit_minutes: z.number().int().min(1).max(480),
+  rounding_minutes: z.number().int().min(1).max(240),
+  half_day_mode: z.enum(['fixed_hours', 'am_pm']).default('fixed_hours'),
+  allow_multi_day: z.boolean().default(true),
+  // UI専用フラグ
+  require_reason: z.boolean().default(false),
+  require_attachment: z.boolean().default(false),
+  show_balance: z.boolean().default(true),
+});
+
+export const ObjectMetadataSchema = z.union([
+  AttendanceObjectMetadataSchema,
+  LeaveObjectMetadataSchema,
+]);
 
 /**
  * 条件表示ロジックスキーマ
@@ -536,6 +556,8 @@ export type FormFieldType = z.infer<typeof FormFieldTypeSchema>;
 export type ValidationRule = z.infer<typeof ValidationRuleSchema>;
 export type ObjectValidationRule = z.infer<typeof ObjectValidationRuleSchema>;
 export type ObjectMetadata = z.infer<typeof ObjectMetadataSchema>;
+export type LeaveObjectMetadata = z.infer<typeof LeaveObjectMetadataSchema>;
+export type AttendanceObjectMetadata = z.infer<typeof AttendanceObjectMetadataSchema>;
 export type ConditionalLogic = z.infer<typeof ConditionalLogicSchema>;
 export type CalculationConfig = z.infer<typeof CalculationConfigSchema>;
 export type FormFieldConfig = z.infer<typeof FormFieldConfigSchema>;
