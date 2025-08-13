@@ -20,6 +20,11 @@ import type {
   FormFieldConfig,
 } from '@/schemas/request';
 import type { ClockBreakRecord, ClockRecord } from '@/schemas/attendance';
+import {
+  holdConsumptionsForRequest,
+  finalizeConsumptionsOnApprove,
+  releaseConsumptionsForRequest,
+} from '@/lib/actions/leave-ledger';
 
 // ユーティリティ: metadataがObjectMetadataかどうか
 function isObjectMetadata(m: unknown): m is ObjectMetadata {
@@ -345,6 +350,21 @@ export async function createRequest(
 
     // キャッシュを再検証
     revalidatePath('/member/requests');
+
+    // 休暇台帳: 申請直後にステータスが pending の場合は仮押さえを作成
+    try {
+      if (statusCode === 'pending') {
+        await holdConsumptionsForRequest({ requestId: data.id, currentUserId: currentUserId || requestData.user_id });
+      }
+    } catch (e) {
+      await logSystem('error', '有給仮押さえ作成エラー(createRequest)', {
+        feature_name: 'leave_management',
+        action_type: 'hold_on_apply',
+        user_id: currentUserId,
+        resource_id: data.id,
+        error_message: e instanceof Error ? e.message : 'Unknown error',
+      });
+    }
 
     return {
       success: true,
@@ -776,6 +796,26 @@ export async function updateRequestStatus(
       }
     }
 
+    // 休暇台帳: ステータス遷移に応じた台帳操作
+    try {
+      if (newStatusCode === 'pending') {
+        await holdConsumptionsForRequest({ requestId, currentUserId: currentUserId || currentRequest.user_id });
+      } else if (newStatusCode === 'approved') {
+        await finalizeConsumptionsOnApprove({ requestId, approverId: currentUserId || currentRequest.user_id });
+      } else if (newStatusCode === 'rejected' || newStatusCode === 'withdrawn') {
+        await releaseConsumptionsForRequest({ requestId, currentUserId: currentUserId || currentRequest.user_id });
+      }
+    } catch (e) {
+      await logSystem('error', '休暇台帳連携エラー(updateRequestStatus)', {
+        feature_name: 'leave_management',
+        action_type: 'ledger_sync',
+        user_id: currentUserId,
+        resource_id: requestId,
+        error_message: e instanceof Error ? e.message : 'Unknown error',
+        metadata: { new_status_code: newStatusCode },
+      });
+    }
+
     revalidatePath('/member/requests');
 
     return {
@@ -988,6 +1028,19 @@ export async function approveRequest(
         object_type: requestForm.object_config?.object_type || null,
       },
     });
+
+    // 休暇台帳: 承認時の確定
+    try {
+      await finalizeConsumptionsOnApprove({ requestId, approverId });
+    } catch (e) {
+      await logSystem('error', '休暇台帳確定エラー(approveRequest)', {
+        feature_name: 'leave_management',
+        action_type: 'finalize_on_approve',
+        user_id: approverId,
+        resource_id: requestId,
+        error_message: e instanceof Error ? e.message : 'Unknown error',
+      });
+    }
 
     // 監査ログを記録
     const clientInfo = await getClientInfo();
