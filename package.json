@@ -80,6 +80,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@types/node": "20.6.2",
     "@types/web-push": "^3.6.4",
     "@typescript-eslint/eslint-plugin": "^8.36.0",
