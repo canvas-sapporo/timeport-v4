@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { getAdminSupabase } from '@/lib/leave/supabase-admin';
+import { createClient } from '@supabase/supabase-js';
 import { allocateLeave } from './allocate';
 import { confirmLeave } from './confirm';
 import { releaseLeave } from './release';
@@ -64,6 +65,43 @@ export async function submitLeaveRequest(input: z.infer<typeof SubmitInput>) {
   }));
   const { error: detErr } = await sb.from('leave_request_details').insert(detailRows);
   if (detErr) throw detErr;
+
+  // [A] ポリシー取得（会社解決のうえ leave_type_id に紐づくもの）
+  const sbAnon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  const { data: vc } = await sbAnon.from('v_user_companies').select('company_id').eq('user_id', p.userId).single();
+  const companyId = (vc as any)?.company_id as string | undefined;
+  if (!companyId) throw new Error('company could not be resolved for the user');
+
+  const { data: policy } = await sbAnon
+    .from('leave_policies')
+    .select('business_day_only, blackout_dates, company_id')
+    .eq('leave_type_id', p.leaveTypeId)
+    .eq('company_id', companyId)
+    .single();
+
+  // [B] 会社カレンダから営業日判定（DB関数）
+  if ((policy as any)?.business_day_only) {
+    for (const d of p.details) {
+      const dateStr = new Date(d.startAt).toISOString().slice(0,10);
+      const { data: okDay, error: dayErr } = await sb.rpc('fn_is_business_day', { p_company_id: companyId, p_date: dateStr });
+      if (dayErr) throw dayErr;
+      if (!okDay) {
+        throw new Error(`非営業日またはブラックアウト日のため申請できません: ${dateStr}`);
+      }
+    }
+  }
+
+  // [C] 旧ポリシーの blackout_dates（配列）もチェック
+  const blackoutDates = (policy as any)?.blackout_dates as string[] | undefined;
+  if (blackoutDates?.length) {
+    const blackSet = new Set<string>(blackoutDates);
+    for (const d of p.details) {
+      const dateStr = new Date(d.startAt).toISOString().slice(0,10);
+      if (blackSet.has(dateStr)) {
+        throw new Error(`ブラックアウト日に申請されています: ${dateStr}`);
+      }
+    }
+  }
 
   await allocateLeave({
     userId: p.userId,
