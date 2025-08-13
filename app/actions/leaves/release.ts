@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { getAdminSupabase } from '@/lib/leave/supabase-admin';
+import { writeAudit } from '@/lib/audit';
 
 const ReleaseInput = z.object({
   requestId: z.string().uuid(),
@@ -16,6 +17,11 @@ export async function releaseLeave(input: { requestId: string; mode?: 'reject_ho
   if (parsed.mode === 'reject_hold') {
     const { error } = await supabase.rpc('fn_release_leave', { p_request_id: parsed.requestId });
     if (error) throw new Error(`releaseLeave (hold) failed: ${error.message}`);
+    await writeAudit({
+      action: 'leave_release_hold',
+      targetType: 'leave_consumptions',
+      details: { requestId: parsed.requestId },
+    });
     return { ok: true, mode: parsed.mode } as const;
   }
 
@@ -24,6 +30,11 @@ export async function releaseLeave(input: { requestId: string; mode?: 'reject_ho
     p_reason: parsed.reason ?? 'reverse',
   });
   if (error) throw new Error(`releaseLeave (reverse) failed: ${error.message}`);
+  await writeAudit({
+    action: 'leave_reverse_confirmed',
+    targetType: 'leave_consumptions',
+    details: { requestId: parsed.requestId },
+  });
   return { ok: true, mode: parsed.mode, reversed: data } as const;
 }
 

@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { getAdminSupabase } from '@/lib/leave/supabase-admin';
 import { LeaveRequestDetailInput } from '@/schemas/leave';
+import { writeAudit } from '@/lib/audit';
 
 // 入力：UI側でdetailsを用意（unit: day/half/hour, quantityはUI入力）
 // needsはこの関数内で「日付ごとの合計時間(h)」に正規化します。
@@ -72,6 +73,12 @@ export async function allocateLeave(input: AllocateInputType) {
   if (error) {
     throw new Error(`allocateLeave failed: ${error.message}`);
   }
+  await writeAudit({
+    userId,
+    action: parsed.mode === 'hold' ? 'leave_allocate_hold' : 'leave_allocate_confirm',
+    targetType: 'leave_consumptions',
+    details: { requestId, rows: (data as any)?.rows ?? [] },
+  });
   return data as unknown;
 }
 

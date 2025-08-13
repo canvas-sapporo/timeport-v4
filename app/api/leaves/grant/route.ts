@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSupabase } from '@/lib/leave/supabase-admin';
+import { writeAudit } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret');
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  await writeAudit({
+    action: 'grant_issue_job',
+    targetType: 'leave_grants',
+    details: { result: data },
+  });
   return NextResponse.json({ ok: true, result: data });
 }
 
