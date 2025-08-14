@@ -2,11 +2,11 @@
  * 申請種別関連のユーティリティ関数
  */
 
-import type { FormFieldConfig, ApprovalStep, ObjectMetadata } from '@/schemas/request';
-import type { ClockRecord, ClockBreakRecord } from '@/schemas/attendance';
+import type { FormFieldConfig, ApprovalStep } from '@/schemas/request';
+// import type { ClockRecord } from '@/schemas/attendance';
 import { getJSTDate } from '@/lib/utils';
 
-import { createDefaultClockRecord, createDefaultBreakRecord } from './attendance-validation';
+// import { createDefaultClockRecord } from './attendance-validation';
 
 // ================================
 // フォーム設定関連
@@ -330,58 +330,39 @@ export function getAttendanceObjectFields(): Record<
   };
 }
 
-function createAttendanceObjectMetadata(): ObjectMetadata {
-  return {
-    object_type: 'attendance',
-    editable_fields: ['work_date', 'clock_records'],
-    required_fields: ['work_date'],
-    excluded_fields: [
-      'id',
-      'created_at',
-      'updated_at',
-      'deleted_at',
-      'user_id',
-      'work_type_id',
-      'actual_work_minutes',
-      'overtime_minutes',
-      'description',
-      'approved_by',
-      'approved_at',
-      'source_id',
-      'edit_reason',
-      'edited_by',
-    ],
-    validation_rules: [
-      {
-        type: 'date_past_only',
-        message: '過去の日付のみ入力可能です',
-      },
-      {
-        type: 'clock_records_valid',
-        message: '打刻記録の形式が正しくありません',
-      },
-      {
-        type: 'required_field',
-        target_field: 'work_date',
-        message: '勤務日は必須です',
-      },
-    ],
-    field_settings: getAttendanceObjectFields(),
-  };
-}
+// 予備: attendance用メタデータ生成（未使用）
+// 削除: 未使用のcreateAttendanceObjectMetadata
 
-function generateObjectTypeFormConfig(
-  objectType: string,
-  editableFields: string[] = []
-): FormFieldConfig[] {
-  switch (objectType) {
-    case 'attendance':
-      return generateAttendanceFormConfig(editableFields);
-    default:
-      return [];
-  }
-}
+// 予備: オブジェクトタイプに応じたフォーム生成（現在未使用）
+// function generateObjectTypeFormConfig(
+//   objectType: string,
+//   editableFields: string[] = []
+// ): FormFieldConfig[] {
+//   switch (objectType) {
+//     case 'attendance':
+//       return generateAttendanceFormConfig(editableFields);
+//     case 'leave':
+//       return [
+//         {
+//           id: 'leave_details',
+//           name: 'leave_details',
+//           type: 'object',
+//           label: '休暇明細',
+//           description: '取得日・単位・時間を入力',
+//           required: true,
+//           validation_rules: [{ type: 'required', message: '休暇明細は必須です' }],
+//           order: 1,
+//           width: 'full',
+//         },
+//       ];
+//     default:
+//       return [];
+//   }
+// }
 
+// 予備: attendance用フォーム生成（未使用）
+// 削除予定: 未使用のgenerateAttendanceFormConfig（今後Attendance専用UIで再利用可）
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function generateAttendanceFormConfig(editableFields: string[]): FormFieldConfig[] {
   const fields: FormFieldConfig[] = [];
   const fieldSettings = getAttendanceObjectFields();
@@ -437,6 +418,10 @@ export function getObjectTypeDefaults(objectType: string) {
           breaks: [],
         },
       };
+    case 'leave':
+      return {
+        leave_details: [],
+      };
     default:
       return {};
   }
@@ -448,6 +433,11 @@ export function getObjectTypeOptions() {
       value: 'attendance',
       label: '勤怠修正',
       description: '出退勤時刻の修正申請',
+    },
+    {
+      value: 'leave',
+      label: '休暇申請（台帳連携）',
+      description: '有給/特別/欠勤などの申請（残高・ポリシー連携）',
     },
   ];
 }

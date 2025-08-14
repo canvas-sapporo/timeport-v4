@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { FileText, Plus, Eye, Send, Edit, Trash2 } from 'lucide-react';
 
@@ -51,6 +52,10 @@ export default function MemberRequestsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequestType, setSelectedRequestType] = useState<string>('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [balanceMinutes, setBalanceMinutes] = useState<number | null>(null);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
+  const [leaveUnit, setLeaveUnit] = useState<'' | 'day' | 'half' | 'hour'>('');
+  const [leaveHours, setLeaveHours] = useState<number>(4);
 
   // 申請種別が選択された時にwork_dateフィールドを初期化
   useEffect(() => {
@@ -268,6 +273,44 @@ export default function MemberRequestsPage() {
       }
     });
     console.log('handleCreateRequest: クリーンアップ後のフォームデータ:', cleanedFormData);
+
+    // 休暇フォームのUI必須制御
+    const oc = (
+      requestForm as unknown as {
+        object_config?: {
+          object_type?: string;
+          require_reason?: boolean;
+          require_attachment?: boolean;
+        };
+      }
+    ).object_config;
+    if (oc && oc.object_type === 'leave') {
+      if (oc.require_reason) {
+        const reason = (cleanedFormData.reason as string | undefined) || '';
+        if (!reason.trim()) {
+          toast({ title: '入力エラー', description: '理由は必須です。', variant: 'destructive' });
+          return;
+        }
+      }
+      if (oc.require_attachment) {
+        const atts = (cleanedFormData.attachments as unknown[] | undefined) || [];
+        if (!Array.isArray(atts) || atts.length === 0) {
+          toast({
+            title: '入力エラー',
+            description: '添付ファイルが必須です。',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+      // 休暇フォームの単位/時間を同梱
+      if (leaveUnit) {
+        cleanedFormData.leave_unit = leaveUnit;
+      }
+      if (leaveUnit === 'hour' && typeof leaveHours === 'number') {
+        cleanedFormData.leave_hours = leaveHours;
+      }
+    }
     try {
       const newRequest = await createRequest({
         user_id: user.id,
@@ -733,6 +776,60 @@ export default function MemberRequestsPage() {
 
   const selectedType = requestForms.find((rf) => rf.id === selectedRequestType);
 
+  // 残高プレビュー（show_balance=true時）
+  useEffect(() => {
+    async function fetchBalance() {
+      try {
+        setIsBalanceLoading(true);
+        setBalanceMinutes(null);
+        if (!user || !selectedType) return;
+        const oc = (
+          selectedType as unknown as {
+            object_config?: {
+              object_type?: string;
+              show_balance?: boolean;
+              leave_type_id?: string;
+            };
+          }
+        ).object_config;
+        if (!oc || oc.object_type !== 'leave' || !oc.show_balance || !oc.leave_type_id) return;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        const { data } = await supabase
+          .from('v_leave_balances')
+          .select('balance_minutes')
+          .eq('user_id', user.id)
+          .eq('leave_type_id', oc.leave_type_id)
+          .maybeSingle();
+        setBalanceMinutes((data as { balance_minutes?: number } | null)?.balance_minutes ?? 0);
+      } catch {
+        setBalanceMinutes(null);
+      } finally {
+        setIsBalanceLoading(false);
+      }
+    }
+    fetchBalance();
+  }, [user, selectedType]);
+
+  // 休暇フォームの単位初期化
+  useEffect(() => {
+    const oc = (
+      selectedType as unknown as {
+        object_config?: { object_type?: string; allowed_units?: string[] };
+      }
+    )?.object_config;
+    if (oc && oc.object_type === 'leave') {
+      const au = Array.isArray(oc.allowed_units) ? oc.allowed_units : [];
+      const first = (au[0] as 'day' | 'half' | 'hour' | undefined) || 'day';
+      setLeaveUnit(first);
+      setLeaveHours(4);
+    } else {
+      setLeaveUnit('');
+      setLeaveHours(4);
+    }
+  }, [selectedType]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -774,6 +871,81 @@ export default function MemberRequestsPage() {
               {selectedType && (
                 <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50/30">
                   <h3 className="font-medium text-blue-800 mb-4">{selectedType.name}</h3>
+                  {(() => {
+                    const oc = (
+                      selectedType as unknown as {
+                        object_config?: { object_type?: string; show_balance?: boolean };
+                      }
+                    ).object_config;
+                    if (oc && oc.object_type === 'leave' && oc.show_balance) {
+                      return (
+                        <div className="mb-4 p-3 rounded-md bg-white border border-blue-100">
+                          <p className="text-sm text-blue-800">
+                            現在の残高:{' '}
+                            {isBalanceLoading
+                              ? '読み込み中…'
+                              : balanceMinutes !== null
+                                ? `${balanceMinutes} 分（約 ${(balanceMinutes / 60).toFixed(1)} 時間 / ${(balanceMinutes / 480).toFixed(1)} 日）`
+                                : '-'}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  {(() => {
+                    const oc = (
+                      selectedType as unknown as {
+                        object_config?: {
+                          object_type?: string;
+                          allowed_units?: string[];
+                          half_day_mode?: string;
+                        };
+                      }
+                    ).object_config;
+                    if (!oc || oc.object_type !== 'leave') return null;
+                    const allowedUnits = (oc.allowed_units || []) as Array<'day' | 'half' | 'hour'>;
+                    return (
+                      <div className="mb-4 p-3 rounded-md bg-white border border-blue-100">
+                        <div className="grid grid-cols-2 gap-4 items-end">
+                          <div>
+                            <Label>取得単位</Label>
+                            <Select
+                              value={leaveUnit}
+                              onValueChange={(v) => setLeaveUnit(v as 'day' | 'half' | 'hour')}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="単位を選択" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {allowedUnits.includes('day') && (
+                                  <SelectItem value="day">日</SelectItem>
+                                )}
+                                {allowedUnits.includes('half') && (
+                                  <SelectItem value="half">半日</SelectItem>
+                                )}
+                                {allowedUnits.includes('hour') && (
+                                  <SelectItem value="hour">時間</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {leaveUnit === 'hour' && (
+                            <div>
+                              <Label>時間数（h）</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={leaveHours}
+                                onChange={(e) => setLeaveHours(Number(e.target.value || 0))}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="space-y-4">
                     {selectedType.form_config
                       .sort((a: { order: number }, b: { order: number }) => a.order - b.order)

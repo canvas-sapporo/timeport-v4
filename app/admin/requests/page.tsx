@@ -119,6 +119,88 @@ export default function AdminRequestsPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedDetailRequest, setSelectedDetailRequest] = useState<AdminRequestData | null>(null);
 
+  function LeaveDetailsView({ requestId }: { requestId: string }) {
+    const [rows, setRows] = useState<Array<{
+      start_at: string;
+      end_at: string;
+      quantity_minutes: number;
+      unit: string;
+    }> | null>(null);
+    useEffect(() => {
+      async function load() {
+        try {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+          const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+          const { createClient } = await import('@supabase/supabase-js');
+          const sb = createClient(supabaseUrl, supabaseAnonKey);
+          const { data } = await sb
+            .from('leave_request_details')
+            .select('start_at, end_at, quantity_minutes, unit')
+            .eq('request_id', requestId)
+            .is('deleted_at', null)
+            .order('start_at', { ascending: true });
+          setRows(
+            (data as Array<{
+              start_at: string;
+              end_at: string;
+              quantity_minutes: number;
+              unit: string;
+            }>) || []
+          );
+        } catch {
+          setRows([]);
+        }
+      }
+      load();
+    }, [requestId]);
+    if (!rows || rows.length === 0)
+      return <div className="text-sm text-gray-500 mt-1">休暇明細はありません</div>;
+    return (
+      <div className="mt-2 space-y-1 text-sm text-gray-700">
+        {rows.map((r, idx) => (
+          <div key={idx} className="flex items-center justify-between">
+            <span>{new Date(r.start_at).toLocaleDateString('ja-JP')}</span>
+            <span>
+              {r.unit} / {r.quantity_minutes}分（約 {(r.quantity_minutes / 60).toFixed(1)} 時間）
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function LeaveBalanceView({ userId, leaveTypeId }: { userId: string; leaveTypeId: string }) {
+    const [balance, setBalance] = useState<number | null>(null);
+    useEffect(() => {
+      async function load() {
+        try {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+          const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+          const { createClient } = await import('@supabase/supabase-js');
+          const sb = createClient(supabaseUrl, supabaseAnonKey);
+          const { data } = await sb
+            .from('v_leave_balances')
+            .select('balance_minutes')
+            .eq('user_id', userId)
+            .eq('leave_type_id', leaveTypeId)
+            .maybeSingle();
+          setBalance((data as { balance_minutes?: number } | null)?.balance_minutes ?? 0);
+        } catch {
+          setBalance(null);
+        }
+      }
+      if (userId && leaveTypeId) load();
+    }, [userId, leaveTypeId]);
+    return (
+      <div className="text-sm text-blue-800">
+        現在の残高:{' '}
+        {balance !== null
+          ? `${balance} 分（約 ${(balance / 60).toFixed(1)} 時間 / ${(balance / 480).toFixed(1)} 日）`
+          : '-'}
+      </div>
+    );
+  }
+
   // 承認ダイアログオープン時に現在の勤怠を取得
   useEffect(() => {
     (async () => {
@@ -2543,6 +2625,29 @@ export default function AdminRequestsPage() {
                     <div className="text-gray-700">
                       {getStatusBadge(selectedDetailRequest.statuses)}
                     </div>
+                  </div>
+                  {/* 休暇明細（該当時） */}
+                  <div className="col-span-2">
+                    {(() => {
+                      const oc = (
+                        selectedDetailRequest?.request_forms as unknown as {
+                          object_config?: { object_type?: string; leave_type_id?: string };
+                        }
+                      )?.object_config;
+                      if (!oc || oc.object_type !== 'leave') return null;
+                      return (
+                        <div className="mt-3 p-3 rounded-md bg-white border">
+                          <Label className="font-medium">休暇明細</Label>
+                          <div className="mt-1 mb-2">
+                            <LeaveBalanceView
+                              userId={selectedDetailRequest.user_id}
+                              leaveTypeId={oc.leave_type_id as string}
+                            />
+                          </div>
+                          <LeaveDetailsView requestId={selectedDetailRequest.id} />
+                        </div>
+                      );
+                    })()}
                   </div>
                   {selectedDetailRequest.form_data &&
                     Object.keys(selectedDetailRequest.form_data).length > 0 && (

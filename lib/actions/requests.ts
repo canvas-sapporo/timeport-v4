@@ -25,6 +25,7 @@ import {
   finalizeConsumptionsOnApprove,
   releaseConsumptionsForRequest,
 } from '@/lib/actions/leave-ledger';
+// import { getUserCompanyId } from '@/lib/actions/user';
 
 // ユーティリティ: metadataがObjectMetadataかどうか
 function isObjectMetadata(m: unknown): m is ObjectMetadata {
@@ -348,13 +349,26 @@ export async function createRequest(
       // プッシュ通知の失敗はリクエスト作成の成功を妨げない
     }
 
-    // キャッシュを再検証
-    revalidatePath('/member/requests');
+    // 休暇申請の場合は明細を正規化して保存（台帳連携の前提）
+    try {
+      await normalizeLeaveDetailsForRequest(data.id);
+    } catch (e) {
+      await logSystem('error', '休暇明細正規化エラー(createRequest)', {
+        feature_name: 'leave_management',
+        action_type: 'normalize_details',
+        user_id: currentUserId,
+        resource_id: data.id,
+        error_message: e instanceof Error ? e.message : 'Unknown error',
+      });
+    }
 
     // 休暇台帳: 申請直後にステータスが pending の場合は仮押さえを作成
     try {
       if (statusCode === 'pending') {
-        await holdConsumptionsForRequest({ requestId: data.id, currentUserId: currentUserId || requestData.user_id });
+        await holdConsumptionsForRequest({
+          requestId: data.id,
+          currentUserId: currentUserId || requestData.user_id,
+        });
       }
     } catch (e) {
       await logSystem('error', '有給仮押さえ作成エラー(createRequest)', {
@@ -365,6 +379,9 @@ export async function createRequest(
         error_message: e instanceof Error ? e.message : 'Unknown error',
       });
     }
+
+    // キャッシュを再検証
+    revalidatePath('/member/requests');
 
     return {
       success: true,
@@ -387,6 +404,115 @@ export async function createRequest(
       message: '申請の作成に失敗しました',
       error: error instanceof Error ? error.message : '不明なエラーが発生しました',
     };
+  }
+}
+
+// ================================
+// 休暇: 明細正規化（form_data -> leave_request_details）
+// ================================
+
+async function normalizeLeaveDetailsForRequest(requestId: string): Promise<void> {
+  const supabase = createAdminClient();
+
+  // リクエスト + フォーム取得
+  const { data: req, error: reqErr } = await supabase
+    .from('requests')
+    .select('id, user_id, form_data, request_forms!requests_request_form_id_fkey(object_config)')
+    .eq('id', requestId)
+    .single();
+  if (reqErr || !req) return;
+
+  const objectConfig = (req.request_forms as { object_config?: unknown } | null)?.object_config as
+    | { object_type?: string; leave_type_id?: string; allowed_units?: string[] }
+    | undefined;
+  if (!objectConfig || objectConfig.object_type !== 'leave' || !objectConfig.leave_type_id) return;
+
+  // form_dataから期間・理由などを推測（現行暫定: start_date/end_date/reason）
+  const fd = (req.form_data || {}) as Record<string, unknown>;
+  const start = typeof fd['start_date'] === 'string' ? new Date(fd['start_date'] as string) : null;
+  const end = typeof fd['end_date'] === 'string' ? new Date(fd['end_date'] as string) : null;
+  const reason = typeof fd['reason'] === 'string' ? (fd['reason'] as string) : undefined;
+  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return;
+
+  // 日ごと分解 + allowed_unitsに応じた単位（暫定ロジック: day優先→half→hour）
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const startDayMs = new Date(start.toDateString()).getTime();
+  const endDayMs = new Date(end.toDateString()).getTime();
+  const dayCount = Math.floor((endDayMs - startDayMs) / msPerDay) + 1;
+
+  // allowed_units解釈
+  const allowedUnits = (objectConfig.allowed_units || []) as string[];
+  const requestedUnit = (fd['leave_unit'] as string | undefined) || undefined;
+  const requestedHours =
+    typeof fd['leave_hours'] === 'number' ? (fd['leave_hours'] as number) : undefined;
+  const preferDay = allowedUnits.includes('day');
+  const preferHalf = allowedUnits.includes('half') && !preferDay; // dayが無ければhalf
+  const preferHour = allowedUnits.includes('hour') && !preferDay && !preferHalf;
+
+  // 既存明細を削除
+  await supabase.from('leave_request_details').delete().eq('request_id', requestId);
+
+  const rows: Array<{
+    request_id: string;
+    leave_type_id: string;
+    start_at: string;
+    end_at: string;
+    quantity_minutes: number;
+    unit: 'day' | 'half' | 'hour';
+    reason?: string;
+  }> = [];
+
+  for (let i = 0; i < dayCount; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(d);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    if (requestedUnit === 'day' || (!requestedUnit && preferDay)) {
+      rows.push({
+        request_id: requestId,
+        leave_type_id: objectConfig.leave_type_id,
+        start_at: dayStart.toISOString(),
+        end_at: dayEnd.toISOString(),
+        quantity_minutes: 60 * 8, // 検証/ポリシー丸めで再計算
+        unit: 'day',
+        reason,
+      });
+      continue;
+    }
+
+    if (requestedUnit === 'half' || (!requestedUnit && preferHalf)) {
+      // 暫定: 常に半日×1で登録（UIからの詳細入力は後段で）
+      rows.push({
+        request_id: requestId,
+        leave_type_id: objectConfig.leave_type_id,
+        start_at: dayStart.toISOString(),
+        end_at: dayEnd.toISOString(),
+        quantity_minutes: 60 * 4,
+        unit: 'half',
+        reason,
+      });
+      continue;
+    }
+
+    // hour指定 or hourのみ許可の場合は時間で登録（指定が無ければ暫定4時間）
+    const useHour = requestedUnit === 'hour' || preferHour;
+    const qty = useHour ? Math.max(60, Math.min(60 * 12, (requestedHours || 4) * 60)) : 60 * 8;
+    rows.push({
+      request_id: requestId,
+      leave_type_id: objectConfig.leave_type_id,
+      start_at: dayStart.toISOString(),
+      end_at: dayEnd.toISOString(),
+      quantity_minutes: qty,
+      unit: useHour ? 'hour' : 'day',
+      reason,
+    });
+  }
+
+  if (rows.length > 0) {
+    await supabase.from('leave_request_details').insert(rows);
   }
 }
 
@@ -799,11 +925,20 @@ export async function updateRequestStatus(
     // 休暇台帳: ステータス遷移に応じた台帳操作
     try {
       if (newStatusCode === 'pending') {
-        await holdConsumptionsForRequest({ requestId, currentUserId: currentUserId || currentRequest.user_id });
+        await holdConsumptionsForRequest({
+          requestId,
+          currentUserId: currentUserId || currentRequest.user_id,
+        });
       } else if (newStatusCode === 'approved') {
-        await finalizeConsumptionsOnApprove({ requestId, approverId: currentUserId || currentRequest.user_id });
+        await finalizeConsumptionsOnApprove({
+          requestId,
+          approverId: currentUserId || currentRequest.user_id,
+        });
       } else if (newStatusCode === 'rejected' || newStatusCode === 'withdrawn') {
-        await releaseConsumptionsForRequest({ requestId, currentUserId: currentUserId || currentRequest.user_id });
+        await releaseConsumptionsForRequest({
+          requestId,
+          currentUserId: currentUserId || currentRequest.user_id,
+        });
       }
     } catch (e) {
       await logSystem('error', '休暇台帳連携エラー(updateRequestStatus)', {
@@ -1163,8 +1298,10 @@ async function handleAttendanceObjectApproval(
     }
 
     // バリデーション
-    if (metadata.validation_rules) {
-      const validationResult = validateAttendanceObject(mutableFormData, metadata.validation_rules);
+    if ((metadata as unknown as { validation_rules?: unknown }).validation_rules) {
+      const rules = (metadata as unknown as { validation_rules: unknown })
+        .validation_rules as Parameters<typeof validateAttendanceObject>[1];
+      const validationResult = validateAttendanceObject(mutableFormData, rules);
       if (!validationResult.isValid) {
         return {
           success: false,
