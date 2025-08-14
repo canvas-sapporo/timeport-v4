@@ -44,6 +44,8 @@ import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ClockRecordsInput from '@/components/forms/ClockRecordsInput';
 import { RequestEditDialog } from '@/components/member/request/RequestEditDialog';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
 export default function MemberRequestsPage() {
   const { user } = useAuth();
@@ -56,6 +58,16 @@ export default function MemberRequestsPage() {
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const [leaveUnit, setLeaveUnit] = useState<'' | 'day' | 'half' | 'hour'>('');
   const [leaveHours, setLeaveHours] = useState<number>(4);
+  const [halfDaySlot, setHalfDaySlot] = useState<'' | 'am' | 'pm'>('');
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [leavePolicy, setLeavePolicy] = useState<{
+    business_day_only?: boolean;
+    blackout_dates?: string[];
+  } | null>(null);
+  const [calendarCache, setCalendarCache] = useState<
+    Record<string, { day_type: string | null; is_blackout: boolean | null }>
+  >({});
+  const [dateHints, setDateHints] = useState<Record<string, string>>({});
 
   // 申請種別が選択された時にwork_dateフィールドを初期化
   useEffect(() => {
@@ -303,12 +315,64 @@ export default function MemberRequestsPage() {
           return;
         }
       }
+      // 期間内のブロック日チェック
+      const sd = String(cleanedFormData.start_date || '');
+      const ed = String(cleanedFormData.end_date || sd);
+      if (sd) {
+        const start = new Date(sd);
+        const end = new Date(ed);
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+          for (
+            let d = new Date(start.getTime());
+            d.getTime() <= end.getTime();
+            d.setDate(d.getDate() + 1)
+          ) {
+            const ds = getJSTDate(d);
+            // eslint-disable-next-line no-await-in-loop
+            const { blocked, reason } = await isDateBlocked(ds);
+            if (blocked) {
+              toast({
+                title: '取得不可日を含みます',
+                description: `${ds}: ${reason || '取得不可日'}`,
+                variant: 'destructive',
+              });
+              return;
+            }
+          }
+        }
+      }
       // 休暇フォームの単位/時間を同梱
       if (leaveUnit) {
         cleanedFormData.leave_unit = leaveUnit;
       }
       if (leaveUnit === 'hour' && typeof leaveHours === 'number') {
+        // 最小単位チェック（object_config.min_booking_unit_minutesに準拠）
+        const minMinutes = ((
+          requestForm as unknown as {
+            object_config?: { min_booking_unit_minutes?: number };
+          }
+        ).object_config?.min_booking_unit_minutes || 60) as number;
+        const requestedMinutes = leaveHours * 60;
+        if (requestedMinutes % minMinutes !== 0) {
+          toast({
+            title: '入力エラー',
+            description: `時間休は${Math.round(minMinutes / 60)}時間単位で入力してください。`,
+            variant: 'destructive',
+          });
+          return;
+        }
         cleanedFormData.leave_hours = leaveHours;
+      }
+      if (leaveUnit === 'half') {
+        if (!halfDaySlot) {
+          toast({
+            title: '入力エラー',
+            description: '半休のAM/PMを選択してください。',
+            variant: 'destructive',
+          });
+          return;
+        }
+        cleanedFormData.leave_half_slot = halfDaySlot;
       }
     }
     try {
@@ -670,12 +734,129 @@ export default function MemberRequestsPage() {
         );
       case 'date':
         return (
-          <Input
-            key={field.name}
-            type="date"
-            value={String(fieldValue)}
-            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
-          />
+          <div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  {String(fieldValue) || '日付を選択'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={fieldValue ? new Date(String(fieldValue)) : undefined}
+                  month={visibleMonth}
+                  onMonthChange={(m) => {
+                    setVisibleMonth(m);
+                    prefetchCalendarMonth(m);
+                  }}
+                  disabled={(date) => {
+                    const ds = getJSTDate(date);
+                    const info = calendarCache[ds];
+                    const policyBlocked = (
+                      (leavePolicy?.blackout_dates as unknown as string[]) || []
+                    ).includes(ds);
+                    if (policyBlocked) return true;
+                    if (info?.is_blackout) return true;
+                    if (
+                      leavePolicy?.business_day_only &&
+                      info?.day_type &&
+                      info.day_type !== 'workday'
+                    )
+                      return true;
+                    return false;
+                  }}
+                  onSelect={async (d) => {
+                    if (!d) return;
+                    const ds = getJSTDate(d);
+                    const oc = (
+                      selectedType as unknown as { object_config?: { object_type?: string } }
+                    )?.object_config;
+                    if (oc && oc.object_type === 'leave' && companyId) {
+                      const { blocked, reason } = await isDateBlocked(ds);
+                      if (blocked) {
+                        toast({
+                          title: '取得不可日',
+                          description: reason || 'この日は選択できません。',
+                          variant: 'destructive',
+                        });
+                        setDateHint(field.name, reason || 'この日は選択できません。');
+                        return;
+                      }
+                      setDateHint(field.name, '');
+                    }
+                    setFormData({ ...formData, [field.name]: ds });
+                  }}
+                  modifiers={{
+                    blocked: (date) => {
+                      const ds = getJSTDate(date);
+                      const info = calendarCache[ds];
+                      const policyBlocked = (
+                        (leavePolicy?.blackout_dates as unknown as string[]) || []
+                      ).includes(ds);
+                      if (policyBlocked) return true;
+                      if (info?.is_blackout) return true;
+                      if (
+                        leavePolicy?.business_day_only &&
+                        info?.day_type &&
+                        info.day_type !== 'workday'
+                      )
+                        return true;
+                      return false;
+                    },
+                    publicHoliday: (date) => {
+                      const ds = getJSTDate(date);
+                      const info = calendarCache[ds];
+                      return info?.day_type === 'public_holiday';
+                    },
+                    companyHoliday: (date) => {
+                      const ds = getJSTDate(date);
+                      const info = calendarCache[ds];
+                      return info?.day_type === 'company_holiday';
+                    },
+                    holiday: (date) => {
+                      const ds = getJSTDate(date);
+                      const info = calendarCache[ds];
+                      return info?.day_type === 'holiday';
+                    },
+                    workday: (date) => {
+                      const ds = getJSTDate(date);
+                      const info = calendarCache[ds];
+                      return info?.day_type === 'workday';
+                    },
+                  }}
+                  modifiersClassNames={{
+                    blocked: 'bg-red-100 text-red-800 hover:bg-red-100',
+                    publicHoliday: 'bg-rose-100 text-rose-800',
+                    companyHoliday: 'bg-amber-100 text-amber-900',
+                    holiday: 'bg-slate-200 text-slate-700',
+                    workday: '',
+                  }}
+                />
+                <div className="px-3 pb-3 pt-2 text-xs text-gray-700 space-y-1">
+                  <div className="flex flex-wrap gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-3 w-3 rounded-sm bg-slate-200 border border-slate-300" />
+                      <span>休日</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-3 w-3 rounded-sm bg-rose-100 border border-rose-200" />
+                      <span>祝日</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-3 w-3 rounded-sm bg-amber-100 border border-amber-200" />
+                      <span>会社休日</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-3 w-3 rounded-sm bg-red-100 border border-red-200" />
+                      <span>取得不可日</span>
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            {renderDateHint(field.name)}
+          </div>
         );
       case 'select':
         return (
@@ -824,11 +1005,150 @@ export default function MemberRequestsPage() {
       const first = (au[0] as 'day' | 'half' | 'hour' | undefined) || 'day';
       setLeaveUnit(first);
       setLeaveHours(4);
+      setHalfDaySlot('');
     } else {
       setLeaveUnit('');
       setLeaveHours(4);
+      setHalfDaySlot('');
     }
   }, [selectedType]);
+
+  // 会社ID取得
+  useEffect(() => {
+    async function loadCompanyId() {
+      try {
+        if (!user) return;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        const { data } = await supabase
+          .from('v_user_companies')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        setCompanyId((data as { company_id?: string } | null)?.company_id || null);
+      } catch {
+        setCompanyId(null);
+      }
+    }
+    loadCompanyId();
+  }, [user]);
+
+  // ポリシー取得（business_day_only / blackout_dates / day_hours / min_booking_unit_minutes / rounding_minutes）
+  useEffect(() => {
+    async function loadPolicy() {
+      try {
+        setLeavePolicy(null);
+        const oc = (
+          selectedType as unknown as {
+            object_config?: { object_type?: string; leave_type_id?: string };
+          }
+        )?.object_config;
+        if (!user || !companyId || !oc || oc.object_type !== 'leave' || !oc.leave_type_id) return;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        const { data } = await supabase
+          .from('leave_policies')
+          .select(
+            'business_day_only, blackout_dates, day_hours, min_booking_unit_minutes, rounding_minutes'
+          )
+          .eq('company_id', companyId)
+          .eq('leave_type_id', oc.leave_type_id)
+          .is('deleted_at', null)
+          .maybeSingle();
+        setLeavePolicy(
+          (data as {
+            business_day_only?: boolean;
+            blackout_dates?: string[];
+            day_hours?: number;
+            min_booking_unit_minutes?: number;
+            rounding_minutes?: number | null;
+          } | null) || null
+        );
+      } catch {
+        setLeavePolicy(null);
+      }
+    }
+    loadPolicy();
+  }, [companyId, selectedType, user]);
+
+  async function getCalendarInfo(
+    dateStr: string
+  ): Promise<{ day_type: string | null; is_blackout: boolean | null }> {
+    if (!dateStr || !companyId) return { day_type: null, is_blackout: null };
+    const cached = calendarCache[dateStr];
+    if (cached) return cached;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data } = await supabase
+      .from('company_calendar_dates')
+      .select('day_type, is_blackout')
+      .eq('company_id', companyId)
+      .eq('calendar_date', dateStr)
+      .maybeSingle();
+    const info = {
+      day_type: (data as { day_type?: string } | null)?.day_type ?? null,
+      is_blackout: (data as { is_blackout?: boolean } | null)?.is_blackout ?? null,
+    };
+    setCalendarCache((prev) => ({ ...prev, [dateStr]: info }));
+    return info;
+  }
+
+  async function isDateBlocked(
+    dateStr: string
+  ): Promise<{ blocked: boolean; reason: string | null }> {
+    if (!dateStr) return { blocked: false, reason: null };
+    // ポリシーのブラックアウト（JSON）
+    const blackoutList = (leavePolicy?.blackout_dates as unknown as string[]) || [];
+    if (blackoutList.includes(dateStr)) {
+      return { blocked: true, reason: '会社ポリシーで取得不可日です。' };
+    }
+    // 会社カレンダー
+    const info = await getCalendarInfo(dateStr);
+    if (info.is_blackout) {
+      return { blocked: true, reason: '会社カレンダーの取得不可日に該当します。' };
+    }
+    if (leavePolicy?.business_day_only) {
+      if (info.day_type && info.day_type !== 'workday') {
+        return { blocked: true, reason: '営業日以外は取得できません。' };
+      }
+    }
+    return { blocked: false, reason: null };
+  }
+
+  function setDateHint(fieldName: string, message: string) {
+    setDateHints((prev) => ({ ...prev, [fieldName]: message }));
+  }
+
+  function renderDateHint(fieldName: string) {
+    const msg = dateHints[fieldName];
+    if (!msg) return null;
+    return <div className="mt-1 text-xs text-red-600">{msg}</div>;
+  }
+
+  function makeDateChangeHandler(fieldName: string) {
+    return async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      const oc = (selectedType as unknown as { object_config?: { object_type?: string } })
+        ?.object_config;
+      if (oc && oc.object_type === 'leave' && companyId) {
+        const { blocked, reason } = await isDateBlocked(value);
+        if (blocked) {
+          toast({
+            title: '取得不可日',
+            description: reason || 'この日は選択できません。',
+            variant: 'destructive',
+          });
+          setDateHint(fieldName, reason || 'この日は選択できません。');
+          return;
+        }
+        setDateHint(fieldName, '');
+      }
+      setFormData({ ...formData, [fieldName]: value });
+    };
+  }
 
   return (
     <div className="space-y-6">
@@ -930,6 +1250,23 @@ export default function MemberRequestsPage() {
                               </SelectContent>
                             </Select>
                           </div>
+                          {leaveUnit === 'half' && (
+                            <div>
+                              <Label>半休区分</Label>
+                              <Select
+                                value={halfDaySlot}
+                                onValueChange={(v) => setHalfDaySlot(v as 'am' | 'pm')}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="AM/PM を選択" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="am">午前（AM）</SelectItem>
+                                  <SelectItem value="pm">午後（PM）</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                           {leaveUnit === 'hour' && (
                             <div>
                               <Label>時間数（h）</Label>
@@ -943,6 +1280,43 @@ export default function MemberRequestsPage() {
                             </div>
                           )}
                         </div>
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    // 動的合計の厳密丸め（min_booking_unit_minutes → rounding_minutes）
+                    const dayHours =
+                      leavePolicy?.day_hours && leavePolicy.day_hours > 0
+                        ? leavePolicy.day_hours
+                        : 8;
+                    const minUnit = leavePolicy?.min_booking_unit_minutes || 60;
+                    const rounding =
+                      leavePolicy?.rounding_minutes && leavePolicy.rounding_minutes > 0
+                        ? leavePolicy.rounding_minutes
+                        : null;
+                    const entries = Object.entries(
+                      (perDayOverrides as unknown as Record<
+                        string,
+                        { unit: 'day' | 'half' | 'hour'; hours?: number }
+                      >) || {}
+                    );
+                    if (entries.length === 0) return null;
+                    function calcMinutes(u: 'day' | 'half' | 'hour', h?: number) {
+                      if (u === 'day') return dayHours * 60;
+                      if (u === 'half') return Math.round((dayHours * 60) / 2);
+                      const mins = Math.max(0, Math.floor((h || 0) * 60));
+                      const up = Math.ceil(mins / minUnit) * minUnit;
+                      if (!rounding) return up;
+                      return Math.max(minUnit, Math.round(up / rounding) * rounding);
+                    }
+                    const sum = entries.reduce(
+                      (acc, [, v]) => acc + calcMinutes(v.unit, v.hours),
+                      0
+                    );
+                    return (
+                      <div className="mb-2 text-sm text-gray-700">
+                        合計（丸め適用後）: {sum} 分（約 {(sum / 60).toFixed(1)} 時間 /{' '}
+                        {(sum / (dayHours * 60)).toFixed(1)} 日）
                       </div>
                     );
                   })()}

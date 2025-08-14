@@ -449,6 +449,59 @@ async function normalizeLeaveDetailsForRequest(requestId: string): Promise<void>
   const preferHalf = allowedUnits.includes('half') && !preferDay; // dayが無ければhalf
   const preferHour = allowedUnits.includes('hour') && !preferDay && !preferHalf;
 
+  // 会社・ポリシー取得（day_hours / min_booking_unit_minutes / rounding_minutes など）
+  let companyId: string | null = null;
+  try {
+    const { data: comp } = await supabase
+      .from('v_user_companies')
+      .select('company_id')
+      .eq('user_id', req.user_id)
+      .maybeSingle();
+    companyId = ((comp || {}) as { company_id?: string }).company_id || null;
+  } catch {
+    companyId = null;
+  }
+
+  let policy: {
+    day_hours?: number;
+    min_booking_unit_minutes?: number;
+    rounding_minutes?: number | null;
+  } | null = null;
+  if (companyId) {
+    try {
+      const { data: pol } = await supabase
+        .from('leave_policies')
+        .select('day_hours, min_booking_unit_minutes, rounding_minutes')
+        .eq('company_id', companyId)
+        .eq('leave_type_id', objectConfig.leave_type_id)
+        .is('deleted_at', null)
+        .maybeSingle();
+      policy = (pol || null) as {
+        day_hours?: number;
+        min_booking_unit_minutes?: number;
+        rounding_minutes?: number | null;
+      } | null;
+    } catch {
+      policy = null;
+    }
+  }
+
+  const dayHours = policy?.day_hours && policy.day_hours > 0 ? policy.day_hours : 8;
+  const minUnit =
+    policy?.min_booking_unit_minutes && policy.min_booking_unit_minutes > 0
+      ? policy.min_booking_unit_minutes
+      : 60;
+  let roundingMinutes: number | null = null;
+  if (policy?.rounding_minutes && policy.rounding_minutes > 0) {
+    roundingMinutes = policy.rounding_minutes;
+  }
+
+  function applyRounding(minutes: number, unit: 'day' | 'half' | 'hour'): number {
+    if (!roundingMinutes || unit !== 'hour') return minutes;
+    const rounded = Math.round(minutes / roundingMinutes) * roundingMinutes;
+    return Math.max(minUnit, rounded);
+  }
+
   // 既存明細を削除
   await supabase.from('leave_request_details').delete().eq('request_id', requestId);
 
@@ -462,53 +515,96 @@ async function normalizeLeaveDetailsForRequest(requestId: string): Promise<void>
     reason?: string;
   }> = [];
 
-  for (let i = 0; i < dayCount; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    const dayStart = new Date(d);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(d);
-    dayEnd.setHours(23, 59, 59, 999);
+  const perDay = Array.isArray(fd['leave_per_day'])
+    ? (fd['leave_per_day'] as Array<{
+        date: string;
+        unit: 'day' | 'half' | 'hour';
+        hours?: number | null;
+      }>)
+    : null;
 
-    if (requestedUnit === 'day' || (!requestedUnit && preferDay)) {
+  if (perDay && perDay.length > 0) {
+    for (const item of perDay) {
+      const dayDate = typeof item.date === 'string' ? new Date(item.date) : null;
+      if (!dayDate || isNaN(dayDate.getTime())) continue;
+      const dayStart = new Date(dayDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      let qty = 0;
+      if (item.unit === 'day') {
+        qty = dayHours * 60;
+      } else if (item.unit === 'half') {
+        qty = Math.round((dayHours * 60) / 2);
+      } else {
+        const requested = Math.max(0, Math.floor(((item.hours || 0) as number) * 60));
+        qty = Math.max(minUnit, Math.ceil(requested / minUnit) * minUnit);
+        qty = applyRounding(qty, 'hour');
+      }
       rows.push({
         request_id: requestId,
         leave_type_id: objectConfig.leave_type_id,
         start_at: dayStart.toISOString(),
         end_at: dayEnd.toISOString(),
-        quantity_minutes: 60 * 8, // 検証/ポリシー丸めで再計算
-        unit: 'day',
+        quantity_minutes: qty,
+        unit: item.unit,
         reason,
       });
-      continue;
     }
+  } else {
+    for (let i = 0; i < dayCount; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dayStart = new Date(d);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(d);
+      dayEnd.setHours(23, 59, 59, 999);
 
-    if (requestedUnit === 'half' || (!requestedUnit && preferHalf)) {
-      // 暫定: 常に半日×1で登録（UIからの詳細入力は後段で）
+      if (requestedUnit === 'day' || (!requestedUnit && preferDay)) {
+        rows.push({
+          request_id: requestId,
+          leave_type_id: objectConfig.leave_type_id,
+          start_at: dayStart.toISOString(),
+          end_at: dayEnd.toISOString(),
+          quantity_minutes: dayHours * 60,
+          unit: 'day',
+          reason,
+        });
+        continue;
+      }
+
+      if (requestedUnit === 'half' || (!requestedUnit && preferHalf)) {
+        rows.push({
+          request_id: requestId,
+          leave_type_id: objectConfig.leave_type_id,
+          start_at: dayStart.toISOString(),
+          end_at: dayEnd.toISOString(),
+          quantity_minutes: Math.round((dayHours * 60) / 2),
+          unit: 'half',
+          reason,
+        });
+        continue;
+      }
+
+      const useHour = requestedUnit === 'hour' || preferHour;
+      const baseMinutes = Math.max(0, Math.floor((requestedHours || 4) * 60));
+      let qty = useHour
+        ? Math.max(minUnit, Math.ceil(baseMinutes / minUnit) * minUnit)
+        : dayHours * 60;
+      if (useHour) {
+        qty = applyRounding(qty, 'hour');
+      }
       rows.push({
         request_id: requestId,
         leave_type_id: objectConfig.leave_type_id,
         start_at: dayStart.toISOString(),
         end_at: dayEnd.toISOString(),
-        quantity_minutes: 60 * 4,
-        unit: 'half',
+        quantity_minutes: qty,
+        unit: useHour ? 'hour' : 'day',
         reason,
       });
-      continue;
     }
-
-    // hour指定 or hourのみ許可の場合は時間で登録（指定が無ければ暫定4時間）
-    const useHour = requestedUnit === 'hour' || preferHour;
-    const qty = useHour ? Math.max(60, Math.min(60 * 12, (requestedHours || 4) * 60)) : 60 * 8;
-    rows.push({
-      request_id: requestId,
-      leave_type_id: objectConfig.leave_type_id,
-      start_at: dayStart.toISOString(),
-      end_at: dayEnd.toISOString(),
-      quantity_minutes: qty,
-      unit: useHour ? 'hour' : 'day',
-      reason,
-    });
   }
 
   if (rows.length > 0) {
