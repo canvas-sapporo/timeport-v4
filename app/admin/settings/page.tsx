@@ -18,6 +18,7 @@ import {
   Loader2,
   FileText,
   Activity,
+  CalendarDays,
 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -58,6 +59,7 @@ import type { AttendanceStatusData } from '@/schemas/attendance';
 import type { Company } from '@/schemas/company';
 import type { CompanyInfo } from '@/schemas/user_profile';
 import { formatDateTimeForDisplay, formatTime } from '@/lib/utils';
+import CalendarSettings from '@/components/admin/calendar/CalendarSettings';
 
 // 雇用形態管理用ダイアログコンポーネントをインポート
 import EmploymentTypeCreateDialog from '@/components/admin/employment-types/EmploymentTypeCreateDialog';
@@ -398,6 +400,7 @@ export default function AdminSettingsPage() {
     { id: 'employment-types', label: '雇用形態', icon: Users },
     { id: 'work-types', label: '勤務形態', icon: Briefcase },
     { id: 'attendance', label: '勤怠管理', icon: Clock },
+    { id: 'calendar', label: 'カレンダー管理', icon: CalendarDays },
     { id: 'logs', label: 'ログ設定', icon: FileText },
   ];
 
@@ -886,237 +889,21 @@ export default function AdminSettingsPage() {
           </div>
         )}
 
-        {/* 雇用形態設定 */}
-        {activeTab === 'employment-types' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Users className="w-5 h-5" />
-                  <span>雇用形態設定</span>
-                </div>
-                <Button
-                  onClick={() => setCreateEmploymentTypeDialogOpen(true)}
-                  variant="timeport-primary"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  新規雇用形態
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEmploymentTypesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>データを読み込み中...</span>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <div className="text-2xl font-bold">{employmentTypeStats.total}</div>
-                      <div className="text-sm text-gray-600">総雇用形態数</div>
-                    </div>
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
-                        {employmentTypeStats.active}
-                      </div>
-                      <div className="text-sm text-gray-600">有効</div>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-400">
-                        {employmentTypeStats.inactive}
-                      </div>
-                      <div className="text-sm text-gray-600">無効</div>
-                    </div>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>雇用形態名</TableHead>
-                        <TableHead>コード</TableHead>
-                        <TableHead>説明</TableHead>
-                        <TableHead>表示順序</TableHead>
-                        <TableHead>ステータス</TableHead>
-                        <TableHead>編集日</TableHead>
-                        <TableHead>操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {employmentTypes.map((type) => (
-                        <TableRow key={type.id}>
-                          <TableCell className="font-medium">{type.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{type.code}</Badge>
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate">{type.description}</TableCell>
-                          <TableCell>{type.display_order}</TableCell>
-                          <TableCell>
-                            <Badge variant={type.is_active ? 'default' : 'secondary'}>
-                              {type.is_active ? '有効' : '無効'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {type.updated_at ? new Date(type.updated_at).toLocaleDateString() : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <ActionButton
-                                action="edit"
-                                onClick={() => handleEditEmploymentType(type)}
-                              />
-                              <ActionButton
-                                action="delete"
-                                onClick={() => handleDeleteEmploymentType(type)}
-                              />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {employmentTypes.length === 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">雇用形態が登録されていません</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 勤務形態設定 */}
-        {activeTab === 'work-types' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Briefcase className="w-5 h-5" />
-                  <span>勤務形態設定</span>
-                </div>
-                <Button
-                  onClick={() => setCreateWorkTypeDialogOpen(true)}
-                  variant="timeport-primary"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  新規勤務形態
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isWorkTypesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>データを読み込み中...</span>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <div className="text-2xl font-bold">{workTypeStats.total}</div>
-                      <div className="text-sm text-gray-600">総勤務形態数</div>
-                    </div>
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
-                        {workTypeStats.active}
-                      </div>
-                      <div className="text-sm text-gray-600">有効</div>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <div className="text-2xl font-bold text-gray-400">
-                        {workTypeStats.inactive}
-                      </div>
-                      <div className="text-sm text-gray-600">無効</div>
-                    </div>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>勤務形態名</TableHead>
-                        <TableHead>コード</TableHead>
-                        <TableHead>勤務時間</TableHead>
-                        <TableHead>休憩時間</TableHead>
-                        <TableHead>フレックス</TableHead>
-                        <TableHead>ステータス</TableHead>
-                        <TableHead>編集日</TableHead>
-                        <TableHead>操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {workTypes.map((type) => (
-                        <TableRow key={type.id}>
-                          <TableCell className="font-medium">{type.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{type.code}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {(() => {
-                              console.log(
-                                '勤務時間表示 - work_start_time:',
-                                type.work_start_time,
-                                'work_end_time:',
-                                type.work_end_time
-                              );
-                              return `${formatTime(type.work_start_time)} - ${formatTime(type.work_end_time)}`;
-                            })()}
-                          </TableCell>
-                          <TableCell>
-                            {(() => {
-                              if (!type.break_times || type.break_times.length === 0) {
-                                return '0分';
-                              }
-                              const totalMinutes = type.break_times.reduce((total, breakTime) => {
-                                const start = new Date(`2000-01-01T${breakTime.start_time}:00`);
-                                const end = new Date(`2000-01-01T${breakTime.end_time}:00`);
-                                const diffMs = end.getTime() - start.getTime();
-                                return total + Math.floor(diffMs / (1000 * 60));
-                              }, 0);
-                              return `${totalMinutes}分`;
-                            })()}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={type.is_flexible ? 'default' : 'secondary'}>
-                              {type.is_flexible ? 'フレックス' : '固定'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={type.is_active ? 'default' : 'secondary'}>
-                              {type.is_active ? '有効' : '無効'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {type.updated_at ? new Date(type.updated_at).toLocaleDateString() : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <ActionButton
-                                action="edit"
-                                onClick={() => handleEditWorkType(type)}
-                              />
-                              <ActionButton
-                                action="delete"
-                                onClick={() => handleDeleteWorkType(type)}
-                              />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {workTypes.length === 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">勤務形態が登録されていません</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+        {/* カレンダー管理 */}
+        {activeTab === 'calendar' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <CalendarDays className="w-5 h-5" />
+                  <span>カレンダー管理</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CalendarSettings />
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* ログ設定 */}
