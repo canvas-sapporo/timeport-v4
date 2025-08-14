@@ -455,6 +455,78 @@ export async function getAdminUsers(
 }
 
 /**
+ * joined_date 未設定のユーザーを検出
+ */
+export async function listUsersMissingJoinedDate(companyId: UUID): Promise<{ success: boolean; data: Array<{ id: string; name: string; email: string }>; error?: string }>{
+  try {
+    const supabase = createAdminClient();
+    // 企業内ユーザー特定
+    const { data: companyUserIds } = await supabase
+      .from('user_groups')
+      .select('user_id, groups!inner(company_id)')
+      .eq('groups.company_id', companyId)
+      .is('deleted_at', null);
+    const userIds = (companyUserIds || []).map((r) => (r as { user_id: string }).user_id);
+    if (userIds.length === 0) return { success: true, data: [] };
+    // joined_dateが空のユーザー
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('id, family_name, first_name, email, joined_date')
+      .in('id', userIds)
+      .or('joined_date.is.null,joined_date.eq.') // null または 空文字
+      .is('deleted_at', null);
+    const rows = (data || []).map((u) => ({
+      id: (u as { id: string }).id,
+      name: `${(u as { family_name?: string }).family_name || ''} ${(u as { first_name?: string }).first_name || ''}`.trim(),
+      email: (u as { email?: string }).email || '',
+    }));
+    return { success: true, data: rows };
+  } catch (e) {
+    return { success: false, data: [], error: e instanceof Error ? e.message : 'Unknown error' };
+  }
+}
+
+/**
+ * joined_date を一括更新
+ */
+export async function bulkUpdateJoinedDate(companyId: UUID, updates: Array<{ userId: string; joinedDate: string }>, currentUserId?: string): Promise<{ success: boolean; updated: number; error?: string }>{
+  try {
+    const supabase = createAdminClient();
+    let updated = 0;
+    for (const u of updates) {
+      // 企業所属チェック（軽量）
+      const { data: belongs } = await supabase
+        .from('user_groups')
+        .select('user_id, groups!inner(company_id)')
+        .eq('user_id', u.userId)
+        .eq('groups.company_id', companyId)
+        .is('deleted_at', null)
+        .limit(1);
+      if (!belongs || belongs.length === 0) continue;
+      // 更新
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ joined_date: u.joinedDate })
+        .eq('id', u.userId);
+      if (!error) updated++;
+    }
+    // ページ再検証など必要に応じ
+    if (currentUserId) {
+      await logSystem('info', 'joined_date一括更新', {
+        feature_name: 'user_management',
+        action_type: 'bulk_update_joined_date',
+        user_id: currentUserId,
+        company_id: companyId,
+        metadata: { updated_count: updated },
+      });
+    }
+    return { success: true, updated };
+  } catch (e) {
+    return { success: false, updated: 0, error: e instanceof Error ? e.message : 'Unknown error' };
+  }
+}
+
+/**
  * ユーザー詳細を取得
  */
 export async function getUser(userId: UUID): Promise<UserDetailResponse> {
